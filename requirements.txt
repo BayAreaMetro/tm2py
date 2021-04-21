@@ -1,1 +1,16 @@
+geojson
+geographiclib
+geopandas > 0.8.0
+fiona
+folium
+jsonschema
+jupyter
+lark-parser
+osmnx >= 0.12
+notebook
+numpy
 pandas > 1.0
+pyproj > 2.2.0 
+pyyaml
+rtree
+shapely
