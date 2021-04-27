@@ -40,6 +40,7 @@ The docstring may span multiple lines. The type may optionally be specified
 on the first line, separated by a colon.
 """
 
+
 class TemplateClass:
     """The summary line for a class docstring should fit on one line.
 
@@ -55,17 +56,18 @@ class TemplateClass:
         attr1 (str): Description of `attr1`.
         attr2 (:obj:`int`, optional): Description of `attr2`.
 
-    """   
-    def __init__(self,var1: int,var2: str = "default") -> None:
+    """
+
+    def __init__(self, var1: int, var2: str = "default") -> None:
         """One-line summary of what method does.
 
         Args:
             var1: Description of var1.
             var2: Description of var2. Defaults to "default".
-        """        
-        pass
+        """
+        self.var1 = var1
 
     @property
     def my_readonly_property(self):
         """int: Double of var1."""
-        return self.var1*2
+        return self.var1 * 2
