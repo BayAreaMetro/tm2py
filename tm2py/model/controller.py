@@ -6,20 +6,27 @@
 import argparse as _argparse
 import os as _os
 
-# import tm2py.core.tools as _tools
 
 from contextlib import contextmanager as _context
 
-# from tm2py.model.assignment.highway import HighwayAssignment
-# from tm2py.assignment.transit import TransitAssignment
+# from tm2py.model.assignment.setup import PrepareEmmeNetworks
+from tm2py.model.assignment.highway import HighwayAssignment
+
+# from tm2py.model.assignment.transit import TransitAssignment
+# from tm2py.model.assignment.nonmotoized import NonMotorizedSkim
+# from tm2py.model.demand.ctramp import ResidentModel
+# from tm2py.model.demand.truck import TruckModel
+# from tm2py.model.demand.airport import AirportModel
+# from tm2py.model.demand.something? import AverageDemand
 from tm2py.core.config import Configuration
 from tm2py.core.logging import Logger
+from tm2py.core.component import Controller as _Controller # NOTE: to be renamed
 
 
 _join, _dir = _os.path.join, _os.path.dirname
 
 
-class Controller:
+class Controller(_Controller):
     """docstring for Controller class"""
 
     def __init__(self):
@@ -30,54 +37,20 @@ class Controller:
         self._top_sheet = Logger(self)
         self._trace = None
 
-        self.create_emme_networks = None
-        self.non_motorized_skim = None
-        self.airport_model = None
-        self.start_household_manager = None  # HouseholdManager(self)
-        self.start_matrix_manager = None  # MatrixManager(self)
-        self.resident_model = None  # ResidentModel(self)
-        self.stop_java = None  # StopJava(self)
-        self.internal_external_model = None  # InternalExternalModel(self)
-        self.truck_model = None  # TruckModel(self)
-        self.average_demand = None  # AverageDemand(self)
-        self.highway_assignment = None  # HighwayAssignment(self)
-        self.transit_assignment = None  # TransitAssignment(self)
-
-        self._components = [
-            self.create_emme_networks,
-            self.non_motorized_skim,
-            self.airport_model,
-            self.start_household_manager,
-            self.start_matrix_manager,
-            self.resident_model,
-            self.stop_java,
-            self.internal_external_model,
-            self.truck_model,
-            self.average_demand,
-            self.highway_assignment,
-            self.transit_assignment,
-        ]
+        self._components = {
+            # "prepare_emme_networks": PrepareEmmeNetworks(self),
+            # "non_motorized_skim": NonMotorizedSkim(self),
+            # "airport_model": AirportModel(self),
+            # "resident_model": ResidentModel(self),
+            # "internal_external_model": InternalExternalModel(self),
+            # "truck_model": TruckModel(self),
+            # "average_demand": AverageDemand(self),
+            "highway_assignment": HighwayAssignment(self),
+            #"transit_assignment": None,  # TransitAssignment(self),
+        }
+        # self._components = [a for a in self.__dict__.values() if isinstance(a, Component)]
         self._iteration = 0
 
-    @property
-    def config(self):
-        """Return configuration interface"""
-        return self._config
-
-    @property
-    def top_sheet(self):
-        """Placeholder for topsheet interface"""
-        return self._top_sheet
-
-    @property
-    def logger(self):
-        """Placeholder for logger interface"""
-        return self._logger
-
-    @property
-    def trace(self):
-        """Trace information"""
-        return self._trace
 
     @property
     def iteration(self):
@@ -90,29 +63,21 @@ class Controller:
         self.validate_inputs()
 
         with self.setup():
-            self.create_emme_networks.run()
-            self.non_motorized_skim.run()
-            self.airport_model.run()
-
-            self.highway_assignment.run()
-            self.transit_assignment.run()
-            # self.export_skims.run()
+            self.run_prepare_emme_networks()
+            self.run_non_motorized_skim()
+            self.run_airport_model()
+            self.run_highway_assignment()
+            self.run_transit_assignment()
+            # self.run_export_skims()
             # or Export skims embeded in above assignment steps?
-            for iteration in self._config.global_iterations:
+            for iteration in range(self._config.run.global_iterations):
                 self._iteration = iteration
-                self.start_household_manager.run()
-                # call CTRAMP\runtime\runHhMgr.cmd "%JAVA_PATH%" %HOST_IP_ADDRESS%
-                self.start_matrix_manager.run()
-                # call CTRAMP\runtime\runMtxMgr.cmd %HOST_IP_ADDRESS% "%JAVA_PATH%"
-                self.resident_model.run()
-                # call CTRAMP\runtime\runMTCTM2ABM.cmd %SAMPLERATE% %ITERATION% "%JAVA_PATH%"
-                self.stop_java.run()
-                # taskkill /im "java.exe" /F
-                self.internal_external_model.run()
-                self.truck_model.run()
-                self.average_demand.run()
-                self.highway_assignment.run()
-                self.transit_assignment.run()
+                self.run_resident_model()
+                self.run_internal_external_model()
+                self.run_truck_model()
+                self.run_average_demand()
+                self.run_highway_assignment()
+                self.run_transit_assignment()
 
     def initialize(self):
         """Placeholder for initialization"""
@@ -120,20 +85,42 @@ class Controller:
 
     def validate_inputs(self):
         """Validate input state prior to run"""
-        for component in self._components:
+        for component in self._components.values():
             component.validate_inputs()
 
-    @_context
-    def setup(self):
-        """Placeholder setup and teardown"""
-        try:
-            yield
-        finally:
-            pass
+
+    def run_prepare_emme_networks(self):
+        pass
+
+    def run_non_motorized_skim(self):
+        pass
+
+    def run_airport_model(self):
+        pass
+
+    def run_resident_model(self):
+        pass
+
+    def run_internal_external_model(self):
+        pass
+
+    def run_truck_model(self):
+        pass
+
+    def run_average_demand(self):
+        pass
+
+    def run_highway_assignment(self):
+        if self.config.run[0].highway == True:
+            self._component["highway_assignment"].run()
+
+    def run_transit_assignment(self):
+        if self.config.run[0].transit == True:
+            self._component["transit_assignment"].run()
 
 
 if __name__ == "__main__":
-    parser = _argparse.ArgumentParser(description="Main: run MTC TM2.1")
+    parser = _argparse.ArgumentParser(description="Main: run MTC TM2PY")
     parser.add_argument("-a", "--argument", help=r"An argument")
     args = parser.parse_args()
 

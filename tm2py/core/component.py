@@ -2,11 +2,67 @@
 
 """
 
+# from abc import ABC, abstractmethod
+from contextlib import contextmanager as _context
 
+# TODO: make ABC once interface is stable
+class Controller:
+    def __init__(self):
+        super().__init__()
+        self._config = None
+        self._logger = None
+        self._top_sheet = None
+        self._trace = None
+
+    @_context
+    def setup(self):
+        """Placeholder setup and teardown"""
+        try:
+            yield
+        finally:
+            pass
+
+    @property
+    def config(self):
+        """Return configuration interface"""
+        return self._config
+
+    @property
+    def top_sheet(self):
+        """Placeholder for topsheet interface"""
+        return self._top_sheet
+
+    @property
+    def logger(self):
+        """Placeholder for logger interface"""
+        return self._logger
+
+    @property
+    def trace(self):
+        """Trace information"""
+        return self._trace
+
+    def validate_inputs(self):
+        """Validate inputs are correct at model initiation, fail fast if not"""
+
+    def run(self):
+        """Run model component"""
+
+    def report_progress(self):
+        """Write progress to log file"""
+
+    def test_component(self):
+        """Run stand-alone component test"""
+
+    def write_top_sheet(self):
+        """Write key outputs to the model top sheet"""
+
+
+# TODO: make ABC once interface is stable
 class Component:
     """Template comopnent class for tm2py top-level inheritance"""
 
-    def __init__(self, controller):
+    def __init__(self, controller: Controller):
         super().__init__()
         self._controller = controller
         self._trace = None
