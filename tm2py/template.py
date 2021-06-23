@@ -31,9 +31,9 @@ Todo:
    https://google.github.io/styleguide/pyguide.html
 """
 
-module_level_variable_module_doc = 12345
+MODULE_LEVEL_VARIABLE_MODULE_DOC = 12345
 
-module_level_variable_inline = 98765
+MODULE_LEVEL_VARIABLE_MODULE_INLINE = 98765
 """int: Module level variable documented inline.
 
 The docstring may span multiple lines. The type may optionally be specified
@@ -66,6 +66,7 @@ class TemplateClass:
             var2: Description of var2. Defaults to "default".
         """
         self.var1 = var1
+        self.var2 = var2
 
     @property
     def my_readonly_property(self):
