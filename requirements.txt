@@ -12,5 +12,6 @@ numpy
 pandas > 1.0
 pyproj > 2.2.0 
 pyyaml
+pywin32==224
 rtree
 shapely

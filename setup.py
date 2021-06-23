@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 version = "0.0.1"
 
@@ -38,7 +38,7 @@ setup(
     url="https://github.com/BayAreaMetro/tm2py",
     license="Apache 2",
     platforms="any",
-    packages=["tm2py"],
+    packages=find_packages(),
     include_package_data=True,
     install_requires=install_requires,
 )
