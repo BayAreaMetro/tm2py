@@ -6,9 +6,6 @@
 import argparse as _argparse
 import os as _os
 
-
-from contextlib import contextmanager as _context
-
 # from tm2py.model.assignment.setup import PrepareEmmeNetworks
 from tm2py.model.assignment.highway import HighwayAssignment
 
@@ -20,7 +17,7 @@ from tm2py.model.assignment.highway import HighwayAssignment
 # from tm2py.model.demand.something? import AverageDemand
 from tm2py.core.config import Configuration
 from tm2py.core.logging import Logger
-from tm2py.core.component import Controller as _Controller # NOTE: to be renamed
+from tm2py.core.component import Controller as _Controller
 
 
 _join, _dir = _os.path.join, _os.path.dirname
@@ -40,17 +37,16 @@ class Controller(_Controller):
         self._components = {
             # "prepare_emme_networks": PrepareEmmeNetworks(self),
             # "non_motorized_skim": NonMotorizedSkim(self),
-            # "airport_model": AirportModel(self),
+            # "airpassenger": AirPassengerModel(self),
             # "resident_model": ResidentModel(self),
             # "internal_external_model": InternalExternalModel(self),
             # "truck_model": TruckModel(self),
             # "average_demand": AverageDemand(self),
             "highway_assignment": HighwayAssignment(self),
-            #"transit_assignment": None,  # TransitAssignment(self),
+            # "transit_assignment": None,  # TransitAssignment(self),
         }
         # self._components = [a for a in self.__dict__.values() if isinstance(a, Component)]
         self._iteration = 0
-
 
     @property
     def iteration(self):
@@ -65,7 +61,7 @@ class Controller(_Controller):
         with self.setup():
             self.run_prepare_emme_networks()
             self.run_non_motorized_skim()
-            self.run_airport_model()
+            self.run_airpassenger_model()
             self.run_highway_assignment()
             self.run_transit_assignment()
             # self.run_export_skims()
@@ -88,35 +84,43 @@ class Controller(_Controller):
         for component in self._components.values():
             component.validate_inputs()
 
-
     def run_prepare_emme_networks(self):
+        """Run prepare emme network component"""
         pass
 
     def run_non_motorized_skim(self):
+        """Run prepare emme network component"""
         pass
 
-    def run_airport_model(self):
+    def run_airpassenger_model(self):
+        """Run air passenger model component"""
         pass
 
     def run_resident_model(self):
+        """Run resident model component"""
         pass
 
     def run_internal_external_model(self):
+        """Run internal external component"""
         pass
 
     def run_truck_model(self):
+        """Run truck model component"""
         pass
 
     def run_average_demand(self):
+        """Run average demand component"""
         pass
 
     def run_highway_assignment(self):
-        if self.config.run[0].highway == True:
-            self._component["highway_assignment"].run()
+        """Run highway component"""
+        if self.config.run[0].highway is True:
+            self._components["highway_assignment"].run()
 
     def run_transit_assignment(self):
-        if self.config.run[0].transit == True:
-            self._component["transit_assignment"].run()
+        """Run transit assignment component"""
+        if self.config.run[0].transit is True:
+            self._components["transit_assignment"].run()
 
 
 if __name__ == "__main__":
