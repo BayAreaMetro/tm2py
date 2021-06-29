@@ -1,12 +1,13 @@
-"""Component module docsting
+"""Component contains the abstract classes for the model Controller and Components.
 
 """
 
-# from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod
 from contextlib import contextmanager as _context
 
-# TODO: make ABC once interface is stable
-class Controller:
+
+class Controller(ABC):
+    """Base controller class for tm2py operating tm2py model."""
     def __init__(self):
         super().__init__()
         self._config = None
@@ -39,12 +40,13 @@ class Controller:
 
     @property
     def trace(self):
-        """Trace information"""
+        """Placeholder for trace information"""
         return self._trace
 
     def validate_inputs(self):
         """Validate inputs are correct at model initiation, fail fast if not"""
 
+    @abstractmethod
     def run(self):
         """Run model component"""
 
@@ -58,9 +60,8 @@ class Controller:
         """Write key outputs to the model top sheet"""
 
 
-# TODO: make ABC once interface is stable
-class Component:
-    """Template comopnent class for tm2py top-level inheritance"""
+class Component(ABC):
+    """Base component class for tm2py top-level inheritance"""
 
     def __init__(self, controller: Controller):
         super().__init__()
@@ -95,6 +96,7 @@ class Component:
     def validate_inputs(self):
         """Validate inputs are correct at model initiation, fail fast if not"""
 
+    @abstractmethod
     def run(self):
         """Run model component"""
 
