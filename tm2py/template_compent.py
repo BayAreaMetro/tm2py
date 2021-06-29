@@ -1,6 +1,6 @@
 """ See also base template.py for docstring and type hint examples.
 
-module docsting 
+module docsting
 """
 
 
@@ -33,8 +33,6 @@ class Component(_Component):
 
     def _step1(self):
         """docstring for step1"""
-        pass
 
     def _step2(self):
         """docstring for step2"""
-        pass

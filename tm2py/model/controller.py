@@ -86,40 +86,35 @@ class Controller(_Controller):
 
     def run_prepare_emme_networks(self):
         """Run prepare emme network component"""
-        pass
 
     def run_non_motorized_skim(self):
         """Run prepare emme network component"""
-        pass
 
     def run_airpassenger_model(self):
         """Run air passenger model component"""
-        pass
 
     def run_resident_model(self):
         """Run resident model component"""
-        pass
 
     def run_internal_external_model(self):
         """Run internal external component"""
-        pass
 
     def run_truck_model(self):
         """Run truck model component"""
-        pass
 
     def run_average_demand(self):
         """Run average demand component"""
-        pass
 
     def run_highway_assignment(self):
         """Run highway component"""
-        if self.config.run[0].highway is True:
+        # NOTE: E1101 due to dynamic generation of config from TOML file
+        if self.config.run[0].highway is True:  # pylint-disable=E1101
             self._components["highway_assignment"].run()
 
     def run_transit_assignment(self):
         """Run transit assignment component"""
-        if self.config.run[0].transit is True:
+        # NOTE: E1101 due to dynamic generation of config from TOML file
+        if self.config.run[0].transit is True:  # pylint-disable=E1101
             self._components["transit_assignment"].run()
 
 
