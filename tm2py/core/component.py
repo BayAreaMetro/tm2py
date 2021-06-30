@@ -3,25 +3,17 @@
 """
 
 from abc import ABC, abstractmethod
-from contextlib import contextmanager as _context
 
 
 class Controller(ABC):
     """Base controller class for tm2py operating tm2py model."""
+
     def __init__(self):
         super().__init__()
         self._config = None
         self._logger = None
         self._top_sheet = None
         self._trace = None
-
-    @_context
-    def setup(self):
-        """Placeholder setup and teardown"""
-        try:
-            yield
-        finally:
-            pass
 
     @property
     def config(self):

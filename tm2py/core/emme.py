@@ -9,7 +9,7 @@ import re as _re
 from socket import error as _socket_error
 from typing import List, Union, Any, Dict
 
-from numpy import array as NumpyArray, resize as _np_resize
+import numpy as _np
 import openmatrix as _omx
 
 # PyLint cannot build AST from compiled Emme libraries
@@ -20,7 +20,7 @@ from inro.emme.database.matrix import Matrix as EmmeMatrix
 import inro.emme.desktop.app as _app
 import inro.modeller as _m
 
-
+NumpyArray = _np.array
 EmmeDesktopApp = _app.App
 EmmeModeller = _m.Modeller
 
@@ -360,10 +360,10 @@ class OMX:
             numpy_array = matrix.get_numpy_data(self._scenario.id)
         if matrix.type == "DESTINATION":
             n_zones = len(numpy_array)
-            numpy_array = _np_resize(numpy_array, (1, n_zones))
+            numpy_array = _np.resize(numpy_array, (1, n_zones))
         elif matrix.type == "ORIGIN":
             n_zones = len(numpy_array)
-            numpy_array = _np_resize(numpy_array, (n_zones, 1))
+            numpy_array = _np.resize(numpy_array, (n_zones, 1))
         attrs = {"description": matrix.description}
         self.write_array(numpy_array, name, attrs)
 
@@ -372,8 +372,8 @@ class OMX:
         numpy_array: NumpyArray,
         name: str,
         a_min: float,
-        a_max: float=None,
-        attrs: Dict[str, str]=None
+        a_max: float = None,
+        attrs: Dict[str, str] = None,
     ):  # pylint: disable=R0913
         """Write array with min and max values capped.
 
@@ -390,7 +390,9 @@ class OMX:
             numpy_array = numpy_array.clip(a_min)
         self.write_array(numpy_array, name, attrs)
 
-    def write_array(self, numpy_array: NumpyArray, name: str, attrs: Dict[str, str]=None):
+    def write_array(
+        self, numpy_array: NumpyArray, name: str, attrs: Dict[str, str] = None
+    ):
         """Write array with name and optional attrs to OMX file.
 
         Args:
