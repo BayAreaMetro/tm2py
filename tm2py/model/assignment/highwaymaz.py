@@ -179,7 +179,12 @@ class AssignMAZSPDemand(_Component):
             if dist > self._max_dist:
                 self._max_dist = dist
             self._demand[orig_node].append(
-                {"orig": orig_node, "dest": dest_node, "dem": data[orig][dest], "dist": dist}
+                {
+                    "orig": orig_node,
+                    "dest": dest_node,
+                    "dem": data[orig][dest],
+                    "dist": dist,
+                }
             )
         self._debug_report.append(
             "    PROCESS DEMAND --- %s seconds ---" % (_time.time() - start_time)
@@ -193,7 +198,9 @@ class AssignMAZSPDemand(_Component):
         if bin_edges[-1] < self._max_dist / 5280.0:
             bin_edges.append(self._max_dist / 5280.0)
 
-        demand_groups = [{"dist": edge, "demand": []} for i, edge in enumerate(bin_edges[1:])]
+        demand_groups = [
+            {"dist": edge, "demand": []} for i, edge in enumerate(bin_edges[1:])
+        ]
         for data in self._demand.values():
             max_dist = max(entry["dist"] for entry in data) / 5280.0
             for group in demand_groups:
@@ -202,7 +209,7 @@ class AssignMAZSPDemand(_Component):
                     break
         for group in demand_groups:
             self._debug_report.append(
-                "       bin dist %s, size %s" % (x["dist"], len(x["demand"]))
+                "       bin dist %s, size %s" % (group["dist"], len(group["demand"]))
             )
         # Filter out groups without any demend
         demand_groups = [group for group in demand_groups if group["demand"]]

@@ -1,10 +1,105 @@
 """Performs equalibrium traffic assignment and generates resulting skims.
 
+The traffic assignment runs according to the list of assignment classes
+in the controller.config. Each classes is specified using the following
+schema. All items are required unless otherwise (no validation at present).
+Note that some network preparation steps (such as the setting of link.modes)
+are completed in the create_emme_network component.
+    "name": short (e.g. 2-3 character) unique reference name for the class.
+        used in attribute and matrix names
+    "description": longer text used in attribute and matrix descriptions
+    "emme_mode": single character mode, used to generate link.modes to
+        identify subnetwork, generated from "exclued_links" keywords
+    "demand": list of OMX file and matrix keyname references
+        "file": reference name for relative file path of source OMX file
+        "name": name of matrix in the OMX file, can include "{period}"
+            placeholder
+        "factor": optional, multiplicative factor to generate PCEs from
+            trucks or convert person-trips to vehicle-trips for HOVs
+    "excluded_links": list of keywords to identify links to exclude from
+        this class' available subnetwork (generate link.modes)
+        Options are:
+            - "is_toll_da": has a value (non-bridge) toll for drive alone
+            - "is_sr2": is reserved for shared ride 2+
+            - "is_sr3": is reserved for shared ride 3+
+            - "is_toll_sr2": has a value (non-bridge) toll for shared ride 2
+            - "is_toll_sr3": has a value (non-bridge) toll for shared ride 3+
+            - "is_toll_truck": has a value (non-bridge) toll for trucks
+            - "is_auto_only": is reserved for autos (non-truck)
+    "value_of_time": value of time for this class in $ / hr
+    "operating_cost": vehicle operating cost in cents / mile
+    "toll": additional toll cost link attribute (in cents)
+    "toll_factor": optional, factor to apply to toll values in cost calculation
+    "pce": optional, passenger car equivalent to convert assigned demand in
+        PCE units to vehicles for total assigned vehicle calculations
+    "skims": list of skim matrices to generate
+        Options are:
+            "time": travel time only in minutes
+            "dist": distance in miles
+            "hovdist": distance on HOV (sr2 or sr3+) facilities
+            "tolldist": distance on toll (@valuetoll_da > 0) facilities
+            "freeflowtime": free flow travel time in minutes
+            "bridgetoll_YY": bridge tolls, where YY is one of the class groups
+            "valuetoll_YY": other, non-bridge tolls, where YY is one of the class groups
 
-NOTES:
-The following are details in the implementation which are specified
-in the config.properties file or in the traffic_config list in the
-run function (to be moved to the config.properties).
+The available class groups for the skim / attribute names are:
+"da", "sr2", "sr3", "vsm", sml", "med", "lrg"
+
+Example single class config, as a Python dictionary:
+    {
+        "name": "da",
+        "description": "drive alone",
+        "mode": "d",
+        "demand": [
+            {"file": "household", "name": "SOV_GP_{period}"},
+            {"file": "air_passenger", "name": "DA"},
+            {"file": "internal_external", "name": "DA"},
+        ],
+        "excluded_links": ["is_toll_da", "is_sr2"],
+        "value_of_time": 18.93,  # $ / hr
+        "operating_cost": 17.23,  # cents / mile
+        "toll": "@bridgetoll_da",
+        "skims": ["time", "dist", "freeflowtime", "bridgetoll_da"],
+    }
+
+Other relevant parameters from the config are
+    emme.highway.relative_gap: target relative gap stopping criteria
+    emme.highway.max_iterations: maximum iterations stopping criteria
+    emme.highway.demand_files: mapping giving short names for relative
+        paths to OMX files for demand import. Can use {period} placeholder
+    emme.num_processors: number of processors as integer or "MAX" or "MAX-N"
+    emme.scenario_ids: mapping of period ID to scenario number
+
+The Emme network must have the following attributes available:
+    Link:
+    - "length" in feet
+    - "type", the facility type
+    - "vdf", volume delay function (volume delay functions must also be setup)
+    - "@free_flow_speed", the free flow speed (in miles per hour)
+    - "@tollXX_YY", the toll for period XX and class subgroup (see truck
+        class) named YY
+    - "@bridgetoll_YY", the bridge toll for period XX and class subgroup
+        (see truck class) named YY
+    - "@valuetoll_YY", the "value", non-bridge toll for period XX and class
+        subgroup (see truck class) named YY
+    - modes: must be set on links and match the specified mode codes in
+        the traffic config
+    Node:
+    - "@mazseq": the MAZ identifiers (used in the highwaymaz assignment)
+    - "#county": the county name
+
+ Network results:
+    - @flow_YY: link PCE flows per class, where YY is the class name in the config
+    - timau: auto travel time
+    - volau: total assigned flow in PCE
+
+ Notes:
+    - Output matrices are in miles, minutes, and cents (2010 dollars) and are stored as real values;
+    - Intrazonal distance/time is one half the distance/time to the nearest neighbor;
+    - Intrazonal bridge and value tolls are assumed to be zero
+
+The following are the default example setup which are specified
+in the config.properties file.
     The traffic assignment is run for the following periods:
         (1) EA: early AM, 3 am to 6 am;
         (2) AM: AM peak period, 6 am to 10 am;
@@ -38,11 +133,12 @@ run function (to be moved to the config.properties).
         (10) lrgtrktoll, mode "L", large trucks, value toll eligible
                 skims: time, dist, freeflowtime,
 
-    Note that the "truck" and "trucktoll" classes combine very small, small and medium trucks
+    Note that the "truck" and "trucktoll" classes combine very small, small and
+    medium trucks
 
-    The skims are stored in the Emmebank and exported to OMX with names with the following
-    convention:
-        period_class_skim
+    The skims are stored in the Emmebank and exported to OMX with names with
+    the following convention:
+        period_class_skim, e.g. am_da_bridgetoll_da
 
     Four types of trips are assigned:
         (a) personal, inter-regional travel, file "household";
@@ -50,309 +146,69 @@ run function (to be moved to the config.properties).
         (c) commercial travel, file "commercial";
         (d) air passenger travel, file "air_passenger";
 
-    Separate trip tables are read in by the script for each of these travel types.
-
-The Emme network must have the following attributes set:
-    - "length" in feet
-    - "type"  the facility type
-    - "vdf", volume delay function (volume delay functions must also be setup)
-    - "@free_flow_speed" the free flow speed (in miles per hour)
-    - "@tollXX_YY"
-    - "@bridgetoll_YY"
-    - "@valuetoll_YY"
-    - modes
-    - "@mazseq"
-    - "#county"
-
- Network results:
-     TODO
-
- Notes:
-    - Output matrices are in miles, minutes, and cents (2010 dollars) and are stored as real values;
-    - Intrazonal distance/time is one half the distance/time to the nearest neighbor;
-    - Intrazonal bridge and value tolls are assumed to be zero
-
+    The trip tables are read in by the script for each of these
+    travel types.
 """
 
 from contextlib import contextmanager as _context
 import os as _os
+
+# from typing import List, Union, Any, Dict
 import numpy as _numpy
 
 from tm2py.core.component import Component as _Component, Controller as _Controller
 import tm2py.core.emme as _emme_tools
 from tm2py.model.assignment.highwaymaz import AssignMAZSPDemand as _AssignMAZSPDemand
 
-
 _join, _dir = _os.path.join, _os.path.dirname
 
 
 class HighwayAssignment(_Component):
-    """docstring for traffic assignment"""
+    """Highway assignment and skims"""
 
-    def __init__(self, controller: _Controller, root_dir: str):
-        """Run highway assignment and skims.
+    def __init__(self, controller: _Controller, root_dir: str = None):
+        """Highway assignment and skims.
 
         Args:
             controller: parent Controller object
-            root_dir (str): root directory containing Emme project, demand matrix root directory.
+            root_dir (str): root directory containing Emme project, demand matrices
         """
         super().__init__(controller)
         self._num_processors = _emme_tools.parse_num_processors(
-            self.config.emme.number_of_processors
+            self.config.emme.num_processors
         )
         if root_dir is None:
             self._root_dir = _os.getcwd()
+        else:
+            self._root_dir = root_dir
         self._matrix_cache = None
         self._emme_manager = None
         self._emmebank = None
         self._skim_matrices = []
-        self._omx_files = {}
 
     @property
     def _modeller(self):
-        return self._emme_manager.modeller()
+        return self._emme_manager.modeller
 
     def run(self):
         """Run highway assignment and skims."""
         project_path = _join(self._root_dir, "mtc_emme", "mtc_emme.emp")
         self._emme_manager = _emme_tools.EmmeProjectCache()
-        project = self._emme_manager.project(project_path)
-        self._modeller = self._emme_manager.init_modeller(project)
+        self._emme_manager.project(project_path)
         self._emmebank = self._modeller.emmebank
-
-        msa_iteration = self.controller.iteration
-        # List of assignment classes
-        # TODO: move to config
-        traffic_config = [
-            {  # 0
-                "name": "da",
-                "description": "drive alone",
-                "mode": "d",
-                "demand": [
-                    {"file": "household", "name": "SOV_GP_{period}"},
-                    {"file": "air_passenger", "name": "DA"},
-                    {"file": "internal_external", "name": "DA"},
-                ],
-                "excluded_links": ["is_toll_da", "is_hov"],
-                "value_of_time": 18.93,  # $ / hr
-                "operating_cost": 17.23,  # cents / mile
-                "toll": "@bridgetoll_da",
-                "skims": ["time", "dist", "freeflowtime", "bridgetoll_da"],
-                # available skims: time, dist, bridgetoll_{}, valuetoll_{},
-                #                  freeflowtime, hovdist, tolldist
-            },
-            {  # 1
-                "name": "sr2",
-                "description": "shared ride 2",
-                "mode": "e",
-                "demand": [
-                    {
-                        "file": "household",
-                        "name": "SR2_GP_{period}",
-                        "factor": 1 / 1.75,
-                    },
-                    {
-                        "file": "household",
-                        "name": "SR2_HOV_{period}",
-                        "factor": 1 / 1.75,
-                    },
-                    {"file": "air_passenger", "name": "SR2"},
-                    {"file": "internal_external", "name": "SR2"},
-                ],
-                "excluded_links": ["is_toll_s2", "is_hov3"],
-                "value_of_time": 18.93,  # $ / hr
-                "operating_cost": 17.23,  # cents / mile
-                "toll": "@bridgetoll_sr2",
-                "skims": ["time", "dist", "freeflowtime", "bridgetoll_sr2", "hovdist"],
-            },
-            {  # 2
-                "name": "sr3",
-                "description": "shared ride 3+",
-                "mode": "f",
-                "demand": [
-                    {"file": "household", "name": "SR3_GP_{period}", "factor": 1 / 2.5},
-                    {
-                        "file": "household",
-                        "name": "SR3_HOV_{period}",
-                        "factor": 1 / 2.5,
-                    },
-                    {"file": "air_passenger", "name": "SR3"},
-                    {"file": "internal_external", "name": "SR3"},
-                ],
-                "excluded_links": ["is_toll_s3"],
-                "value_of_time": 18.93,  # $ / hr
-                "operating_cost": 17.23,  # cents / mile
-                "toll": "@bridgetoll_sr3",
-                "skims": ["time", "dist", "freeflowtime", "bridgetoll_sr3", "hovdist"],
-            },
-            {  # 3
-                "name": "truck",
-                "description": "truck",
-                "mode": "t",
-                "demand": [
-                    {"file": "commercial", "name": "VSTRUCK"},
-                    {"file": "commercial", "name": "STRUCK"},
-                    {"file": "commercial", "name": "MTRUCK"},
-                ],
-                "excluded_links": ["is_toll_truck", "is_hov"],
-                "value_of_time": 37.87,  # $ / hr
-                "operating_cost": 31.28,  # cents / mile
-                "toll": "@bridgetoll_sml",
-                "skims": [
-                    "time",
-                    "dist",
-                    "freeflowtime",
-                    "bridgetoll_vsm",
-                    "bridgetoll_sml",
-                    "bridgetoll_med",
-                ],
-            },
-            {  # 4
-                "name": "lrgtrk",
-                "description": "large truck",
-                "mode": "l",
-                "demand": [
-                    {"file": "commercial", "name": "CTRUCK", "factor": 2.0},
-                ],
-                "excluded_links": ["is_toll_truck", "is_auto_only"],
-                "value_of_time": 37.87,  # $ / hr
-                "operating_cost": 31.28,  # cents / mile
-                "toll": "@bridgetoll_lrg",
-                "passenger_car_equivalent": 2.0,
-                "skims": [
-                    "time",
-                    "dist",
-                    "freeflowtime",
-                    "bridgetoll_lrg",
-                ],
-            },
-            {  # 5
-                "name": "datoll",
-                "description": "drive alone toll",
-                "mode": "D",
-                "excluded_links": ["is_hov"],
-                "value_of_time": 18.93,  # $ / hr
-                "operating_cost": 17.23,  # cents / mile
-                "toll": "@toll_da",
-                "skims": [
-                    "time",
-                    "dist",
-                    "freeflowtime",
-                    "bridgetoll_da",
-                    "valuetoll_da",
-                    "tolldist",
-                ],
-            },
-            {  # 6
-                "name": "sr2toll",
-                "description": "shared ride 2 toll",
-                "mode": "E",
-                "demand": [
-                    {
-                        "file": "household",
-                        "name": "SR2_PAY_{period}",
-                        "factor": 1 / 1.75,
-                    },
-                    {"file": "air_passenger", "name": "SR2TOLL"},
-                    {"file": "internal_external", "name": "SR2TOLL"},
-                ],
-                "excluded_links": ["is_hov3"],
-                "value_of_time": 18.93,  # $ / hr
-                "operating_cost": 17.23,  # cents / mile
-                "toll": "@toll_sr2",
-                "toll_factor": 1 / 1.75,
-                "skims": [
-                    "time",
-                    "dist",
-                    "freeflowtime",
-                    "bridgetoll_sr2",
-                    "valuetoll_sr2",
-                    "hovdist",
-                    "tolldist",
-                ],
-            },
-            {  # 7
-                "name": "sr3toll",
-                "description": "shared ride 3+ toll",
-                "mode": "F",
-                "demand": [
-                    {
-                        "file": "household",
-                        "name": "SR3_PAY_{period}",
-                        "factor": 1 / 2.5,
-                    },
-                    {"file": "air_passenger", "name": "SR3TOLL"},
-                    {"file": "internal_external", "name": "SR3TOLL"},
-                ],
-                "excluded_links": [],
-                "value_of_time": 18.93,  # $ / hr
-                "operating_cost": 17.23,  # cents / mile
-                "toll": "@toll_sr3",
-                "toll_factor": 1 / 2.5,
-                "skims": [
-                    "time",
-                    "dist",
-                    "freeflowtime",
-                    "bridgetoll_sr3",
-                    "valuetoll_sr3",
-                    "hovdist",
-                    "tolldist",
-                ],
-            },
-            {  # 8
-                "name": "trucktoll",
-                "description": "truck toll",
-                "mode": "T",
-                "demand": [
-                    {"file": "commercial", "name": "VSTRUCKTOLL"},
-                    {"file": "commercial", "name": "STRUCKTOLL"},
-                    {"file": "commercial", "name": "MTRUCKTOLL"},
-                ],
-                "excluded_links": ["is_hov"],
-                "value_of_time": 37.87,  # $ / hr
-                "operating_cost": 31.28,  # cents / mile
-                "toll": "@toll_sml",
-                "skims": [
-                    "time",
-                    "dist",
-                    "freeflowtime",
-                    "bridgetoll_vsm",
-                    "bridgetoll_sml",
-                    "bridgetoll_med",
-                    "valuetoll_vsm",
-                    "valuetoll_sml",
-                    "valuetoll_med",
-                ],
-            },
-            {  # 9
-                "name": "lrgtrktoll",
-                "description": "large truck toll",
-                "mode": "L",
-                "demand": [
-                    {"file": "commercial", "name": "CTRUCKTOLL", "factor": 2.0},
-                ],
-                "excluded_links": ["is_auto_only", "is_hov"],
-                "value_of_time": 37.87,  # $ / hr
-                "operating_cost": 31.28,  # cents / mile
-                "passenger_car_equivalent": 2.0,
-                "toll": "@toll_lrg",
-                "skims": [
-                    "time",
-                    "dist",
-                    "freeflowtime",
-                    "bridgetoll_lrg",
-                    "valuetoll_lrg",
-                ],
-            },
-        ]
-        for period in self.config.model.periods:
+        # Run assignment and skims for all specified periods
+        for period in self.config.periods:
             scenario_id = self.config.emme.scenario_ids[period]
             scenario = self._emmebank.scenario(scenario_id)
             with self._setup(scenario):
-                # NOTE to consider: should import and avg demand be separate step?
-                self._import_demand(scenario, period, traffic_config, msa_iteration)
+                # Import demand from specified OMX files
+                # Will also MSA average demand if msa_iteration > 1
+                import_demand = ImportDemand(
+                    self.controller, self._root_dir, scenario, period
+                )
+                import_demand.run()
                 # skip for first global iteration
-                if msa_iteration > 1:
+                if self.controller.iteration > 1:
                     modes = ["x", "d"]
                     maz_assign = _AssignMAZSPDemand(
                         self.controller, scenario, period, modes
@@ -362,7 +218,7 @@ class HighwayAssignment(_Component):
                     # Initialize ul1 to 0 (MAZ-MAZ background traffic)
                     net_calc = _emme_tools.NetworkCalculator(scenario)
                     net_calc("ul1", "0")
-                self._assign_and_skim(period, scenario, traffic_config)
+                self._assign_and_skim(period, scenario)
                 self._export_skims(period, scenario)
 
     @_context
@@ -376,75 +232,8 @@ class HighwayAssignment(_Component):
                 self._matrix_cache.clear()
                 self._matrix_cache = None
 
-    def _import_demand(self, scenario, period, traffic_config, msa_iteration):
-        emmebank = scenario.emmebank
-        num_zones = len(scenario.zone_numbers)
-        with self._open_omx_files(period):
-            for class_config in traffic_config:
-                demand = self._read_demand(class_config["demand"][0], num_zones)
-                for file_config in class_config["demand"[1:]]:
-                    demand = demand + self._read_demand(file_config, num_zones)
-            demand_name = f'{period}_{traffic_config["name"]}'
-            matrix = emmebank.matrix(demand_name)
-            if msa_iteration == 1:
-                if matrix:
-                    emmebank.delete_matrix(matrix)
-                ident = emmebank.available_matrix_identifier("FULL")
-                matrix = emmebank.create_matrix(ident)
-                matrix.name = demand_name
-                matrix.description = f'{period} {traffic_config["description"]} demand'
-            else:
-                prev_demand = matrix.get_numpy_data(scenario.id)
-                demand = prev_demand + (1.0 / msa_iteration) * (demand - prev_demand)
-            matrix.set_numpy_data(demand, scenario.id)
-
-    @_context
-    def _open_omx_files(self, period):
-        root = _join(self._root_dir, "demand_matrices", "highway")
-        # TODO: set file paths in config
-        self._omx_files = {
-            "household": _emme_tools.OMX(
-                _join(root, "household", f"TAZ_Demand_{period}.omx")
-            ),
-            "air_passenger": _emme_tools.OMX(
-                _join(root, "air_passenger", f"tripsAirPax{period}.omx")
-            ),
-            "internal_external": _emme_tools.OMX(
-                _join(root, "internal_external", f"tripsIx{period}.omx")
-            ),
-            "commercial": _emme_tools.OMX(
-                _join(root, "commercial", f"tripstrk{period}.omx")
-            ),
-        }
-        try:
-            for file_obj in self._omx_files.values():
-                file_obj.open()
-            yield
-        finally:
-            for file_obj in self._omx_files.values():
-                file_obj.close()
-            self._omx_files = {}
-
-    def _read_demand(self, file_config, num_zones):
-        file_ref = file_config["file"]
-        name = file_config["name"]
-        factor = file_config.get("factor")
-        demand = self._omx_files[file_ref][name].read()
-        if factor is not None:
-            demand = factor * demand
-        shape = demand.shape
-        # pad external zone values with 0
-        if shape != (num_zones, num_zones):
-            demand = _numpy.pad(
-                demand, ((0, num_zones - shape[0]), (0, num_zones - shape[1]))
-            )
-        return demand
-
-    # def validate_inputs(self):
-
-    # def trace_od_pair(self):
-
-    def _assign_and_skim(self, period, scenario, traffic_config):
+    def _assign_and_skim(self, period, scenario):
+        """Runs Emme SOLA assignment with path analyses (skims)."""
         traffic_assign = self._modeller.tool(
             "inro.emme.traffic_assignment.sola_traffic_assignment"
         )
@@ -466,7 +255,7 @@ class HighwayAssignment(_Component):
         # create Emme format specification with traffic class definitions
         # and path analyses (skims)
         assign_spec = self._base_spec()
-        for class_config in traffic_config:
+        for class_config in self.config.emme.highway.classes:
             emme_class_spec = self._prepare_traffic_class(
                 class_config, scenario, period
             )
@@ -485,7 +274,10 @@ class HighwayAssignment(_Component):
             )
 
     def _calc_time_skim(self, emme_class_spec):
-        od_travel_times = emme_class_spec["results"]["od_travel_times"]["shortest_paths"]
+        """Cacluate the matrix skim time=gen_cost-per_fac*link_costs"""
+        od_travel_times = emme_class_spec["results"]["od_travel_times"][
+            "shortest_paths"
+        ]
         if od_travel_times is not None:
             # Total link costs is always the first analysis
             cost = emme_class_spec["path_analyses"][0]["results"]["od_values"]
@@ -496,6 +288,7 @@ class HighwayAssignment(_Component):
             self._matrix_cache.set_data(od_travel_times, time_data)
 
     def _set_intrazonal_values(self, period, class_name, skims):
+        """Set the intrazonal values to 1/2 nearest neighbour for time and distance skims."""
         for skim_name in skims:
             name = f"{period}_{class_name}_{skim_name}"
             matrix = self._emmebank.matrix(name)
@@ -507,8 +300,9 @@ class HighwayAssignment(_Component):
                 self._matrix_cache.set_data(matrix, data)
 
     def _export_skims(self, period, scenario):
+        """Export skims to OMX files by period."""
         root = _dir(_dir(self._emmebank.path))
-        omx_file_path = _join(root, f"{period}_traffic_skims.omx")
+        omx_file_path = _join(root, f"traffic_skims_{period}.omx")
         with _emme_tools.OMX(
             omx_file_path, "w", scenario, matrix_cache=self._matrix_cache
         ) as omx_file:
@@ -517,11 +311,10 @@ class HighwayAssignment(_Component):
         self._matrix_cache.clear()
 
     def _base_spec(self):
-        relative_gap = self.config.emme.highway_assignment.relative_gap
-        max_iterations = self.config.emme.highway_assignment.max_iterations
+        """Generate template Emme SOLA assignment specification"""
+        relative_gap = self.config.emme.highway.relative_gap
+        max_iterations = self.config.emme.highway.max_iterations
         # NOTE: mazmazvol as background traffic in link.data1 ("ul1")
-        #       to consider: background transit vehicles per-period
-        #       (assignment period length) PCE?
         base_spec = {
             "type": "SOLA_TRAFFIC_ASSIGNMENT",
             "background_traffic": {
@@ -541,6 +334,7 @@ class HighwayAssignment(_Component):
         return base_spec
 
     def _prepare_traffic_class(self, class_config, scenario, period):
+        """Prepare attributes and matrices and path analyses specs by class."""
         create_attribute = self._modeller.tool(
             "inro.emme.data.extra_attribute.create_extra_attribute"
         )
@@ -554,9 +348,9 @@ class HighwayAssignment(_Component):
         link_cost = f"@cost_{name_lower}"
         create_attribute("LINK", link_cost, overwrite=True, scenario=scenario)
         if toll_factor is None:
-            cost_expression = f'length * {op_cost} + {toll}'
+            cost_expression = f"length * {op_cost} + {toll}"
         else:
-            cost_expression = f'length * {op_cost} + {toll} * {toll_factor}'
+            cost_expression = f"length * {op_cost} + {toll} * {toll_factor}"
         net_calc(link_cost, cost_expression)
         link_flow = create_attribute(
             "LINK",
@@ -568,14 +362,15 @@ class HighwayAssignment(_Component):
         )
 
         class_analysis, od_travel_times = self._prepare_path_analyses(
-            class_config["skims"], scenario, period, name, link_cost)
+            class_config["skims"], scenario, period, name, link_cost
+        )
         emme_class_spec = {
-            "mode": class_config["mode"],
+            "mode": class_config["emme_mode"],
             "demand": f'mf"{period}_{name}"',
             "generalized_cost": {
                 "link_costs": link_cost,  # cost in $0.01
-                "perception_factor": 0.6
-                / class_config["value_of_time"],  # $/hr -> min/$0.01
+                # $/hr -> min/$0.01
+                "perception_factor": 0.6 / class_config["value_of_time"],
             },
             "results": {
                 "link_volumes": link_flow.id,
@@ -586,6 +381,7 @@ class HighwayAssignment(_Component):
         return emme_class_spec
 
     def _prepare_path_analyses(self, skim_names, scenario, period, name, link_cost):
+        """Prepare the path analysis specification and matrices for all skims"""
         create_matrix = self._modeller.tool("inro.emme.data.matrix.create_matrix")
         skim_names = skim_names[:]
         skim_matrices = []
@@ -636,6 +432,7 @@ class HighwayAssignment(_Component):
 
     @staticmethod
     def _analysis_spec(matrix_name, link_attr):
+        """Template path analysis spec"""
         analysis_spec = {
             "link_component": link_attr,
             "turn_component": None,
@@ -655,3 +452,96 @@ class HighwayAssignment(_Component):
             },
         }
         return analysis_spec
+
+
+class ImportDemand(_Component):
+    """Import and average highway assignment demand from OMX files to Emme database"""
+
+    def __init__(
+        self,
+        controller: _Controller,
+        root_dir: str,
+        scenario: _emme_tools.EmmeScenario,
+        period: str,
+    ):
+        """Import and average highway demand.
+
+        Demand is imported from OMX files based on reference file paths and OMX
+        matrix names in highway assignment config (emme.highway.classes).
+        The demand is average using MSA with the current demand matrices if the
+        controller.iteration > 1.
+
+        Args:
+            controller: parent Controller object
+            root_dir (str): root directory containing Emme project, demand matrices
+            scenario: Emme scenario object for reference zone system
+            period: time period ID
+        """
+        super().__init__(controller)
+        self._root_dir = root_dir
+        self._scenario = scenario
+        self._period = period
+        self._omx_files = {}
+
+    def run(self):
+        """Run demand import from OMX files and average"""
+        scenario = self._scenario
+        period = self._period
+        traffic_config = self.config.emme.highway.classes
+        msa_iteration = self.controller.iteration
+        emmebank = scenario.emmebank
+        num_zones = len(scenario.zone_numbers)
+        with self._setup():
+            for class_config in traffic_config:
+                demand = self._read_demand(class_config["demand"][0], num_zones)
+                for file_config in class_config["demand"][1:]:
+                    demand = demand + self._read_demand(file_config, num_zones)
+                demand_name = f'{period}_{class_config["name"]}'
+                matrix = emmebank.matrix(demand_name)
+                if msa_iteration <= 1:
+                    if matrix:
+                        emmebank.delete_matrix(matrix)
+                    ident = emmebank.available_matrix_identifier("FULL")
+                    matrix = emmebank.create_matrix(ident)
+                    matrix.name = demand_name
+                    matrix.description = (
+                        f'{period} {class_config["description"]} demand'
+                    )
+                else:
+                    # Load prev demand and MSA average
+                    prev_demand = matrix.get_numpy_data(scenario.id)
+                    demand = prev_demand + (1.0 / msa_iteration) * (
+                        demand - prev_demand
+                    )
+                matrix.set_numpy_data(demand, scenario.id)
+
+    @_context
+    def _setup(self):
+        demand_files = self.config.emme.highway.demand_files
+        for name, path in demand_files.items():
+            self._omx_files[name] = _emme_tools.OMX(
+                _join(self._root_dir, path.format(period=self._period))
+            )
+        try:
+            for file_obj in self._omx_files.values():
+                file_obj.open()
+            yield
+        finally:
+            for file_obj in self._omx_files.values():
+                file_obj.close()
+            self._omx_files = {}
+
+    def _read_demand(self, file_config, num_zones):
+        file_ref = file_config["file"]
+        name = file_config["name"].format(period=self._period.upper())
+        factor = file_config.get("factor")
+        demand = self._omx_files[file_ref].read(name)
+        if factor is not None:
+            demand = factor * demand
+        shape = demand.shape
+        # pad external zone values with 0
+        if shape != (num_zones, num_zones):
+            demand = _numpy.pad(
+                demand, ((0, num_zones - shape[0]), (0, num_zones - shape[1]))
+            )
+        return demand
