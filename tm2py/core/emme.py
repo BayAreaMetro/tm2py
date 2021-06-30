@@ -92,8 +92,18 @@ class EmmeProjectCache:
 
     @property
     def modeller(self) -> EmmeModeller:
-        """Return Modeller object, init_modeller must have been previously called."""
-        return _m.Modeller()
+        """Return Modeller object.
+
+        If not already initialized the first opened Emme project will be used
+        to do so.
+        """
+        try:
+            return _m.Modeller()
+        except AssertionError:
+            if self._project_cache:
+                emme_project = next(iter(self._project_cache.values()))
+                return _m.Modeller(emme_project)
+            raise
 
     @staticmethod
     def logbook_write(name: str, value: str = None, attributes: Dict[str, Any] = None):
@@ -108,6 +118,7 @@ class EmmeProjectCache:
             value: Optional. An HTML string value to be displayed in main detail
                    pane of the logbook entry
         """
+        attributes = attributes if attributes else {}
         _m.logbook_write(name, value=value, attributes=attributes)
 
     @staticmethod
@@ -129,6 +140,7 @@ class EmmeProjectCache:
             value: Optional. An HTML string value to be displayed in main detail
                    pane of the logbook entry.
         """
+        attributes = attributes if attributes else {}
         with _m.logbook_trace(name, value=value, attributes=attributes):
             yield
 
@@ -282,11 +294,11 @@ class OMX:
         """.
 
         Args:
-            file_path:
+            file_path: 
             mode:
             scenario:
             omx_key: "ID_NAME", "NAME", "ID"
-            matrix_cache:
+            matrix_cache: 
         """
         self._file_path = file_path
         self._mode = mode

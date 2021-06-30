@@ -38,10 +38,14 @@ class Configuration:
 class ConfigItem(SimpleNamespace):
     """Support use of both .X and ["X"] from configuration"""
 
-    # Skip too-few-public methods recomendation
-    # pylint: disable=R0903
     def __getitem__(self, key):
         return getattr(self, key)
+
+    def items(self):
+        return self.__dict__.items()
+
+    def get(self, key):
+        return self.__dict__.get(key)
 
 
 def _dict_to_config(data):
