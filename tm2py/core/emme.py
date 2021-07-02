@@ -291,14 +291,19 @@ class OMX:
         omx_key: str = "NAME",
         matrix_cache: MatrixCache = None,
     ):  # pylint: disable=R0913
-        """.
+        """Write from Emmebank or Matrix Cache to OMX file, or read from OMX to Numpy.
+
+        Also supports with statement.
 
         Args:
-            file_path: 
-            mode:
-            scenario:
-            omx_key: "ID_NAME", "NAME", "ID"
-            matrix_cache: 
+            file_path: path of OMX file
+            mode: "r", "w" or "a"
+            scenario: Emme scenario object for zone system and reference
+                Emmebank
+            omx_key: "ID_NAME", "NAME", "ID", format for generating
+                OMX key from Emme matrix data
+            matrix_cache: optional, Matrix Cache to support write data
+                from cache instead of Emmmebank
         """
         self._file_path = file_path
         self._mode = mode
@@ -344,7 +349,8 @@ class OMX:
         """Write the list of emme matrices to OMX file.
 
         Args:
-            matrices:
+            matrices: list of Emme matrix objects or names / IDs
+                of matrices in Emmebank
         """
         if isinstance(matrices, dict):
             for key, matrix in matrices.iteritems():
@@ -357,8 +363,10 @@ class OMX:
         """Write Emme matrix (as name or ID or Emme matrix object).
 
         Args:
-            matrix:
-            name:
+            matrix: Emme matrix object or name / ID of matrix in Emmebank
+            name: optional name to use for OMX key, if not specified the
+                omx_key format will be used to generate a name from the
+                Emme matrix data
         """
         if self._mode not in ["a", "w"]:
             raise Exception("{0}: open in read-only mode".format(self._file_path))
@@ -390,11 +398,11 @@ class OMX:
         """Write array with min and max values capped.
 
         Args:
-            numpy_array:
-            name:
-            a_min:
-            a_max:
-            attrs:
+            numpy_array: Numpy array
+            name: name to use for the OMX key
+            a_min: minimum value to clip array data
+            a_max: optional maximum value to clip array data
+            attrs: additional attribute key value pairs to write to OMX file
         """
         if a_max is not None:
             numpy_array = numpy_array.clip(a_min, a_max)

@@ -1,16 +1,34 @@
 """Assigns MAZ-to-MAZ demand along shortest generalized cost path for nearby trips.
 
- MAZ to MAZ local networks are as follows:
-         (1) counties 1, 2, and 3
-         (2) counties 4 and 5
-         (3) counties 6, 7, 8, and 9
+ MAZ to MAZ demand is read in 3 separate OMX matrices are as follows:
+         (1) counties 1, 2, and 3 ("San Francisco", "San Mateo", "Santa Clara")
+         (2) counties 4 and 5 ("Alameda", "Contra Costa")
+         (3) counties 6, 7, 8, and 9 ("Solano", "Napa", "Sonoma", "Marin")
 
- Input:  (1) hwy\\avgload@token_period@.net - TAZ output network for skimming by time period
-         (2) hwy\\hwyparam.block - highway assignment generalized cost parameters
-         (3) MAZ_Demand_@mazset@_@token_period@.mat - MAZ to MAZ auto demand for each local network
+The demand is expected to be short distance (e.g. <0.5 miles), or within the
+same TAZ. The demand is grouped into bins of origin -> all destinations, by
+distance (straight-line) to furthest destination. This limits the size of the
+shortest path calculated to the minimum required.
+The bin edges have been predefined after testing as (in miles):
+    [0.0, 0.9, 1.2, 1.8, 2.5, 5.0, 10.0, max_dist]
 
- Output: (1) maz_preload_@token_period@.net - Network by time period with link attribute MAZMAZVOL
-             for copying over to the TAZ to TAZ highway assignment
+
+Input:
+Emme network with:
+    Link attributes:
+        - time attribute, either timau (resulting VDF congested time)
+          or @free_flow_time
+    Node attributes: @mazseq, x, y, and #county
+Demand matrices under /demand_matrices/highway/maz_demand"
+    auto_{period}_MAZ_AUTO_1_{period}.omx
+    auto_{period}_MAZ_AUTO_2_{period}.omx
+    auto_{period}_MAZ_AUTO_3_{period}.omx
+    NOTE: demand structured is fixed in current version
+          this will be reviewed
+
+Output:
+The resulting MAZ-MAZ flows are saved in link data1 ("ul1") which is
+used as background traffic in the general Highway assignment.
 """
 
 import array as _array
@@ -19,37 +37,56 @@ from contextlib import contextmanager as _context
 from math import sqrt as _sqrt
 import os as _os
 import time as _time
+from typing import List
 
 
-from tm2py.core.component import Component as _Component
+from tm2py.core.component import Component as _Component, Controller as _Controller
 import tm2py.core.emme as _emme_tools
 
 
 _join, _dir = _os.path.join, _os.path.dirname
+EmmeScenario = _emme_tools.EmmeScenario
 
 
 class AssignMAZSPDemand(_Component):
-    """TODO: docstring"""
+    """MAZ-to-MAZ shortest-path highway assignment.
 
-    def __init__(self, controller, scenario, period, modes):
-        """docstring for traffic assignment run"""
+    Calculates shortest path between MAZs with demand in the Emme network
+    and assigns flow.
+    """
+
+    # skip Too many instance attributes recommendation, it is OK as is
+    # pylint: disable=R0902
+
+    def __init__(
+        self,
+        controller: _Controller,
+        scenario: EmmeScenario,
+        period: str,
+        modes: List[str],
+    ):
+        """MAZ-to-MAZ shortest-path highway assignment.
+
+        Args:
+            controller: parent Controller object
+            scenario: Emme scenario
+            period: one of the available period names
+            modes: list of Mode IDs in the Emme network
+        """
         super().__init__(controller)
-        self._num_processors = self.config.emme.number_of_processors
         self._scenario = scenario
         self._period = period
         self._modes = modes
         self._modeller = _emme_tools.EmmeProjectCache().modeller
-        self._root_dir = _dir(scenario.emmebank.path)
-        maz_assign_config = self.config.emme.highway_assignment.maz_assignment
-        self._vot = maz_assign_config.value_of_time
-        self._operating_cost = maz_assign_config.operating_cost
         # bins: performance parameter: crow-fly distance bins
         #       to limit shortest path calculation by origin to furthest destination
+        #       semi-exposed for performance testing
         self._bin_edges = [0.0, 0.9, 1.2, 1.8, 2.5, 5.0, 10.0]
         self._net_calc = _emme_tools.NetworkCalculator(self._scenario, self._modeller)
         self._debug_report = []
         self._debug = False
 
+        # Internal attributes to track data through the sequence of steps
         self._mazs = None
         self._demand = None
         self._max_dist = 0
@@ -58,7 +95,8 @@ class AssignMAZSPDemand(_Component):
         self._leaf_index = None
 
     def run(self):
-        """docstring for traffic assignment run"""
+        """Run MAZ-to-MAZ shortest path assignment."""
+        # NOTE: demand structure to be reviewed
         root_dir = r"..\demand_matrices\highway\maz_demand"
         period = self._period
         with self._setup():
@@ -74,6 +112,7 @@ class AssignMAZSPDemand(_Component):
                     root_dir, f"auto_{period}_MAZ_AUTO_{i}_{period}.omx"
                 )
                 with _emme_tools.OMX(omx_file_path, "r") as omx_file:
+                    # NOTE: OMX matrices to be updated by WSP
                     demand_array = omx_file.read_hdf5("/matrices/M0")
                 self._process_demand(demand_array, mazseq)
                 del demand_array
@@ -131,8 +170,8 @@ class AssignMAZSPDemand(_Component):
             time_attr = "timau"
         else:
             time_attr = "@free_flow_time"
-        vot = self._vot
-        op_cost = self._operating_cost
+        vot = self.config.emme.highway_maz.value_of_time
+        op_cost = self.config.emme.highway_maz.operating_cost
         self._net_calc(
             "@link_cost", f"{time_attr} + 0.6 / {vot} * (length * {op_cost})"
         )
@@ -143,7 +182,6 @@ class AssignMAZSPDemand(_Component):
         self._network.create_attribute("LINK", "temp_flow")
         attrs_to_read = [
             ("NODE", ["@mazseq", "x", "y", "#county"]),
-            # ("LINK", ["@link_cost_maz"]),
         ]
         for domain, attrs in attrs_to_read:
             self._read_attr_values(domain, attrs)
@@ -253,16 +291,17 @@ class AssignMAZSPDemand(_Component):
         shortest_paths_tool = self._modeller.tool(
             "inro.emme.network_calculation.shortest_path"
         )
-        # TODO: temp binary path files / path file directory
         max_radius = max_radius * 5280 + 100  # add some buffer for rounding error
+        root_dir = _dir(self._scenario.emmebank.path)
+        num_processors = self.config.emme.number_of_processors
         shortest_paths_tool(
             modes=self._modes,
             roots_attribute="@maz_root",
             leafs_attribute="@maz_leaf",
             link_cost_attribute="@link_cost_maz",
-            num_processors=self._num_processors,
+            num_processors=num_processors,
             direction="FORWARD",
-            paths_file=_join(self._root_dir, f"shortest_paths_{bin_no}.ebp"),
+            paths_file=_join(root_dir, f"shortest_paths_{bin_no}.ebp"),
             export_format_paths="BINARY",
             through_leaves=False,
             through_centroids=False,
@@ -275,46 +314,29 @@ class AssignMAZSPDemand(_Component):
 
     def _assign_flow(self, bin_no, demand):
         start_time = _time.time()
-        # NOTE: can add additional report details with log levels
         with open(
-            _join(self._root_dir, f"shortest_paths_{bin_no}.ebp"), "rb"
+            _join(_dir(self._scenario.emmebank.path), f"shortest_paths_{bin_no}.ebp"),
+            "rb",
         ) as paths_file:
-            # read first 4 integers from file
-            header = _array.array("I")
-            header.fromfile(paths_file, 4)
-            _, _, roots_nb, leafs_nb = header
-            # read list of positions by orig-dest index, for list of path node IDs in file
-            path_indicies = _array.array("I")
-            path_indicies.fromfile(paths_file, roots_nb * leafs_nb + 1)
+            # read set of path pointers by Orig-Dest sequence from file
+            offset, leafs_nb, path_indicies = self._get_path_indices(paths_file)
             assigned = 0
             not_assigned = 0
-            offset = roots_nb * leafs_nb + 1 + 4
             bytes_read = offset
             # for all orig-dest pairs with demand, load path from file
             for data in demand:
                 # get file position based on orig-dest index
-                p_index = self._root_index[data["orig"].number]
-                q_index = self._leaf_index[data["dest"].number]
-                index = p_index * leafs_nb + q_index
-                start = path_indicies[index]
-                end = path_indicies[index + 1]
-
-                # no path found, likely disconnected zone
+                start, end = self._get_path_location(
+                    data["orig"].number, data["dest"].number, leafs_nb, path_indicies
+                )
+                # no path found, disconnected zone
                 if start == end:
-                    not_assigned += 1
+                    not_assigned += data["dem"]
                     continue
                 paths_file.seek((start + offset) * 4)
-                # load sequence of Node IDs which define the path
-                path = _array.array("I")
-                path.fromfile(paths_file, end - start)
+                self._assign_path_flow(paths_file, start, end, data["dem"])
+                assigned += data["dem"]
                 bytes_read += end - start
-                path_iter = iter(path)
-                i_node = next(path_iter)
-                for j_node in path_iter:
-                    link = self._network.link(i_node, j_node)
-                    link["temp_flow"] += data["dem"]
-                    i_node = j_node
-                assigned += 1
 
         self._debug_report.append(
             "    ASSIGN bin %s, total %s, assign %s, not assign %s, bytes %s  --- %s seconds ---"
@@ -328,6 +350,39 @@ class AssignMAZSPDemand(_Component):
             )
         )
         self._save_attr_values("LINK", ["temp_flow"], ["data1"])
+
+    @staticmethod
+    def _get_path_indices(paths_file):
+        # read first 4 integers from file
+        header = _array.array("I")
+        header.fromfile(paths_file, 4)
+        _, _, roots_nb, leafs_nb = header
+        # Load sequence of path indices (positions by orig-dest index),
+        # pointing to list of path node IDs in file
+        path_indicies = _array.array("I")
+        path_indicies.fromfile(paths_file, roots_nb * leafs_nb + 1)
+        offset = roots_nb * leafs_nb + 1 + 4
+        return offset, leafs_nb, path_indicies
+
+    def _get_path_location(self, orig, dest, leafs_nb, path_indicies):
+        p_index = self._root_index[orig]
+        q_index = self._leaf_index[dest]
+        index = p_index * leafs_nb + q_index
+        start = path_indicies[index]
+        end = path_indicies[index + 1]
+        return start, end
+
+    def _assign_path_flow(self, paths_file, start, end, demand):
+        # load sequence of Node IDs which define the path
+        path = _array.array("I")
+        path.fromfile(paths_file, end - start)
+        # proccess path to sequence of links and add flow
+        path_iter = iter(path)
+        i_node = next(path_iter)
+        for j_node in path_iter:
+            link = self._network.link(i_node, j_node)
+            link["temp_flow"] += demand
+            i_node = j_node
 
     def _read_attr_values(self, domain, src_names, dst_names=None):
         self._copy_attr_values(

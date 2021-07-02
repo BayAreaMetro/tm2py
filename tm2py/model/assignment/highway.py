@@ -20,12 +20,12 @@ are completed in the create_emme_network component.
         this class' available subnetwork (generate link.modes)
         Options are:
             - "is_toll_da": has a value (non-bridge) toll for drive alone
-            - "is_sr2": is reserved for shared ride 2+
-            - "is_sr3": is reserved for shared ride 3+
+            - "is_sr2": is reserved for shared ride 2+ (@useclass in 2,3)
+            - "is_sr3": is reserved for shared ride 3+ (@useclass == 3)
             - "is_toll_sr2": has a value (non-bridge) toll for shared ride 2
             - "is_toll_sr3": has a value (non-bridge) toll for shared ride 3+
             - "is_toll_truck": has a value (non-bridge) toll for trucks
-            - "is_auto_only": is reserved for autos (non-truck)
+            - "is_auto_only": is reserved for autos (non-truck) (@useclass != 1)
     "value_of_time": value of time for this class in $ / hr
     "operating_cost": vehicle operating cost in cents / mile
     "toll": additional toll cost link attribute (in cents)
@@ -49,7 +49,7 @@ Example single class config, as a Python dictionary:
     {
         "name": "da",
         "description": "drive alone",
-        "mode": "d",
+        "emme_mode": "d",
         "demand": [
             {"file": "household", "name": "SOV_GP_{period}"},
             {"file": "air_passenger", "name": "DA"},
@@ -75,13 +75,12 @@ The Emme network must have the following attributes available:
     - "length" in feet
     - "type", the facility type
     - "vdf", volume delay function (volume delay functions must also be setup)
-    - "@free_flow_speed", the free flow speed (in miles per hour)
+    - "@useclass", vehicle-class restrictions classification, auto-only, HOV only
+    - "@free_flow_time", the free flow time (in minutes)
     - "@tollXX_YY", the toll for period XX and class subgroup (see truck
-        class) named YY
-    - "@bridgetoll_YY", the bridge toll for period XX and class subgroup
-        (see truck class) named YY
-    - "@valuetoll_YY", the "value", non-bridge toll for period XX and class
-        subgroup (see truck class) named YY
+        class) named YY, used together with @tollbooth to generate @bridgetoll_YY
+        and @valuetoll_YY
+    - "@tollbooth", label to separate bridgetolls from valuetolls
     - modes: must be set on links and match the specified mode codes in
         the traffic config
     Node:
@@ -89,6 +88,10 @@ The Emme network must have the following attributes available:
     - "#county": the county name
 
  Network results:
+    - "@bridgetoll_YY", the bridge toll for period XX and class subgroup
+        (see truck class) named YY
+    - "@valuetoll_YY", the "value", non-bridge toll for period XX and class
+        subgroup (see truck class) named YY
     - @flow_YY: link PCE flows per class, where YY is the class name in the config
     - timau: auto travel time
     - volau: total assigned flow in PCE
@@ -198,28 +201,30 @@ class HighwayAssignment(_Component):
         self._emmebank = self._modeller.emmebank
         # Run assignment and skims for all specified periods
         for period in self.config.periods:
-            scenario_id = self.config.emme.scenario_ids[period]
+            scenario_id = self.config.emme.scenario_ids[period["name"]]
             scenario = self._emmebank.scenario(scenario_id)
             with self._setup(scenario):
                 # Import demand from specified OMX files
                 # Will also MSA average demand if msa_iteration > 1
                 import_demand = ImportDemand(
-                    self.controller, self._root_dir, scenario, period
+                    self.controller, self._root_dir, scenario, period["name"]
                 )
                 import_demand.run()
                 # skip for first global iteration
                 if self.controller.iteration > 1:
+                    # non-auto mode x on MAZ connectors plus drive alone
+                    # mode d, requires review after network creation workflow
                     modes = ["x", "d"]
                     maz_assign = _AssignMAZSPDemand(
-                        self.controller, scenario, period, modes
+                        self.controller, scenario, period["name"], modes
                     )
                     maz_assign.run()
                 else:
                     # Initialize ul1 to 0 (MAZ-MAZ background traffic)
                     net_calc = _emme_tools.NetworkCalculator(scenario)
                     net_calc("ul1", "0")
-                self._assign_and_skim(period, scenario)
-                self._export_skims(period, scenario)
+                self._assign_and_skim(period["name"], scenario)
+                self._export_skims(period["name"], scenario)
 
     @_context
     def _setup(self, scenario):
@@ -268,7 +273,7 @@ class HighwayAssignment(_Component):
         for emme_class_spec in assign_spec["classes"]:
             self._calc_time_skim(emme_class_spec)
         # Set intra-zonals for time and dist to be 1/2 nearest neighbour
-        for class_config in traffic_config:
+        for class_config in self.config.emme.highway.classes:
             self._set_intrazonal_values(
                 period, class_config["name"], class_config["skims"]
             )
@@ -341,46 +346,51 @@ class HighwayAssignment(_Component):
         net_calc = _emme_tools.NetworkCalculator(scenario)
 
         name = class_config["name"]
-        name_lower = name.lower()
+        name_lower = name
         op_cost = class_config["operating_cost"]
         toll = class_config["toll"]
         toll_factor = class_config.get("toll_factor")
-        link_cost = f"@cost_{name_lower}"
-        create_attribute("LINK", link_cost, overwrite=True, scenario=scenario)
+        create_attribute(
+            "LINK",
+            f"@cost_{name_lower}",
+            f'{period} {class_config["description"]} total costs'[:40],
+            overwrite=True,
+            scenario=scenario,
+        )
         if toll_factor is None:
             cost_expression = f"length * {op_cost} + {toll}"
         else:
             cost_expression = f"length * {op_cost} + {toll} * {toll_factor}"
-        net_calc(link_cost, cost_expression)
-        link_flow = create_attribute(
+        net_calc(f"@cost_{name_lower}", cost_expression)
+        create_attribute(
             "LINK",
             f"@flow_{name_lower}",
-            f'{period} {class_config["description"]} link volume',
+            f'{period} {class_config["description"]} link volume'[:40],
             0,
             overwrite=True,
             scenario=scenario,
         )
 
         class_analysis, od_travel_times = self._prepare_path_analyses(
-            class_config["skims"], scenario, period, name, link_cost
+            class_config["skims"], scenario, period, name
         )
         emme_class_spec = {
             "mode": class_config["emme_mode"],
             "demand": f'mf"{period}_{name}"',
             "generalized_cost": {
-                "link_costs": link_cost,  # cost in $0.01
+                "link_costs": f"@cost_{name_lower}",  # cost in $0.01
                 # $/hr -> min/$0.01
                 "perception_factor": 0.6 / class_config["value_of_time"],
             },
             "results": {
-                "link_volumes": link_flow.id,
+                "link_volumes": f"@flow_{name_lower}",
                 "od_travel_times": {"shortest_paths": od_travel_times},
             },
             "path_analyses": class_analysis,
         }
         return emme_class_spec
 
-    def _prepare_path_analyses(self, skim_names, scenario, period, name, link_cost):
+    def _prepare_path_analyses(self, skim_names, scenario, period, name):
         """Prepare the path analysis specification and matrices for all skims"""
         create_matrix = self._modeller.tool("inro.emme.data.matrix.create_matrix")
         skim_names = skim_names[:]
@@ -393,9 +403,10 @@ class HighwayAssignment(_Component):
             od_travel_times = f"{period}_{name}_time"
             skim_matrices.append(od_travel_times)
             # also get non-time costs
-            total_cost = f"{period}_{name}_cost"
-            skim_matrices.append(total_cost)
-            class_analysis.append(self._analysis_spec(total_cost, link_cost))
+            skim_matrices.append(f"{period}_{name}_cost")
+            class_analysis.append(
+                self._analysis_spec(f"{period}_{name}_cost", f"@cost_{name}".lower())
+            )
             skim_names.remove("time")
         else:
             od_travel_times = None
@@ -413,12 +424,13 @@ class HighwayAssignment(_Component):
                 "bridgetoll": f"@bridgetoll_{group}",
                 "valuetoll": f"@valuetoll_{group}",
             }
-            link_attr = analysis_link[skim_type]
             if group:
                 matrix_name = f"{period}_{name}_{skim_type}{group}"
             else:
                 matrix_name = f"{period}_{name}_{skim_type}"
-            class_analysis.append(self._analysis_spec(matrix_name, link_attr))
+            class_analysis.append(
+                self._analysis_spec(matrix_name, analysis_link[skim_type])
+            )
             skim_matrices.append(matrix_name)
 
         # create / initialize skim matrices

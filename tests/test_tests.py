@@ -1,3 +1,6 @@
+"""Test basic test operation.
+"""
+
 import pytest
 
 
@@ -10,4 +13,7 @@ def test_skipci():
 def test_testing():
     """Tests that tests are run."""
     print("Tests are being run!")
+    # Skip non-top level import and unused import warnings
+    # pylint: disable=C0415
+    # pylint: disable=W0611
     import tm2py

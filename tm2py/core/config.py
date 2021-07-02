@@ -42,10 +42,12 @@ class ConfigItem(SimpleNamespace):
         return getattr(self, key)
 
     def items(self):
+        """D.items() -> a set-like object providing a view on D's items"""
         return self.__dict__.items()
 
-    def get(self, key):
-        return self.__dict__.get(key)
+    def get(self, key, default=None):
+        """Return the value for key if key is in the dictionary, else default."""
+        return self.__dict__.get(key, default)
 
 
 def _dict_to_config(data):

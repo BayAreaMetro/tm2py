@@ -4,6 +4,7 @@
 
 
 import argparse as _argparse
+# from contextlib import contextmanager as _context
 import os as _os
 
 # from tm2py.model.assignment.setup import PrepareEmmeNetworks
@@ -43,7 +44,7 @@ class Controller(_Controller):
             # "truck_model": TruckModel(self),
             # "average_demand": AverageDemand(self),
             "highway_assignment": HighwayAssignment(self),
-            # "transit_assignment": None,  # TransitAssignment(self),
+            # "transit_assignment": TransitAssignment(self),
         }
         # self._components = [a for a in self.__dict__.values() if isinstance(a, Component)]
         self._iteration = 0
@@ -58,22 +59,24 @@ class Controller(_Controller):
         self.initialize()
         self.validate_inputs()
 
-        with self.setup():
-            self.run_prepare_emme_networks()
-            self.run_non_motorized_skim()
-            self.run_airpassenger_model()
+        # with self.setup():
+        self.run_prepare_emme_networks()
+        self.run_non_motorized_skim()
+        self.run_airpassenger_model()
+        self.run_highway_assignment()
+        self.run_transit_assignment()
+        # self.run_export_skims()
+        # or Export skims embeded in above assignment steps?
+        # NOTE: E1101 due to dynamic generation of config from TOML file
+        # pylint: disable=E1101
+        for iteration in range(self._config.run.global_iterations):
+            self._iteration = iteration
+            self.run_resident_model()
+            self.run_internal_external_model()
+            self.run_truck_model()
+            self.run_average_demand()
             self.run_highway_assignment()
             self.run_transit_assignment()
-            # self.run_export_skims()
-            # or Export skims embeded in above assignment steps?
-            for iteration in range(self._config.run.global_iterations):
-                self._iteration = iteration
-                self.run_resident_model()
-                self.run_internal_external_model()
-                self.run_truck_model()
-                self.run_average_demand()
-                self.run_highway_assignment()
-                self.run_transit_assignment()
 
     def initialize(self):
         """Placeholder for initialization"""
@@ -108,14 +111,14 @@ class Controller(_Controller):
     def run_highway_assignment(self):
         """Run highway component"""
         # NOTE: E1101 due to dynamic generation of config from TOML file
-        if self.config.run[0].highway is True:  # pylint-disable=E1101
+        if self.config.run.highway is True:  # pylint: disable=E1101
             self._components["highway_assignment"].run()
 
     def run_transit_assignment(self):
         """Run transit assignment component"""
         # NOTE: E1101 due to dynamic generation of config from TOML file
-        if self.config.run[0].transit is True:  # pylint-disable=E1101
-            self._components["transit_assignment"].run()
+        # if self.config.run.transit is True:  # pylint: disable=E1101
+        #     self._components["transit_assignment"].run()
 
 
 if __name__ == "__main__":

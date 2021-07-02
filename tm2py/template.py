@@ -58,6 +58,9 @@ class TemplateClass:
 
     """
 
+    # Skip too-few-public methods recomendation
+    # pylint: disable=R0903
+
     def __init__(self, var1: int, var2: str = "default") -> None:
         """One-line summary of what method does.
 
