@@ -118,7 +118,7 @@ in the config.properties file.
                 skims: time, dist, freeflowtime, bridgetoll_sr2, hovdist
         (3) sr3, mode "f", shared ride 3+, no value toll
                 skims: time, dist, freeflowtime, bridgetoll_sr3, hovdist
-        (4) truck, mode "t", very small, small, and medium trucks, no value toll
+        (4) trk, mode "t", very small, small, and medium trucks, no value toll
                 skims: time, dist, freeflowtime,
                        bridgetollvsm, bridgetollsml, bridgetollmed
         (5) lrgtrk, mode "l", large trucks, no value toll
@@ -129,7 +129,7 @@ in the config.properties file.
                 skims: time, dist, freeflowtime, bridgetoll_sr2, valuetoll_sr2, tolldist
         (8) sr3toll, mode "F", shared ride 3+, value toll eligible
                 skims: time, dist, freeflowtime, bridgetoll_sr3, valuetoll_sr3, tolldist
-        (9) trucktoll, mode "T", very small, small, and medium trucks, value toll eligible
+        (9) trktoll, mode "T", very small, small, and medium trucks, value toll eligible
                 skims: time, dist, freeflowtime,
                        bridgetollvsm, bridgetollsml, bridgetollmed,
                        valuetollvsm, valuetollsml, valuetollmed
