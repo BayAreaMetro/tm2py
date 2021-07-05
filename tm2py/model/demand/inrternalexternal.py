@@ -163,6 +163,6 @@ class InternalExternal(_Component):
         #   with matrix names: DA, SR2, SR3, DATOLL, SR2TOLL, SR3TOLL 
         pass
 
-        def _export_results(self, demand):
-            # Export results to OMX files
-            pass
+    def _export_results(self, demand):
+        # Export results to OMX files
+        pass
