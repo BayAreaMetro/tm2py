@@ -209,6 +209,7 @@ class Truck(_Component):
         # convert to O/D (m + m.T)/2 and divide by 100
         # apply time-of-day factors by class
         # return the time-of-day matrices
+        pass
 
     def _toll_choice(self):
         # input: time-of-day matrices
@@ -219,6 +220,7 @@ class Truck(_Component):
         #    utility of toll and notoll
         #    probabability of toll / notoll
         #    split demand into toll and notoll matrices
+        pass
 
     def _export_results(self):
         # Export results to OMX files by time-of-day
