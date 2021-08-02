@@ -147,6 +147,7 @@ TruckTollChoice.job
 
 # from contextlib import contextmanager as _context
 import os as _os
+
 # import numpy as _numpy
 # import pandas as _pandas
 from tm2py.core.component import Component as _Component
@@ -175,7 +176,7 @@ class Truck(_Component):
 
     def _generation(self):
         # load "maz_data.csv" as dataframe, copy truck_taz_data.py
-        # apply the generation models 
+        # apply the generation models
         # balance attractions and productions
         # sum linked and unlinked trips
         # return vectors of productiond and attactions (numpy or pandas)
@@ -183,14 +184,14 @@ class Truck(_Component):
 
     def _distribution(self):
         # input: the production / attraction vectors
-        # load nonres\truck_kfactors_taz.csv 
+        # load nonres\truck_kfactors_taz.csv
         # load nonres\truckFF.dat
         # compute blended truck time as an average 1/3 AM and 2/3 MD
         #     NOTE: Cube outputs skims\COM_HWYSKIMAM_taz.tpp, skims\COM_HWYSKIMMD_taz.tpp
-        #           are in the highway_skims_{period}.omx files in Emme version 
-        #           with updated matrix names, {period}_trk_time, {period}_lrgtrk_time. 
+        #           are in the highway_skims_{period}.omx files in Emme version
+        #           with updated matrix names, {period}_trk_time, {period}_lrgtrk_time.
         #           Also, there will no longer be separate very small, small and medium
-        #           truck times, as they are assigned together as the same class.         
+        #           truck times, as they are assigned together as the same class.
         #           There is only the trk_time.
         # Apply friction factors and kfactors to produce balancing matrix
         # apply the gravity models using friction factors from nonres\truckFF.dat
@@ -199,7 +200,7 @@ class Truck(_Component):
         #     matrices by name and ensure names are unique
         #     May want to use temporary matrices
         #     See core/emme.py
-        # scale the trips by 100 and bucket round 
+        # scale the trips by 100 and bucket round
         #     (maybe use Matrix controlled rounding Emme tool and precision 0.01)
         # return the daily truck trip matrices
         pass

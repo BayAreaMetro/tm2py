@@ -29,7 +29,9 @@ def run_process(commands: List[str], name: str = "", logger: _Logger = None):
             # Note: temp file created in the current working directory
             with temp_file(mode="w+", suffix="_error.log") as (err_file, _):
                 try:
-                    output = _subprocess.check_output(bat_file_path, stderr=err_file, shell=True)
+                    output = _subprocess.check_output(
+                        bat_file_path, stderr=err_file, shell=True
+                    )
                     logger.log(output.decode("utf-8"))
                 except _subprocess.CalledProcessError as error:
                     logger.log(error.output)

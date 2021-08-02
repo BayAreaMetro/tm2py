@@ -80,6 +80,7 @@ IxTollChoice.job
 
 # from contextlib import contextmanager as _context
 import os as _os
+
 # import numpy as _numpy
 # import pandas as _pandas
 from tm2py.core.component import Component as _Component
@@ -123,14 +124,14 @@ class InternalExternal(_Component):
     def _ix_time_of_day(self, pa_matrices):
         # input: results of _ix_forecast, daily PA matrices
         # STEPS:
-        # 2.1 apply time of day factors to convert 3 PA matrices into 15 
+        # 2.1 apply time of day factors to convert 3 PA matrices into 15
         #     time of day O-D matrices
         # return result array(s) / dataframe(s)
         pass
 
     def _ix_toll_choice(self, od_matrices):
         # input: result of _ix_time_of_day
-        #        skims: 
+        #        skims:
         #           REFERENCE version, from Cube Output:
         #             HWYSKIMYY_taz.omx, where YY is time period,
         #                                      XX is the class DA, S2, S3
@@ -151,16 +152,16 @@ class InternalExternal(_Component):
         #               (e) Value-toll paying distance is: {period}_{class}toll_dist,
         #               (f) Value-toll bridge toll is: {period}_{class}toll_bridgetoll_{class},
         #               (g) Value-toll value toll is: {period}_{class}toll_valuetoll_{class},
-        #             
+        #
         # STEPS:
-        # 3.1: For each time of day, for each da, sr2, sr3, calculate 
+        # 3.1: For each time of day, for each da, sr2, sr3, calculate
         #      - utility of toll and notoll
         #      - probabability of toll / notoll
         #      - split demand into toll and notoll matrices
         # 3.2 Export resulting demand to .omx files
-        # 
-        #   demand_matrices\highway\internal_external\tripsIx{period}.omx, 
-        #   with matrix names: DA, SR2, SR3, DATOLL, SR2TOLL, SR3TOLL 
+        #
+        #   demand_matrices\highway\internal_external\tripsIx{period}.omx,
+        #   with matrix names: DA, SR2, SR3, DATOLL, SR2TOLL, SR3TOLL
         pass
 
     def _export_results(self, demand):
