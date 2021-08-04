@@ -49,11 +49,15 @@ class ConfigItem(SimpleNamespace):
         """Return the value for key if key is in the dictionary, else default."""
         return self.__dict__.get(key, default)
 
+__banned_keys = ["items", "get"]
+
 
 def _dict_to_config(data):
     if isinstance(data, dict):
         result = {}
         for key, value in data.items():
+            if key in __banned_keys:
+                raise Exception(f"name '{key}' is not allowed in config")
             result[key] = _dict_to_config(value)
         return ConfigItem(**result)
     if isinstance(data, list):

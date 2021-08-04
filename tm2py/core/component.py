@@ -100,3 +100,6 @@ class Component(ABC):
 
     def write_top_sheet(self):
         """Write key outputs to the model top sheet"""
+
+    def verify(self):
+        """Verify component ouputs / results"""

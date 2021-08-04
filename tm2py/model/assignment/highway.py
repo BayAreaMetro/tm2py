@@ -224,6 +224,8 @@ class HighwayAssignment(_Component):
                     net_calc = _emme_tools.NetworkCalculator(scenario)
                     net_calc("ul1", "0")
                 self._assign_and_skim(period["name"], scenario)
+                if self.config.run.verify:
+                    self.verify(period["name"], scenario)
                 self._export_skims(period["name"], scenario)
 
     @_context
@@ -464,6 +466,30 @@ class HighwayAssignment(_Component):
             },
         }
         return analysis_spec
+
+    def verify(self, period, scenario):
+        """Run post-process verification steps 
+        """
+        # calc_vmt
+        net_calc = _emme_tools.NetworkCalculator(scenario)
+        class_vehs = []
+        for class_config in self.config.emme.highway.classes:
+            name = class_config.name.lower()
+            pce = class_config.get("pce", 1.0)
+            class_vehs.append(f"@flow_{[name]}*{[pce]}")
+        if not scenario.extra_attribute("@total_vehicles"):
+            scenario.create_extra_attribute("LINK", "@total_vehicles")
+        net_calc.add_calc("@total_vehicles", "+".join(class_vehs))
+        net_calc.add_calc(result=None, expression="length * @total_vehicles")
+        reports = net_calc.run()
+        total_vmt = reports[1]["sum"]
+        # TODO: specifiy acceptable VMT range
+        # assert min_vmt[period] <= total_vmt <= max_vmt[period]
+
+        # check skim matrices for infinities
+        for matrix in self._skim_matrices:
+            data = self._matrix_cache.get_data(matrix)
+            
 
 
 class ImportDemand(_Component):
