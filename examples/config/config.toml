@@ -1,3 +1,5 @@
+[model]
+year = 2008
 [[periods]]
 name = "ea"
 length = 3

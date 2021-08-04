@@ -9,13 +9,12 @@ import os as _os
 
 # from tm2py.model.assignment.setup import PrepareEmmeNetworks
 from tm2py.model.assignment.highway import HighwayAssignment
+from tm2py.model.assignment.transit import TransitAssignment
 
-# from tm2py.model.assignment.transit import TransitAssignment
 # from tm2py.model.assignment.nonmotoized import NonMotorizedSkim
-# from tm2py.model.demand.ctramp import ResidentModel
+# from tm2py.model.demand.resident import ResidentsModel
 # from tm2py.model.demand.truck import TruckModel
-# from tm2py.model.demand.airport import AirportModel
-# from tm2py.model.demand.something? import AverageDemand
+from tm2py.model.demand.airpassenger import AirPassenger
 from tm2py.core.config import Configuration
 from tm2py.core.logging import Logger
 from tm2py.core.component import Controller as _Controller
@@ -29,7 +28,7 @@ class Controller(_Controller):
 
     def __init__(self):
         super().__init__()
-        config_path = _join(_os.getcwd(), "config.properties")
+        config_path = _join(_os.getcwd(), "config.toml")
         self._config = Configuration(config_path)  # load config file
         self._logger = Logger(self)
         self._top_sheet = Logger(self)
@@ -38,15 +37,13 @@ class Controller(_Controller):
         self._components = {
             # "prepare_emme_networks": PrepareEmmeNetworks(self),
             # "non_motorized_skim": NonMotorizedSkim(self),
-            # "airpassenger": AirPassengerModel(self),
-            # "resident_model": ResidentModel(self),
+            "airpassenger": AirPassenger(self),
+            # "residents_model": ResidentsModel(self),
             # "internal_external_model": InternalExternalModel(self),
             # "truck_model": TruckModel(self),
-            # "average_demand": AverageDemand(self),
             "highway_assignment": HighwayAssignment(self),
-            # "transit_assignment": TransitAssignment(self),
+            "transit_assignment": TransitAssignment(self),
         }
-        # self._components = [a for a in self.__dict__.values() if isinstance(a, Component)]
         self._iteration = 0
 
     @property
@@ -65,8 +62,6 @@ class Controller(_Controller):
         self.run_airpassenger_model()
         self.run_highway_assignment()
         self.run_transit_assignment()
-        # self.run_export_skims()
-        # or Export skims embeded in above assignment steps?
         # NOTE: E1101 due to dynamic generation of config from TOML file
         # pylint: disable=E1101
         for iteration in range(self._config.run.global_iterations):
@@ -95,6 +90,9 @@ class Controller(_Controller):
 
     def run_airpassenger_model(self):
         """Run air passenger model component"""
+        # NOTE: E1101 due to dynamic generation of config from TOML file
+        if self.config.run.airpassenger is True:  # pylint: disable=E1101
+            self._components["airpassenger"].run()
 
     def run_resident_model(self):
         """Run resident model component"""
@@ -117,8 +115,8 @@ class Controller(_Controller):
     def run_transit_assignment(self):
         """Run transit assignment component"""
         # NOTE: E1101 due to dynamic generation of config from TOML file
-        # if self.config.run.transit is True:  # pylint: disable=E1101
-        #     self._components["transit_assignment"].run()
+        if self.config.run.transit is True:  # pylint: disable=E1101
+            self._components["transit_assignment"].run()
 
 
 if __name__ == "__main__":
