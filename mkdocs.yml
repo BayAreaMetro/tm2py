@@ -1,0 +1,66 @@
+site_name: "Travel Model Two Python Package: tm2py"
+site_url: https://bayareametro.github.io/tm2py
+repo_url: https://github.com/bayareametro/tm2py
+edit_uri: edit/main/docs
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: grey
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: grey
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
+
+plugins:
+  - autorefs
+  - awesome-pages
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          rendering:
+            show_source: false
+      custom_templates: templates
+      watch:
+        - tm2py
+  - search
+
+extra_javascript:
+  - https://unpkg.com/mermaid@8.5.0/dist/mermaid.min.js
+
+extra_css:
+  - https://use.fontawesome.com/releases/v5.13.0/css/all.css
+
+markdown_extensions:
+  - admonition
+  - codehilite:
+      linenums: true
+  - fontawesome_markdown
+  - meta
+  - pymdownx.inlinehilite
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tabbed
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_div_format
+  - pymdownx.smartsymbols
+  - smarty
+  - toc:
+      # insert a blank space before the character
+      permalink: " ¶"
+  
