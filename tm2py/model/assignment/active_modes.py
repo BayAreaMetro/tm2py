@@ -40,9 +40,11 @@ TODO: docstring details
 """
 
 import array as _array
+
 # from collections import defaultdict as _defaultdict
 from contextlib import contextmanager as _context
 import os as _os
+
 # from typing import List
 
 
@@ -58,12 +60,7 @@ class ActiveModesAssign(_Component):
     """MAZ-to-MAZ 
     """
 
-
-    def __init__(
-        self,
-        controller: _Controller,
-        scenario: EmmeScenario,
-    ):
+    def __init__(self, controller: _Controller, scenario: EmmeScenario):
         """TODO.
 
         Args:
@@ -89,29 +86,59 @@ class ActiveModesAssign(_Component):
         period = self._period
 
         counties = [
-            "San Francisco", 
-            "San Mateo", 
+            "San Francisco",
+            "San Mateo",
             "Santa Clara",
-            "Alameda", 
+            "Alameda",
             "Contra Costa",
-            "Solano", 
-            "Napa", 
-            "Sonoma", 
-            "Marin"
+            "Solano",
+            "Napa",
+            "Sonoma",
+            "Marin",
         ]
         # TODO: filter walk access or bike access links ?
         # TODO: output files ? append results by county to file ?
         skim_types = [
-            {"roots": "MAZ", "leafs": "MAZ", "max_dist": max_ped_distance, "output": ""},  # walk, MAZ<->MAZ
-            {"roots": "MAZ", "leafs": "TAP", "max_dist": max_ped_distance, "output": ""},  # walk, MAZ ->TAP
-            {"roots": "MAZ", "leafs": "MAZ", "max_dist": max_bike_short_distance, "output": ""},  # bike, MAZ<->MAZ
-            {"roots": "MAZ", "leafs": "TAP", "max_dist": max_bike_short_distance, "output": ""},  # bike, MAZ ->TAP
-            {"roots": "TAZ", "leafs": "TAZ", "max_dist": max_bike_short_distance, "output": ""},  # bike, TAZ<->TAZ
-            {"roots": "TAP", "leafs": "TAP", "max_dist": max_tap_ped_distance, "output": ""},  # walk, TAP<->TAP
+            {
+                "roots": "MAZ",
+                "leafs": "MAZ",
+                "max_dist": max_ped_distance,
+                "output": "",
+            },  # walk, MAZ<->MAZ
+            {
+                "roots": "MAZ",
+                "leafs": "TAP",
+                "max_dist": max_ped_distance,
+                "output": "",
+            },  # walk, MAZ ->TAP
+            {
+                "roots": "MAZ",
+                "leafs": "MAZ",
+                "max_dist": max_bike_short_distance,
+                "output": "",
+            },  # bike, MAZ<->MAZ
+            {
+                "roots": "MAZ",
+                "leafs": "TAP",
+                "max_dist": max_bike_short_distance,
+                "output": "",
+            },  # bike, MAZ ->TAP
+            {
+                "roots": "TAZ",
+                "leafs": "TAZ",
+                "max_dist": max_bike_short_distance,
+                "output": "",
+            },  # bike, TAZ<->TAZ
+            {
+                "roots": "TAP",
+                "leafs": "TAP",
+                "max_dist": max_tap_ped_distance,
+                "output": "",
+            },  # walk, TAP<->TAP
         ]
         with self._setup():
             # calculate 6 skim types X 9 counties
-            # (splitting by county should limit RAM consumption 
+            # (splitting by county should limit RAM consumption
             #  and might help runtime a little, to be tested)
             for skim in skim_types:
                 for county in counties:
@@ -120,14 +147,14 @@ class ActiveModesAssign(_Component):
 
     @_context
     def _setup(self):
-        # may want to create separate scenarios ? 
+        # may want to create separate scenarios ?
         # Or use temp scenario
-        # create @root and @leaf attributes, 
+        # create @root and @leaf attributes,
         try:
             yield
         finally:
-            # delete @root and @leaf attributes, 
-            # 
+            # delete @root and @leaf attributes,
+            #
             pass
 
     def _prepare_network(self):
@@ -148,24 +175,23 @@ class ActiveModesAssign(_Component):
 
     def _run_shortest_path(self, max_dist):
         # TODO: output:
-        #    return numpy array and write to CSV 
+        #    return numpy array and write to CSV
         shortest_paths_tool = self._modeller.tool(
             "inro.emme.network_calculation.shortest_path"
         )
         root_dir = _dir(self._scenario.emmebank.path)
         num_processors = self.config.emme.number_of_processors
         shortest_paths_tool(
-            #modes=?,
+            # modes=?,
             roots_attribute="@root",
             leafs_attribute="@leaf",
             link_cost_attribute="length",
             num_processors=num_processors,
             direction="FORWARD",
-            #paths_file=_join(root_dir, f"shortest_paths_.ebp"),
+            # paths_file=_join(root_dir, f"shortest_paths_.ebp"),
             export_format_paths="BINARY",
             through_leaves=False,
             through_centroids=False,
             # max_radius=max_radius,
-            max_cost=max_dist
+            max_cost=max_dist,
         )
-

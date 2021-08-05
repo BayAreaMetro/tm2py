@@ -180,9 +180,7 @@ class AssignMAZSPDemand(_Component):
             ["NODE", "LINK"], include_attributes=False
         )
         self._network.create_attribute("LINK", "temp_flow")
-        attrs_to_read = [
-            ("NODE", ["@mazseq", "x", "y", "#county"]),
-        ]
+        attrs_to_read = [("NODE", ["@mazseq", "x", "y", "#county"])]
         for domain, attrs in attrs_to_read:
             self._read_attr_values(domain, attrs)
         self._debug_report.append(

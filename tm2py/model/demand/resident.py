@@ -25,40 +25,35 @@ class ResidentsModel(_Component):
 
     def _start_household_manager(self):
         commands = [
-            'CALL CTRAMP\\runtime\\CTRampEnv.bat',
-            'set PATH=%CD%\\CTRAMP\runtime;C:\\Windows\\System32;%JAVA_PATH%\bin;'
-                '%TPP_PATH%;%PYTHON_PATH%;%PYTHON_PATH%\\condabin;%PYTHON_PATH%\\envs',
+            "CALL CTRAMP\\runtime\\CTRampEnv.bat",
+            "set PATH=%CD%\\CTRAMP\runtime;C:\\Windows\\System32;%JAVA_PATH%\bin;"
+            "%TPP_PATH%;%PYTHON_PATH%;%PYTHON_PATH%\\condabin;%PYTHON_PATH%\\envs",
             'CALL CTRAMP\\runtime\\runHhMgr.cmd "%JAVA_PATH%" "%HOST_IP_ADDRESS%"',
         ]
         _tools.run_process(commands, name="start_household_manager")
 
     def _start_matrix_manager(self):
         commands = [
-            'CALL CTRAMP\\runtime\\CTRampEnv.bat',
-            'set PATH=%CD%\\CTRAMP\runtime;C:\\Windows\\System32;%JAVA_PATH%\bin;'
-                '%TPP_PATH%;%PYTHON_PATH%;%PYTHON_PATH%\\condabin;%PYTHON_PATH%\\envs',
+            "CALL CTRAMP\\runtime\\CTRampEnv.bat",
+            "set PATH=%CD%\\CTRAMP\runtime;C:\\Windows\\System32;%JAVA_PATH%\bin;"
+            "%TPP_PATH%;%PYTHON_PATH%;%PYTHON_PATH%\\condabin;%PYTHON_PATH%\\envs",
             'CALL CTRAMP\runtime\runMtxMgr.cmd %HOST_IP_ADDRESS% "%JAVA_PATH%"',
         ]
         _tools.run_process(commands, name="start_matrix_manager")
 
     def _run_resident_model(self):
         # TODO: move sample rates to config
-        sample_rate_iteration = {
-            1: 0.3,
-            2: 0.5,
-            3: 1,
-            4: 0.02,
-            5: 0.02,
-        }
+        sample_rate_iteration = {1: 0.3, 2: 0.5, 3: 1, 4: 0.02, 5: 0.02}
         iteration = self.controller.iteration
         sample_rate = sample_rate_iteration[iteration]
         _shutil.copyfile("CTRAMP\\runtime\\mtctm2.properties", "mtctm2.properties")
         commands = [
-            'CALL CTRAMP\\runtime\\CTRampEnv.bat',
-            'set PATH=%CD%\\CTRAMP\runtime;C:\\Windows\\System32;%JAVA_PATH%\bin;'
-                '%TPP_PATH%;%PYTHON_PATH%;%PYTHON_PATH%\\condabin;%PYTHON_PATH%\\envs',
+            "CALL CTRAMP\\runtime\\CTRampEnv.bat",
+            "set PATH=%CD%\\CTRAMP\runtime;C:\\Windows\\System32;%JAVA_PATH%\bin;"
+            "%TPP_PATH%;%PYTHON_PATH%;%PYTHON_PATH%\\condabin;%PYTHON_PATH%\\envs",
             'CALL CTRAMP\runtime\runMTCTM2ABM.cmd {sample_rate} {iteration} "%JAVA_PATH%"'.format(
-                sample_rate=sample_rate, iteration=iteration),
+                sample_rate=sample_rate, iteration=iteration
+            ),
         ]
         _tools.run_process(commands, name="run_resident_model")
 

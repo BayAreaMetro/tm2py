@@ -21,42 +21,44 @@ from copy import deepcopy as _copy
 
 try:
     import openmatrix as _omx
+
     def open_file(file_path, mode):
         return OmxMatrix(_omx.open_file(file_path, mode))
+
+
 except Exception as e:
     import omx as _omx
+
     def open_file(file_path, mode):
         return OmxMatrix(_omx.openFile(file_path, mode))
 
+
 # _all_periods = ['AM']
-_all_periods = ['ea', 'am', 'md', 'pm', 'ev']
-_all_components = ['transit_skims']
-_all_access_modes = ['WLK', 'PNR', 'KNRTNC', 'KNRPRV']
-_all_sets = ['set1', 'set2', 'set3']
-_set_dict = {
-     'BUS': 'set1',
-     'PREM': 'set2',
-     'ALLPEN': 'set3'}
+_all_periods = ["ea", "am", "md", "pm", "ev"]
+_all_components = ["transit_skims"]
+_all_access_modes = ["WLK", "PNR", "KNRTNC", "KNRPRV"]
+_all_sets = ["set1", "set2", "set3"]
+_set_dict = {"BUS": "set1", "PREM": "set2", "ALLPEN": "set3"}
 
 _hours_in_period = {
-    'ea': 3,  # 3:00 to 6:00 AM
-    'am': 3,  # 6:00 to 9:00 AM
-    'md': 6.5,  # 9:00 AM to 3:30 PM
-    'pm': 3.5,  # 3:30 PM to 7:00 PM
-    'ev': 8,  # 7:00 PM to 3:00 AM
+    "ea": 3,  # 3:00 to 6:00 AM
+    "am": 3,  # 6:00 to 9:00 AM
+    "md": 6.5,  # 9:00 AM to 3:30 PM
+    "pm": 3.5,  # 3:30 PM to 7:00 PM
+    "ev": 8,  # 7:00 PM to 3:00 AM
 }
 
 # TODO: make global lists tuples
-transit_modes = ['b', 'x', 'f', 'l', 'h', 'r']
-aux_transit_modes = ['w', 'a', 'e']
+transit_modes = ["b", "x", "f", "l", "h", "r"]
+aux_transit_modes = ["w", "a", "e"]
 _walk_modes = ["a", "w", "e"]
 _local_modes = ["b"]
-_premium_modes = ['x', 'f', 'l', 'h', 'r']
+_premium_modes = ["x", "f", "l", "h", "r"]
 
 # initialize matrix variables
 # TODO: need a proper cache implementation and invalidation
 #       removed for now to make sure it doesn't cause issues with iteration
-#_matrix_cache = {}
+# _matrix_cache = {}
 _matrices = {}
 _matrix_count = {}
 
@@ -147,7 +149,8 @@ def connect_to_desktop(port=59673):
 def start_desktop(root, title="mtc_emme", port=59673):
     emme_project = _os.path.join(root, title, title + ".emp")
     desktop = _app.start(  # will not close desktop when program ends
-        project=emme_project, user_initials="RSG", visible=True, port=port)
+        project=emme_project, user_initials="RSG", visible=True, port=port
+    )
     return desktop
 
 
@@ -158,7 +161,7 @@ def initialize_matrices(components, periods, scenario, delete_all_existing=False
     attributes = {
         "components": components,
         "periods": periods,
-        "delete_all_existing": delete_all_existing
+        "delete_all_existing": delete_all_existing,
     }
     if periods == "all":
         periods = _all_periods[:]
@@ -170,13 +173,17 @@ def initialize_matrices(components, periods, scenario, delete_all_existing=False
     generate_matrix_list(scenario)
     matrices = []
     for component in components:
-        matrices.extend(create_matrices(component, periods, scenario, create_matrix_tool))
+        matrices.extend(
+            create_matrices(component, periods, scenario, create_matrix_tool)
+        )
     create_matrix_tool("ms1", "zero", "zero", scenario=scenario, overwrite=True)
     return matrices
 
 
 def create_matrices(component, periods, scenario, create_matrix_tool):
-    with _m.logbook_trace("Create matrices for component %s" % (component.replace("_", " "))):
+    with _m.logbook_trace(
+        "Create matrices for component %s" % (component.replace("_", " "))
+    ):
         emmebank = scenario.emmebank
         matrices = []
         for period in periods + ["ALL"]:
@@ -184,9 +191,15 @@ def create_matrices(component, periods, scenario, create_matrix_tool):
                 for ident, name, desc in _matrices[component][period]:
                     existing_matrix = emmebank.matrix(name)
                     if existing_matrix and (existing_matrix.id != ident):
-                        raise Exception("Matrix name conflict '%s', with id %s instead of %s. Delete all matrices first."
-                            % (name, existing_matrix.id, ident))
-                    matrices.append(create_matrix_tool(ident, name, desc, scenario=scenario, overwrite=True))
+                        raise Exception(
+                            "Matrix name conflict '%s', with id %s instead of %s. Delete all matrices first."
+                            % (name, existing_matrix.id, ident)
+                        )
+                    matrices.append(
+                        create_matrix_tool(
+                            ident, name, desc, scenario=scenario, overwrite=True
+                        )
+                    )
     return matrices
 
 
@@ -195,7 +208,8 @@ def generate_matrix_list(scenario):
     global _matrix_count
     _matrices = dict(
         (name, dict((k, []) for k in _all_periods + ["ALL"]))
-        for name in _all_components)
+        for name in _all_components
+    )
     _matrix_count = {"ms": 2, "md": 100, "mo": 100, "mf": 100}
 
     # for component in self._all_components:
@@ -204,14 +218,18 @@ def generate_matrix_list(scenario):
     get_transit_skims()
     # check dimensions can fit full set of matrices
     type_names = [
-        ('mf', 'full_matrices'),
-        ('mo', 'origin_matrices'),
-        ('md', 'destination_matrices'),
-        ('ms', 'scalar_matrices')]
+        ("mf", "full_matrices"),
+        ("mo", "origin_matrices"),
+        ("md", "destination_matrices"),
+        ("ms", "scalar_matrices"),
+    ]
     dims = scenario.emmebank.dimensions
     for prefix, name in type_names:
         if _matrix_count[prefix] > dims[name]:
-            raise Exception("emmebank capacity error, increase %s to at least %s" % (name, _matrix_count[prefix]))
+            raise Exception(
+                "emmebank capacity error, increase %s to at least %s"
+                % (name, _matrix_count[prefix])
+            )
     return _matrices
 
 
@@ -225,52 +243,63 @@ def get_matrix_names(component, periods, scenario):
 
 def add_matrices(component, period, matrices):
     for ident, name, desc in matrices:
-        _matrices[component][period].append([ident+str(_matrix_count[ident]), name, desc])
+        _matrices[component][period].append(
+            [ident + str(_matrix_count[ident]), name, desc]
+        )
         _matrix_count[ident] += 1
 
 
 def get_transit_skims():
     tmplt_matrices = [
         # ("GENCOST",    "total impedance"),
-        ("FIRSTWAIT",  "first wait time"),
-        ("XFERWAIT",   "transfer wait time"),
-        ("TOTALWAIT",  "total wait time"),
-        ("FARE",       "fare"),
-        ("XFERS",      "num transfers"),
-        ("XFERWALK",   "transfer walk time"),
-        ("TOTALWALK",  "total walk time"),
-        ("TOTALIVTT",  "total in-vehicle time"),
-        ("LBIVTT",     "local bus in-vehicle time"),
-        ("EBIVTT",     "express bus in-vehicle time"),
-        ("LRIVTT",     "light rail in-vehicle time"),
-        ("HRIVTT",     "heavy rail in-vehicle time"),
-        ("CRIVTT",     "commuter rail in-vehicle time"),
-        ("FRIVTT",     "ferry in-vehicle time"),
-        ("IN_VEHICLE_COST",    "In vehicle cost"),
-        ("LINKREL",     "Link reliability"),
-        ("CROWD",       "Crowding penalty"),
-        ("EAWT",        "Extra added wait time"),
-        ("CAPPEN",      "Capacity penalty"),
+        ("FIRSTWAIT", "first wait time"),
+        ("XFERWAIT", "transfer wait time"),
+        ("TOTALWAIT", "total wait time"),
+        ("FARE", "fare"),
+        ("XFERS", "num transfers"),
+        ("XFERWALK", "transfer walk time"),
+        ("TOTALWALK", "total walk time"),
+        ("TOTALIVTT", "total in-vehicle time"),
+        ("LBIVTT", "local bus in-vehicle time"),
+        ("EBIVTT", "express bus in-vehicle time"),
+        ("LRIVTT", "light rail in-vehicle time"),
+        ("HRIVTT", "heavy rail in-vehicle time"),
+        ("CRIVTT", "commuter rail in-vehicle time"),
+        ("FRIVTT", "ferry in-vehicle time"),
+        ("IN_VEHICLE_COST", "In vehicle cost"),
+        ("LINKREL", "Link reliability"),
+        ("CROWD", "Crowding penalty"),
+        ("EAWT", "Extra added wait time"),
+        ("CAPPEN", "Capacity penalty"),
     ]
     skim_sets = [
-        ("BUS",    "Local bus only"),
-        ("PREM",   "Premium modes only"),
-        ("ALLPEN", "All w/ xfer pen")
+        ("BUS", "Local bus only"),
+        ("PREM", "Premium modes only"),
+        ("ALLPEN", "All w/ xfer pen"),
     ]
     for period in _all_periods:
         for set_name, set_desc in skim_sets:
-            add_matrices("transit_skims", period,
-                [("mf", period + "_" + set_name + "_" + name,
-                  period + " " + set_desc + ": " + desc)
-                 for name, desc in tmplt_matrices])
+            add_matrices(
+                "transit_skims",
+                period,
+                [
+                    (
+                        "mf",
+                        period + "_" + set_name + "_" + name,
+                        period + " " + set_desc + ": " + desc,
+                    )
+                    for name, desc in tmplt_matrices
+                ],
+            )
+
 
 def create_full_matrix(matrix_name, matrix_description, scenario):
     create_matrix_tool = _m.Modeller().tool("inro.emme.data.matrix.create_matrix")
-    matrix = scenario.emmebank.matrix('mf' + matrix_name)
+    matrix = scenario.emmebank.matrix("mf" + matrix_name)
     if matrix is not None:
-        matrix_id=matrix.id
+        matrix_id = matrix.id
     else:
-        matrix_id='mf'
+        matrix_id = "mf"
 
     create_matrix_tool(
         matrix_id=matrix_id,
@@ -278,53 +307,71 @@ def create_full_matrix(matrix_name, matrix_description, scenario):
         matrix_description=matrix_description,
         overwrite=True,
         default_value=0,
-        scenario=scenario)
+        scenario=scenario,
+    )
 
 
 def create_empty_demand_matrices(period, scenario):
     summed_matrix_name_template = "TRN_{set}_{period}"
     with _m.logbook_trace("Create empty demand matrices for period %s" % period):
         for set_num in _all_sets:
-            summed_matrix_name = summed_matrix_name_template.format(period=period, set=set_num)
-            create_full_matrix(summed_matrix_name, 'demand summed across access modes', scenario)
+            summed_matrix_name = summed_matrix_name_template.format(
+                period=period, set=set_num
+            )
+            create_full_matrix(
+                summed_matrix_name, "demand summed across access modes", scenario
+            )
 
 
-def import_demand_matrices(period, scenario, ctramp_output_folder, num_processors="MAX-1"):
+def import_demand_matrices(
+    period, scenario, ctramp_output_folder, num_processors="MAX-1"
+):
     omx_filename_template = "transit_{period}_{access_mode}_TRN_{set}_{period}.omx"
     matrix_name_template = "{access_mode}_TRN_{set}_{period}"
     summed_matrix_name_template = "TRN_{set}_{period}"
     num_processors = parse_num_processors(num_processors)
     import_from_omx_tool = _m.Modeller().tool("inro.emme.data.matrix.import_from_omx")
-    matrix_calc_tool = _m.Modeller().tool("inro.emme.matrix_calculation.matrix_calculator")
+    matrix_calc_tool = _m.Modeller().tool(
+        "inro.emme.matrix_calculation.matrix_calculator"
+    )
 
     with _m.logbook_trace("Importing demand matrices for period %s" % period):
         for set_num in _all_sets:
-            sum_expression = ''
+            sum_expression = ""
             for access_mode in _all_access_modes:
-                omx_filename = omx_filename_template.format(period=period, access_mode=access_mode, set=set_num)
+                omx_filename = omx_filename_template.format(
+                    period=period, access_mode=access_mode, set=set_num
+                )
                 omx_filename_path = _os.path.join(ctramp_output_folder, omx_filename)
-                matrix_name = matrix_name_template.format(period=period, access_mode=access_mode, set=set_num)
+                matrix_name = matrix_name_template.format(
+                    period=period, access_mode=access_mode, set=set_num
+                )
 
                 create_full_matrix(matrix_name, omx_filename, scenario)
 
                 import_from_omx_tool(
                     file_path=omx_filename_path,
-                    matrices={matrix_name: 'mf' + matrix_name},
-                    zone_mapping='NO',
-                    scenario=scenario)
+                    matrices={matrix_name: "mf" + matrix_name},
+                    zone_mapping="NO",
+                    scenario=scenario,
+                )
 
-                if sum_expression == '':
-                    sum_expression = 'mf' + matrix_name
+                if sum_expression == "":
+                    sum_expression = "mf" + matrix_name
                 else:
-                    sum_expression = sum_expression + ' + mf' + matrix_name
+                    sum_expression = sum_expression + " + mf" + matrix_name
 
             # Sum demand accross access modes:
-            summed_matrix_name = summed_matrix_name_template.format(period=period, set=set_num)
-            create_full_matrix(summed_matrix_name, 'demand summed across access modes', scenario)
+            summed_matrix_name = summed_matrix_name_template.format(
+                period=period, set=set_num
+            )
+            create_full_matrix(
+                summed_matrix_name, "demand summed across access modes", scenario
+            )
             spec = {
                 "type": "MATRIX_CALCULATION",
                 "constraint": None,
-                "result": 'mf' + summed_matrix_name,
+                "result": "mf" + summed_matrix_name,
                 "expression": sum_expression,
             }
             matrix_calc_tool(spec, scenario=scenario, num_processors=num_processors)
@@ -338,7 +385,8 @@ def temp_matrices(emmebank, mat_type, total=1, default_value=0.0):
                 ident = emmebank.available_matrix_identifier(mat_type)
             except _except.CapacityError:
                 raise _except.CapacityError(
-                    "Insufficient room for %s required temp matrices." % total)
+                    "Insufficient room for %s required temp matrices." % total
+                )
             matrices.append(emmebank.create_matrix(ident, default_value))
         yield matrices[:]
     finally:
@@ -357,7 +405,7 @@ def retry(fcn, attempts=10, init_wait=0.05, error_types=(RuntimeError, WindowsEr
         except error_types:
             if attempt > attempts:
                 raise
-            _time.sleep(init_wait * (attempt**2))
+            _time.sleep(init_wait * (attempt ** 2))
 
 
 def parse_num_processors(value):
@@ -376,19 +424,29 @@ def parse_num_processors(value):
         return int(value)
     return value
 
+
 # ---------------------------------------- Skimming ----------------------------------------------
 
-def perform_assignment_and_skim(modeller, scenario, period, assignment_only=False, num_processors="MAX-1", use_fares=False, use_ccr=False):
+
+def perform_assignment_and_skim(
+    modeller,
+    scenario,
+    period,
+    assignment_only=False,
+    num_processors="MAX-1",
+    use_fares=False,
+    use_ccr=False,
+):
     attrs = {
-            "period": period,
-            "scenario": scenario.id,
-            "assignment_only": assignment_only,
-            "num_processors": num_processors,
-        }
+        "period": period,
+        "scenario": scenario.id,
+        "assignment_only": assignment_only,
+        "num_processors": num_processors,
+    }
     emmebank = scenario.emmebank
 
     if not period in _all_periods:
-        raise Exception('period: unknown value - specify one of %s' % _all_periods)
+        raise Exception("period: unknown value - specify one of %s" % _all_periods)
     num_processors = parse_num_processors(num_processors)
     params = get_perception_parameters(period)
     network = scenario.get_network()
@@ -396,17 +454,59 @@ def perform_assignment_and_skim(modeller, scenario, period, assignment_only=Fals
     #     element_types=["TRANSIT_LINE", "TRANSIT_SEGMENT"], include_attributes=True)
 
     with _m.logbook_trace("Transit assignment and skims for period %s" % period):
-        run_assignment(modeller, scenario, period, params, network, num_processors, use_fares, use_ccr)
+        run_assignment(
+            modeller,
+            scenario,
+            period,
+            params,
+            network,
+            num_processors,
+            use_fares,
+            use_ccr,
+        )
 
         if not assignment_only:
             with _m.logbook_trace("Skims for Local-only (set1)"):
-                run_skims(modeller, scenario, "BUS", period, _local_modes, params, num_processors, network, use_fares, use_ccr)
+                run_skims(
+                    modeller,
+                    scenario,
+                    "BUS",
+                    period,
+                    _local_modes,
+                    params,
+                    num_processors,
+                    network,
+                    use_fares,
+                    use_ccr,
+                )
             with _m.logbook_trace("Skims for Premium-only (set2)"):
-                run_skims(modeller, scenario, "PREM", period, _premium_modes, params, num_processors, network, use_fares, use_ccr)
+                run_skims(
+                    modeller,
+                    scenario,
+                    "PREM",
+                    period,
+                    _premium_modes,
+                    params,
+                    num_processors,
+                    network,
+                    use_fares,
+                    use_ccr,
+                )
             with _m.logbook_trace("Skims for Local+Premium (set3)"):
-                run_skims(modeller, scenario, "ALLPEN", period, _local_modes + _premium_modes, params, num_processors, network, use_fares, use_ccr)
+                run_skims(
+                    modeller,
+                    scenario,
+                    "ALLPEN",
+                    period,
+                    _local_modes + _premium_modes,
+                    params,
+                    num_processors,
+                    network,
+                    use_fares,
+                    use_ccr,
+                )
                 mask_allpen(scenario, period)
-            #report(scenario, period)
+            # report(scenario, period)
 
 
 # def setup(scenario, attrs):
@@ -433,8 +533,8 @@ def get_perception_parameters(period):
             "init_wait": 1.5,
             "xfer_wait": 3.0,
             "walk": 2.0,
-            "init_headway": 'hdw',
-            "xfer_headway": 'hdw',
+            "init_headway": "hdw",
+            "xfer_headway": "hdw",
             "fare": 0.0,
             "in_vehicle": 1.0,
             "fixed_link_time": 0.0,
@@ -444,8 +544,8 @@ def get_perception_parameters(period):
             "init_wait": 1.5,
             "xfer_wait": 3.0,
             "walk": 2.0,
-            "init_headway": 'hdw',
-            "xfer_headway": 'hdw',
+            "init_headway": "hdw",
+            "xfer_headway": "hdw",
             "fare": 0.0,
             "in_vehicle": 1.0,
             "fixed_link_time": 0.0,
@@ -455,8 +555,8 @@ def get_perception_parameters(period):
             "init_wait": 1.5,
             "xfer_wait": 3.0,
             "walk": 2.0,
-            "init_headway": 'hdw',
-            "xfer_headway": 'hdw',
+            "init_headway": "hdw",
+            "xfer_headway": "hdw",
             "fare": 0.0,
             "in_vehicle": 1.0,
             "fixed_link_time": 0.0,
@@ -466,8 +566,8 @@ def get_perception_parameters(period):
             "init_wait": 1.5,
             "xfer_wait": 3.0,
             "walk": 2.0,
-            "init_headway": 'hdw',
-            "xfer_headway": 'hdw',
+            "init_headway": "hdw",
+            "xfer_headway": "hdw",
             "fare": 0.0,
             "in_vehicle": 1.0,
             "fixed_link_time": 0.0,
@@ -477,25 +577,36 @@ def get_perception_parameters(period):
             "init_wait": 1.5,
             "xfer_wait": 3.0,
             "walk": 2.0,
-            "init_headway": 'hdw',
-            "xfer_headway": 'hdw',
+            "init_headway": "hdw",
+            "xfer_headway": "hdw",
             "fare": 0.0,
             "in_vehicle": 1.0,
             "fixed_link_time": 0.0,
-        }
+        },
     }
     return perception_parameters[period]
 
 
 # @_m.logbook_trace("Transit assignment by demand set", save_arguments=True)
-def run_assignment(modeller, scenario, period, params, network, num_processors, use_fares=False, use_ccr=False):
+def run_assignment(
+    modeller,
+    scenario,
+    period,
+    params,
+    network,
+    num_processors,
+    use_fares=False,
+    use_ccr=False,
+):
     base_spec = {
         "type": "EXTENDED_TRANSIT_ASSIGNMENT",
         "modes": [],
         "demand": "",  # demand matrix specified below
         "waiting_time": {
-            "effective_headways": params["init_headway"], "headway_fraction": 0.5,
-            "perception_factor": params["init_wait"], "spread_factor": 1.0
+            "effective_headways": params["init_headway"],
+            "headway_fraction": 0.5,
+            "perception_factor": params["init_wait"],
+            "spread_factor": 1.0,
         },
         "boarding_cost": {"global": {"penalty": 0, "perception_factor": 1}},
         "boarding_time": {"global": {"penalty": 10, "perception_factor": 1}},
@@ -508,7 +619,7 @@ def run_assignment(modeller, scenario, period, params, network, num_processors, 
         "flow_distribution_between_lines": {"consider_total_impedance": False},
         "flow_distribution_at_origins": {
             "fixed_proportions_on_connectors": None,
-            "choices_at_origins": "OPTIMAL_STRATEGY"
+            "choices_at_origins": "OPTIMAL_STRATEGY",
         },
         "flow_distribution_at_regular_nodes_with_aux_transit_choices": {
             "choices_at_regular_nodes": "OPTIMAL_STRATEGY"
@@ -516,13 +627,21 @@ def run_assignment(modeller, scenario, period, params, network, num_processors, 
         "circular_lines": {"stay": False},
         "connector_to_connector_path_prohibition": None,
         "od_results": {"total_impedance": None},
-        "performance_settings": {"number_of_processors": num_processors}
+        "performance_settings": {"number_of_processors": num_processors},
     }
     if use_fares:
         # fare attributes
-        fare_perception = 1 / params['vot']
-        base_spec["boarding_cost"] = {"on_segments": {"penalty": "@board_cost", "perception_factor": fare_perception}}
-        base_spec["in_vehicle_cost"] = {"penalty": "@invehicle_cost", "perception_factor": fare_perception}
+        fare_perception = 1 / params["vot"]
+        base_spec["boarding_cost"] = {
+            "on_segments": {
+                "penalty": "@board_cost",
+                "perception_factor": fare_perception,
+            }
+        }
+        base_spec["in_vehicle_cost"] = {
+            "penalty": "@invehicle_cost",
+            "perception_factor": fare_perception,
+        }
 
         fare_modes = _defaultdict(lambda: set([]))
         for line in network.transit_lines():
@@ -537,15 +656,32 @@ def run_assignment(modeller, scenario, period, params, network, num_processors, 
         local_modes = get_fare_modes(_local_modes)
         premium_modes = get_fare_modes(_premium_modes)
         project_dir = _os.path.dirname(_os.path.dirname(scenario.emmebank.path))
-        with open(_os.path.join(project_dir, "Specifications", "%s_BUS_journey_levels.ems" % period), 'r') as f:
+        with open(
+            _os.path.join(
+                project_dir, "Specifications", "%s_BUS_journey_levels.ems" % period
+            ),
+            "r",
+        ) as f:
             local_journey_levels = _json.load(f)["journey_levels"]
-        with open(_os.path.join(project_dir, "Specifications", "%s_PREM_journey_levels.ems" % period), 'r') as f:
+        with open(
+            _os.path.join(
+                project_dir, "Specifications", "%s_PREM_journey_levels.ems" % period
+            ),
+            "r",
+        ) as f:
             premium_modes_journey_levels = _json.load(f)["journey_levels"]
-        with open(_os.path.join(project_dir, "Specifications", "%s_ALLPEN_journey_levels.ems" % period), 'r') as f:
+        with open(
+            _os.path.join(
+                project_dir, "Specifications", "%s_ALLPEN_journey_levels.ems" % period
+            ),
+            "r",
+        ) as f:
             journey_levels = _json.load(f)["journey_levels"]
         for level in journey_levels:
             if level["boarding_cost"]:
-                level["boarding_cost"]["on_segments"]["perception_factor"] = fare_perception
+                level["boarding_cost"]["on_segments"][
+                    "perception_factor"
+                ] = fare_perception
         mode_attr = '["#src_mode"]'
     else:
         local_modes = list(_local_modes)
@@ -553,26 +689,38 @@ def run_assignment(modeller, scenario, period, params, network, num_processors, 
         local_journey_levels = []
         premium_modes_journey_levels = []
         journey_levels = []
-        mode_attr = '.mode.id'
+        mode_attr = ".mode.id"
 
-    skim_parameters = OrderedDict([
-        ("BUS", {
-            "modes": _walk_modes + local_modes,
-            "journey_levels": local_journey_levels
-        }),
-        ("PREM", {
-            "modes": _walk_modes + premium_modes,
-            "journey_levels": premium_modes_journey_levels
-        }),
-        ("ALLPEN", {
-            "modes": _walk_modes + local_modes + premium_modes,
-            "journey_levels": journey_levels
-        }),
-    ])
+    skim_parameters = OrderedDict(
+        [
+            (
+                "BUS",
+                {
+                    "modes": _walk_modes + local_modes,
+                    "journey_levels": local_journey_levels,
+                },
+            ),
+            (
+                "PREM",
+                {
+                    "modes": _walk_modes + premium_modes,
+                    "journey_levels": premium_modes_journey_levels,
+                },
+            ),
+            (
+                "ALLPEN",
+                {
+                    "modes": _walk_modes + local_modes + premium_modes,
+                    "journey_levels": journey_levels,
+                },
+            ),
+        ]
+    )
 
     if use_ccr:
         assign_transit = modeller.tool(
-            "inro.emme.transit_assignment.capacitated_transit_assignment")
+            "inro.emme.transit_assignment.capacitated_transit_assignment"
+        )
         #  assign all 3 classes of demand at the same time
         specs = []
         names = []
@@ -585,10 +733,11 @@ def run_assignment(modeller, scenario, period, params, network, num_processors, 
             #     access_mode=a_name, set=_set_dict[mode_name], period=period)
             name = "%s_%s" % (period, mode_name)
             demand_matrix = demand_matrix_template.format(
-                set=_set_dict[mode_name], period=period)
+                set=_set_dict[mode_name], period=period
+            )
 
             if emmebank.matrix(demand_matrix).get_numpy_data(scenario.id).sum() == 0:
-                continue   # don't include if no demand
+                continue  # don't include if no demand
             spec["demand"] = demand_matrix
             spec["journey_levels"] = parameters["journey_levels"]
             specs.append(spec)
@@ -596,36 +745,49 @@ def run_assignment(modeller, scenario, period, params, network, num_processors, 
         func = {
             "segment": {
                 "type": "CUSTOM",
-                "python_function": _segment_cost_function.format(_hours_in_period[period]),
+                "python_function": _segment_cost_function.format(
+                    _hours_in_period[period]
+                ),
                 "congestion_attribute": "us3",
-                "orig_func": False
+                "orig_func": False,
             },
             "headway": {
                 "type": "CUSTOM",
                 "python_function": _headway_cost_function.format(mode_attr),
             },
-            "assignment_period": _hours_in_period[period]
+            "assignment_period": _hours_in_period[period],
         }
         stop = {
             "max_iterations": 3,  # changed from 10 for testing
             "relative_difference": 0.01,
-            "percent_segments_over_capacity": 0.01
+            "percent_segments_over_capacity": 0.01,
         }
-        assign_transit(specs, congestion_function=func, stopping_criteria=stop, class_names=names, scenario=scenario,
-                       log_worksheets=False)
+        assign_transit(
+            specs,
+            congestion_function=func,
+            stopping_criteria=stop,
+            class_names=names,
+            scenario=scenario,
+            log_worksheets=False,
+        )
     else:
         assign_transit = modeller.tool(
-            "inro.emme.transit_assignment.extended_transit_assignment")
+            "inro.emme.transit_assignment.extended_transit_assignment"
+        )
         add_volumes = False
         for mode_name, parameters in skim_parameters.items():
             spec = _copy(base_spec)
             name = "%s_%s" % (period, mode_name)
             spec["modes"] = parameters["modes"]
-            #spec["demand"] = 'ms1' # zero demand matrix
-            spec["demand"] = "mfTRN_{set}_{period}".format(set=_set_dict[mode_name], period=period)
+            # spec["demand"] = 'ms1' # zero demand matrix
+            spec["demand"] = "mfTRN_{set}_{period}".format(
+                set=_set_dict[mode_name], period=period
+            )
             # spec['od_results'] = {'total_impedance': 'mf{}_{}_IMPED'.format(period, mode_name)}
             spec["journey_levels"] = parameters["journey_levels"]
-            assign_transit(spec, class_name=name, add_volumes=add_volumes, scenario=scenario)
+            assign_transit(
+                spec, class_name=name, add_volumes=add_volumes, scenario=scenario
+            )
             add_volumes = True
 
 
@@ -636,37 +798,52 @@ def get_strat_spec(components, matrix_name):
         "sub_strategy_combination_operator": "average",
         "selected_demand_and_transit_volumes": {
             "sub_strategies_to_retain": "ALL",
-            "selection_threshold": {"lower": -999999, "upper": 999999}
+            "selection_threshold": {"lower": -999999, "upper": 999999},
         },
         "analyzed_demand": None,
         "constraint": None,
         "results": {"strategy_values": matrix_name},
-        "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS"
+        "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS",
     }
     return spec
 
 
 # @_m.logbook_trace("Extract skims", save_arguments=True)
-def run_skims(modeller, scenario, name, period, valid_modes, params, num_processors, network, use_fares=False, use_ccr=False):
+def run_skims(
+    modeller,
+    scenario,
+    name,
+    period,
+    valid_modes,
+    params,
+    num_processors,
+    network,
+    use_fares=False,
+    use_ccr=False,
+):
     emmebank = scenario.emmebank
-    matrix_calc = modeller.tool(
-        "inro.emme.matrix_calculation.matrix_calculator")
-    network_calc = modeller.tool(
-        "inro.emme.network_calculation.network_calculator")
+    matrix_calc = modeller.tool("inro.emme.matrix_calculation.matrix_calculator")
+    network_calc = modeller.tool("inro.emme.network_calculation.network_calculator")
     create_extra = modeller.tool(
-        "inro.emme.data.extra_attribute.create_extra_attribute")
+        "inro.emme.data.extra_attribute.create_extra_attribute"
+    )
     matrix_results = modeller.tool(
-        "inro.emme.transit_assignment.extended.matrix_results")
+        "inro.emme.transit_assignment.extended.matrix_results"
+    )
     path_analysis = modeller.tool(
-        "inro.emme.transit_assignment.extended.path_based_analysis")
+        "inro.emme.transit_assignment.extended.path_based_analysis"
+    )
     strategy_analysis = modeller.tool(
-        "inro.emme.transit_assignment.extended.strategy_based_analysis")
+        "inro.emme.transit_assignment.extended.strategy_based_analysis"
+    )
 
     class_name = "%s_%s" % (period, name)
     skim_name = "%s_%s" % (period, name)
     # self.run_skims.logbook_cursor.write(name="Extract skims for %s, using assignment class %s" % (name, class_name))
 
-    with _m.logbook_trace("First and total wait time, number of boardings, fares, total walk time"):
+    with _m.logbook_trace(
+        "First and total wait time, number of boardings, fares, total walk time"
+    ):
         # First and total wait time, number of boardings, fares, total walk time, in-vehicle time
         spec = {
             "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
@@ -674,25 +851,38 @@ def run_skims(modeller, scenario, name, period, valid_modes, params, num_process
             "actual_total_waiting_times": 'mf"%s_TOTALWAIT"' % skim_name,
             # "total_impedance": 'mf"%s_GENCOST"' % skim_name,
             "by_mode_subset": {
-                "modes": [m.id for m in network.modes() if m.type in ["TRANSIT", "AUX_TRANSIT"]],
+                "modes": [
+                    m.id
+                    for m in network.modes()
+                    if m.type in ["TRANSIT", "AUX_TRANSIT"]
+                ],
                 "avg_boardings": 'mf"%s_XFERS"' % skim_name,
-                #"actual_in_vehicle_times": 'mf"%s_TOTALIVTT"' % skim_name,
+                # "actual_in_vehicle_times": 'mf"%s_TOTALIVTT"' % skim_name,
                 "actual_aux_transit_times": 'mf"%s_TOTALWALK"' % skim_name,
             },
         }
         if use_fares:
-            spec["by_mode_subset"]["actual_in_vehicle_costs"] = 'mf"%s_IN_VEHICLE_COST"' % skim_name
-            spec["by_mode_subset"]["actual_total_boarding_costs"] = 'mf"%s_FARE"' % skim_name
-        matrix_results(spec, class_name=class_name, scenario=scenario, num_processors=num_processors)
+            spec["by_mode_subset"]["actual_in_vehicle_costs"] = (
+                'mf"%s_IN_VEHICLE_COST"' % skim_name
+            )
+            spec["by_mode_subset"]["actual_total_boarding_costs"] = (
+                'mf"%s_FARE"' % skim_name
+            )
+        matrix_results(
+            spec,
+            class_name=class_name,
+            scenario=scenario,
+            num_processors=num_processors,
+        )
 
     with _m.logbook_trace("In-vehicle time by mode"):
         mode_combinations = [
-            ("LB", 'b'),
-            ("EB", 'x'),
-            ("FR", 'f'),
-            ("LR", 'l'),
-            ("HR", 'h'),
-            ("CR", 'r'),
+            ("LB", "b"),
+            ("EB", "x"),
+            ("FR", "f"),
+            ("LR", "l"),
+            ("HR", "h"),
+            ("CR", "r"),
         ]
         # map to used modes in apply fares case
         fare_modes = _defaultdict(lambda: set([]))
@@ -702,7 +892,9 @@ def run_skims(modeller, scenario, name, period, valid_modes, params, num_process
         else:
             fare_modes = dict((m, [m]) for m in valid_modes)
         # set to fare_modes and filter out unused modes
-        mode_combinations = [(n, list(fare_modes[m])) for n, m  in mode_combinations if m in valid_modes]
+        mode_combinations = [
+            (n, list(fare_modes[m])) for n, m in mode_combinations if m in valid_modes
+        ]
 
         total_ivtt_expr = []
         if use_ccr:
@@ -716,13 +908,22 @@ def run_skims(modeller, scenario, name, period, valid_modes, params, num_process
                                 # segment["@mode_timtr"] = segment["@base_timtr"]
                                 # segment["@mode_timtr"] = segment["@trantime_final"]
                                 segment["@mode_timtr"] = segment["@timtr"]
-                    mode_timtr = network.get_attribute_values("TRANSIT_SEGMENT", ["@mode_timtr"])
+                    mode_timtr = network.get_attribute_values(
+                        "TRANSIT_SEGMENT", ["@mode_timtr"]
+                    )
                     network.delete_attribute("TRANSIT_SEGMENT", "@mode_timtr")
-                    scenario.set_attribute_values("TRANSIT_SEGMENT", ["@mode_timtr"], mode_timtr)
+                    scenario.set_attribute_values(
+                        "TRANSIT_SEGMENT", ["@mode_timtr"], mode_timtr
+                    )
                     ivtt = 'mf"%s_%sIVTT"' % (skim_name, mode_name)
                     total_ivtt_expr.append(ivtt)
                     spec = get_strat_spec({"in_vehicle": "@mode_timtr"}, ivtt)
-                    strategy_analysis(spec, class_name=class_name, scenario=scenario, num_processors=num_processors)
+                    strategy_analysis(
+                        spec,
+                        class_name=class_name,
+                        scenario=scenario,
+                        num_processors=num_processors,
+                    )
             finally:
                 scenario.delete_extra_attribute("@mode_timtr")
         else:
@@ -733,62 +934,91 @@ def run_skims(modeller, scenario, name, period, valid_modes, params, num_process
                     "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
                     "by_mode_subset": {"modes": modes, "actual_in_vehicle_times": ivtt},
                 }
-                matrix_results(spec, class_name=class_name, scenario=scenario, num_processors=num_processors)
+                matrix_results(
+                    spec,
+                    class_name=class_name,
+                    scenario=scenario,
+                    num_processors=num_processors,
+                )
 
-    with _m.logbook_trace("Calculate total IVTT, number of transfers, transfer walk and wait times"):
+    with _m.logbook_trace(
+        "Calculate total IVTT, number of transfers, transfer walk and wait times"
+    ):
         spec_list = [
-            {   # sum total ivtt across all modes
+            {  # sum total ivtt across all modes
                 "type": "MATRIX_CALCULATION",
                 "constraint": None,
                 "result": 'mf"%s_TOTALIVTT"' % skim_name,
                 "expression": "+".join(total_ivtt_expr),
             },
-            {   # convert number of boardings to number of transfers
+            {  # convert number of boardings to number of transfers
                 "type": "MATRIX_CALCULATION",
-                "constraint":{
+                "constraint": {
                     "by_value": {
                         "od_values": 'mf"%s_XFERS"' % skim_name,
-                        "interval_min": 0, "interval_max": 9999999,
-                        "condition": "INCLUDE"},
+                        "interval_min": 0,
+                        "interval_max": 9999999,
+                        "condition": "INCLUDE",
+                    }
                 },
                 "result": 'mf"%s_XFERS"' % skim_name,
-                "expression": '(%s_XFERS - 1).max.0' % skim_name,
+                "expression": "(%s_XFERS - 1).max.0" % skim_name,
             },
-            {   # transfer walk time = total - access - egress
+            {  # transfer walk time = total - access - egress
                 "type": "MATRIX_CALCULATION",
                 "constraint": None,
                 "result": 'mf"%s_XFERWALK"' % skim_name,
-                "expression": '({name}_TOTALWALK - 0.66).max.0'.format(name=skim_name),
+                "expression": "({name}_TOTALWALK - 0.66).max.0".format(name=skim_name),
             },
             {
                 "type": "MATRIX_CALCULATION",
-                "constraint":{
+                "constraint": {
                     "by_value": {
                         "od_values": 'mf"%s_TOTALWAIT"' % skim_name,
-                        "interval_min": 0, "interval_max": 9999999,
-                        "condition": "INCLUDE"},
+                        "interval_min": 0,
+                        "interval_max": 9999999,
+                        "condition": "INCLUDE",
+                    }
                 },
                 "result": 'mf"%s_XFERWAIT"' % skim_name,
-                "expression": '({name}_TOTALWAIT - {name}_FIRSTWAIT).max.0'.format(name=skim_name),
-            }
+                "expression": "({name}_TOTALWAIT - {name}_FIRSTWAIT).max.0".format(
+                    name=skim_name
+                ),
+            },
         ]
         if use_fares:
             spec_list.append(
-                {   # sum in-vehicle cost and boarding cost to get the fare paid
+                {  # sum in-vehicle cost and boarding cost to get the fare paid
                     "type": "MATRIX_CALCULATION",
                     "constraint": None,
                     "result": 'mf"%s_FARE"' % skim_name,
-                    "expression": '(%s_FARE + %s_IN_VEHICLE_COST)' % (skim_name, skim_name),
-                })
+                    "expression": "(%s_FARE + %s_IN_VEHICLE_COST)"
+                    % (skim_name, skim_name),
+                }
+            )
         matrix_calc(spec_list, scenario=scenario, num_processors=num_processors)
 
     if use_ccr:
         with _m.logbook_trace("Calculate CCR skims"):
             # TODO: factor this to run once ...
-            create_extra("TRANSIT_SEGMENT", "@eawt", "extra added wait time", overwrite=True, scenario=scenario)
+            create_extra(
+                "TRANSIT_SEGMENT",
+                "@eawt",
+                "extra added wait time",
+                overwrite=True,
+                scenario=scenario,
+            )
             # create_extra("TRANSIT_SEGMENT", "@crowding_factor", "crowding factor along segments", overwrite=True, scenario=scenario)
-            create_extra("TRANSIT_SEGMENT", "@capacity_penalty", "capacity penalty at boarding", overwrite=True, scenario=scenario)
-            network = scenario.get_partial_network(["TRANSIT_LINE", "TRANSIT_SEGMENT"], include_attributes=True)
+            create_extra(
+                "TRANSIT_SEGMENT",
+                "@capacity_penalty",
+                "capacity penalty at boarding",
+                overwrite=True,
+                scenario=scenario,
+            )
+            network = scenario.get_partial_network(
+                ["TRANSIT_LINE", "TRANSIT_SEGMENT"], include_attributes=True
+            )
             attr_map = {
                 "TRANSIT_SEGMENT": ["@phdwy", "transit_volume", "transit_boardings"],
                 "TRANSIT_VEHICLE": ["seated_capacity", "total_capacity"],
@@ -799,7 +1029,7 @@ def run_skims(modeller, scenario, name, period, valid_modes, params, num_process
                 attr_map["TRANSIT_LINE"].append("#src_mode")
                 mode_name = '["#src_mode"]'
             else:
-                mode_name = '.mode.id'
+                mode_name = ".mode.id"
             for domain, attrs in attr_map.items():
                 values = scenario.get_attribute_values(domain, attrs)
                 network.set_attribute_values(domain, attrs, values)
@@ -807,10 +1037,14 @@ def run_skims(modeller, scenario, name, period, valid_modes, params, num_process
             enclosing_scope = {"network": network, "scenario": scenario}
             # code = compile(_segment_cost_function, "segment_cost_function", "exec")
             # exec(code, enclosing_scope)
-            code = compile(_headway_cost_function.format(mode_name), "headway_cost_function", "exec")
+            code = compile(
+                _headway_cost_function.format(mode_name),
+                "headway_cost_function",
+                "exec",
+            )
             exec(code, enclosing_scope)
             calc_eawt = enclosing_scope["calc_eawt"]
-            hdwy_fraction = 0.5 # fixed in assignment spec
+            hdwy_fraction = 0.5  # fixed in assignment spec
 
             # NOTE: assume assignment period is 1 hour
             for segment in network.transit_segments():
@@ -822,10 +1056,17 @@ def run_skims(modeller, scenario, name, period, valid_modes, params, num_process
                 vcr = transit_volume / capacity
                 segment["@eawt"] = calc_eawt(segment, vcr, headway)
                 # segment["@crowding_penalty"] = calc_segment_cost(transit_volume, capacity, segment)
-                segment["@capacity_penalty"] = max(segment["@phdwy"] - segment["@eawt"] - headway, 0) * hdwy_fraction
+                segment["@capacity_penalty"] = (
+                    max(segment["@phdwy"] - segment["@eawt"] - headway, 0)
+                    * hdwy_fraction
+                )
 
-            values = network.get_attribute_values('TRANSIT_SEGMENT', ["@eawt", "@capacity_penalty"])
-            scenario.set_attribute_values('TRANSIT_SEGMENT', ["@eawt", "@capacity_penalty"], values)
+            values = network.get_attribute_values(
+                "TRANSIT_SEGMENT", ["@eawt", "@capacity_penalty"]
+            )
+            scenario.set_attribute_values(
+                "TRANSIT_SEGMENT", ["@eawt", "@capacity_penalty"], values
+            )
 
             # # Link unreliability
             # spec = get_strat_spec({"in_vehicle": "ul1"}, "%s_LINKREL" % skim_name)
@@ -833,15 +1074,32 @@ def run_skims(modeller, scenario, name, period, valid_modes, params, num_process
 
             # Crowding penalty
             spec = get_strat_spec({"in_vehicle": "@ccost"}, "%s_CROWD" % skim_name)
-            strategy_analysis(spec, class_name=class_name, scenario=scenario, num_processors=num_processors)
+            strategy_analysis(
+                spec,
+                class_name=class_name,
+                scenario=scenario,
+                num_processors=num_processors,
+            )
 
             # skim node reliability, Extra added wait time (EAWT)
             spec = get_strat_spec({"boarding": "@eawt"}, "%s_EAWT" % skim_name)
-            strategy_analysis(spec, class_name=class_name, scenario=scenario, num_processors=num_processors)
+            strategy_analysis(
+                spec,
+                class_name=class_name,
+                scenario=scenario,
+                num_processors=num_processors,
+            )
 
             # skim capacity penalty
-            spec = get_strat_spec({"boarding": "@capacity_penalty"}, "%s_CAPPEN" % skim_name)
-            strategy_analysis(spec, class_name=class_name, scenario=scenario, num_processors=num_processors)
+            spec = get_strat_spec(
+                {"boarding": "@capacity_penalty"}, "%s_CAPPEN" % skim_name
+            )
+            strategy_analysis(
+                spec,
+                class_name=class_name,
+                scenario=scenario,
+                num_processors=num_processors,
+            )
 
     return
 
@@ -852,9 +1110,11 @@ def save_per_iteration_flows(scenario):
     try:
         scenario.transit_strategies.data = strat_data
         create_attr = modeller.tool(
-            "inro.emme.data.extra_attribute.create_extra_attribute")
+            "inro.emme.data.extra_attribute.create_extra_attribute"
+        )
         network_results = modeller.tool(
-            "inro.emme.transit_assignment.extended.network_results")
+            "inro.emme.transit_assignment.extended.network_results"
+        )
 
         for strat in scenario.transit_strategies.strat_files():
             _, num, class_name = strat.name.split()
@@ -873,11 +1133,25 @@ def save_per_iteration_flows(scenario):
 def mask_allpen(scenario, period):
     # Reset skims to 0 if not both local and premium
     skims = [
-        "FIRSTWAIT", "TOTALWAIT", "XFERS", "TOTALWALK",
-        "LBIVTT", "EBIVTT", "LRIVTT", "HRIVTT", "CRIVTT", "FRIVTT",
-        "XFERWAIT", "FARE",
-        "XFERWALK", "TOTALIVTT",
-        "LINKREL", "CROWD", "EAWT", "CAPPEN"]
+        "FIRSTWAIT",
+        "TOTALWAIT",
+        "XFERS",
+        "TOTALWALK",
+        "LBIVTT",
+        "EBIVTT",
+        "LRIVTT",
+        "HRIVTT",
+        "CRIVTT",
+        "FRIVTT",
+        "XFERWAIT",
+        "FARE",
+        "XFERWALK",
+        "TOTALIVTT",
+        "LINKREL",
+        "CROWD",
+        "EAWT",
+        "CAPPEN",
+    ]
     localivt_skim = get_matrix_data(scenario, period + "_ALLPEN_LBIVTT")
     totalivt_skim = get_matrix_data(scenario, period + "_ALLPEN_TOTALIVTT")
     has_premium = numpy.greater((totalivt_skim - localivt_skim), 0)
@@ -891,13 +1165,27 @@ def mask_allpen(scenario, period):
 def mask_transfers(scenario, period, max_transfers=3):
     # Reset skims to 0 if number of transfers is greater than max_transfers
     skims = [
-        "FIRSTWAIT", "TOTALWAIT", "XFERS", "TOTALWALK",
-        "LBIVTT", "EBIVTT", "LRIVTT", "HRIVTT", "CRIVTT", "FRIVTT",
-        "XFERWAIT", "FARE",
-        "XFERWALK", "TOTALIVTT",
-        "LINKREL", "CROWD", "EAWT", "CAPPEN"]
+        "FIRSTWAIT",
+        "TOTALWAIT",
+        "XFERS",
+        "TOTALWALK",
+        "LBIVTT",
+        "EBIVTT",
+        "LRIVTT",
+        "HRIVTT",
+        "CRIVTT",
+        "FRIVTT",
+        "XFERWAIT",
+        "FARE",
+        "XFERWALK",
+        "TOTALIVTT",
+        "LINKREL",
+        "CROWD",
+        "EAWT",
+        "CAPPEN",
+    ]
 
-    for set in ['_BUS_', '_PREM_', '_ALLPEN_']:
+    for set in ["_BUS_", "_PREM_", "_ALLPEN_"]:
         xfers = get_matrix_data(scenario, period + set + "XFERS")
         xfer_mask = numpy.less_equal(xfers, max_transfers)
         for skim in skims:
@@ -913,13 +1201,13 @@ def get_matrix_data(scenario, name):
     if matrix is None:
         raise Exception("No matrix with name %s" % name)
     return matrix.get_numpy_data(scenario.id)
-    #_matrix_cache[name] = data
+    # _matrix_cache[name] = data
     # return data
 
 
 def set_matrix_data(scenario, name, data):
     matrix = scenario.emmebank.matrix(name)
-    #_matrix_cache[name] = data
+    # _matrix_cache[name] = data
     matrix.set_numpy_data(data, scenario)
 
 
@@ -930,17 +1218,28 @@ def report(scenario, period):
     num_cells = num_zones ** 2
     text.append(
         "Number of zones: %s. Number of O-D pairs: %s. "
-        "Values outside -9999999, 9999999 are masked in summaries.<br>" % (num_zones, num_cells))
-    text.append("%-25s %9s %9s %9s %13s %9s" % ("name", "min", "max", "mean", "sum", "mask num"))
+        "Values outside -9999999, 9999999 are masked in summaries.<br>"
+        % (num_zones, num_cells)
+    )
+    text.append(
+        "%-25s %9s %9s %9s %13s %9s" % ("name", "min", "max", "mean", "sum", "mask num")
+    )
     for name in matrices:
         data = get_matrix_data(scenario, name)
         data = numpy.ma.masked_outside(data, -9999999, 9999999, copy=False)
-        stats = (name, data.min(), data.max(), data.mean(), data.sum(), num_cells-data.count())
+        stats = (
+            name,
+            data.min(),
+            data.max(),
+            data.mean(),
+            data.sum(),
+            num_cells - data.count(),
+        )
         text.append("%-25s %9.4g %9.4g %9.4g %13.7g %9d" % stats)
     text.append("</div>")
-    title = 'Transit impedance summary for period %s' % period
+    title = "Transit impedance summary for period %s" % period
     report = _m.PageBuilder(title)
-    report.wrap_html('Matrix details', "<br>".join(text))
+    report.wrap_html("Matrix details", "<br>".join(text))
     _m.logbook_write(title, report.render())
 
 
@@ -964,31 +1263,21 @@ class OmxMatrix(object):
     def create_mapping(self, name, ids):
         exception_raised = False
         try:
-            self.matrix.create_mapping(name, ids) # Emme 44 and above
+            self.matrix.create_mapping(name, ids)  # Emme 44 and above
         except Exception as e:
             exception_raised = True
 
         if exception_raised:
-            self.matrix.createMapping(name, ids) # Emme 437
+            self.matrix.createMapping(name, ids)  # Emme 437
 
     def create_matrix(self, key, obj, chunkshape, attrs):
         exception_raised = False
-        try: # Emme 44 and above
-            self.matrix.create_matrix(
-                key,
-                obj=obj,
-                chunkshape=chunkshape,
-                attrs=attrs
-            )
+        try:  # Emme 44 and above
+            self.matrix.create_matrix(key, obj=obj, chunkshape=chunkshape, attrs=attrs)
         except Exception as e:
             exception_raised = True
-        if exception_raised: # Emme 437
-            self.matrix.createMatrix(
-                key,
-                obj=obj,
-                chunkshape=chunkshape,
-                attrs=attrs
-            )
+        if exception_raised:  # Emme 437
+            self.matrix.createMatrix(key, obj=obj, chunkshape=chunkshape, attrs=attrs)
 
     def close(self):
         self.matrix.close()
@@ -1011,21 +1300,28 @@ class ExportOMX(object):
         text_encoding = self.emmebank.text_encoding
         if omx_key == "ID_NAME":
             self.generate_key = lambda m: "%s_%s" % (
-                m.id.encode(text_encoding), m.name.encode(text_encoding))
+                m.id.encode(text_encoding),
+                m.name.encode(text_encoding),
+            )
         elif omx_key == "NAME":
             self.generate_key = lambda m: m.name.encode(text_encoding)
         elif omx_key == "ID":
             self.generate_key = lambda m: m.id.encode(text_encoding)
 
     def __enter__(self):
-        self.trace = _m.logbook_trace(name="Export matrices to OMX",
+        self.trace = _m.logbook_trace(
+            name="Export matrices to OMX",
             attributes={
-                "file_path": self.file_path, "omx_key": self.omx_key,
-                "scenario": self.scenario, "emmebank": self.emmebank.path})
+                "file_path": self.file_path,
+                "omx_key": self.omx_key,
+                "scenario": self.scenario,
+                "emmebank": self.emmebank.path,
+            },
+        )
         self.trace.__enter__()
-        self.omx_file = _omx.open_file(self.file_path, 'w')
+        self.omx_file = _omx.open_file(self.file_path, "w")
         try:
-            self.omx_file.create_mapping('zone_number', self.scenario.zone_numbers)
+            self.omx_file.create_mapping("zone_number", self.scenario.zone_numbers)
         except LookupError:
             pass
         return self
@@ -1073,11 +1369,14 @@ class ExportOMX(object):
         attrs["source"] = "Emme"
         numpy_array = numpy_array.astype(dtype="float64", copy=False)
         omx_matrix = self.omx_file.create_matrix(
-            key, obj=numpy_array, chunkshape=chunkshape, attrs=attrs)
+            key, obj=numpy_array, chunkshape=chunkshape, attrs=attrs
+        )
 
 
 # @_m.logbook_trace("Export transit skims to OMX", save_arguments=True)
-def export_matrices_to_omx(omx_file, periods, scenario, big_to_zero=False, max_transfers=None):
+def export_matrices_to_omx(
+    omx_file, periods, scenario, big_to_zero=False, max_transfers=None
+):
     attributes = {"omx_file": omx_file, "periods": periods, "big_to_zero": big_to_zero}
     if max_transfers is not None:
         for period in periods:
@@ -1089,7 +1388,7 @@ def export_matrices_to_omx(omx_file, periods, scenario, big_to_zero=False, max_t
             for name in matrices:
                 matrix = emmebank.matrix(name)
                 array = matrix.get_numpy_data(scenario)
-                array[array>10E6] = 0
+                array[array > 10e6] = 0
                 exporter.write_array(array, exporter.generate_key(matrix))
         else:
             exporter.write_matrices(matrices)
@@ -1128,22 +1427,69 @@ def export_boardings_by_line(desktop, output_transit_boardings_file):
 if __name__ == "__main__":
     from create_emme_network import period_to_scenario_dict
 
-    parser = _argparse.ArgumentParser(description="Skim an already created Emme transit network.")
-    parser.add_argument('-p', '--trn_path', help=r"path to the trn folder, default is the current_working_folder\trn",
-                        default=_os.path.join(_os.getcwd(), 'trn'))
-    parser.add_argument('-s', '--skims_path', help=r"path to the skims folder, default is the current_working_folder\skims",
-                        default=_os.path.join(_os.getcwd(), 'skims'))
-    parser.add_argument('-i', '--first_iteration', help='Is this the first iteration? yes or no, default is yes', default='yes')
-    parser.add_argument('--save_iter_flows', action="store_true", help='Save per-iteration flows in scenarios', default=False)
-    parser.add_argument('-t', '--time_periods', help='List of time periods as EA,AM,MD,PM,EV or ALL', default='ALL')
-    parser.add_argument('-o', '--port', help='Port to connect to Emme desktop session', default=59673, type=int)
-    parser.add_argument('-d', '--skip_import_demand', action="store_true", help='Skip import of CT-RAMP demand')
-    parser.add_argument('-b', '--output_transit_boardings', action="store_true", help='Output transit boardings from assignment')
-    parser.add_argument('-n', '--num_processors', help='Number of processors to use, can specify MAX-#', default='MAX-4')
+    parser = _argparse.ArgumentParser(
+        description="Skim an already created Emme transit network."
+    )
+    parser.add_argument(
+        "-p",
+        "--trn_path",
+        help=r"path to the trn folder, default is the current_working_folder\trn",
+        default=_os.path.join(_os.getcwd(), "trn"),
+    )
+    parser.add_argument(
+        "-s",
+        "--skims_path",
+        help=r"path to the skims folder, default is the current_working_folder\skims",
+        default=_os.path.join(_os.getcwd(), "skims"),
+    )
+    parser.add_argument(
+        "-i",
+        "--first_iteration",
+        help="Is this the first iteration? yes or no, default is yes",
+        default="yes",
+    )
+    parser.add_argument(
+        "--save_iter_flows",
+        action="store_true",
+        help="Save per-iteration flows in scenarios",
+        default=False,
+    )
+    parser.add_argument(
+        "-t",
+        "--time_periods",
+        help="List of time periods as EA,AM,MD,PM,EV or ALL",
+        default="ALL",
+    )
+    parser.add_argument(
+        "-o",
+        "--port",
+        help="Port to connect to Emme desktop session",
+        default=59673,
+        type=int,
+    )
+    parser.add_argument(
+        "-d",
+        "--skip_import_demand",
+        action="store_true",
+        help="Skip import of CT-RAMP demand",
+    )
+    parser.add_argument(
+        "-b",
+        "--output_transit_boardings",
+        action="store_true",
+        help="Output transit boardings from assignment",
+    )
+    parser.add_argument(
+        "-n",
+        "--num_processors",
+        help="Number of processors to use, can specify MAX-#",
+        default="MAX-4",
+    )
 
     args = parser.parse_args()
-    assert (args.first_iteration == 'yes') or (args.first_iteration == 'no'), \
-        'Please specify "yes" or "no" for the first_iteration (-i) run-time argument'
+    assert (args.first_iteration == "yes") or (
+        args.first_iteration == "no"
+    ), 'Please specify "yes" or "no" for the first_iteration (-i) run-time argument'
     if args.time_periods == "ALL":
         time_periods = _all_periods[:]
     else:
@@ -1160,11 +1506,21 @@ if __name__ == "__main__":
         scenario_id = period_to_scenario_dict[period]
         scenario = emmebank.scenario(scenario_id)
 
-        initialize_matrices(components=['transit_skims'], periods=[period], scenario=scenario, delete_all_existing=False)
+        initialize_matrices(
+            components=["transit_skims"],
+            periods=[period],
+            scenario=scenario,
+            delete_all_existing=False,
+        )
 
-        ctramp_output_folder = _os.path.join(_os.getcwd(), 'ctramp_output')
+        ctramp_output_folder = _os.path.join(_os.getcwd(), "ctramp_output")
         if not args.skip_import_demand:
-            import_demand_matrices(period, scenario, ctramp_output_folder, num_processors=args.num_processors)
+            import_demand_matrices(
+                period,
+                scenario,
+                ctramp_output_folder,
+                num_processors=args.num_processors,
+            )
         else:
             create_empty_demand_matrices(period, scenario)
 
@@ -1178,16 +1534,32 @@ if __name__ == "__main__":
         #     use_ccr = False
         use_ccr = False
 
-        perform_assignment_and_skim(modeller, scenario, period=period, assignment_only=False,
-                                    num_processors=args.num_processors, use_fares=True, use_ccr=use_ccr)
-        output_omx_file = _os.path.join(args.skims_path, "transit_skims_{}.omx".format(period))
-        export_matrices_to_omx(omx_file=output_omx_file, periods=[period], scenario=scenario,
-                               big_to_zero=True, max_transfers=3)
+        perform_assignment_and_skim(
+            modeller,
+            scenario,
+            period=period,
+            assignment_only=False,
+            num_processors=args.num_processors,
+            use_fares=True,
+            use_ccr=use_ccr,
+        )
+        output_omx_file = _os.path.join(
+            args.skims_path, "transit_skims_{}.omx".format(period)
+        )
+        export_matrices_to_omx(
+            omx_file=output_omx_file,
+            periods=[period],
+            scenario=scenario,
+            big_to_zero=True,
+            max_transfers=3,
+        )
 
         if use_ccr and args.save_iter_flows:
             save_per_iteration_flows(scenario)
 
         if args.output_transit_boardings:
             desktop.data_explorer().replace_primary_scenario(scenario)
-            output_transit_boardings_file = _os.path.join(_os.getcwd(), args.trn_path, "boardings_by_line_{}.csv".format(period))
+            output_transit_boardings_file = _os.path.join(
+                _os.getcwd(), args.trn_path, "boardings_by_line_{}.csv".format(period)
+            )
             export_boardings_by_line(desktop, output_transit_boardings_file)

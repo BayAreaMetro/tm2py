@@ -6,12 +6,13 @@ folium
 jsonschema
 jupyter
 lark-parser
-osmnx >= 0.12
+osmnx >= 1.1.1
 notebook
-numpy
+numpy >= 1.19
 pandas > 1.0
-pyproj > 2.2.0 
+pyproj >= 2.6
 pyyaml
 pywin32==224 ; sys_platform == 'win32'
-rtree
-shapely
+requests >= 2.25
+rtree >= 0.9
+shapely >= 1.7
