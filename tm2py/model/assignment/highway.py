@@ -483,13 +483,15 @@ class HighwayAssignment(_Component):
         net_calc.add_calc(result=None, expression="length * @total_vehicles")
         reports = net_calc.run()
         total_vmt = reports[1]["sum"]
-        # TODO: specifiy acceptable VMT range
+        # TODO: specifiy acceptable VMT range, could come from config
+        # min_vmt = {"ea": ?}
+        # max_vmt = {"ea": ?}
         # assert min_vmt[period] <= total_vmt <= max_vmt[period]
 
         # check skim matrices for infinities
         for matrix in self._skim_matrices:
             data = self._matrix_cache.get_data(matrix)
-            
+            assert (data < 1e19).all()  # 1e20 is sentinal for unreachable in Emme skims
 
 
 class ImportDemand(_Component):
