@@ -7,9 +7,8 @@ If you are managing multiple python versions, we suggest using [`virtualenv`](ht
 The following instructions create and activate a conda environment (recommended) in which you can install:
 
 ```bash
-conda config --add channels conda-forge
-conda create python=3.7 -n <my_conda_environment>
-conda activate <my_conda_environment>
+conda env create -f environment.yml
+conda activate tm2py
 ```
 
 Basic installation instructions are as follows:
@@ -22,9 +21,8 @@ pip install tm2py
 If you want to install a more up-to-date or development version, you can do so by installing it from the `develop` branch as follows:
 
 ```bash
-conda config --add channels conda-forge
-conda create python=3.7  -n <my_conda_environment>
-conda activate <my_conda_environment>
+conda env create -f environment.yml
+conda activate tm2py
 pip install git+https://github.com/bayareametro/tm2py@develop
 ```
 
@@ -33,9 +31,8 @@ If you are going to be working on Lasso locally, you might want to clone it to y
 
 
 ```bash
-conda config --add channels conda-forge
-conda create python=3.7 -n <my_conda_environment>
-conda activate <my_lasso_environment>
+conda env create -f environment.yml
+conda activate tm2py
 git clone https://github.com/bayareametro/tm2py
 cd tm2py
 pip install -e .
