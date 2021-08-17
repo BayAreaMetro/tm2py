@@ -1,0 +1,20 @@
+[scenario]
+name = ''
+run_dir = ''
+year = 2008
+
+[scenario.inputs]
+highway = 
+transit = 
+demand = 
+
+[model]
+config = 
+
+[run]
+start_iteration = 0
+start_component = ''
+global_iterations = 3
+
+[emme]
+num_processors = "max-2"
