@@ -6,7 +6,13 @@ import toml as _toml
 
 
 class Configuration:
-    """Temporary configuration object to wrap arbitrary TOML config with no validation"""
+    """Temporary configuration object to wrap arbitrary TOML config with no validation.
+
+    Provides a dictionary-like interface as well as object properties for accessing
+    the settings in a config. Once the config schema is established this will be
+    replaced by an object with a defined interface.
+
+    """
 
     def __init__(self, path: str = None):
         super().__init__()
@@ -49,10 +55,12 @@ class ConfigItem(SimpleNamespace):
         """Return the value for key if key is in the dictionary, else default."""
         return self.__dict__.get(key, default)
 
+
 __banned_keys = ["items", "get"]
 
 
 def _dict_to_config(data):
+    """Deep copy converting dictionary / list to ConfigItem."""
     if isinstance(data, dict):
         result = {}
         for key, value in data.items():
@@ -66,6 +74,7 @@ def _dict_to_config(data):
 
 
 def _config_to_dict(data):
+    """Deep copy converting ConfigItem to dictionary / list."""
     if isinstance(data, ConfigItem):
         result = {}
         for key, value in data.__dict__.items():

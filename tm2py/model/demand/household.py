@@ -1,18 +1,15 @@
-"""Placeholder docstring for CT-RAMP related components for Residents' model
+"""Placeholder docstring for CT-RAMP related components for household residents' model
 """
 
-import os as _os
+from os.path import join as _join
 import shutil as _shutil
 
 from tm2py.core.component import Component as _Component
 import tm2py.core.tools as _tools
 
 
-_join = _os.path.join
-
-
-class ResidentsModel(_Component):
-    """Run residents' model"""
+class HouseholdModel(_Component):
+    """Run household resident model"""
 
     def __init__(self, controller):
         super().__init__(controller)

@@ -6,6 +6,7 @@
 from contextlib import contextmanager as _context
 import multiprocessing as _multiprocessing
 import re as _re
+from os.path import join as _join
 from socket import error as _socket_error
 from typing import List, Union, Any, Dict
 
@@ -15,6 +16,7 @@ import openmatrix as _omx
 # PyLint cannot build AST from compiled Emme libraries
 # so disabling relevant import module checks
 # pylint: disable=E0611, E0401, E1101
+from inro.emme.database.emmebank import Emmebank
 from inro.emme.database.scenario import Scenario as EmmeScenario
 from inro.emme.database.matrix import Matrix as EmmeMatrix
 import inro.emme.desktop.app as _app
@@ -28,8 +30,11 @@ EmmeModeller = _m.Modeller
 _EMME_PROJECT_REF = {}
 
 
-class EmmeProjectCache:
-    """Centralized cache for Emme project and related calls for traffic and transit assignments."""
+class EmmeManager:
+    """Centralized cache for Emme project and related calls for traffic and transit assignments.
+
+    Wraps Emme Desktop API (see Emme API Reference, )
+    """
 
     def __init__(self):
         self._project_cache = _EMME_PROJECT_REF
@@ -74,6 +79,11 @@ class EmmeProjectCache:
             self._project_cache[project_path] = emme_project
         return emme_project
 
+    def emmebank(self, path: str) -> Emmebank:
+        if not path.endswith("emmebank"):
+            path = _join(path, "emmebank")
+        return Emmebank(path)
+
     @staticmethod
     def init_modeller(emme_project: EmmeDesktopApp) -> EmmeModeller:
         """Initialize and return Modeller object.
@@ -104,6 +114,9 @@ class EmmeProjectCache:
                 emme_project = next(iter(self._project_cache.values()))
                 return _m.Modeller(emme_project)
             raise
+
+    def tool(self, namespace: str):
+        return self.modeller.tool(namespace)
 
     @staticmethod
     def logbook_write(name: str, value: str = None, attributes: Dict[str, Any] = None):
@@ -162,7 +175,8 @@ class NetworkCalculator:
         """
         self._scenario = scenario
         if modeller is None:
-            modeller = _m.Modeller()
+            emme_manager = EmmeManager()
+            modeller = emme_manager.modeller
         self._network_calc = modeller.tool(
             "inro.emme.network_calculation.network_calculator"
         )
@@ -290,6 +304,7 @@ class OMX:
         scenario: EmmeScenario = None,
         omx_key: str = "NAME",
         matrix_cache: MatrixCache = None,
+        mask_max_value: float = None
     ):  # pylint: disable=R0913
         """Write from Emmebank or Matrix Cache to OMX file, or read from OMX to Numpy.
 
@@ -303,14 +318,18 @@ class OMX:
             omx_key: "ID_NAME", "NAME", "ID", format for generating
                 OMX key from Emme matrix data
             matrix_cache: optional, Matrix Cache to support write data
-                from cache instead of Emmmebank
+                from cache (instead of always reading from Emmmebank)
+            mask_max_value: optional, max value above which to write
+                zero instead ("big to zero" behavior)
         """
         self._file_path = file_path
         self._mode = mode
         self._scenario = scenario
         self._omx_key = omx_key
+        self._mask_max_value = mask_max_value
         self._omx_file = None
-        self._matrix_cache = matrix_cache
+        self._emme_matrix_cache = matrix_cache
+        self._read_cache = {}
 
     def _generate_name(self, matrix):
         if self._omx_key == "ID_NAME":
@@ -330,6 +349,7 @@ class OMX:
         if self._omx_file is not None:
             self._omx_file.close()
         self._omx_file = None
+        self._read_cache = {}
 
     def __enter__(self):
         self.open()
@@ -350,7 +370,8 @@ class OMX:
 
         Args:
             matrices: list of Emme matrix objects or names / IDs
-                of matrices in Emmebank
+                of matrices in Emmebank, or dictionary of 
+                name: Emme matrix object/ Emme matrix ID
         """
         if isinstance(matrices, dict):
             for key, matrix in matrices.iteritems():
@@ -374,8 +395,8 @@ class OMX:
             matrix = self._scenario.emmebank.matrix(matrix)
         if name is None:
             name = self._generate_name(matrix)
-        if self._matrix_cache:
-            numpy_array = self._matrix_cache.get_data(matrix)
+        if self._emme_matrix_cache:
+            numpy_array = self._emme_matrix_cache.get_data(matrix)
         else:
             numpy_array = matrix.get_numpy_data(self._scenario.id)
         if matrix.type == "DESTINATION":
@@ -427,7 +448,8 @@ class OMX:
             chunkshape = (1, shape[0])
         else:
             chunkshape = None
-        attrs["source"] = "Emme"
+        if self._mask_max_value:
+            numpy_array[numpy_array > self._mask_max_value] = 0
         numpy_array = numpy_array.astype(dtype="float64", copy=False)
         self._omx_file.create_matrix(
             name, obj=numpy_array, chunkshape=chunkshape, attrs=attrs
@@ -436,10 +458,16 @@ class OMX:
     def read(self, name: str) -> NumpyArray:
         """Read OMX data as numpy array (standard interface).
 
+        Caches matrix data (arrays) already read from disk.
+
         Args:
             name: name of OMX matrix
         """
-        return self._omx_file[name].read()
+        if name in self._read_cache:
+            return self._read_cache[name]
+        data = self._omx_file[name].read()
+        self._read_cache[name] = data
+        return data
 
     def read_hdf5(self, path: str) -> NumpyArray:
         """Read data directly from PyTables interface.
@@ -455,7 +483,8 @@ class OMX:
 def parse_num_processors(value: [str, int, float]):
     """Parse input value string "MAX-X" to number of available processors.
 
-    Does not raise any specific errors.
+    Used with Emme procedures (traffic and transit assignments, matrix
+    caculator, etc.) Does not raise any specific errors.
 
     Args:
         value: int, float or string; string value can be "X" or "MAX-X"

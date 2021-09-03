@@ -35,7 +35,7 @@ import array as _array
 from collections import defaultdict as _defaultdict
 from contextlib import contextmanager as _context
 from math import sqrt as _sqrt
-import os as _os
+from os.path import join as _join, dirname as _dir
 import time as _time
 from typing import List
 
@@ -44,8 +44,8 @@ from tm2py.core.component import Component as _Component, Controller as _Control
 import tm2py.core.emme as _emme_tools
 
 
-_join, _dir = _os.path.join, _os.path.dirname
 EmmeScenario = _emme_tools.EmmeScenario
+_default_bin_edges = [0.0, 0.9, 1.2, 1.8, 2.5, 5.0, 10.0]
 
 
 class AssignMAZSPDemand(_Component):
@@ -77,16 +77,16 @@ class AssignMAZSPDemand(_Component):
         self._scenario = scenario
         self._period = period
         self._modes = modes
-        self._modeller = _emme_tools.EmmeProjectCache().modeller
         # bins: performance parameter: crow-fly distance bins
         #       to limit shortest path calculation by origin to furthest destination
         #       semi-exposed for performance testing
-        self._bin_edges = [0.0, 0.9, 1.2, 1.8, 2.5, 5.0, 10.0]
-        self._net_calc = _emme_tools.NetworkCalculator(self._scenario, self._modeller)
+        self._bin_edges = _default_bin_edges
         self._debug_report = []
         self._debug = False
 
         # Internal attributes to track data through the sequence of steps
+        self._modeller = None
+        self._net_calc = None
         self._mazs = None
         self._demand = None
         self._max_dist = 0
@@ -96,8 +96,12 @@ class AssignMAZSPDemand(_Component):
 
     def run(self):
         """Run MAZ-to-MAZ shortest path assignment."""
+        self._modeller = _emme_tools.EmmeManager().modeller
+        self._net_calc = _emme_tools.NetworkCalculator(self._scenario, self._modeller)
         # NOTE: demand structure to be reviewed
-        root_dir = r"..\demand_matrices\highway\maz_demand"
+        # TODO: hard coded path to be fixed
+        file_path_tmplt = _join(
+            self.root_dir, self.config.highway.maz_to_maz.input_maz_highway_demand_file)
         period = self._period
         with self._setup():
             self._prepare_network()
@@ -108,9 +112,7 @@ class AssignMAZSPDemand(_Component):
             }
             for i in range(1, 4):
                 mazseq = self._get_county_mazs(county_sets[i])
-                omx_file_path = _join(
-                    root_dir, f"auto_{period}_MAZ_AUTO_{i}_{period}.omx"
-                )
+                omx_file_path = file_path_tmplt.format(period=period, number=i)
                 with _emme_tools.OMX(omx_file_path, "r") as omx_file:
                     # NOTE: OMX matrices to be updated by WSP
                     demand_array = omx_file.read_hdf5("/matrices/M0")
@@ -150,28 +152,22 @@ class AssignMAZSPDemand(_Component):
         create_attribute = modeller.tool(
             "inro.emme.data.extra_attribute.create_extra_attribute"
         )
-        create_attribute(
-            "LINK",
-            "@link_cost",
-            "total link cost for MAZ-MAZ SP assign",
-            overwrite=True,
-            scenario=self._scenario,
-        )
-        create_attribute(
-            "LINK",
-            "@link_cost_maz",
-            "link cost MAZ-MAZ, unused MAZs blocked",
-            overwrite=True,
-            scenario=self._scenario,
-        )
-        create_attribute("NODE", "@maz_root", overwrite=True, scenario=self._scenario)
-        create_attribute("NODE", "@maz_leaf", overwrite=True, scenario=self._scenario)
+        # TODO: internal (temp) attbribute names may have a name conflict
+        #       could auto-generate unique names on conflict
+        attributes = [
+            ("LINK", "@link_cost", "total cost MAZ-MAZ"),
+            ("LINK", "@link_cost_maz", "cost MAZ-MAZ, unused MAZs blocked"),
+            ("NODE", "@maz_root", ""),
+            ("NODE", "@maz_leaf", ""),
+        ]
+        for domain, name, desc in attributes:
+            create_attribute(domain, name, desc, overwrite=True, scenario=self._scenario)
         if self._scenario.has_traffic_results:
             time_attr = "timau"
         else:
-            time_attr = "@free_flow_time"
-        vot = self.config.emme.highway_maz.value_of_time
-        op_cost = self.config.emme.highway_maz.operating_cost
+            time_attr = "(@free_flow_time.max.timau)"
+        vot = self.config.highway.maz_to_maz.value_of_time
+        op_cost = self.config.highway.maz_to_maz.operating_cost_per_mile
         self._net_calc(
             "@link_cost", f"{time_attr} + 0.6 / {vot} * (length * {op_cost})"
         )
@@ -240,8 +236,8 @@ class AssignMAZSPDemand(_Component):
         for data in self._demand.values():
             max_dist = max(entry["dist"] for entry in data) / 5280.0
             for group in demand_groups:
-                if max_dist < demand_groups["dist"]:
-                    demand_groups["demand"].extend(data)
+                if max_dist < group["dist"]:
+                    group["demand"].extend(data)
                     break
         for group in demand_groups:
             self._debug_report.append(
@@ -266,7 +262,7 @@ class AssignMAZSPDemand(_Component):
         root_maz_ids = {}
         leaf_maz_ids = {}
         for data in demand:
-            o_node, d_node = data["p"], data["q"]
+            o_node, d_node = data["orig"], data["dest"]
             root_maz_ids[o_node.number] = o_node["@maz_root"] = o_node["@mazseq"]
             leaf_maz_ids[d_node.number] = d_node["@maz_leaf"] = d_node["@mazseq"]
         self._root_index = {p: i for i, p in enumerate(sorted(root_maz_ids.keys()))}
@@ -291,7 +287,8 @@ class AssignMAZSPDemand(_Component):
         )
         max_radius = max_radius * 5280 + 100  # add some buffer for rounding error
         root_dir = _dir(self._scenario.emmebank.path)
-        num_processors = self.config.emme.number_of_processors
+        num_processors = _emme_tools.parse_num_processors(
+            self.config.emme.num_processors)
         shortest_paths_tool(
             modes=self._modes,
             roots_attribute="@maz_root",
@@ -354,7 +351,7 @@ class AssignMAZSPDemand(_Component):
         # read first 4 integers from file
         header = _array.array("I")
         header.fromfile(paths_file, 4)
-        _, _, roots_nb, leafs_nb = header
+        roots_nb, leafs_nb = header[2:4]
         # Load sequence of path indices (positions by orig-dest index),
         # pointing to list of path node IDs in file
         path_indicies = _array.array("I")

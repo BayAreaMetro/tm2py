@@ -2,16 +2,17 @@
 
 The traffic assignment runs according to the list of assignment classes
 in the controller.config. Each classes is specified using the following
-schema. All items are required unless otherwise (no validation at present).
+schema. All items are required unless indicated (no validation at present).
 Note that some network preparation steps (such as the setting of link.modes)
 are completed in the create_emme_network component.
     "name": short (e.g. 2-3 character) unique reference name for the class.
         used in attribute and matrix names
     "description": longer text used in attribute and matrix descriptions
-    "emme_mode": single character mode, used to generate link.modes to
+    "mode_code": single character mode, used to generate link.modes to
         identify subnetwork, generated from "exclued_links" keywords
     "demand": list of OMX file and matrix keyname references
-        "file": reference name for relative file path of source OMX file
+        "source": reference name of the component section for the 
+            source "highway_demand_file" location
         "name": name of matrix in the OMX file, can include "{period}"
             placeholder
         "factor": optional, multiplicative factor to generate PCEs from
@@ -27,7 +28,7 @@ are completed in the create_emme_network component.
             - "is_toll_truck": has a value (non-bridge) toll for trucks
             - "is_auto_only": is reserved for autos (non-truck) (@useclass != 1)
     "value_of_time": value of time for this class in $ / hr
-    "operating_cost": vehicle operating cost in cents / mile
+    "operating_cost_per_mile": vehicle operating cost in cents / mile
     "toll": additional toll cost link attribute (in cents)
     "toll_factor": optional, factor to apply to toll values in cost calculation
     "pce": optional, passenger car equivalent to convert assigned demand in
@@ -49,26 +50,24 @@ Example single class config, as a Python dictionary:
     {
         "name": "da",
         "description": "drive alone",
-        "emme_mode": "d",
+        "mode_code": "d",
         "demand": [
-            {"file": "household", "name": "SOV_GP_{period}"},
-            {"file": "air_passenger", "name": "DA"},
-            {"file": "internal_external", "name": "DA"},
+            {"source": "household", "name": "SOV_GP_{period}"},
+            {"source": "air_passenger", "name": "DA"},
+            {"source": "internal_external", "name": "DA"},
         ],
         "excluded_links": ["is_toll_da", "is_sr2"],
         "value_of_time": 18.93,  # $ / hr
-        "operating_cost": 17.23,  # cents / mile
+        "operating_cost_per_mile": 17.23,  # cents / mile
         "toll": "@bridgetoll_da",
         "skims": ["time", "dist", "freeflowtime", "bridgetoll_da"],
     }
 
 Other relevant parameters from the config are
-    emme.highway.relative_gap: target relative gap stopping criteria
-    emme.highway.max_iterations: maximum iterations stopping criteria
-    emme.highway.demand_files: mapping giving short names for relative
-        paths to OMX files for demand import. Can use {period} placeholder
+    highway.relative_gap: target relative gap stopping criteria
+    highway.max_iterations: maximum iterations stopping criteria
     emme.num_processors: number of processors as integer or "MAX" or "MAX-N"
-    emme.scenario_ids: mapping of period ID to scenario number
+    periods[].emme_scenario_id: Emme scenario number to use for each period
 
 The Emme network must have the following attributes available:
     Link:
@@ -154,22 +153,19 @@ in the config.properties file.
 """
 
 from contextlib import contextmanager as _context
-import os as _os
+from os.path import join as _join, dirname as _dir
 
-# from typing import List, Union, Any, Dict
-import numpy as _numpy
+import numpy as np
 
 from tm2py.core.component import Component as _Component, Controller as _Controller
 import tm2py.core.emme as _emme_tools
-from tm2py.model.assignment.highwaymaz import AssignMAZSPDemand as _AssignMAZSPDemand
-
-_join, _dir = _os.path.join, _os.path.dirname
+from tm2py.model.assignment.highway_maz import AssignMAZSPDemand as _AssignMAZSPDemand
 
 
 class HighwayAssignment(_Component):
     """Highway assignment and skims"""
 
-    def __init__(self, controller: _Controller, root_dir: str = None):
+    def __init__(self, controller: _Controller):
         """Highway assignment and skims.
 
         Args:
@@ -180,10 +176,6 @@ class HighwayAssignment(_Component):
         self._num_processors = _emme_tools.parse_num_processors(
             self.config.emme.num_processors
         )
-        if root_dir is None:
-            self._root_dir = _os.getcwd()
-        else:
-            self._root_dir = root_dir
         self._matrix_cache = None
         self._emme_manager = None
         self._emmebank = None
@@ -195,38 +187,50 @@ class HighwayAssignment(_Component):
 
     def run(self):
         """Run highway assignment and skims."""
-        project_path = _join(self._root_dir, "mtc_emme", "mtc_emme.emp")
-        self._emme_manager = _emme_tools.EmmeProjectCache()
+        project_path = _join(self.root_dir, self.config.emme.project_path)
+        self._emme_manager = _emme_tools.EmmeManager()
         self._emme_manager.project(project_path)
-        self._emmebank = self._modeller.emmebank
+        # NOTE: fixed path for database for now
+        emmebank_path = _join(_dir(self.config.emme.project_path), "Database")
+        self._emmebank = self._emme_manager.emmebank(emmebank_path)
         # Run assignment and skims for all specified periods
         for period in self.config.periods:
-            scenario_id = self.config.emme.scenario_ids[period["name"]]
-            scenario = self._emmebank.scenario(scenario_id)
+            scenario_id = period.emme_scenario_id
+            scenario = emmebank.scenario(scenario_id)
             with self._setup(scenario):
-                # Import demand from specified OMX files
-                # Will also MSA average demand if msa_iteration > 1
-                import_demand = ImportDemand(
-                    self.controller, self._root_dir, scenario, period["name"]
-                )
-                import_demand.run()
+                if self.controller.iteration > 0:
+                    # Import demand from specified OMX files
+                    # Will also MSA average demand if iteration > 1
+                    import_demand = ImportDemand(
+                        self.controller, scenario, period.name
+                    )
+                    import_demand.run()
+                else:
+                    matrix = emmebank.matrix('ms"zero"')
+                    if matrix:
+                        emmebank.delete_matrix(matrix)
+                    ident = emmebank.available_matrix_identifier("SCALAR")
+                    matrix = emmebank.create_matrix(ident)
+                    matrix.name = 'zero'
+                    matrix.description = "Zero value matrix for FF assign"
+
                 # skip for first global iteration
                 if self.controller.iteration > 1:
                     # non-auto mode x on MAZ connectors plus drive alone
                     # mode d, requires review after network creation workflow
                     modes = ["x", "d"]
                     maz_assign = _AssignMAZSPDemand(
-                        self.controller, scenario, period["name"], modes
+                        self.controller, scenario, period.name, modes
                     )
                     maz_assign.run()
                 else:
                     # Initialize ul1 to 0 (MAZ-MAZ background traffic)
                     net_calc = _emme_tools.NetworkCalculator(scenario)
                     net_calc("ul1", "0")
-                self._assign_and_skim(period["name"], scenario)
-                if self.config.run.verify:
-                    self.verify(period["name"], scenario)
-                self._export_skims(period["name"], scenario)
+                self._assign_and_skim(period.name, scenario)
+                self._export_skims(period.name, scenario)
+                if self.config.scenario.verify and self.controller.iteration == 1:
+                    self._verify(period.name, scenario)
 
     @_context
     def _setup(self, scenario):
@@ -262,7 +266,7 @@ class HighwayAssignment(_Component):
         # create Emme format specification with traffic class definitions
         # and path analyses (skims)
         assign_spec = self._base_spec()
-        for class_config in self.config.emme.highway.classes:
+        for class_config in self.config.highway.classes:
             emme_class_spec = self._prepare_traffic_class(
                 class_config, scenario, period
             )
@@ -275,7 +279,7 @@ class HighwayAssignment(_Component):
         for emme_class_spec in assign_spec["classes"]:
             self._calc_time_skim(emme_class_spec)
         # Set intra-zonals for time and dist to be 1/2 nearest neighbour
-        for class_config in self.config.emme.highway.classes:
+        for class_config in self.config.highway.classes:
             self._set_intrazonal_values(
                 period, class_config["name"], class_config["skims"]
             )
@@ -302,14 +306,17 @@ class HighwayAssignment(_Component):
             if skim_name in ["time", "distance", "freeflowtime", "hovdist", "tolldist"]:
                 data = self._matrix_cache.get_data(matrix)
                 # NOTE: sets values for external zones as well
-                _numpy.fill_diagonal(data, _numpy.inf)
-                data[_numpy.diag_indices_from(data)] = 0.5 * _numpy.nanmin(data, 1)
+                np.fill_diagonal(data, np.inf)
+                data[np.diag_indices_from(data)] = 0.5 * np.nanmin(data, 1)
                 self._matrix_cache.set_data(matrix, data)
 
     def _export_skims(self, period, scenario):
         """Export skims to OMX files by period."""
-        root = _dir(_dir(self._emmebank.path))
-        omx_file_path = _join(root, f"traffic_skims_{period}.omx")
+        # NOTE: skims in separate file by period
+        omx_file_path = _join(
+            self.root_dir, 
+            self.config.highway.output_skims_path.format(period=period))
+        os.makedirs(omx_file_path, exist_ok=True)
         with _emme_tools.OMX(
             omx_file_path, "w", scenario, matrix_cache=self._matrix_cache
         ) as omx_file:
@@ -319,8 +326,8 @@ class HighwayAssignment(_Component):
 
     def _base_spec(self):
         """Generate template Emme SOLA assignment specification"""
-        relative_gap = self.config.emme.highway.relative_gap
-        max_iterations = self.config.emme.highway.max_iterations
+        relative_gap = self.config.highway.relative_gap
+        max_iterations = self.config.highway.max_iterations
         # NOTE: mazmazvol as background traffic in link.data1 ("ul1")
         base_spec = {
             "type": "SOLA_TRAFFIC_ASSIGNMENT",
@@ -348,8 +355,8 @@ class HighwayAssignment(_Component):
         net_calc = _emme_tools.NetworkCalculator(scenario)
 
         name = class_config["name"]
-        name_lower = name
-        op_cost = class_config["operating_cost"]
+        name_lower = name.lower()
+        op_cost = class_config["operating_cost_per_mile"]
         toll = class_config["toll"]
         toll_factor = class_config.get("toll_factor")
         create_attribute(
@@ -376,9 +383,13 @@ class HighwayAssignment(_Component):
         class_analysis, od_travel_times = self._prepare_path_analyses(
             class_config["skims"], scenario, period, name
         )
+        if self.controller.iteration == 0:
+            demand_matrix = 'ms"zero"'
+        else:
+            demand_matrix = f'mf"{period}_{name}"'
         emme_class_spec = {
-            "mode": class_config["emme_mode"],
-            "demand": f'mf"{period}_{name}"',
+            "mode": class_config["mode_code"],
+            "demand": demand_matrix,
             "generalized_cost": {
                 "link_costs": f"@cost_{name_lower}",  # cost in $0.01
                 # $/hr -> min/$0.01
@@ -467,13 +478,12 @@ class HighwayAssignment(_Component):
         }
         return analysis_spec
 
-    def verify(self, period, scenario):
-        """Run post-process verification steps 
-        """
+    def _verify(self, period, scenario):
+        """Run post-process verification steps"""
         # calc_vmt
         net_calc = _emme_tools.NetworkCalculator(scenario)
         class_vehs = []
-        for class_config in self.config.emme.highway.classes:
+        for class_config in self.config.highway.classes:
             name = class_config.name.lower()
             pce = class_config.get("pce", 1.0)
             class_vehs.append(f"@flow_{[name]}*{[pce]}")
@@ -486,13 +496,20 @@ class HighwayAssignment(_Component):
         # TODO: specifiy acceptable VMT range, could come from config
         # min_vmt = {"ea": ?}
         # max_vmt = {"ea": ?}
-        # assert min_vmt[period] <= total_vmt <= max_vmt[period]
+        assert min_vmt[period] <= total_vmt <= max_vmt[period]
 
-        # check skim matrices for infinities
+        # check all skim matrices for infinities
+        errors = []
         for matrix in self._skim_matrices:
             data = self._matrix_cache.get_data(matrix)
-            assert (data < 1e19).all()  # 1e20 is sentinal for unreachable in Emme skims
+            if not (data < 1e19).all():
+                errors.append(f"{matrix.name} has infinite (>1e19) values")
+        # assert no error message has been registered, else print messages
+        assert not errors, "errors occured:\n{}".format("\n".join(errors))
 
+
+# TODO: import demand to separate python file
+# TODO: incorporate import of transit demand
 
 class ImportDemand(_Component):
     """Import and average highway assignment demand from OMX files to Emme database"""
@@ -500,14 +517,13 @@ class ImportDemand(_Component):
     def __init__(
         self,
         controller: _Controller,
-        root_dir: str,
         scenario: _emme_tools.EmmeScenario,
         period: str,
     ):
         """Import and average highway demand.
 
         Demand is imported from OMX files based on reference file paths and OMX
-        matrix names in highway assignment config (emme.highway.classes).
+        matrix names in highway assignment config (highway.classes).
         The demand is average using MSA with the current demand matrices if the
         controller.iteration > 1.
 
@@ -518,7 +534,6 @@ class ImportDemand(_Component):
             period: time period ID
         """
         super().__init__(controller)
-        self._root_dir = root_dir
         self._scenario = scenario
         self._period = period
         self._omx_files = {}
@@ -527,7 +542,7 @@ class ImportDemand(_Component):
         """Run demand import from OMX files and average"""
         scenario = self._scenario
         period = self._period
-        traffic_config = self.config.emme.highway.classes
+        traffic_config = self.config.highway.classes
         msa_iteration = self.controller.iteration
         emmebank = scenario.emmebank
         num_zones = len(scenario.zone_numbers)
@@ -539,15 +554,15 @@ class ImportDemand(_Component):
                 demand_name = f'{period}_{class_config["name"]}'
                 matrix = emmebank.matrix(demand_name)
                 if msa_iteration <= 1:
-                    if matrix:
-                        emmebank.delete_matrix(matrix)
-                    ident = emmebank.available_matrix_identifier("FULL")
-                    matrix = emmebank.create_matrix(ident)
-                    matrix.name = demand_name
+                    if not matrix:
+                        ident = emmebank.available_matrix_identifier("FULL")
+                        matrix = emmebank.create_matrix(ident)
+                        matrix.name = demand_name
                     matrix.description = (
                         f'{period} {class_config["description"]} demand'
                     )
                 else:
+                    # NOTE: could validate that matrix already exists
                     # Load prev demand and MSA average
                     prev_demand = matrix.get_numpy_data(scenario.id)
                     demand = prev_demand + (1.0 / msa_iteration) * (
@@ -557,14 +572,7 @@ class ImportDemand(_Component):
 
     @_context
     def _setup(self):
-        demand_files = self.config.emme.highway.demand_files
-        for name, path in demand_files.items():
-            self._omx_files[name] = _emme_tools.OMX(
-                _join(self._root_dir, path.format(period=self._period))
-            )
         try:
-            for file_obj in self._omx_files.values():
-                file_obj.open()
             yield
         finally:
             for file_obj in self._omx_files.values():
@@ -572,16 +580,26 @@ class ImportDemand(_Component):
             self._omx_files = {}
 
     def _read_demand(self, file_config, num_zones):
-        file_ref = file_config["file"]
+        file_ref = file_config["source"]
         name = file_config["name"].format(period=self._period.upper())
         factor = file_config.get("factor")
-        demand = self._omx_files[file_ref].read(name)
+        file_obj = self._omx_files.get(source)
+        if not file_ref:
+            # REVIEW: should source reference the full key instead of
+            #         fixed "highway_demand_file" ?
+            path = self.config[file_ref].highway_demand_file
+            file_obj = _emme_tools.OMX(
+                _join(self.root_dir, path.format(period=self._period))
+            )
+            file_obj.open()
+            self._omx_files[source] = file_obj
+        demand = file_obj.read(name)
         if factor is not None:
             demand = factor * demand
         shape = demand.shape
         # pad external zone values with 0
         if shape != (num_zones, num_zones):
-            demand = _numpy.pad(
+            demand = np.pad(
                 demand, ((0, num_zones - shape[0]), (0, num_zones - shape[1]))
             )
         return demand

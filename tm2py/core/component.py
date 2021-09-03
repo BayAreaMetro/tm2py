@@ -71,6 +71,12 @@ class Component(ABC):
         return self.controller.config
 
     @property
+    def root_dir(self):
+        """Root directory set on controller object"""
+        # TODO: need some review
+        return self.controller._root_dir
+
+    @property
     def top_sheet(self):
         """docstring placeholder for top sheet"""
         return self.controller.top_sheet

@@ -16,10 +16,10 @@ _Logger = _log.Logger
 def run_process(commands: List[str], name: str = "", logger: _Logger = None):
     """Run system level commands as blocking process and log output and error messages.
 
-        Args:
-            commands: list of one or more commands to execute
-            name: optional name to use for the temp bat file
-            logger: optional Logger object to log output and errors from console
+    Args:
+        commands: list of one or more commands to execute
+        name: optional name to use for the temp bat file
+        logger: optional Logger object to log output and errors from console
     """
     with temp_file("w", prefix=name, suffix=".bat") as (bat_file, bat_file_path):
         bat_file.write("\n".join(commands))
@@ -49,14 +49,14 @@ def run_process(commands: List[str], name: str = "", logger: _Logger = None):
 def temp_file(mode: str = "w+", prefix: str = "", suffix: str = ""):
     """Temp file wrapper to return open file handle and named path.
 
-        A named temporary file (using mkstemp) with specified prefix and
-        suffix is created and opened with the specified mode. The file
-        handle and path are returned. The file is closed and deleted on exit.
-    
-        Args:
-            mode: mode to open file, [rw][+][b]
-            prefix: optional text to start temp file name
-            suffix: optional text to end temp file name
+    A named temporary file (using mkstemp) with specified prefix and
+    suffix is created and opened with the specified mode. The file
+    handle and path are returned. The file is closed and deleted on exit.
+
+    Args:
+        mode: mode to open file, [rw][+][b]
+        prefix: optional text to start temp file name
+        suffix: optional text to end temp file name
     """
     file_ref, file_path = _tempfile.mkstemp(prefix=prefix, suffix=suffix)
     file = _os.fdopen(file_ref, mode=mode)
