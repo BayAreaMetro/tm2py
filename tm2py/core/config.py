@@ -3,6 +3,7 @@
 
 from types import SimpleNamespace
 import toml as _toml
+from typing import List, Union
 
 
 class Configuration:
@@ -14,14 +15,21 @@ class Configuration:
 
     """
 
-    def __init__(self, path: str = None):
+    def __init__(self, path: Union[str, List[str]] = None):
         super().__init__()
         if path is not None:
-            self.load(path)
+            if isinstance(path, list):
+                for path_item in path:
+                    self.load(path_item)
+            else:
+                self.load(path)
 
     def __repr__(self):
         items = (f"{k}={v!r}" for k, v in self.__dict__.items())
         return "{}({})".format(type(self).__name__, ", ".join(items))
+
+    def __getitem__(self, key):
+        return getattr(self, key)
 
     def load(self, path: str):
         """Load config from toml file at path"""

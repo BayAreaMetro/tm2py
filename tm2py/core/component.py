@@ -14,11 +14,17 @@ class Controller(ABC):
         self._logger = None
         self._top_sheet = None
         self._trace = None
+        self._root_dir = None
 
     @property
     def config(self):
         """Return configuration interface"""
         return self._config
+
+    @property
+    def root_dir(self):
+        """Root directory for model operation"""
+        return self._root_dir
 
     @property
     def top_sheet(self):
