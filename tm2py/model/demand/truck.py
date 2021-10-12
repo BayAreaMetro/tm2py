@@ -4,11 +4,12 @@
 
 import numpy as np
 import openmatrix as omx
-from os.path import join as _join, dirname as _dir
+import os
 import pandas as pd
 
 from tm2py.core.component import Component as _Component, Controller as _Controller
 import tm2py.core.emme as _emme_tools
+from tm2py.core.logging import LogStartEnd
 
 
 # employment category mappings, grouping into larger categories
@@ -200,6 +201,7 @@ TruckTollChoice.job
         self._emme_manager = None
         self._scenario = None
 
+    @LogStartEnd()
     def run(self):
         """Run truck sub-model to generate assignable truck class demand."""
         # future note: should not round intermediate results
@@ -215,12 +217,12 @@ TruckTollChoice.job
     def _setup_emme(self):
         """Start Emme desktop session and create matrices for balancing."""
         self._emme_manager = _emme_tools.EmmeManager()
-        project_path = _join(self.root_dir, "mtc_emme", "mtc_emme.emp")
+        project_path = os.path.join(self.root_dir, self.config.emme.project_path)
         project = self._emme_manager.project(project_path)
         self._emme_manager.init_modeller(project)
         # Note: using the highway assignment Emmebank by path
         emmebank = self._emme_manager.emmebank(
-            _join(self.root_dir, "mtc_emme", "Database", "emmebank")
+            os.path.join(self.root_dir, self.config.emme.highway_database_path)
         )
         # use first valid scenario for reference Zone IDs
         ref_scenario_id = self.config.periods[0].emme_scenario_id
@@ -272,7 +274,7 @@ TruckTollChoice.job
         MWTEMPN, manufacturing, warehousing, and transportation employment per NAICS
         TOTHH, total households
         """
-        maz_data_file = _join(self.root_dir, self.config.truck.maz_landuse_file)
+        maz_data_file = os.path.join(self.root_dir, self.config.scenario.maz_landuse_file)
         maz_input_data = pd.read_csv(maz_data_file)
         taz_input_data = maz_input_data.groupby(["TAZ_ORIGINAL"]).sum()
         # TODO: double check comes back sorted by TAZ ID
@@ -395,7 +397,7 @@ TruckTollChoice.job
         # note that very small, small and medium are assigned as one class
         # and share the same output skims
 
-        skim_path_tmplt = _join(self.root_dir, self.config.truck.skim_file)
+        skim_path_tmplt = os.path.join(self.root_dir, self.config.highway.output_skim_path)
         with _emme_tools.OMX(skim_path_tmplt.format(period="AM"), "r") as am_file:
             if use_old_skims:
                 am_vsmtrk_time = am_file.read("TIMEVSM")
@@ -484,11 +486,7 @@ TruckTollChoice.job
         class_demand = {}
         # TODO: skim names to parameter?
         for period, demands in period_demand.items():
-            if use_old_skims:
-                skim_path_tmplt = _join(
-                    self.root_dir, self.config.highway.output_skim_file)
-            else:
-                skim_path_tmplt = _join(self.root_dir, self.config.highway.output_skim_file)
+            skim_path_tmplt = os.path.join(self.root_dir, self.config.highway.output_skim_path)
             with _emme_tools.OMX(skim_path_tmplt.format(period=period)) as skims:
                 split_demand = {}
                 for name, total_trips in demands.items():
@@ -510,18 +508,19 @@ TruckTollChoice.job
                         )
                     else:
                         cls_name = "trk" if name != "lrgtrk" else "lrgtrk"
+                        grp_name = name[:3]
                         nontoll_time = skims.read(f"{period}_{cls_name}_time")
                         nontoll_dist = skims.read(f"{period}_{cls_name}_dist")
                         nontoll_bridgecost = skims.read(
-                            f"{period}_{cls_name}_bridgecost_{name}"
+                            f"{period}_{cls_name}_bridgetoll{grp_name}"
                         )
                         toll_time = skims.read(f"{period}_{cls_name}toll_time")
                         toll_dist = skims.read(f"{period}_{cls_name}toll_dist")
                         toll_bridgecost = skims.read(
-                            f"{period}_{cls_name}toll_bridgecost_{name}"
+                            f"{period}_{cls_name}toll_bridgetoll{grp_name}"
                         )
                         toll_tollcost = skims.read(
-                            f"{period}_{cls_name}toll_valuecost_{name}"
+                            f"{period}_{cls_name}toll_valuetoll{grp_name}"
                         )
 
                     e_util_nontoll = np.exp(
@@ -544,11 +543,12 @@ TruckTollChoice.job
 
     def _export_results(self, class_demand):
         """Export assignable class demands to OMX files by time-of-day."""
-        path_tmplt = _join(self.root_dir, self.config.truck.highway_demand_file)
+        path_tmplt = os.path.join(self.root_dir, self.config.truck.highway_demand_file)
+        os.makedirs(os.path.dirname(path_tmplt), exist_ok=True)
         for period, matrices in class_demand.items():
             with _emme_tools.OMX(path_tmplt.format(period=period), "w") as output_file:
                 for name, data in matrices.items():
-                    output_file.write_array(data, f"{period}_{name}")
+                    output_file.write_array(data, name)
 
     def _matrix_balancing(self, friction_matrix, orig_totals, dest_totals, name):
         """Run Emme matrix balancing tool using input arrays."""
@@ -561,7 +561,7 @@ TruckTollChoice.job
         od_values_name = f"{name}_friction"
         orig_totals_name = f"{name}_prod"
         dest_totals_name = f"{name}_attr"
-        result_name = f"{name}_demand"
+        result_name = f"{name}_daily_demand"
         # save O-D friction, prod and dest total values to Emmebank matrix
         self._save_to_emme_matrix(od_values_name, friction_matrix)
         self._save_to_emme_matrix(orig_totals_name, orig_totals)
@@ -607,7 +607,7 @@ TruckTollChoice.job
         #   time is in column 0, very small FF in 1, small FF in 2,
         #   medium FF in 3, and large FF in 4
         factors = {"time": [], "vsmtrk": [], "smltrk": [], "medtrk": [], "lrgtrk": []}
-        file_path = _join(self.root_dir, self.config.truck.friction_factors_file)
+        file_path = os.path.join(self.root_dir, self.config.truck.friction_factors_file)
         with open(file_path, "r") as truck_ff:
             for line in truck_ff:
                 tokens = line.split()
@@ -619,11 +619,14 @@ TruckTollChoice.job
         """Load k-factors table from CSV file [config.truck.k_factors_file]."""
         # NOTE: loading from this text format to numpy is pretty slow (~10 seconds)
         #       would be better to use a different format
-        data = pd.read_csv(_join(self.root_dir, self.config.truck.k_factors_file))
+        data = pd.read_csv(os.path.join(self.root_dir, self.config.truck.k_factors_file))
         zones = np.unique(data["I_taz_tm2_v2_2"])
-        num_zones = len(zones)
+        num_data_zones = len(zones)
         row_index = np.searchsorted(zones, data["I_taz_tm2_v2_2"])
         col_index = np.searchsorted(zones, data["J_taz_tm2_v2_2"])
-        k_factors = np.zeros((num_zones, num_zones))
+        k_factors = np.zeros((num_data_zones, num_data_zones))
         k_factors[row_index, col_index] = data["truck_k"]
+        num_zones = len(self._scenario.zone_numbers)
+        padding = ((0, num_zones - num_data_zones), (0, num_zones - num_data_zones))
+        k_factors = np.pad(k_factors, padding)
         return k_factors

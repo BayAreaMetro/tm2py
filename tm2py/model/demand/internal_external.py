@@ -82,9 +82,10 @@ import os
 import math
 import numpy as np
 import openmatrix as _omx
-from tm2py.core.component import Component as _Component
 
+from tm2py.core.component import Component as _Component
 import tm2py.core.emme as _emme_tools
+from tm2py.core.logging import LogStartEnd
 
 _special_gateway_adjust = {
     4693: 1.020228, 
@@ -134,6 +135,7 @@ class InternalExternal(_Component):
         super().__init__(controller)
         self._parameter = None
 
+    @LogStartEnd()
     def run(self):
         """docstring for component run"""
         input_demand = self._load_data()
@@ -194,11 +196,11 @@ class InternalExternal(_Component):
         period_demand = {}
         for period in [p.name for p in self.config.periods]:
             factor_map = _time_of_day_split[period]
-            demand = {}
+            class_demand = {}
             for class_name, demand in daily_prod_attract.items():
-                p, a = 0.5 * factors["production"], 0.5 * factors["attraction"]
-                demand[class_name] = p * demand + a * demand.T
-            period_demand[period] = demand
+                p, a = 0.5 * factor_map["production"], 0.5 * factor_map["attraction"]
+                class_demand[class_name] = p * demand + a * demand.T
+            period_demand[period] = class_demand
         return period_demand
 
     def _toll_choice(self, period_demand):
@@ -248,7 +250,7 @@ class InternalExternal(_Component):
         class_demand = {}
         for period, demands in period_demand.items():
             # skim_file_path = os.path.join('skims', 'HWYSKIM' + period + '_taz.omx')
-            skim_path_tmplt = os.path.join(self.root_dir, self.config.highway.output_skim_file)
+            skim_path_tmplt = os.path.join(self.root_dir, self.config.highway.output_skim_path)
             with _emme_tools.OMX(skim_path_tmplt.format(period=period)) as skims:
                 split_demand = {}
                 for name, total_trips in demands.items():
@@ -265,15 +267,15 @@ class InternalExternal(_Component):
                         nontoll_time = skims.read(f"{period}_{name}_time")
                         nontoll_dist = skims.read(f"{period}_{name}_dist")
                         nontoll_bridgecost = skims.read(
-                            f"{period}_{name}_bridgecost_{name}"
+                            f"{period}_{name}_bridgetoll{name}"
                         )
                         toll_time = skims.read(f"{period}_{name}toll_time")
                         toll_dist = skims.read(f"{period}_{name}toll_dist")
                         toll_bridgecost = skims.read(
-                            f"{period}_{name}toll_bridgecost_{name}"
+                            f"{period}_{name}toll_bridgetoll{name}"
                         )
                         toll_tollcost = skims.read(
-                            f"{period}_{name}toll_valuecost_{name}"
+                            f"{period}_{name}toll_valuetoll{name}"
                         )
 
                     e_util_nontoll = np.exp(
@@ -296,10 +298,9 @@ class InternalExternal(_Component):
 
     def _export_results(self, demand):
         """Export assignable class demands to OMX files by time-of-day."""
-        path_tmplt = os.pathjoin(self.root_dir, self.config.internal_external.highway_demand_file)
-        os.makedirs(path_tmplt, exist_ok=True)
-        for period, matrices in class_demand.items():
+        path_tmplt = os.path.join(self.root_dir, self.config.internal_external.highway_demand_file)
+        os.makedirs(os.path.dirname(path_tmplt), exist_ok=True)
+        for period, matrices in demand.items():
             with _emme_tools.OMX(path_tmplt.format(period=period), "w") as output_file:
                 for name, data in matrices.items():
-                    print(period, name, data.sum())
-                    output_file.write_array(data, f"{period}_{name}")
+                    output_file.write_array(data, name)

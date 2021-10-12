@@ -107,6 +107,7 @@ import openmatrix as _omx
 import pandas as _pandas
 
 from tm2py.core.component import Component as _Component, Controller as _Controller
+from tm2py.core.logging import LogStartEnd
 
 
 class AirPassenger(_Component):
@@ -121,14 +122,23 @@ class AirPassenger(_Component):
         """
         super().__init__(controller)
         self._periods = [p["name"].upper() for p in self.config.periods]
+        self._start_year = None
+        self._end_year = None
+        self._mode_groups = {}
+        self._out_names = {}
+
+    @LogStartEnd()
+    def run(self):
+        """Build the airport trip matrices"""
+        self._periods = [p["name"].upper() for p in self.config.periods]
         self._start_year = self.config.air_passenger.reference_start_year
         self._end_year = self.config.air_passenger.reference_end_year
         self._mode_groups = {}
+        self._out_names = {}
         for group in self.config.air_passenger.demand_aggregation:
-            self._mode_groups[group["assign_class"]] = group["access_modes"]
+            self._mode_groups[group["src_group_name"]] = group["access_modes"]
+            self._out_names[group["src_group_name"]] = group["result_class_name"]
 
-    def run(self):
-        """Build the airport trip matrices"""
         input_demand = self._load_demand()
         aggr_demand = self._aggregate_demand(input_demand)
         demand = self._interpolate(aggr_demand)
@@ -166,14 +176,14 @@ class AirPassenger(_Component):
         aggr_demand = _pandas.DataFrame()
         for year in [self._start_year, self._end_year]:
             for period in self._periods:
-                for assign, access_modes in self._mode_groups.items():
+                for group, access_modes in self._mode_groups.items():
                     data = input_demand[
                         [
-                            f"{period}_{access}_{assign}_{year}"
+                            f"{period}_{access}_{group}_{year}"
                             for access in access_modes
                         ]
                     ]
-                    aggr_demand[f"{period}_{assign}_{year}"] = data.sum(axis=1)
+                    aggr_demand[f"{period}_{group}_{year}"] = data.sum(axis=1)
         return aggr_demand
 
     def _interpolate(self, aggr_demand):
@@ -199,8 +209,8 @@ class AirPassenger(_Component):
         scale = float(int(year) - start_year) / (end_year - start_year)
         demand = _pandas.DataFrame()
         for period in self._periods:
-            for assign in self._mode_groups:
-                name = f"{period}_{assign}"
+            for group in self._mode_groups:
+                name = f"{period}_{group}"
                 demand[name] = (1 - scale) * aggr_demand[
                     f"{name}_{start_year}"
                 ] + scale * aggr_demand[f"{name}_{end_year}"]
@@ -218,16 +228,13 @@ class AirPassenger(_Component):
         demand["INDEX"] = demand.apply(
             lambda r: zone_map[r["ORIG"]] * len(zone_ids) + zone_map[r["DEST"]], axis=1
         )
-        output_folder = os.path.dirname(os.path.join(
+        path_tmplt = os.path.join(
             self.root_dir,
             self.config.air_passenger.highway_demand_file
-        ))
-        os.makedirs(output_folder, exist_ok=True)
+        )
+        os.makedirs(os.path.dirname(path_tmplt), exist_ok=True)
         for period in self._periods:
-            file_path = os.path.join(
-                self.root_dir,
-                self.config.air_passenger.highway_demand_file.format(period=period),
-            )
+            file_path = path_tmplt.format(period=period)
             omx_file = _omx.open_file(file_path, "w")
             try:
                 omx_file.create_mapping("zone_number", zone_ids)
@@ -239,6 +246,6 @@ class AirPassenger(_Component):
                         demand["INDEX"].to_numpy(),
                         demand[f"{period}_{name}"].to_numpy(),
                     )
-                    omx_file.create_matrix(name, obj=array)
+                    omx_file.create_matrix(self._out_names[name], obj=array)
             finally:
                 omx_file.close()
