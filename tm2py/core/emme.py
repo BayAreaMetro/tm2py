@@ -3,12 +3,14 @@
 """
 
 
+from collections import defaultdict as _defaultdict
 from contextlib import contextmanager as _context
+import heapq
 import multiprocessing as _multiprocessing
 import re as _re
-from os.path import join as _join
+import os
 from socket import error as _socket_error
-from typing import List, Union, Any, Dict
+from typing import List, Union, Any, Dict, Callable
 
 import numpy as _np
 import openmatrix as _omx
@@ -16,9 +18,11 @@ import openmatrix as _omx
 # PyLint cannot build AST from compiled Emme libraries
 # so disabling relevant import module checks
 # pylint: disable=E0611, E0401, E1101
-from inro.emme.database.emmebank import Emmebank
+from inro.emme.database.emmebank import Emmebank, change_dimensions
 from inro.emme.database.scenario import Scenario as EmmeScenario
 from inro.emme.database.matrix import Matrix as EmmeMatrix
+from inro.emme.network.node import Node as EmmeNetworkNode
+from inro.emme.network.link import Link as EmmeNetworkLink
 import inro.emme.desktop.app as _app
 import inro.modeller as _m
 
@@ -28,7 +32,7 @@ EmmeModeller = _m.Modeller
 
 # Cache running Emme projects from this process (simple singleton implementation)
 _EMME_PROJECT_REF = {}
-
+_INF = 1e400
 
 class EmmeManager:
     """Centralized cache for Emme project and related calls for traffic and transit assignments.
@@ -73,16 +77,27 @@ class EmmeManager:
                 emme_project = None
         # if window is not opened in this process, start a new one
         if emme_project is None:
+            if not os.path.isfile(project_path):
+                raise Exception(f"Emme project path does not exist {project_path}")
             emme_project = _app.start_dedicated(
                 visible=True, user_initials="inro", project=project_path
             )
             self._project_cache[project_path] = emme_project
         return emme_project
 
-    def emmebank(self, path: str) -> Emmebank:
+    @staticmethod
+    def emmebank(path: str) -> Emmebank:
         if not path.endswith("emmebank"):
-            path = _join(path, "emmebank")
+            path = os.path.join(path, "emmebank")
         return Emmebank(path)
+
+    @staticmethod
+    def change_emmebank_dimensions(emmebank, dimensions):
+        dims = emmebank.dimensions
+        new_dims = dims.copy()
+        new_dims.update(dimensions)
+        if dims != new_dims:
+            change_dimensions(emmebank.path, new_dims, keep_backup=False)
 
     @staticmethod
     def init_modeller(emme_project: EmmeDesktopApp) -> EmmeModeller:
@@ -266,7 +281,7 @@ class MatrixCache:
         Args:
             matrix: Emme matrix object or unique name / ID for Emme matrix in Emmebank
         """
-        if not isinstance(matrix, EmmeMatrix):
+        if isinstance(matrix, str):
             matrix = self._emmebank.matrix(matrix)
         timestamp = matrix.timestamp
         prev_timestamp = self._timestamps.get(matrix)
@@ -282,7 +297,7 @@ class MatrixCache:
             matrix: Emme matrix object or unique name / ID for Emme matrix in Emmebank
             data: Numpy array, must match the scenario zone system
         """
-        if not isinstance(matrix, EmmeMatrix):
+        if isinstance(matrix, str):
             matrix = self._emmebank.matrix(matrix)
         matrix.set_numpy_data(data, self._scenario.id)
         self._timestamps[matrix] = matrix.timestamp
@@ -502,3 +517,69 @@ def parse_num_processors(value: [str, int, float]):
     else:
         return int(value)
     return value
+
+
+def find_path(
+        orig_node: EmmeNetworkNode,
+        dest_node: EmmeNetworkNode,
+        filter_func: Callable,
+        cost_func: Callable) -> List[EmmeNetworkLink]:
+    """Find and return the shortest path (sequence of links) between two nodes in Emme network.
+
+        Args:
+            orig_node: origin Emme node object
+            dest_node: desination Emme node object
+            filter_func: callable function which accepts an Emme network link and returns True if included and False
+                if excluded. E.g. lambda link: mode in link.modes
+            cost_func: callable function which accepts an Emme network link and returns the cost value for the link.
+    """
+    visited = set([])
+    visited_add = visited.add
+    costs = _defaultdict(lambda: _INF)
+    back_links = {}
+    heap = []
+    pop, push = heapq.heappop, heapq.heappush
+    outgoing = None
+    link_found = False
+    for outgoing in orig_node.outgoing_links():
+        if filter_func(outgoing):
+            back_links[outgoing] = None
+            if outgoing.j_node == dest_node:
+                link_found = True
+                break
+            cost_to_link = cost_func(outgoing)
+            costs[outgoing] = cost_to_link
+            push(heap, (cost_to_link, outgoing))
+    try:
+        while not link_found:
+            cost_to_link, link = pop(heap)
+            if link in visited:
+                continue
+            visited_add(link)
+            for outgoing in link.j_node.outgoing_links():
+                if not filter_func(outgoing):
+                    continue
+                if outgoing in visited:
+                    continue
+                outgoing_cost = cost_to_link + cost_func(outgoing)
+                if outgoing_cost < costs[outgoing]:
+                    back_links[outgoing] = link
+                    costs[outgoing] = outgoing_cost
+                    push(heap, (outgoing_cost, outgoing))
+                if outgoing.j_node == dest_node:
+                    link_found = True
+                    break
+    except IndexError:
+        pass  # IndexError if heap is empty
+    if not link_found or outgoing is None:
+        raise NoPathFound("No path found between %s and %s" % (orig_node, dest_node))
+    prev_link = outgoing
+    route = []
+    while prev_link:
+        route.append(prev_link)
+        prev_link = back_links[prev_link]
+    return list(reversed(route))
+
+
+class NoPathFound(Exception):
+    pass
