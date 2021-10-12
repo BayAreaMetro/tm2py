@@ -2,11 +2,14 @@
 
 """
 
+from collections import defaultdict as _defaultdict
 from contextlib import contextmanager as _context
+from itertools import product as _product
+from math import sqrt, ceil
 import os as _os
 import subprocess as _subprocess
 import tempfile as _tempfile
-from typing import List
+from typing import List, Any
 
 import tm2py.core.logging as _log
 
@@ -66,3 +69,106 @@ def temp_file(mode: str = "w+", prefix: str = "", suffix: str = ""):
         if not file.closed:
             file.close()
         _os.remove(file_path)
+
+
+class SpatialGridIndex:
+    """
+    Simple spatial grid hash for fast (enough) nearest neighbor / within distance searches of points.
+    """
+
+    def __init__(self, size: float):
+        """
+        Args:
+            size: the size of the grid to use for the index, relative to the point coordinates
+        """
+        self._size = float(size)
+        self._grid_index = _defaultdict(lambda: [])
+
+    def insert(self, obj: Any, x: float, y: float):
+        """
+        Add new obj with coordinates x and y.
+
+        Args:
+           obj: any python object, will be returned from search methods "nearest" and "within_distance"
+           x: x-coordinate
+           y: y-coordinate
+        """
+        grid_x, grid_y = round(x / self._size), round(y / self._size)
+        self._grid_index[(grid_x, grid_y)].append((obj, x, y))
+
+    def nearest(self, x: float, y: float):
+        """Return the closest object in index to the specified coordinates
+
+        Args:
+            x: x-coordinate
+            y: y-coordinate
+        """
+        if len(self._grid_index) == 0:
+            raise Exception("SpatialGrid is empty.")
+
+        def calc_dist(x1, y1, x2, y2):
+            return sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
+        grid_x, grid_y = round(x / self._size), round(y / self._size)
+        step = 0
+        done = False
+        found_items = []
+        while not done:
+            search_offsets = list(range(-1 * step, step + 1))
+            search_offsets = _product(search_offsets, search_offsets)
+            items = []
+            for x_offset, y_offset in search_offsets:
+                if abs(x_offset) != step and abs(y_offset) != step:
+                    continue  # already checked this grid tile
+                items.extend(self._grid_index[grid_x + x_offset, grid_y + y_offset])
+            if found_items:
+                done = True
+            found_items.extend(items)
+            step += 1
+        min_dist = 1e400
+        closest = None
+        for i, xi, yi in found_items:
+            dist = calc_dist(x, y, xi, yi)
+            if dist < min_dist:
+                closest = i
+                min_dist = dist
+        return closest
+
+    def within_distance(self, x: float, y: float, distance: float):
+        """Return all objects in index within the distance of the specified coordinates
+
+        Args:
+            x: x-coordinate
+            y: y-coordinate
+            distance: distance to search in point coordinate units
+        """
+
+        def point_in_circle(x1, y1, x2, y2, dist):
+            return sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2) <= dist
+
+        return self._get_items_on_grid(x, y, distance, point_in_circle)
+
+    def within_square(self, x: float, y: float, distance: float):
+        """Return all objects in index within a square box distance of the specified coordinates.
+
+        Args:
+            x: x-coordinate
+            y: y-coordinate
+            distance: distance to search in point coordinate units
+        """
+
+        def point_in_box(x1, y1, x2, y2, dist):
+            return abs(x1 - x2) <= dist and abs(y1 - y2) <= dist
+
+        return self._get_items_on_grid(x, y, distance, point_in_box)
+
+    def _get_items_on_grid(self, x, y, distance, filter_func):
+        grid_x, grid_y = round(x / self._size), round(y / self._size)
+        num_search_grids = ceil(distance / self._size)
+        search_offsets = list(range(-1 * num_search_grids, num_search_grids + 1))
+        search_offsets = list(_product(search_offsets, search_offsets))
+        items = []
+        for x_offset, y_offset in search_offsets:
+            items.extend(self._grid_index[grid_x + x_offset, grid_y + y_offset])
+        filtered_items = [i for i, xi, yi in items if filter_func(x, y, xi, yi, distance)]
+        return filtered_items
