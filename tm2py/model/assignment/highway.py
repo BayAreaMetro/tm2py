@@ -11,7 +11,7 @@ are completed in the create_emme_network component.
     "mode_code": single character mode, used to generate link.modes to
         identify subnetwork, generated from "exclued_links" keywords
     "demand": list of OMX file and matrix keyname references
-        "source": reference name of the component section for the 
+        "source": reference name of the component section for the
             source "highway_demand_file" location
         "name": name of matrix in the OMX file, can include "{period}"
             placeholder
@@ -153,13 +153,14 @@ in the config.properties file.
 """
 
 from contextlib import contextmanager as _context
-from os.path import join as _join, dirname as _dir
+import os
+from typing import Dict, Any, Tuple, Union
 
 import numpy as np
-
 from tm2py.core.component import Component as _Component, Controller as _Controller
 import tm2py.core.emme as _emme_tools
-from tm2py.model.assignment.highway_maz import AssignMAZSPDemand as _AssignMAZSPDemand
+from tm2py.core.logging import LogStartEnd
+from tm2py.core.tools import SpatialGridIndex
 
 
 class HighwayAssignment(_Component):
@@ -170,7 +171,6 @@ class HighwayAssignment(_Component):
 
         Args:
             controller: parent Controller object
-            root_dir (str): root directory containing Emme project, demand matrices
         """
         super().__init__(controller)
         self._num_processors = _emme_tools.parse_num_processors(
@@ -185,52 +185,43 @@ class HighwayAssignment(_Component):
     def _modeller(self):
         return self._emme_manager.modeller
 
+    @LogStartEnd("highway assignment and skims")
     def run(self):
         """Run highway assignment and skims."""
-        project_path = _join(self.root_dir, self.config.emme.project_path)
+        project_path = os.path.join(self.root_dir, self.config.emme.project_path)
         self._emme_manager = _emme_tools.EmmeManager()
-        self._emme_manager.project(project_path)
-        # NOTE: fixed path for database for now
-        emmebank_path = _join(_dir(self.config.emme.project_path), "Database")
-        self._emmebank = self._emme_manager.emmebank(emmebank_path)
+        emme_app = self._emme_manager.project(project_path)
+        self._emme_manager.init_modeller(emme_app)
+        emmebank_path = os.path.join(self.root_dir, self.config.emme.highway_database_path)
+        self._emmebank = emmebank = self._emme_manager.emmebank(emmebank_path)
         # Run assignment and skims for all specified periods
         for period in self.config.periods:
-            scenario_id = period.emme_scenario_id
-            scenario = emmebank.scenario(scenario_id)
-            with self._setup(scenario):
-                if self.controller.iteration > 0:
-                    # Import demand from specified OMX files
-                    # Will also MSA average demand if iteration > 1
-                    import_demand = ImportDemand(
-                        self.controller, scenario, period.name
-                    )
-                    import_demand.run()
-                else:
-                    matrix = emmebank.matrix('ms"zero"')
-                    if matrix:
-                        emmebank.delete_matrix(matrix)
-                    ident = emmebank.available_matrix_identifier("SCALAR")
-                    matrix = emmebank.create_matrix(ident)
-                    matrix.name = 'zero'
-                    matrix.description = "Zero value matrix for FF assign"
+            with self.logger.log_start_end(f"period {period.name}"):
+                scenario_id = period.emme_scenario_id
+                scenario = emmebank.scenario(scenario_id)
+                with self._setup(scenario):
+                    if self.controller.iteration > 0:
+                        # Import demand from specified OMX files
+                        # Will also MSA average demand if iteration > 1
+                        import_demand = ImportDemand(
+                            self.controller, scenario, period.name
+                        )
+                        import_demand.run()
+                    else:
+                        matrix = emmebank.matrix('ms"zero"')
+                        if matrix:
+                            emmebank.delete_matrix(matrix)
+                        ident = emmebank.available_matrix_identifier("SCALAR")
+                        matrix = emmebank.create_matrix(ident)
+                        matrix.name = 'zero'
+                        matrix.description = "Zero value matrix for FF assign"
 
-                # skip for first global iteration
-                if self.controller.iteration > 1:
-                    # non-auto mode x on MAZ connectors plus drive alone
-                    # mode d, requires review after network creation workflow
-                    modes = ["x", "d"]
-                    maz_assign = _AssignMAZSPDemand(
-                        self.controller, scenario, period.name, modes
-                    )
-                    maz_assign.run()
-                else:
-                    # Initialize ul1 to 0 (MAZ-MAZ background traffic)
-                    net_calc = _emme_tools.NetworkCalculator(scenario)
-                    net_calc("ul1", "0")
-                self._assign_and_skim(period.name, scenario)
-                self._export_skims(period.name, scenario)
-                if self.config.scenario.verify and self.controller.iteration == 1:
-                    self._verify(period.name, scenario)
+                        self._prepare_network(scenario, period)
+
+                    self._assign_and_skim(period.name, scenario)
+                    self._export_skims(period.name, scenario)
+                    if self.config.scenario.verify and self.controller.iteration == 1:
+                        self._verify(period.name, scenario)
 
     @_context
     def _setup(self, scenario):
@@ -243,6 +234,232 @@ class HighwayAssignment(_Component):
                 self._matrix_cache.clear()
                 self._matrix_cache = None
 
+    @LogStartEnd("prepare network attributes and modes")
+    def _prepare_network(self, scenario, period):
+        network = scenario.get_network()
+        attributes = {
+            "LINK": ["@capclass", "@area_type", "@capacity", "@free_flow_speed", "@free_flow_time", "@ja"]
+        }
+        # toll field attributes in scenario and network object
+        dst_veh_groups = self.config.highway.tolls.dst_vehicle_group_names
+        for dst_veh in dst_veh_groups:
+            for toll_type in "bridge", "value":
+                attributes["LINK"].append(f"@{toll_type}toll_{dst_veh}")
+
+        for domain, attrs in attributes.items():
+            for name in attrs:
+                if name in network.attributes("LINK"):
+                    network.delete_attribute("LINK", name)
+                network.create_attribute("LINK", name)
+                if scenario.extra_attribute(name) is None:
+                    scenario.create_extra_attribute("LINK", name)
+
+        self._set_tolls(network, period)
+        self._set_area_type(network)
+        self._set_capclass(network)
+        self._set_speed(network)
+        self._set_vdf_attributes(network, period)
+        self._set_link_modes(network)
+        scenario.publish_network(network)
+
+    def _set_area_type(self, network):
+        # set area type for links based on average density of MAZ closest to I or J node
+        # the average density including all MAZs within the specified buffer distance
+        buff_dist = 5280 * self.config.highway.area_type_buffer_dist_miles
+        maz_data_file_path = os.path.join(self.root_dir, self.config.scenario.maz_landuse_file)
+        maz_landuse_data: Dict[int, Dict[Any, Union[str, int, Tuple[float, float]]]] = {}
+        with open(maz_data_file_path, 'r') as maz_data_file:
+            header = [h.strip() for h in next(maz_data_file).split(",")]
+            for line in maz_data_file:
+                data = dict(zip(header, line.split(",")))
+                maz_landuse_data[int(data["MAZ_ORIGINAL"])] = data
+        # Build spatial index of MAZ node coords
+        sp_index_maz = SpatialGridIndex(size=0.5 * 5280)
+        for node in network.nodes():
+            if node["@maz_id"]:
+                x, y = node.x, node.y
+                maz_landuse_data[int(node["@maz_id"])]["coords"] = (x, y)
+                sp_index_maz.insert(int(node["@maz_id"]), x, y)
+        for maz_landuse in maz_landuse_data.values():
+            x, y = maz_landuse.get("coords", (None, None))
+            if x is None:
+                continue  # some MAZs in table might not be in network
+            # Find all MAZs with the square buffer (including this one)
+            # (note: square buffer instead of radius used to match earlier implementation)
+            other_maz_ids = sp_index_maz.within_square(x, y, buff_dist)
+            # Sum total landuse attributes within buffer distance
+            total_pop = sum(int(maz_landuse_data[maz_id]["POP"]) for maz_id in other_maz_ids)
+            total_emp = sum(int(maz_landuse_data[maz_id]["emp_total"]) for maz_id in other_maz_ids)
+            total_acres = sum(float(maz_landuse_data[maz_id]["ACRES"]) for maz_id in other_maz_ids)
+            # calculate buffer area type
+            if total_acres > 0:
+                density = (1 * total_pop + 2.5 * total_emp) / total_acres
+            else:
+                density = 0
+            # code area type class
+            if density < 6:
+                maz_landuse["area_type"] = 5  # rural
+            elif density < 30:
+                maz_landuse["area_type"] = 4  # suburban
+            elif density < 55:
+                maz_landuse["area_type"] = 3  # urban
+            elif density < 100:
+                maz_landuse["area_type"] = 2  # urban business
+            elif density < 300:
+                maz_landuse["area_type"] = 1  # cbd
+            else:
+                maz_landuse["area_type"] = 0  # regional core
+        # Find nearest MAZ for each link, take min area type of i or j node
+        for link in network.links():
+            i_node, j_node = link.i_node, link.j_node
+            a_maz = sp_index_maz.nearest(i_node.x, i_node.y)
+            b_maz = sp_index_maz.nearest(j_node.x, j_node.y)
+            link["@area_type"] = min(
+                maz_landuse_data[a_maz]["area_type"],
+                maz_landuse_data[b_maz]["area_type"]
+            )
+
+    def _set_capclass(self, network):
+        for link in network.links():
+            area_type = link["@area_type"]
+            if area_type < 0:
+                link["@capclass"] = -1
+            else:
+                link["@capclass"] = 10 * area_type + link["@ft"]
+
+    def _set_speed(self, network):
+        free_flow_speed_map = {}
+        for row in self.config.model.highway.capclass_lookup:
+            if row.get("free_flow_speed") is not None:
+                free_flow_speed_map[row["capclass"]] = row.get("free_flow_speed")
+        for link in network.links():
+            # default speed o 25 mph if missing or 0 in table map
+            link["@free_flow_speed"] = free_flow_speed_map.get(link["@capclass"], 25)
+            speed = link["@free_flow_speed"] or 25
+            link["@free_flow_time"] = 60 * link.length / speed
+
+    def _set_tolls(self, network, period):
+        # TODO: validate format of tolls.csv file
+        # TODO: report on tolls
+        toll_file_path = os.path.join(self.root_dir, self.config.highway.tolls.file_path)
+        tolls = {}
+        with open(toll_file_path, 'r') as toll_file:
+            header = next(toll_file).split(",")
+            for line in toll_file:
+                data = dict(zip(header, line.split(",")))
+                tolls[data["fac_index"]] = data
+
+        src_veh_groups = self.config.highway.tolls.src_vehicle_group_names
+        dst_veh_groups = self.config.highway.tolls.dst_vehicle_group_names
+
+        tollbooth_start_index = self.config.highway.tolls.tollbooth_start_index
+        pname = period.name.lower()
+        for link in network.links():
+            tollbooth = link["@tollbooth"]
+            if tollbooth:
+                index = link["@tollbooth"] * 1000 + link["@tollseg"] * 10 + link[f"@useclass"]
+                data_row = tolls.get(index)
+                if data_row is None:
+                    # TODO: report on failed lookup, may want to have optional halt model in config
+                    continue  # tolls will remain at zero
+                # if index is below tollbooth start index then this is a bridge (point toll), available
+                # for all traffic assignment classes
+                if link["@tollbooth"] < tollbooth_start_index:
+                    for src_veh, dst_veh in zip(src_veh_groups, dst_veh_groups):
+                        link[f"@bridgetoll_{dst_veh}"] = data_row[f"toll{pname}_{src_veh}"] * 100
+                # else, this is a tollway with a per-mile charge
+                else:
+                    for src_veh, dst_veh in zip(src_veh_groups, dst_veh_groups):
+                        link[f"@valuetoll_{dst_veh}"] = data_row[f"toll{pname}_{src_veh}"] * link.length * 100
+
+    def _set_vdf_attributes(self, network, period):
+        # Set capacity, VDF and critical speed on links
+        capacity_map = {}
+        critical_speed_map = {}
+        for row in self.config.model.highway.capclass_lookup:
+            if row.get("capacity") is not None:
+                capacity_map[row["capclass"]] = row.get("capacity")
+            if row.get("critical_speed") is not None:
+                critical_speed_map[row["capclass"]] = row.get("critical_speed")
+        period_capacity_factor = period.highway_capacity_factor
+        akcelik_vdfs = [3, 4, 5, 7, 8, 10, 11, 12, 13, 14]
+        for link in network.links():
+            cap_lanehour = capacity_map[link["@capclass"]]
+            link["@capacity"] = cap_lanehour * period_capacity_factor * link["@lanes"]
+            link.volume_delay_func = int(link["@ft"])
+            # re-mapping links with type 99 to type 7 "local road of minor importance"
+            if link.volume_delay_func == 99:
+                link.volume_delay_func = 7
+            # num_lanes not used directly, but set for reference
+            link.num_lanes = max(min(9.9, link["@lanes"]), 1.0)
+            if link.volume_delay_func in akcelik_vdfs and link["@free_flow_speed"] > 0:
+                dist = link.length
+                CritSpd = critical_speed_map[link["@capclass"]]
+                Tc = (dist / CritSpd)
+                To = (dist / link["@free_flow_speed"])
+                link["@ja"] = 16 * (Tc - To) ** 2
+
+    def _set_link_modes(self, network):
+        # first reset link modes (script run more than once)
+        # "generic_highway_mode_code" must already be created (in import to Emme script)
+        auto_mode = network.mode(self.config.highway.generic_highway_mode_code)
+        for link in network.links():
+            modes = [m for m in link.modes if m.type in ["TRANSIT", "AUX_TRANSIT"]]
+            modes.append(auto_mode)
+            link.modes = modes
+        for mode in network.modes():
+            if mode.type == "AUX_AUTO":
+                network.delete_mode(mode)
+
+        # create modes from class spec
+        # (duplicate mode codes allowed provided the excluded_links is the same)
+        mode_excluded_links = {}
+        for assign_class in self.config.highway.classes:
+            if network.mode(assign_class.mode_code):
+                if assign_class.excluded_links != mode_excluded_links[assign_class.mode_code]:
+                    ex_links1 = mode_excluded_links[assign_class.mode_code]
+                    ex_links2 = assign_class.excluded_links
+                    raise Exception(
+                        f"config error: highway.classes, duplicated mode codes ('{assign_class.mode_code}')"
+                        f" with different excluded links: {ex_links1} and {ex_links2}")
+                else:
+                    continue
+            mode = network.create_mode("AUX_AUTO", assign_class.mode_code)
+            mode.description = assign_class.name
+            mode_excluded_links[mode.id] = assign_class.excluded_links
+
+        # TODO: ok like this for now, but should consider moving to highway_maz script
+        maz_access_mode = network.create_mode("AUX_AUTO", self.config.highway.maz_to_maz.mode_code)
+        maz_access_mode.description = "MAZ access"
+
+        def apply_exclusions(excluded_links_criteria, mode_code, modes_set, link_values):
+            for criteria in excluded_links_criteria:
+                if link_values[criteria]:
+                    return
+            modes_set.add(mode_code)
+
+        dst_veh_groups = self.config.highway.tolls.dst_vehicle_group_names
+        for link in network.links():
+            modes = set([m.id for m in link.modes])
+            if link.i_node["@maz_id"] + link.j_node["@maz_id"] > 0:
+                # MAZ connectors, special MAZ access / egress mode
+                modes.add(maz_access_mode.id)
+            else:
+                exclude_links_map = {
+                    "is_sr": link["@useclass"] in [2, 3],
+                    "is_sr3": link["@useclass"] == 3,
+                    "is_auto_only": link["@useclass"] in [2, 3, 4],
+                }
+                for dst_veh in dst_veh_groups:
+                    exclude_links_map[f"is_toll_{dst_veh}"] = link[f"@valuetoll_{dst_veh}"] > 0
+                for assign_class in self.config.highway.classes:
+                    apply_exclusions(assign_class.excluded_links, assign_class.mode_code, modes, exclude_links_map)
+                apply_exclusions(
+                    self.config.highway.maz_to_maz.excluded_links,
+                    maz_access_mode.id,
+                    modes, exclude_links_map)
+            link.modes = modes
+
     def _assign_and_skim(self, period, scenario):
         """Runs Emme SOLA assignment with path analyses (skims)."""
         traffic_assign = self._modeller.tool(
@@ -253,24 +470,26 @@ class HighwayAssignment(_Component):
         )
         net_calc = _emme_tools.NetworkCalculator(scenario)
 
-        # prepare network attributes for skimming
-        create_attribute(
-            "LINK", "@hov_length", "length HOV lanes", overwrite=True, scenario=scenario
-        )
-        net_calc("@hov_length", "length * (@useclass >= 2 && @useclass <= 3)")
-        create_attribute(
-            "LINK", "@toll_length", "length tolls", overwrite=True, scenario=scenario
-        )
-        # non-bridge toll facilities
-        net_calc("@toll_length", "length * (@valuetoll_da > 0)")
-        # create Emme format specification with traffic class definitions
-        # and path analyses (skims)
-        assign_spec = self._base_spec()
-        for class_config in self.config.highway.classes:
-            emme_class_spec = self._prepare_traffic_class(
-                class_config, scenario, period
+        with self._emme_manager.logbook_trace(f"Prepare scenario for period {period}"):
+            # prepare network attributes for skimming
+            create_attribute(
+                "LINK", "@hov_length", "length HOV lanes", overwrite=True, scenario=scenario
             )
-            assign_spec["classes"].append(emme_class_spec)
+            net_calc("@hov_length", "length * (@useclass >= 2 && @useclass <= 3)")
+            create_attribute(
+                "LINK", "@toll_length", "length tolls", overwrite=True, scenario=scenario
+            )
+            # non-bridge toll facilities
+            tollbooth_start_index = self.config.highway.tolls.tollbooth_start_index
+            net_calc("@toll_length", f"length * (@tollbooth >= {tollbooth_start_index})")
+            # create Emme format specification with traffic class definitions
+            # and path analyses (skims)
+            assign_spec = self._base_spec()
+            for class_config in self.config.highway.classes:
+                emme_class_spec = self._prepare_traffic_class(
+                    class_config, scenario, period
+                )
+                assign_spec["classes"].append(emme_class_spec)
 
         # Run assignment
         traffic_assign(assign_spec, scenario, chart_log_interval=1)
@@ -301,22 +520,25 @@ class HighwayAssignment(_Component):
     def _set_intrazonal_values(self, period, class_name, skims):
         """Set the intrazonal values to 1/2 nearest neighbour for time and distance skims."""
         for skim_name in skims:
-            name = f"{period}_{class_name}_{skim_name}"
-            matrix = self._emmebank.matrix(name)
             if skim_name in ["time", "distance", "freeflowtime", "hovdist", "tolldist"]:
+                matrix_name = f'mf"{period}_{class_name}_{skim_name}"'
+                matrix = self._emmebank.matrix(matrix_name)
+                if not matrix:
+                    raise Exception(f"Matrix {matrix_name} does not exist")
                 data = self._matrix_cache.get_data(matrix)
                 # NOTE: sets values for external zones as well
                 np.fill_diagonal(data, np.inf)
                 data[np.diag_indices_from(data)] = 0.5 * np.nanmin(data, 1)
                 self._matrix_cache.set_data(matrix, data)
 
+    @LogStartEnd()
     def _export_skims(self, period, scenario):
         """Export skims to OMX files by period."""
         # NOTE: skims in separate file by period
-        omx_file_path = _join(
-            self.root_dir, 
-            self.config.highway.output_skims_path.format(period=period))
-        os.makedirs(omx_file_path, exist_ok=True)
+        omx_file_path = os.path.join(
+            self.root_dir,
+            self.config.highway.output_skim_path.format(period=period))
+        os.makedirs(os.path.dirname(omx_file_path), exist_ok=True)
         with _emme_tools.OMX(
             omx_file_path, "w", scenario, matrix_cache=self._matrix_cache
         ) as omx_file:
@@ -397,7 +619,7 @@ class HighwayAssignment(_Component):
             },
             "results": {
                 "link_volumes": f"@flow_{name_lower}",
-                "od_travel_times": {"shortest_paths": od_travel_times},
+                "od_travel_times": {"shortest_paths": f'mf"{od_travel_times}"'},
             },
             "path_analyses": class_analysis,
         }
@@ -448,9 +670,9 @@ class HighwayAssignment(_Component):
 
         # create / initialize skim matrices
         for matrix_name in skim_matrices:
-            if self._emmebank.matrix(matrix_name):
-                self._emmebank.delete_matrix(self._emmebank.matrix(matrix_name))
-            matrix = create_matrix("mf", matrix_name, scenario=scenario, overwrite=True)
+            matrix = self._emmebank.matrix(f'mf"{matrix_name}"')
+            if not matrix:
+                matrix = create_matrix("mf", matrix_name, scenario=scenario, overwrite=True)
             self._skim_matrices.append(matrix)
 
         return class_analysis, od_travel_times
@@ -471,7 +693,7 @@ class HighwayAssignment(_Component):
                 },
             },
             "results": {
-                "od_values": matrix_name,
+                "od_values": f'mf"{matrix_name}"',
                 "selected_link_volumes": None,
                 "selected_turn_volumes": None,
             },
@@ -538,6 +760,7 @@ class ImportDemand(_Component):
         self._period = period
         self._omx_files = {}
 
+    @LogStartEnd("import highway demand")
     def run(self):
         """Run demand import from OMX files and average"""
         scenario = self._scenario
@@ -548,11 +771,13 @@ class ImportDemand(_Component):
         num_zones = len(scenario.zone_numbers)
         with self._setup():
             for class_config in traffic_config:
+                # sum up demand from all sources (listed in config)
                 demand = self._read_demand(class_config["demand"][0], num_zones)
                 for file_config in class_config["demand"][1:]:
                     demand = demand + self._read_demand(file_config, num_zones)
+                # get the Emme matrix, create a new matrix if needed
                 demand_name = f'{period}_{class_config["name"]}'
-                matrix = emmebank.matrix(demand_name)
+                matrix = emmebank.matrix(f'mf"{demand_name}"')
                 if msa_iteration <= 1:
                     if not matrix:
                         ident = emmebank.available_matrix_identifier("FULL")
@@ -562,7 +787,8 @@ class ImportDemand(_Component):
                         f'{period} {class_config["description"]} demand'
                     )
                 else:
-                    # NOTE: could validate that matrix already exists
+                    if not matrix:
+                        raise Exception(f"{demand_name} matrix does not exist in Emmebank, cannot use MSA iteration {msa_iteration}")
                     # Load prev demand and MSA average
                     prev_demand = matrix.get_numpy_data(scenario.id)
                     demand = prev_demand + (1.0 / msa_iteration) * (
@@ -572,6 +798,7 @@ class ImportDemand(_Component):
 
     @_context
     def _setup(self):
+        self._omx_files = {}
         try:
             yield
         finally:
@@ -580,16 +807,16 @@ class ImportDemand(_Component):
             self._omx_files = {}
 
     def _read_demand(self, file_config, num_zones):
-        file_ref = file_config["source"]
+        source = file_config["source"]
         name = file_config["name"].format(period=self._period.upper())
         factor = file_config.get("factor")
         file_obj = self._omx_files.get(source)
-        if not file_ref:
+        if not file_obj:
             # REVIEW: should source reference the full key instead of
             #         fixed "highway_demand_file" ?
-            path = self.config[file_ref].highway_demand_file
+            path = self.config[source].highway_demand_file
             file_obj = _emme_tools.OMX(
-                _join(self.root_dir, path.format(period=self._period))
+                os.path.join(self.root_dir, path.format(period=self._period))
             )
             file_obj.open()
             self._omx_files[source] = file_obj
