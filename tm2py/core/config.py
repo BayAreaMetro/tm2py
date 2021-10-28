@@ -16,13 +16,21 @@ class Configuration:
     """
 
     def __init__(self, path: Union[str, List[str]] = None):
+        """Load config from toml file(s) at path.
+
+        Args:
+            path: valid path to a toml file, or list of paths
+        """
         super().__init__()
         if path is not None:
             if isinstance(path, list):
+                config = {}
                 for path_item in path:
-                    self.load(path_item)
+                    next_config = self._load(path_item)
+                    _merge_dicts(config, next_config)
+                self._set_config(config)
             else:
-                self.load(path)
+                self._set_config(self._load(path))
 
     def __repr__(self):
         items = (f"{k}={v!r}" for k, v in self.__dict__.items())
@@ -31,14 +39,16 @@ class Configuration:
     def __getitem__(self, key):
         return getattr(self, key)
 
-    def load(self, path: str):
-        """Load config from toml file at path"""
+    @staticmethod
+    def _load(path):
         with open(path, "r") as toml_file:
-            data = _toml.load(toml_file)
+            return _toml.load(toml_file)
+
+    def _set_config(self, data):
         config = {}
         for key, value in data.items():
             config[key] = _dict_to_config(value)
-        self.__dict__.update(config)
+        self.__dict__ = config
 
     def save(self, path: str):
         """Save config to toml file at path"""
@@ -91,3 +101,18 @@ def _config_to_dict(data):
     if isinstance(data, list):
         return [_config_to_dict(value) for value in data]
     return data
+
+
+def _merge_dicts(right, left, path=None):
+    """Merges the contents of nested dict left into nested dict right, raising errors in case of namespace conflicts.
+    """
+    if path is None:
+        path = []
+    for key in left:
+        if key in right:
+            if isinstance(right[key], dict) and isinstance(left[key], dict):
+                _merge_dicts(right[key], left[key], path + [str(key)])
+            else:
+                raise Exception('Conflict during merge %s' % '.'.join(path + [str(key)]))
+        else:
+            right[key] = left[key]

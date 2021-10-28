@@ -29,21 +29,23 @@ class Logger:
         """Placeholder logging method"""
         print(msg)
 
-    def log_time(self, msg, level=1):
+    def log_time(self, msg, level=1, indent=False):
         """Log message with timestamp"""
         timestamp = datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
-        self.log(f"{timestamp}: {msg}", level)
+        if indent:
+            indent = "  " * self._indentation
+            self.log(f"{timestamp}: {indent}{msg}", level)
+        else:
+            self.log(f"{timestamp}: {msg}", level)
 
     def log_start(self, msg, level=1):
         """Log message with timestamp"""
-        indent = "  " * self._indentation
-        self.log_time(f"{indent}Start {msg}", level)
+        self.log_time(f"Start {msg}", level, indent=True)
         self._indentation += 1
 
     def log_end(self, msg, level=1):
         self._indentation -= 1
-        indent = "  " * self._indentation
-        self.log_time(f"{indent}End {msg}", level)
+        self.log_time(f"End {msg}", level, indent=True)
 
     @_context
     def log_start_end(self, msg, level=1):
@@ -51,10 +53,12 @@ class Logger:
         yield
         self.log_end(msg, level)
 
+
 class LogStartEnd:
     """Log the start and end time with optional message.
 
-    Can be used as a Component method decorator or in with statement
+    Used as a Component method decorator. If message is not provided a default message 
+    is generated with the object class and method name.
     """
 
     def __init__(self, msg=None, level=1):
