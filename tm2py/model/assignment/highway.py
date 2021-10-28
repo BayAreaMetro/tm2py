@@ -160,7 +160,6 @@ import numpy as np
 from tm2py.core.component import Component as _Component, Controller as _Controller
 import tm2py.core.emme as _emme_tools
 from tm2py.core.logging import LogStartEnd
-from tm2py.core.tools import SpatialGridIndex
 
 
 class HighwayAssignment(_Component):
@@ -236,9 +235,8 @@ class HighwayAssignment(_Component):
 
     @LogStartEnd("prepare network attributes and modes")
     def _prepare_network(self, scenario, period):
-        network = scenario.get_network()
         attributes = {
-            "LINK": ["@capclass", "@area_type", "@capacity", "@free_flow_speed", "@free_flow_time", "@ja"]
+            "LINK": ["@capacity", "@ja"]
         }
         # toll field attributes in scenario and network object
         dst_veh_groups = self.config.highway.tolls.dst_vehicle_group_names
@@ -248,95 +246,14 @@ class HighwayAssignment(_Component):
 
         for domain, attrs in attributes.items():
             for name in attrs:
-                if name in network.attributes("LINK"):
-                    network.delete_attribute("LINK", name)
-                network.create_attribute("LINK", name)
                 if scenario.extra_attribute(name) is None:
-                    scenario.create_extra_attribute("LINK", name)
+                    scenario.create_extra_attribute(domain, name)
 
+        network = scenario.get_network()
         self._set_tolls(network, period)
-        self._set_area_type(network)
-        self._set_capclass(network)
-        self._set_speed(network)
         self._set_vdf_attributes(network, period)
         self._set_link_modes(network)
         scenario.publish_network(network)
-
-    def _set_area_type(self, network):
-        # set area type for links based on average density of MAZ closest to I or J node
-        # the average density including all MAZs within the specified buffer distance
-        buff_dist = 5280 * self.config.highway.area_type_buffer_dist_miles
-        maz_data_file_path = os.path.join(self.root_dir, self.config.scenario.maz_landuse_file)
-        maz_landuse_data: Dict[int, Dict[Any, Union[str, int, Tuple[float, float]]]] = {}
-        with open(maz_data_file_path, 'r') as maz_data_file:
-            header = [h.strip() for h in next(maz_data_file).split(",")]
-            for line in maz_data_file:
-                data = dict(zip(header, line.split(",")))
-                maz_landuse_data[int(data["MAZ_ORIGINAL"])] = data
-        # Build spatial index of MAZ node coords
-        sp_index_maz = SpatialGridIndex(size=0.5 * 5280)
-        for node in network.nodes():
-            if node["@maz_id"]:
-                x, y = node.x, node.y
-                maz_landuse_data[int(node["@maz_id"])]["coords"] = (x, y)
-                sp_index_maz.insert(int(node["@maz_id"]), x, y)
-        for maz_landuse in maz_landuse_data.values():
-            x, y = maz_landuse.get("coords", (None, None))
-            if x is None:
-                continue  # some MAZs in table might not be in network
-            # Find all MAZs with the square buffer (including this one)
-            # (note: square buffer instead of radius used to match earlier implementation)
-            other_maz_ids = sp_index_maz.within_square(x, y, buff_dist)
-            # Sum total landuse attributes within buffer distance
-            total_pop = sum(int(maz_landuse_data[maz_id]["POP"]) for maz_id in other_maz_ids)
-            total_emp = sum(int(maz_landuse_data[maz_id]["emp_total"]) for maz_id in other_maz_ids)
-            total_acres = sum(float(maz_landuse_data[maz_id]["ACRES"]) for maz_id in other_maz_ids)
-            # calculate buffer area type
-            if total_acres > 0:
-                density = (1 * total_pop + 2.5 * total_emp) / total_acres
-            else:
-                density = 0
-            # code area type class
-            if density < 6:
-                maz_landuse["area_type"] = 5  # rural
-            elif density < 30:
-                maz_landuse["area_type"] = 4  # suburban
-            elif density < 55:
-                maz_landuse["area_type"] = 3  # urban
-            elif density < 100:
-                maz_landuse["area_type"] = 2  # urban business
-            elif density < 300:
-                maz_landuse["area_type"] = 1  # cbd
-            else:
-                maz_landuse["area_type"] = 0  # regional core
-        # Find nearest MAZ for each link, take min area type of i or j node
-        for link in network.links():
-            i_node, j_node = link.i_node, link.j_node
-            a_maz = sp_index_maz.nearest(i_node.x, i_node.y)
-            b_maz = sp_index_maz.nearest(j_node.x, j_node.y)
-            link["@area_type"] = min(
-                maz_landuse_data[a_maz]["area_type"],
-                maz_landuse_data[b_maz]["area_type"]
-            )
-
-    def _set_capclass(self, network):
-        for link in network.links():
-            area_type = link["@area_type"]
-            if area_type < 0:
-                link["@capclass"] = -1
-            else:
-                link["@capclass"] = 10 * area_type + link["@ft"]
-
-    def _set_speed(self, network):
-        free_flow_speed_map = {}
-        for row in self.config.model.highway.capclass_lookup:
-            if row.get("free_flow_speed") is not None:
-                free_flow_speed_map[row["capclass"]] = row.get("free_flow_speed")
-        for link in network.links():
-            # default speed o 25 mph if missing or 0 in table map
-            link["@free_flow_speed"] = free_flow_speed_map.get(link["@capclass"], 25)
-            speed = link["@free_flow_speed"] or 25
-            link["@free_flow_time"] = 60 * link.length / speed
 
     def _set_tolls(self, network, period):
         # TODO: validate format of tolls.csv file
@@ -376,17 +293,20 @@ class HighwayAssignment(_Component):
         # Set capacity, VDF and critical speed on links
         capacity_map = {}
         critical_speed_map = {}
-        for row in self.config.model.highway.capclass_lookup:
+        for row in self.config.highway.capclass_lookup:
             if row.get("capacity") is not None:
                 capacity_map[row["capclass"]] = row.get("capacity")
             if row.get("critical_speed") is not None:
                 critical_speed_map[row["capclass"]] = row.get("critical_speed")
         period_capacity_factor = period.highway_capacity_factor
+        # TODO: vdf definitions, only 3 vdfs used,
+        # TODO: type to vdf mapping to config
         akcelik_vdfs = [3, 4, 5, 7, 8, 10, 11, 12, 13, 14]
         for link in network.links():
             cap_lanehour = capacity_map[link["@capclass"]]
             link["@capacity"] = cap_lanehour * period_capacity_factor * link["@lanes"]
             link.volume_delay_func = int(link["@ft"])
+            # TODO: to review type 99
             # re-mapping links with type 99 to type 7 "local road of minor importance"
             if link.volume_delay_func == 99:
                 link.volume_delay_func = 7

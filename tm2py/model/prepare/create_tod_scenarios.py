@@ -82,14 +82,8 @@ class CreateTODScenarios(_Component):
     def _create_highway_scenarios(self):
         emmebank_path = os.path.join(self.root_dir, self.config.emme.highway_database_path)
         emmebank = self._emme_manager.emmebank(emmebank_path)
-
-        # TODO: remove this when done debugging
-        # $$$$$$$$$$$$$$$$
         ref_scenario = emmebank.scenario(self.config.emme.all_day_scenario_id)
         self._ref_auto_network = ref_scenario.get_network()
-        return
-        # $$$$$$$$$$$$$$$$
-
         self._emme_manager.change_emmebank_dimensions(emmebank, {"full_matrices": 9999})
         # create VDFs & set cross-reference function parameters
         emmebank.extra_function_parameters.el1 = "@free_flow_time"
