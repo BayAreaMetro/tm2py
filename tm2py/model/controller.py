@@ -16,13 +16,14 @@ import os
 from tm2py.model.assignment.active_modes import ActiveModesSkim
 from tm2py.model.assignment.highway import HighwayAssignment
 from tm2py.model.assignment.highway_maz import AssignMAZSPDemand, SkimMAZCosts
-from tm2py.model.assignment.create_tod_scenarios import CreateTODScenarios
 from tm2py.model.assignment.transit import TransitAssignment
 from tm2py.model.assignment.drive_access_skims import DriveAccessSkims
 from tm2py.model.demand.air_passenger import AirPassenger
 from tm2py.model.demand.household import HouseholdModel
 from tm2py.model.demand.internal_external import InternalExternal
 from tm2py.model.demand.truck import TruckModel
+from tm2py.model.prepare.create_tod_scenarios import CreateTODScenarios
+from tm2py.model.prepare.prepare_transit_network import PrepareTransitNetwork
 
 from tm2py.core.config import Configuration
 from tm2py.core.logging import Logger, LogStartEnd
@@ -45,7 +46,6 @@ class Controller(_Controller):
         self._trace = None
 
         self._components = {
-            # "prepare_emme_networks": PrepareEmmeNetworks(self),
             "active_modes": ActiveModesSkim(self),
             "air_passenger": AirPassenger(self),
             "drive_access": DriveAccessSkims(self),
@@ -57,6 +57,7 @@ class Controller(_Controller):
             "maz_maz_skim": SkimMAZCosts(self),
             "highway": HighwayAssignment(self),
             "transit": TransitAssignment(self),
+            "prepare_transit": PrepareTransitNetwork(self),
         }
         self._iteration = 0
 
@@ -163,6 +164,7 @@ class Controller(_Controller):
     def run_transit_assignment(self):
         """Run transit assignment and skims component"""
         if self.config.run.transit[self.iteration]:  # pylint: disable=E1101
+            self._components["prepare_transit"].run()
             self._components["transit"].run()
 
 

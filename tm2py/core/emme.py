@@ -29,10 +29,12 @@ import inro.modeller as _m
 NumpyArray = _np.array
 EmmeDesktopApp = _app.App
 EmmeModeller = _m.Modeller
+PageBuilder = _m.PageBuilder
 
 # Cache running Emme projects from this process (simple singleton implementation)
 _EMME_PROJECT_REF = {}
 _INF = 1e400
+
 
 class EmmeManager:
     """Centralized cache for Emme project and related calls for traffic and transit assignments.
@@ -91,13 +93,14 @@ class EmmeManager:
             path = os.path.join(path, "emmebank")
         return Emmebank(path)
 
-    @staticmethod
-    def change_emmebank_dimensions(emmebank, dimensions):
+    def change_emmebank_dimensions(self, emmebank, dimensions):
         dims = emmebank.dimensions
         new_dims = dims.copy()
         new_dims.update(dimensions)
         if dims != new_dims:
-            change_dimensions(emmebank.path, new_dims, keep_backup=False)
+            change_dimensions = self.tool(
+                "inro.emme.data.database.change_database_dimensions")
+            change_dimensions(new_dims, emmebank, keep_backup=False)
 
     @staticmethod
     def init_modeller(emme_project: EmmeDesktopApp) -> EmmeModeller:
