@@ -9,6 +9,7 @@ lark-parser
 osmnx >= 1.1.1
 notebook
 numpy >= 1.19
+scipy
 pandas > 1.0
 pyproj >= 2.6
 pyyaml
