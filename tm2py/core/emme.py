@@ -71,6 +71,7 @@ class EmmeManager:
         Args:
             project_path: valid path to Emme project *.emp file
         """
+        project_path = os.path.normcase(os.path.realpath(project_path))
         emme_project = self._project_cache.get(project_path)
         if emme_project:
             try:  # Check if the Emme window was closed

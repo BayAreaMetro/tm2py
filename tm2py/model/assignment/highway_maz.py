@@ -18,7 +18,7 @@ Emme network with:
     Link attributes:
         - time attribute, either timau (resulting VDF congested time)
           or @free_flow_time
-    Node attributes: @maz_id, x, y, and #county
+    Node attributes: @maz_id, x, y, and #node_county
 Demand matrices under /demand_matrices/highway/maz_demand"
     auto_{period}_MAZ_AUTO_1_{period}.omx
     auto_{period}_MAZ_AUTO_2_{period}.omx
@@ -214,7 +214,7 @@ class AssignMAZSPDemand(_Component):
             ["NODE", "LINK"], include_attributes=False
         )
         self._network.create_attribute("LINK", "temp_flow")
-        attrs_to_read = [("NODE", ["@maz_id", "x", "y", "#county"])]
+        attrs_to_read = [("NODE", ["@maz_id", "x", "y", "#node_county"])]
         for domain, attrs in attrs_to_read:
             self._read_attr_values(domain, attrs)
         self._debug_report.append(
@@ -223,12 +223,12 @@ class AssignMAZSPDemand(_Component):
 
     def _get_county_mazs(self, counties):
         network = self._network
-        # NOTE: every maz must have a valid #county
+        # NOTE: every maz must have a valid #node_county
         if self._mazs is None:
             self._mazs = _defaultdict(lambda: [])
             for node in network.nodes():
                 if node["@maz_id"]:
-                    self._mazs[node["#county"]].append(node)
+                    self._mazs[node["#node_county"]].append(node)
         mazs = []
         for county in counties:
             mazs.extend(self._mazs[county])
@@ -565,7 +565,7 @@ class SkimMAZCosts(_Component):
             "@link_cost", f"{time_attr} + 0.6 / {vot} * (length * {op_cost})"
         )
         self._network = self._scenario.get_partial_network(["NODE"], include_attributes=False)
-        attrs_to_read = [("NODE", ["@maz_id", "#county"])]
+        attrs_to_read = [("NODE", ["@maz_id", "#node_county"])]
         for domain, attrs in attrs_to_read:
             values = self._scenario.get_attribute_values(domain, attrs)
             self._network.set_attribute_values(domain, attrs, values)
@@ -574,7 +574,7 @@ class SkimMAZCosts(_Component):
         # TODO: double check can't route through non-active roots
         #       (should be OK with through_leaves=False)
         for node in self._network.nodes():
-            if node["@maz_id"] > 0 and node["#county"] == county:
+            if node["@maz_id"] > 0 and node["#node_county"] == county:
                 node["@maz_root"] = node["@maz_id"]
             else:
                 node["@maz_root"] = 0

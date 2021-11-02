@@ -6,6 +6,7 @@ import shutil as _shutil
 
 from tm2py.core.component import Component as _Component
 import tm2py.core.tools as _tools
+from tm2py.core.logging import LogStartEnd
 
 
 class HouseholdModel(_Component):
@@ -14,6 +15,7 @@ class HouseholdModel(_Component):
     def __init__(self, controller):
         super().__init__(controller)
 
+    @LogStartEnd()
     def run(self):
         self._start_household_manager()
         self._start_matrix_manager()

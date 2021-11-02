@@ -263,6 +263,7 @@ TruckTollChoice.job
                     matrix.name = name
                 matrix.description = desc
 
+    @LogStartEnd()
     def _aggregate_landuse(self):
         """Aggregates landuse data from input CSV by MAZ to TAZ and employment groups.
         TOTEMP, total employment (same regardless of classification system)
@@ -378,6 +379,7 @@ TruckTollChoice.job
         trip_ends.round(decimals=7)
         return trip_ends
 
+    @LogStartEnd()
     def _distribution(self, trip_ends):
         """Run trip distribution model for 4 truck types using Emme matrix balancing."""
         # input: the production / attraction vectors
@@ -460,6 +462,7 @@ TruckTollChoice.job
             # self.logger.log(name, prod_attr_matrix.sum(), daily_demand[name].sum())
         return daily_demand
 
+    @LogStartEnd()
     def _time_of_day(self, daily_demand):
         """Apply period factors to convert daily demand totals to per-period demands."""
         period_demand = {}
@@ -472,6 +475,7 @@ TruckTollChoice.job
             period_demand[period] = demand
         return period_demand
 
+    @LogStartEnd()
     def _toll_choice(self, period_demand):
         """Split per-period truck demands into nontoll and toll classes."""
         # input: time-of-day matrices
@@ -541,6 +545,7 @@ TruckTollChoice.job
                 class_demand[period] = split_demand
         return class_demand
 
+    @LogStartEnd()
     def _export_results(self, class_demand):
         """Export assignable class demands to OMX files by time-of-day."""
         path_tmplt = os.path.join(self.root_dir, self.config.truck.highway_demand_file)

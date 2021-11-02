@@ -187,6 +187,7 @@ class InternalExternal(_Component):
         }
         return daily_prod_attract
 
+    @LogStartEnd()
     def _time_of_day(self, daily_prod_attract):
         # input: results of _ix_forecast, daily PA matrices
         # STEPS:
@@ -203,6 +204,7 @@ class InternalExternal(_Component):
             period_demand[period] = class_demand
         return period_demand
 
+    @LogStartEnd()
     def _toll_choice(self, period_demand):
         # input: result of _ix_time_of_day
         #        skims:
@@ -296,6 +298,7 @@ class InternalExternal(_Component):
                 class_demand[period] = split_demand
         return class_demand
 
+    @LogStartEnd()
     def _export_results(self, demand):
         """Export assignable class demands to OMX files by time-of-day."""
         path_tmplt = os.path.join(self.root_dir, self.config.internal_external.highway_demand_file)

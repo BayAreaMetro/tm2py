@@ -84,7 +84,9 @@ class CreateTODScenarios(_Component):
         emmebank = self._emme_manager.emmebank(emmebank_path)
         ref_scenario = emmebank.scenario(self.config.emme.all_day_scenario_id)
         self._ref_auto_network = ref_scenario.get_network()
-        self._emme_manager.change_emmebank_dimensions(emmebank, {"full_matrices": 9999})
+        self._emme_manager.change_emmebank_dimensions(
+            emmebank,
+            {"full_matrices": 9999, "extra_attribute_values": 40000000})
         # create VDFs & set cross-reference function parameters
         emmebank.extra_function_parameters.el1 = "@free_flow_time"
         emmebank.extra_function_parameters.el2 = "@capacity"

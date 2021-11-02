@@ -388,7 +388,7 @@ class HighwayAssignment(_Component):
         create_attribute = self._modeller.tool(
             "inro.emme.data.extra_attribute.create_extra_attribute"
         )
-        net_calc = _emme_tools.NetworkCalculator(scenario)
+        net_calc = _emme_tools.NetworkCalculator(scenario, self._modeller)
 
         with self._emme_manager.logbook_trace(f"Prepare scenario for period {period}"):
             # prepare network attributes for skimming
@@ -412,7 +412,8 @@ class HighwayAssignment(_Component):
                 assign_spec["classes"].append(emme_class_spec)
 
         # Run assignment
-        traffic_assign(assign_spec, scenario, chart_log_interval=1)
+        with self.logger.log_start_end("Run SOLA assignment with path analyses"):
+            traffic_assign(assign_spec, scenario, chart_log_interval=1)
 
         # Subtrack the non-time costs from generalize cost to get the raw travel time skim
         for emme_class_spec in assign_spec["classes"]:
@@ -511,7 +512,7 @@ class HighwayAssignment(_Component):
         if toll_factor is None:
             cost_expression = f"length * {op_cost} + {toll}"
         else:
-            cost_expression = f"length * {op_cost} + {toll} * {toll_factor}"
+            cost_expression = f"length * {op_cost} + ({toll}) * {toll_factor}"
         net_calc(f"@cost_{name_lower}", cost_expression)
         create_attribute(
             "LINK",
