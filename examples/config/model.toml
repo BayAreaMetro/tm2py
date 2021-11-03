@@ -1,0 +1,848 @@
+[[highway.capclass_lookup]]
+	capclass = 0
+	capacity = 0
+	free_flow_speed = 0
+
+[[highway.capclass_lookup]]
+	capclass = 1
+	capacity = 2050
+	free_flow_speed = 55
+	critical_speed = 18.835
+
+[[highway.capclass_lookup]]
+	capclass = 2
+	capacity = 1450
+	free_flow_speed = 40
+	critical_speed = 25.898
+
+[[highway.capclass_lookup]]
+	capclass = 3
+	capacity = 1450
+	free_flow_speed = 30
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 4
+	capacity = 900
+	free_flow_speed = 20
+	critical_speed = 4.709
+
+[[highway.capclass_lookup]]
+	capclass = 5
+	capacity = 900
+	free_flow_speed = 20
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 6
+	capacity = 600
+	free_flow_speed = 15
+	critical_speed = 47.087
+
+[[highway.capclass_lookup]]
+	capclass = 7
+	capacity = 600
+	free_flow_speed = 15
+	critical_speed = 7.063
+
+[[highway.capclass_lookup]]
+	capclass = 8
+	capacity = 2050
+	free_flow_speed = 18
+	critical_speed = 9.417
+
+[[highway.capclass_lookup]]
+	capclass = 9
+	capacity = 0
+	free_flow_speed = 0
+	critical_speed = 25.898
+
+[[highway.capclass_lookup]]
+	capclass = 10
+	capacity = 0
+	free_flow_speed = 18
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 11
+	capacity = 2050
+	free_flow_speed = 55
+	critical_speed = 7.063
+
+[[highway.capclass_lookup]]
+	capclass = 12
+	capacity = 1450
+	free_flow_speed = 40
+	critical_speed = 4.709
+
+[[highway.capclass_lookup]]
+	capclass = 13
+	capacity = 1500
+	free_flow_speed = 30
+	critical_speed = 4.709
+
+[[highway.capclass_lookup]]
+	capclass = 14
+	capacity = 950
+	free_flow_speed = 25
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 15
+	capacity = 950
+	free_flow_speed = 25
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 16
+	capacity = 650
+	free_flow_speed = 20
+	critical_speed = 18.835
+
+[[highway.capclass_lookup]]
+	capclass = 17
+	capacity = 650
+	free_flow_speed = 20
+	critical_speed = 25.898
+
+[[highway.capclass_lookup]]
+	capclass = 18
+	capacity = 2050
+	free_flow_speed = 18
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 19
+	capacity = 0
+	free_flow_speed = 0
+	critical_speed = 4.709
+
+[[highway.capclass_lookup]]
+	capclass = 20
+	capacity = 0
+	free_flow_speed = 18
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 21
+	capacity = 2100
+	free_flow_speed = 60
+	critical_speed = 47.087
+
+[[highway.capclass_lookup]]
+	capclass = 22
+	capacity = 1600
+	free_flow_speed = 45
+	critical_speed = 9.417
+
+[[highway.capclass_lookup]]
+	capclass = 23
+	capacity = 1550
+	free_flow_speed = 35
+	critical_speed = 9.417
+
+[[highway.capclass_lookup]]
+	capclass = 24
+	capacity = 1000
+	free_flow_speed = 30
+	critical_speed = 28.252
+
+[[highway.capclass_lookup]]
+	capclass = 25
+	capacity = 1000
+	free_flow_speed = 30
+	critical_speed = 16.48
+
+[[highway.capclass_lookup]]
+	capclass = 26
+	capacity = 700
+	free_flow_speed = 25
+	critical_speed = 9.417
+
+[[highway.capclass_lookup]]
+	capclass = 27
+	capacity = 700
+	free_flow_speed = 25
+	critical_speed = 4.709
+
+[[highway.capclass_lookup]]
+	capclass = 28
+	capacity = 700
+	free_flow_speed = 18
+	critical_speed = 4.709
+
+[[highway.capclass_lookup]]
+	capclass = 29
+	capacity = 0
+	free_flow_speed = 0
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 30
+	capacity = 0
+	free_flow_speed = 18
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 31
+	capacity = 2100
+	free_flow_speed = 60
+	critical_speed = 21.189
+
+[[highway.capclass_lookup]]
+	capclass = 32
+	capacity = 1600
+	free_flow_speed = 45
+	critical_speed = 28.252
+
+[[highway.capclass_lookup]]
+	capclass = 33
+	capacity = 1550
+	free_flow_speed = 35
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 34
+	capacity = 1000
+	free_flow_speed = 35
+	critical_speed = 7.063
+
+[[highway.capclass_lookup]]
+	capclass = 35
+	capacity = 1000
+	free_flow_speed = 35
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 36
+	capacity = 700
+	free_flow_speed = 30
+	critical_speed = 47.087
+
+[[highway.capclass_lookup]]
+	capclass = 37
+	capacity = 700
+	free_flow_speed = 30
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 38
+	capacity = 2100
+	free_flow_speed = 18
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 39
+	capacity = 0
+	free_flow_speed = 0
+	critical_speed = 30.607
+
+[[highway.capclass_lookup]]
+	capclass = 40
+	capacity = 0
+	free_flow_speed = 18
+	critical_speed = 18.835
+
+[[highway.capclass_lookup]]
+	capclass = 41
+	capacity = 2150
+	free_flow_speed = 65
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 42
+	capacity = 1650
+	free_flow_speed = 50
+	critical_speed = 7.063
+
+[[highway.capclass_lookup]]
+	capclass = 43
+	capacity = 1550
+	free_flow_speed = 40
+	critical_speed = 7.063
+
+[[highway.capclass_lookup]]
+	capclass = 44
+	capacity = 1050
+	free_flow_speed = 35
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 45
+	capacity = 1050
+	free_flow_speed = 35
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 46
+	capacity = 900
+	free_flow_speed = 30
+	critical_speed = 21.189
+
+[[highway.capclass_lookup]]
+	capclass = 47
+	capacity = 900
+	free_flow_speed = 30
+	critical_speed = 28.252
+
+[[highway.capclass_lookup]]
+	capclass = 48
+	capacity = 2150
+	free_flow_speed = 18
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 49
+	capacity = 0
+	free_flow_speed = 0
+	critical_speed = 9.417
+
+[[highway.capclass_lookup]]
+	capclass = 50
+	capacity = 0
+	free_flow_speed = 18
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 51
+	capacity = 2150
+	free_flow_speed = 65
+	critical_speed = 47.087
+
+[[highway.capclass_lookup]]
+	capclass = 52
+	capacity = 1650
+	free_flow_speed = 55
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 53
+	capacity = 1550
+	free_flow_speed = 40
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 54
+	capacity = 1050
+	free_flow_speed = 40
+	critical_speed = 23.543
+
+[[highway.capclass_lookup]]
+	capclass = 55
+	capacity = 1050
+	free_flow_speed = 40
+	critical_speed = 9.417
+
+[[highway.capclass_lookup]]
+	capclass = 56
+	capacity = 950
+	free_flow_speed = 35
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 57
+	capacity = 950
+	free_flow_speed = 35
+	critical_speed = 9.417
+
+[[highway.capclass_lookup]]
+	capclass = 58
+	capacity = 2150
+	free_flow_speed = 18
+	critical_speed = 9.417
+
+[[highway.capclass_lookup]]
+	capclass = 59
+	capacity = 0
+	free_flow_speed = 0
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 60
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 61
+	critical_speed = 23.543
+
+[[highway.capclass_lookup]]
+	capclass = 62
+	critical_speed = 30.607
+
+[[highway.capclass_lookup]]
+	capclass = 63
+	critical_speed = 16.48
+
+[[highway.capclass_lookup]]
+	capclass = 64
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 65
+	critical_speed = 16.48
+
+[[highway.capclass_lookup]]
+	capclass = 66
+	critical_speed = 47.087
+
+[[highway.capclass_lookup]]
+	capclass = 67
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 68
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 69
+	critical_speed = 21.189
+
+[[highway.capclass_lookup]]
+	capclass = 70
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 71
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 72
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 73
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 74
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 75
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 76
+	critical_speed = 23.543
+
+[[highway.capclass_lookup]]
+	capclass = 77
+	critical_speed = 30.607
+
+[[highway.capclass_lookup]]
+	capclass = 78
+	critical_speed = 16.48
+
+[[highway.capclass_lookup]]
+	capclass = 79
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 80
+	critical_speed = 16.48
+
+[[highway.capclass_lookup]]
+	capclass = 81
+	critical_speed = 47.087
+
+[[highway.capclass_lookup]]
+	capclass = 82
+	critical_speed = 16.48
+
+[[highway.capclass_lookup]]
+	capclass = 83
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 84
+	critical_speed = 23.543
+
+[[highway.capclass_lookup]]
+	capclass = 85
+	critical_speed = 16.48
+
+[[highway.capclass_lookup]]
+	capclass = 86
+	critical_speed = 16.48
+
+[[highway.capclass_lookup]]
+	capclass = 87
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 88
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 89
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 90
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 99
+	capacity = 0
+	free_flow_speed = 10
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 109
+	capacity = 0
+	free_flow_speed = 10
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 119
+	capacity = 0
+	free_flow_speed = 10
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 129
+	capacity = 0
+	free_flow_speed = 10
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 139
+	capacity = 0
+	free_flow_speed = 10
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 149
+	capacity = 0
+	free_flow_speed = 10
+	critical_speed = 3.0
+
+[[transit.modes]]
+    id = "w"
+    name = "walk"
+    type = "WALK"
+    assign_type = "AUX_TRANSIT"
+    speed_miles_per_hour = 3.0
+[[transit.modes]]
+    id = "a"
+    name = "access"
+    type = "ACCESS"
+    assign_type = "AUX_TRANSIT"
+    speed_miles_per_hour = 3.0
+[[transit.modes]]
+    id = "e"
+    name = "egress"
+    type = "EGRESS"
+    assign_type = "AUX_TRANSIT"
+    speed_miles_per_hour = 3.0
+[[transit.modes]]
+    id = "b"
+    name = "local_bus"
+    type = "LOCAL"
+    assign_type = "TRANSIT"
+[[transit.modes]]
+    id = "x"
+    name = "exp_bus"
+    type = "PREMIUM"
+    assign_type = "TRANSIT"
+[[transit.modes]]
+    id = "f"
+    name = "ferry"
+    type = "PREMIUM"
+    assign_type = "TRANSIT"
+[[transit.modes]]
+    id = "l"
+    name = "light_rail"
+    type = "PREMIUM"
+    assign_type = "TRANSIT"
+[[transit.modes]]
+    id = "h"
+    name = "heavy_rail"
+    type = "PREMIUM"
+    assign_type = "TRANSIT"
+[[transit.modes]]
+    id = "r"
+    name = "comm_rail"
+    type = "PREMIUM"
+    assign_type = "TRANSIT"
+
+[[transit.vehicles]]
+    id = 12 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 14 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 13 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 16 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 17 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 20 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 21 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 24 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 28 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 30 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 38 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 42 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 44 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 46 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 49 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 52 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 56 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 60 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 63 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 66 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 68 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 70 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 71 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 80 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 81 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 84 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 86 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 87 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 90 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 91 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 92 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 94 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 101 
+    mode = "f"
+    name = ""
+    auto_equivalent = 0.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 103 
+    mode = "f"
+    name = ""
+    auto_equivalent = 0.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 110 
+    mode = "l"
+    name = ""
+    auto_equivalent = 0.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 111 
+    mode = "l"
+    name = ""
+    auto_equivalent = 0.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 120 
+    mode = "h"
+    name = ""
+    auto_equivalent = 0.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 130 
+    mode = "r"
+    name = ""
+    auto_equivalent = 0.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 131 
+    mode = "r"
+    name = ""
+    auto_equivalent = 0.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    id = 133 
+    mode = "r"
+    name = ""
+    auto_equivalent = 0.0
+    seated_capacity = 1 
+    total_capacity = 2
