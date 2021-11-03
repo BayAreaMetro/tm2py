@@ -69,19 +69,22 @@ class DriveAccessSkims(_Component):
         with open(results_path, "a", newline="") as output_file:
             output_file.write("FTAZ,MODE,PERIOD,TTAP,TMAZ,TTAZ,DTIME,DDIST,DTOLL,WDIST\n")
 
+        use_fares = self.config.transit.use_fares
         for period in self.config.periods:
             # load Emme network for TAP<->available modes correspondence
             scenario = emmebank.scenario(period.emme_scenario_id)
             network = scenario.get_partial_network(["TRANSIT_LINE", "TRANSIT_SEGMENT"], include_attributes=False)
-            # TODO: to be reviewed with new network
             attrs_to_load = {
                 "NODE": ["@tap_id"],
-                "TRANSIT_LINE": ["#src_mode"],
+                "TRANSIT_LINE": [],
                 "TRANSIT_SEGMENT": ["allow_alightings", "allow_boardings"]
             }
+            if use_fares:
+                attrs_to_load["TRANSIT_LINE"].append("#src_mode")
             for domain, attrs in attrs_to_load.items():
                 values = scenario.get_attribute_values(domain, attrs)
                 network.set_attribute_values(domain, attrs, values)
+            # TODO: should come from config
             mode_name_map = {
                 'b': 'LOCAL_BUS',
                 'f': 'FERRY_SERVICE',
@@ -101,10 +104,16 @@ class DriveAccessSkims(_Component):
                     for next_link in link.j_node.outgoing_links():
                         stops.add(next_link.j_node)
                 modes = set([])
-                for stop in stops:
-                    for seg in stop.outgoing_segments(include_hidden=True):
-                        if seg.allow_alightings or seg.allow_boardings:
-                            modes.add(mode_name_map[seg.line["#src_mode"]])
+                if use_fares:
+                    for stop in stops:
+                        for seg in stop.outgoing_segments(include_hidden=True):
+                            if seg.allow_alightings or seg.allow_boardings:
+                                modes.add(mode_name_map[seg.line["#src_mode"]])
+                else:
+                    for stop in stops:
+                        for seg in stop.outgoing_segments(include_hidden=True):
+                            if seg.allow_alightings or seg.allow_boardings:
+                                modes.add(mode_name_map[seg.line.mode.id])
                 if not modes:
                     taps_with_no_service.append(node["@tap_id"])
                 else:
