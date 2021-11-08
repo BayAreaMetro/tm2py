@@ -42,8 +42,8 @@ class PrepareTransitNetwork(_Component):
 
         for period in self.config.periods:
             with self.logger.log_start_end(f"period {period.name}"):
+                scenario = emmebank.scenario(period.emme_scenario_id)
                 if self.controller.iteration == 0:
-                    scenario = emmebank.scenario(period.emme_scenario_id)
                     attributes = {
                         "TRANSIT_SEGMENT": ["@schedule_time", "@trantime_seg"]
                     }
@@ -70,10 +70,10 @@ class PrepareTransitNetwork(_Component):
                     self.split_tap_connectors_to_prevent_walk(network)
                     # TODO: missing the input data files for apply station attributes
                     # self.apply_station_attributes(input_dir, network)
-
-                    scenario.publish_network(network)
                 else:
                     self.update_auto_times(period, scenario)
+
+                scenario.publish_network(network)
 
     def distribute_nntime(self, network):
         for line in network.transit_lines():
