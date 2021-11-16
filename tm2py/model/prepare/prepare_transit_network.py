@@ -71,7 +71,7 @@ class PrepareTransitNetwork(_Component):
                     # TODO: missing the input data files for apply station attributes
                     # self.apply_station_attributes(input_dir, network)
                 else:
-                    self.update_auto_times(period, scenario)
+                    network = self.update_auto_times(period, scenario)
 
                 scenario.publish_network(network)
 
@@ -328,10 +328,11 @@ class PrepareTransitNetwork(_Component):
                 if not auto_link:
                     continue
                 # TODO: may need to remove "reliability" factor
-                auto_time = link.auto_time
+                auto_time = auto_link.auto_time
                 if auto_time > 0:
                     link["@trantime"] = auto_time
 
+        return network
 
 class ApplyFares(_Component):
 
@@ -369,14 +370,14 @@ class ApplyFares(_Component):
                     fs_data = faresystems[fs_id]
                 except KeyError:
                     self._log.append({
-                        "type": "text", 
+                        "type": "text",
                         "content": (f"Line {line.id} has #faresystem '{fs_id}' which was "
                                     "not found in fares.far table")})
                     continue
                 fs_data["LINES"].append(line)
                 fs_data["NUM LINES"] += 1
                 fs_data["NUM SEGMENTS"] += len(list(line.segments()))
-                # Set final hidden segment allow_boardings to False so that the boarding cost is not 
+                # Set final hidden segment allow_boardings to False so that the boarding cost is not
                 # calculated for this segment (has no next segment)
                 line.segment(-1).allow_boardings = False
 
@@ -420,7 +421,7 @@ class ApplyFares(_Component):
             raise
         finally:
             log_content = []
-            header = ["NUMBER", "NAME", "NUM LINES", "NUM SEGMENTS", "MODES", "FAREMATRIX ID", 
+            header = ["NUMBER", "NAME", "NUM LINES", "NUM SEGMENTS", "MODES", "FAREMATRIX ID",
                       "NUM ZONES", "NUM MATRIX RECORDS"]
             for fs_id, fs_data in faresystems.items():
                 log_content.append([str(fs_data.get(h, "")) for h in header])
@@ -504,7 +505,7 @@ class ApplyFares(_Component):
         network.create_attribute("LINK", "invehicle_cost")
         network.create_attribute("LINK", "board_cost")
         farezone_warning1 = "Warning: faresystem {} estimation: on line {}, node {} "\
-            "does not have a valid @farezone ID. Using {} valid farezone {}." 
+            "does not have a valid @farezone ID. Using {} valid farezone {}."
 
         fs_data["NUM MATRIX RECORDS"] = 0
         valid_farezones = set(fare_matrix.keys())
@@ -535,7 +536,7 @@ class ApplyFares(_Component):
                             src_msg = "previous"
                         farezone = prev_farezone
                         self._log.append({
-                            "type": "text3", 
+                            "type": "text3",
                             "content": farezone_warning1.format(fs_data["NUMBER"], line, seg.i_node, src_msg, prev_farezone)})
                     else:
                         prev_farezone = farezone
@@ -612,26 +613,26 @@ class ApplyFares(_Component):
                         # DH added first farezone fix instead of exception
                         farezone = list(valid_farezones)[0]
                         self._log.append({
-                            "type": "text3", 
+                            "type": "text3",
                             "content": farezone_warning2 % (fs_data["NUMBER"], line, seg.i_node)
                         })
                         msg = "first valid farezone in faresystem,"
                     self._log.append({
-                            "type": "text3", 
+                            "type": "text3",
                             "content": "Using %s farezone %s" % (msg, farezone)
                         })
                 if seg.allow_boardings:
                     # get the cost travelling within this farezone as base boarding cost
                     board_cost = fare_matrix.get(farezone, {}).get(farezone)
                     if board_cost is None:
-                        # If this entry is missing from farematrix, 
+                        # If this entry is missing from farematrix,
                         # use next farezone if both previous stop and next stop are in different farezones
                         next_seg = stop_segments[i+1]
                         next_farezone = next_seg.i_node["@farezone"]
                         if next_farezone != farezone and prev_farezone != farezone:
                             board_cost = fare_matrix.get(farezone, {}).get(next_farezone)
                     if board_cost is None:
-                        # use the smallest fare found from this farezone as best guess 
+                        # use the smallest fare found from this farezone as best guess
                         # as a reasonable boarding cost
                         board_cost = min(fare_matrix[farezone].values())
                         self._log.append({
@@ -653,7 +654,7 @@ class ApplyFares(_Component):
                         prev_seg.link.invehicle_cost = max(invehicle_cost, prev_seg.link.invehicle_cost)
                     except KeyError:
                         self._log.append({
-                            "type": "text3", 
+                            "type": "text3",
                             "content": farezone_warning5 % (matrix_id, prev_farezone, farezone, prev_seg, 0)})
                 if farezone in valid_farezones:
                     prev_farezone = farezone
@@ -839,7 +840,7 @@ class ApplyFares(_Component):
                         xfer = 0.0
                         if fs_data2["FAREFROMFS"][fs_id] != 0:
                             self._log.append({
-                                "type": "text3", 
+                                "type": "text3",
                                 "content": "Warning: non-zero transfer within 'FROMTO' faresystem not supported"})
                     else:
                         xfer = "BOARD+%s" % fs_data2["FAREFROMFS"][fs_id]
@@ -866,7 +867,7 @@ class ApplyFares(_Component):
                             return False
             return True
 
-        # group faresystems together which have the same transfer-to pattern, 
+        # group faresystems together which have the same transfer-to pattern,
         # first pass: only group by matching mode patterns to minimize the number
         #             of levels with multiple modes
         group_xfer_fares_mode = []
@@ -888,7 +889,7 @@ class ApplyFares(_Component):
             if not is_matched:
                 group_xfer_fares_mode.append(([xfers], [fs_id], list(fs_modes)))
 
-        # second pass attempt to group together this set 
+        # second pass attempt to group together this set
         #   to minimize the total number of levels and modes
         group_xfer_fares = []
         for xfer_fares_list, group, modes in group_xfer_fares_mode:
