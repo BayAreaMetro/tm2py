@@ -163,9 +163,18 @@ class TransitAssignment(_Component):
                 else:
                     self.create_empty_demand_matrices(period.name, scenario)
                     use_ccr = False
+
+                network = scenario.get_network()
+                self.update_auto_times(network, period)
+                if self.config.transit.get("override_connector_times", False):
+                    self.update_connector_times(scenario, network, period)
+                # TODO: could set attribute_values instead of full publish
+                scenario.publish_network(network)
+
                 use_fares = self.config.transit.use_fares
                 self.assign_and_skim(
                     scenario,
+                    network,
                     period=period,
                     assignment_only=False,
                     use_fares=use_fares,
@@ -190,7 +199,6 @@ class TransitAssignment(_Component):
             with self._emme_manager.logbook_trace(f"Transit assignments for period {period.name}"):
                 self._matrix_cache = _emme_tools.MatrixCache(scenario)
                 self._skim_matrices = []
-                self._prepare_network(scenario, period)
                 try:
                     yield
                 finally:
@@ -198,8 +206,7 @@ class TransitAssignment(_Component):
                     self._matrix_cache = None
 
     @LogStartEnd("prepare network attributes and update times from auto network")
-    def _prepare_network(self, scenario, period):
-        transit_network = scenario.get_network()
+    def update_auto_times(self, transit_network, period):
         auto_emmebank = self._emme_manager.emmebank(os.path.join(self.root_dir, self.config.emme.highway_database_path))
         auto_scenario = auto_emmebank.scenario(period.emme_scenario_id)
         if auto_scenario.has_traffic_results:
@@ -221,8 +228,55 @@ class TransitAssignment(_Component):
         for segment in transit_network.transit_segments():
             if segment['@schedule_time'] <= 0 and segment.link is not None:
                 segment.data1 = segment["@trantime_seg"] = segment.link["@trantime"]
-        # TODO: could set attribute_values instead of full publish
-        scenario.publish_network(transit_network)
+
+    def update_connector_times(self, scenario, network, period):
+        # walk time attributes per skim set
+        connector_attrs = {1: "@walk_time_bus", 2: "@walk_time_prem", 3: "@walk_time_all"}
+        for attr_name in connector_attrs.values():
+            if scenario.extra_attribute(attr_name) is None:
+                scenario.create_extra_attribute("LINK", attr_name)
+            # delete attribute in network object to reinitialize to default values
+            if attr_name in network.attributes("LINK"):
+                network.delete_attribute("LINK", attr_name)
+            network.create_attribute("LINK", attr_name, 9999)
+        period_name = period.name.lower()
+
+        # lookup adjacent real stop to account for connector splitting
+        connectors = _defaultdict(lambda: {})
+        for zone in network.centroids():
+            taz_id = int(zone["@taz_id"])
+            for link in zone.outgoing_links():
+                stop_id = int(link.j_node["#node_id"])
+                connectors[taz_id][stop_id] = link
+            for link in zone.incoming_links():
+                stop_id = int(link.i_node["#node_id"])
+                connectors[stop_id][taz_id] = link
+        with open(os.path.join(self.root_dir, self.config.transit.input_connector_access_times_path), 'r') as f:
+            header = [x.strip() for x in next(f).split(",")]
+            for line in f:
+                tokens = line.split(",")
+                data = dict(zip(header, tokens))
+                if data["time_period"].lower() == period_name:
+                    taz = int(data["from_taz"])
+                    stop = int(data["to_stop"])
+                    connector = connectors[taz][stop]
+                    attr_name = connector_attrs[int(data["skim_set"])]
+                    connector[attr_name] = float(data["est_walk_min"])
+        with open(os.path.join(self.root_dir, self.config.transit.input_connector_egress_times_path), 'r') as f:
+            header = [x.strip() for x in next(f).split(",")]
+            for line in f:
+                tokens = line.split(",")
+                data = dict(zip(header, tokens))
+                if data["time_period"].lower() == period_name:
+                    taz = int(data["to_taz"])
+                    stop = int(data["from_stop"])
+                    connector = connectors[stop][taz]
+                    attr_name = connector_attrs[int(data["skim_set"])]
+                    connector[attr_name] = float(data["est_walk_min"])
+        # NOTE: publish in calling setup function ...
+        # attrs = connector_attrs.values()
+        # values = network.get_attribute_values("LINK", attrs)
+        # scenario.set_attribute_values("LINK", attrs, values)
 
     @LogStartEnd("initialize matrices")
     def initialize_skim_matrices(self, time_periods, scenario):
@@ -348,13 +402,14 @@ class TransitAssignment(_Component):
 
     def assign_and_skim(self,
                         scenario,
+                        network,
                         period,
                         assignment_only=False,
                         use_fares=False,
                         use_ccr=False,
                         ):
         # TODO: double check value of time from $/min to $/hour is OK
-        network = scenario.get_network()
+        # network = scenario.get_network()
         # network = scenario.get_partial_network(
         #     element_types=["TRANSIT_LINE", "TRANSIT_SEGMENT"], include_attributes=True)
         mode_types = {"LOCAL": [], "PREMIUM": [], "WALK": []}
@@ -363,8 +418,6 @@ class TransitAssignment(_Component):
                 mode_types["WALK"].append(mode.id)
             elif mode.type in ["LOCAL", "PREMIUM"]:
                 mode_types[mode.type].append(mode.id)
-        if self.config.transit.get("override_connector_times", False):
-            self.update_connector_times(scenario, network, period)
         with self._emme_manager.logbook_trace("Transit assignment and skims for period %s" % period.name):
             self.run_assignment(
                 scenario,
@@ -1026,54 +1079,6 @@ class TransitAssignment(_Component):
 
         table.export(output_transit_boardings_file)
         table.close()
-
-    def update_connector_times(self, scenario, network, period):
-        # walk time attributes per skim set
-        connector_attrs = {1: "@walk_time_bus", 2: "@walk_time_prem", 3: "@walk_time_all"}
-        for attr_name in connector_attrs.values():
-            if scenario.extra_attribute(attr_name) is None:
-                scenario.create_extra_attribute("LINK", attr_name)
-            # delete attribute in network object to reinitialize to default values
-            if attr_name in network.attributes("LINK"):
-                network.delete_attribute("LINK", attr_name)
-            network.create_attribute("LINK", attr_name, 9999)
-        period_name = period.name.lower()
-
-        # lookup adjacent real stop to account for connector splitting
-        connectors = _defaultdict(lambda: {})
-        for zone in network.centroids():
-            taz_id = int(zone["@taz_id"])
-            for link in zone.outgoing_links():
-                stop_id = int(link.j_node["#node_id"])
-                connectors[taz_id][stop_id] = link
-            for link in zone.incoming_links():
-                stop_id = int(link.i_node["#node_id"])
-                connectors[stop_id][taz_id] = link
-        with open(os.path.join(self.root_dir, self.config.transit.input_connector_access_times_path), 'r') as f:
-            header = [x.strip() for x in next(f).split(",")]
-            for line in f:
-                tokens = line.split(",")
-                data = dict(zip(header, tokens))
-                if data["time_period"].lower() == period_name:
-                    taz = int(data["from_taz"])
-                    stop = int(data["to_stop"])
-                    connector = connectors[taz][stop]
-                    attr_name = connector_attrs[int(data["skim_set"])]
-                    connector[attr_name] = float(data["est_walk_min"])
-        with open(os.path.join(self.root_dir, self.config.transit.input_connector_egress_times_path), 'r') as f:
-            header = [x.strip() for x in next(f).split(",")]
-            for line in f:
-                tokens = line.split(",")
-                data = dict(zip(header, tokens))
-                if data["time_period"].lower() == period_name:
-                    taz = int(data["to_taz"])
-                    stop = int(data["from_stop"])
-                    connector = connectors[stop][taz]
-                    attr_name = connector_attrs[int(data["skim_set"])]
-                    connector[attr_name] = float(data["est_walk_min"])
-        attrs = connector_attrs.values()
-        values = network.get_attribute_values("LINK", attrs)
-        scenario.set_attribute_values("LINK", attrs, values)
 
     def export_connector_flows(self, scenario, period):
         # export boardings and alightings by stop (connector) and TAZ
