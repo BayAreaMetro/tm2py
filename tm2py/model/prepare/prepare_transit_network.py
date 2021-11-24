@@ -43,37 +43,65 @@ class PrepareTransitNetwork(_Component):
         for period in self.config.periods:
             with self.logger.log_start_end(f"period {period.name}"):
                 scenario = emmebank.scenario(period.emme_scenario_id)
-                if self.controller.iteration == 0:
-                    attributes = {
-                        "TRANSIT_SEGMENT": ["@schedule_time", "@trantime_seg"]
-                    }
-                    for domain, attrs in attributes.items():
-                        for name in attrs:
-                            attr = scenario.extra_attribute(name)
-                            if attr and attr.type != domain:
-                                scenario.delete_extra_attribute(name)
-                                attr = None
-                            if attr is None:
-                                scenario.create_extra_attribute(domain, name)
+                attributes = {
+                    "TRANSIT_SEGMENT": ["@schedule_time", "@trantime_seg", "@board_cost", "@invehicle_cost"],
+                }
+                for domain, attrs in attributes.items():
+                    for name in attrs:
+                        attr = scenario.extra_attribute(name)
+                        if attr is not None:
+                            scenario.delete_extra_attribute(name)
+                        scenario.create_extra_attribute(domain, name)
 
-                    network = scenario.get_network()
-                    self.distribute_nntime(network)
-                    self.update_link_trantime(network)
-                    # self.calc_link_unreliability(network, period)
-                    if self.config.transit.use_fares:
-                        self.apply_fares(scenario, network, period.name)
-                    else:
-                        scenario.create_extra_attribute("TRANSIT_SEGMENT", "@board_cost")
-                        network.create_attribute("TRANSIT_SEGMENT", "@board_cost")
-                        scenario.create_extra_attribute("TRANSIT_SEGMENT", "@invehicle_cost")
-                        network.create_attribute("TRANSIT_SEGMENT", "@invehicle_cost")
-                    self.split_tap_connectors_to_prevent_walk(network)
-                    # TODO: missing the input data files for apply station attributes
-                    # self.apply_station_attributes(input_dir, network)
-                else:
-                    self.update_auto_times(period, scenario)
-
+                network = scenario.get_network()
+                if self.config.transit.get("override_connector_times", False):
+                    self.prepare_connectors(network, period)
+                self.distribute_nntime(network)
+                self.update_link_trantime(network)
+                # self.calc_link_unreliability(network, period)
+                if self.config.transit.use_fares:
+                    self.apply_fares(scenario, network, period.name)
+                self.split_tap_connectors_to_prevent_walk(network)
+                # TODO: missing the input data files for apply station attributes
+                # self.apply_station_attributes(input_dir, network)
                 scenario.publish_network(network)
+
+    def prepare_connectors(self, network, period):
+        for node in network.centroids():
+            for link in node.outgoing_links():
+                network.delete_link(link.i_node, link.j_node)
+            for link in node.incoming_links():
+                network.delete_link(link.i_node, link.j_node)
+        period_name = period.name.lower()
+        access_modes = set()
+        egress_modes = set()
+        for mode_data in self.config.transit.modes:
+            if mode_data["type"] == "ACCESS":
+                access_modes.add(network.mode(mode_data["id"]))
+            if mode_data["type"] == "EGRESS":
+                egress_modes.add(network.mode(mode_data["id"]))
+        tazs = dict((int(n["@taz_id"]), n) for n in network.centroids())
+        nodes = dict((int(n["#node_id"]), n) for n in network.regular_nodes())
+        with open(os.path.join(self.root_dir, self.config.transit.input_connector_access_times_path), 'r') as f:
+            header = next(f).split(",")
+            for line in f:
+                tokens = line.split(",")
+                data = dict(zip(header, tokens))
+                if data["time_period"].lower() == period_name:
+                    taz = tazs[int(data["from_taz"])]
+                    stop = nodes[int(data["to_stop"])]
+                    if network.link(taz, stop) is None:
+                        connector = network.create_link(taz, stop, access_modes)
+        with open(os.path.join(self.root_dir, self.config.transit.input_connector_egress_times_path), 'r') as f:
+            header = next(f).split(",")
+            for line in f:
+                tokens = line.split(",")
+                data = dict(zip(header, tokens))
+                if data["time_period"].lower() == period_name:
+                    taz = tazs[int(data["to_taz"])]
+                    stop = nodes[int(data["from_stop"])]
+                    if network.link(stop, taz) is None:
+                        connector = network.create_link(stop, taz, egress_modes)
 
     def distribute_nntime(self, network):
         for line in network.transit_lines():
@@ -105,7 +133,7 @@ class PrepareTransitNetwork(_Component):
 
     def split_tap_connectors_to_prevent_walk(self, network):
         tap_stops = _defaultdict(lambda: [])
-        new_node_id = self.init_node_id(network)
+        new_node_id = IDGenerator(1, network)
         all_transit_modes = set([mode for mode in network.modes() if mode.type == "TRANSIT"])
         node_attributes = network.attributes("NODE")
         node_attributes.remove("x")
@@ -141,22 +169,28 @@ class PrepareTransitNetwork(_Component):
 
                 if has_adjacent_transfer_links or has_adjacent_walk_links:
                     length = link.length
-                    new_node_id += 1
                     tap_stop = network.split_link(
-                        centroid, real_stop, new_node_id, include_reverse=True, proportion=0.5)
+                        centroid, real_stop, next(new_node_id), include_reverse=True, proportion=0.5)
                     for attr in node_attributes:
                         tap_stop[attr] = real_stop[attr]
                     tap_stops[real_stop].append(tap_stop)
-                    transit_access_link = network.link(real_stop, tap_stop)
-                    for t_link in transit_access_link, transit_access_link.reverse_link:
-                        t_link.modes = all_transit_modes
+                    transit_access_links = [(real_stop, tap_stop), (tap_stop, real_stop)]
+                    for i_node, j_node in transit_access_links:
+                        t_link = network.link(i_node, j_node)
+                        if t_link is None:
+                            t_link = network.create_link(i_node, j_node, all_transit_modes)
+                        else:
+                            t_link.modes = all_transit_modes
                         for attr in link_attributes_reset:
                             t_link[attr] = 0
-                    egress_link = network.link(tap_stop, centroid)
-                    egress_link.modes = egress_modes
-                    egress_link.reverse_link.modes = access_modes
-                    egress_link.length = length
-                    egress_link.reverse_link.length = length
+                    egress_links = [
+                        (network.link(tap_stop, centroid), egress_modes),
+                        (network.link(centroid, tap_stop), access_modes)]
+                    for t_link, modes in egress_links:
+                        if t_link is None:
+                            continue
+                        t_link.modes = modes
+                        t_link.length = length
 
         line_attributes = network.attributes("TRANSIT_LINE")
         seg_attributes = network.attributes("TRANSIT_SEGMENT")
@@ -241,12 +275,6 @@ class PrepareTransitNetwork(_Component):
                     real_seg.allow_alightings = False
                     real_seg.dwell_time = 0
 
-    @staticmethod
-    def init_node_id(network):
-        new_node_id = max(n.number for n in network.nodes())
-        new_node_id = _math.ceil(new_node_id / 10000.0) * 10000
-        return new_node_id
-
     def apply_fares(self, scenario, network, period):
         apply_fares = ApplyFares(self.controller)
         apply_fares.scenario = scenario
@@ -314,23 +342,26 @@ class PrepareTransitNetwork(_Component):
         #print "Number of nodes set with new platform time", len(stop_nodes_with_platform_time)
         #print "Number of walk links set with new walk time", len(walk_links_overridden)
 
-    def update_auto_times(self, period, scenario):
-        auto_emmebank = self._emme_manager.emmebank(os.path.join(self.root_dir, self.config.emme.highway_database_path))
-        auto_scenario = auto_emmebank.scenario(period.emme_scenario_id)
-        if auto_scenario.has_traffic_results:
-            auto_network = auto_scenario.get_network()
-            network = scenario.get_network()
-            link_lookup = {}
-            for link in auto_network.links():
-                link_lookup[link["#link_id"]] = link
-            for link in network.links():
-                auto_link = link_lookup.get(link["#link_id"])
-                if not auto_link:
-                    continue
-                # TODO: may need to remove "reliability" factor
-                auto_time = link.auto_time
-                if auto_time > 0:
-                    link["@trantime"] = auto_time
+
+class IDGenerator(object):
+    """Generate available Node IDs."""
+
+    def __init__(self, start, network):
+        """Return new Emme network attribute with details as defined."""
+        self._number = start
+        self._network = network
+
+    def next(self):
+        """Return the next valid node ID number."""
+        while True:
+            if self._network.node(self._number) is None:
+                break
+            self._number += 1
+        return self._number
+
+    def __next__(self):
+        """Return the next valid node ID number."""
+        return self.next()
 
 
 class ApplyFares(_Component):

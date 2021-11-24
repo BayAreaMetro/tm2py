@@ -75,7 +75,7 @@ class Controller(_Controller):
         # with self.setup():
         # NOTE: E1101 due to dynamic generation of config from TOML file
         # pylint: disable=E1101
-        start, end = self.config.run.start_iteration, self.config.run.global_iterations + 1
+        start, end = self.config.run.start_iteration, self.config.run.end_iteration + 1
         if start == 0:
             self.run_create_tod_scenarios()
             self.run_active_mode_skim()
@@ -110,7 +110,9 @@ class Controller(_Controller):
         """Run prepare emme network component"""
         # NOTE: E1101 due to dynamic generation of config from TOML file
         if self.config.run.create_tod_scenarios:  # pylint: disable=E1101
+            # TODO: merge these two into one component or split into auto and transit prepare steps
             self._components["create_tod_scenarios"].run()
+            self._components["prepare_transit"].run()
 
     def run_active_mode_skim(self):
         """Run prepare emme network component"""
@@ -164,7 +166,6 @@ class Controller(_Controller):
     def run_transit_assignment(self):
         """Run transit assignment and skims component"""
         if self.config.run.transit[self.iteration]:  # pylint: disable=E1101
-            self._components["prepare_transit"].run()
             self._components["transit"].run()
 
 

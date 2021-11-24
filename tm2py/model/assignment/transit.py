@@ -2,9 +2,11 @@
 
 """
 
+from collections import defaultdict as _defaultdict, OrderedDict
+from copy import deepcopy as _copy
 from contextlib import contextmanager as _context
+import json as _json
 import numpy as np
-from os.path import join as _join, dirname as _dir
 import os
 
 from tm2py.core.component import Component as _Component, Controller as _Controller
@@ -13,19 +15,7 @@ from tm2py.core.logging import LogStartEnd
 
 # TODO: imports from skim_transit_network.py, to be reviewed
 import inro.modeller as _m
-import inro.emme.database.emmebank as _eb
-import inro.emme.core.exception as _except
 import inro.emme.desktop.worksheet as _worksheet
-import traceback as _traceback
-from copy import deepcopy as _copy
-from collections import defaultdict as _defaultdict, OrderedDict
-
-import numpy
-import os as _os
-import json as _json
-from copy import deepcopy as _copy
-
-import openmatrix as _omx
 
 
 # TODO: should express these in the config
@@ -153,12 +143,12 @@ class TransitAssignment(_Component):
     @LogStartEnd("transit assignment and skims")
     def run(self):
         """Run transit assignment and skims."""
-        project_path = _join(self.root_dir, self.config.emme.project_path)
+        project_path = os.path.join(self.root_dir, self.config.emme.project_path)
         self._emme_manager = _emme_tools.EmmeManager()
         # Initialize Emme desktop if not already started
         emme_app = self._emme_manager.project(project_path)
         self._emme_manager.init_modeller(emme_app)
-        emmebank_path = _join(self.root_dir, self.config.emme.transit_database_path)
+        emmebank_path = os.path.join(self.root_dir, self.config.emme.transit_database_path)
         self._emmebank = emmebank = self._emme_manager.emmebank(emmebank_path)
         ref_scenario = self._emmebank.scenario(self.config.periods[0].emme_scenario_id)
         period_names = [time.name for time in self.config.periods]
@@ -191,6 +181,8 @@ class TransitAssignment(_Component):
                 #     output_transit_boardings_file = _os.path.join(
                 #          _os.getcwd(), args.trn_path, "boardings_by_line_{}.csv".format(period))
                 #     export_boardings_by_line(emme_app, output_transit_boardings_file)
+                if self.config.transit.get("output_stop_usage_path"):
+                    self.export_connector_flows(scenario, period)
 
     @_context
     def _setup(self, scenario, period):
@@ -198,18 +190,39 @@ class TransitAssignment(_Component):
             with self._emme_manager.logbook_trace(f"Transit assignments for period {period.name}"):
                 self._matrix_cache = _emme_tools.MatrixCache(scenario)
                 self._skim_matrices = []
+                self._prepare_network(scenario, period)
                 try:
                     yield
                 finally:
                     self._matrix_cache.clear()
                     self._matrix_cache = None
 
-    @LogStartEnd("prepare network attributes")
-    def _prepare_network(self, scenario):
-        net_calc = _emme_tools.NetworkCalculator(scenario)
-        # TODO: if not first iteration need to update @trantime from congested auto assignment
+    @LogStartEnd("prepare network attributes and update times from auto network")
+    def _prepare_network(self, scenario, period):
+        transit_network = scenario.get_network()
+        auto_emmebank = self._emme_manager.emmebank(os.path.join(self.root_dir, self.config.emme.highway_database_path))
+        auto_scenario = auto_emmebank.scenario(period.emme_scenario_id)
+        if auto_scenario.has_traffic_results:
+            # TODO: partial network load
+            auto_network = auto_scenario.get_network()
+            link_lookup = {}
+            for auto_link in auto_network.links():
+                link_lookup[auto_link["#link_id"]] = auto_link
+            for tran_link in transit_network.links():
+                auto_link = link_lookup.get(tran_link["#link_id"])
+                if not auto_link:
+                    continue
+                # TODO: may need to remove "reliability" factor in future versions of VDF definition
+                auto_time = auto_link.auto_time
+                if auto_time >= 0:
+                    tran_link["@trantime"] = auto_time
+
         # set us1 (segment data1), used in ttf expressions, from @trantime
-        net_calc("us1", "@trantime", selections={"transit_line": "all", "link": "all"})
+        for segment in transit_network.transit_segments():
+            if segment['@schedule_time'] <= 0 and segment.link is not None:
+                segment.data1 = segment["@trantime_seg"] = segment.link["@trantime"]
+        # TODO: could set attribute_values instead of full publish
+        scenario.publish_network(transit_network)
 
     @LogStartEnd("initialize matrices")
     def initialize_skim_matrices(self, time_periods, scenario):
@@ -258,8 +271,6 @@ class TransitAssignment(_Component):
             create_matrix = self._emme_manager.modeller.tool("inro.emme.data.matrix.create_matrix")
             for mtype, name, desc in matrices:
                 matrix = emmebank.matrix(f'{mtype}"{name}"')
-                #if not matrix:
-                #    create_matrix(mtype, name, desc, scenario=scenario, overwrite=True)
                 if matrix:
                     emmebank.delete_matrix(matrix)
                 create_matrix(mtype, name, desc, scenario=scenario, overwrite=True)
@@ -277,11 +288,11 @@ class TransitAssignment(_Component):
         num_zones = len(scenario.zone_numbers)
         emmebank = scenario.emmebank
         msa_iteration = self.controller.iteration
-        #omx_filename_template = "transit_{period}_{access_mode}_TRN_{set}_{period}.omx"
-        omx_filename_template = _os.path.join(self.root_dir, self.config.household.transit_demand_file)
+        # omx_filename_template = "transit_{period}_{access_mode}_TRN_{set}_{period}.omx"
+        omx_filename_template = os.path.join(self.root_dir, self.config.household.transit_demand_file)
         matrix_name_template = "{access_mode}_SET_{period}"
         emme_matrix_name_template = "TRN_{set}_{period}"
-        #with _m.logbook_trace("Importing demand matrices for period %s" % period):
+        # with _m.logbook_trace("Importing demand matrices for period %s" % period):
         for set_num in _all_sets:
             demand = None
             omx_filename_path = omx_filename_template.format(
@@ -317,10 +328,10 @@ class TransitAssignment(_Component):
                 # Load prev demand and MSA average
                 prev_demand = matrix.get_numpy_data(scenario.id)
                 demand = prev_demand + (1.0 / msa_iteration) * (
-                    demand - prev_demand
+                        demand - prev_demand
                 )
             matrix.set_numpy_data(demand, scenario.id)
-            
+
     def create_empty_demand_matrices(self, period_name, scenario):
         emme_matrix_name_template = "TRN_{set}_{period}"
         emmebank = scenario.emmebank
@@ -336,13 +347,12 @@ class TransitAssignment(_Component):
             matrix.description = f"{period_name} {set_num} (all access modes)"[:80]
 
     def assign_and_skim(self,
-        scenario,
-        period,
-        assignment_only=False,
-        use_fares=False,
-        use_ccr=False,
-    ):
-        emmebank = scenario.emmebank
+                        scenario,
+                        period,
+                        assignment_only=False,
+                        use_fares=False,
+                        use_ccr=False,
+                        ):
         # TODO: double check value of time from $/min to $/hour is OK
         network = scenario.get_network()
         # network = scenario.get_partial_network(
@@ -353,7 +363,8 @@ class TransitAssignment(_Component):
                 mode_types["WALK"].append(mode.id)
             elif mode.type in ["LOCAL", "PREMIUM"]:
                 mode_types[mode.type].append(mode.id)
-
+        if self.config.transit.get("override_connector_times", False):
+            self.update_connector_times(scenario, network, period)
         with self._emme_manager.logbook_trace("Transit assignment and skims for period %s" % period.name):
             self.run_assignment(
                 scenario,
@@ -407,7 +418,7 @@ class TransitAssignment(_Component):
             mode_types,
             use_fares=False,
             use_ccr=False,
-        ):
+    ):
 
         # REVIEW: separate method into smaller steps
         #     - specify class structure in config
@@ -472,26 +483,26 @@ class TransitAssignment(_Component):
 
             local_modes = get_fare_modes(mode_types["LOCAL"])
             premium_modes = get_fare_modes(mode_types["PREMIUM"])
-            project_dir = _os.path.dirname(_os.path.dirname(scenario.emmebank.path))
+            project_dir = os.path.dirname(os.path.dirname(scenario.emmebank.path))
             with open(
-                _os.path.join(
-                    project_dir, "Specifications", "%s_BUS_journey_levels.ems" % period.name
-                ),
-                "r",
+                    os.path.join(
+                        project_dir, "Specifications", "%s_BUS_journey_levels.ems" % period.name
+                    ),
+                    "r",
             ) as f:
                 local_journey_levels = _json.load(f)["journey_levels"]
             with open(
-                _os.path.join(
-                    project_dir, "Specifications", "%s_PREM_journey_levels.ems" % period.name
-                ),
-                "r",
+                    os.path.join(
+                        project_dir, "Specifications", "%s_PREM_journey_levels.ems" % period.name
+                    ),
+                    "r",
             ) as f:
                 premium_modes_journey_levels = _json.load(f)["journey_levels"]
             with open(
-                _os.path.join(
-                    project_dir, "Specifications", "%s_ALLPEN_journey_levels.ems" % period.name
-                ),
-                "r",
+                    os.path.join(
+                        project_dir, "Specifications", "%s_ALLPEN_journey_levels.ems" % period.name
+                    ),
+                    "r",
             ) as f:
                 journey_levels = _json.load(f)["journey_levels"]
             # add transfer wait perception penalty
@@ -510,28 +521,26 @@ class TransitAssignment(_Component):
                 # add in the correct value of time parameter
                 for level in jls:
                     if level["boarding_cost"]:
-                        level["boarding_cost"]["on_segments"][
-                            "perception_factor"
-                        ] = fare_perception
+                        level["boarding_cost"]["on_segments"]["perception_factor"] = fare_perception
 
             mode_attr = '["#src_mode"]'
         else:
             local_modes = list(mode_types["LOCAL"])
             premium_modes = list(mode_types["PREMIUM"])
             local_journey_levels = get_jl_xfer_penalty(
-                local_modes, 
+                local_modes,
                 params["effective_headway_source"],
                 params["transfer_wait_perception_factor"],
                 params.get("transfer_boarding_penalty")
             )
             premium_modes_journey_levels = get_jl_xfer_penalty(
-                premium_modes, 
+                premium_modes,
                 params["effective_headway_source"],
                 params["transfer_wait_perception_factor"],
                 params.get("transfer_boarding_penalty")
             )
             journey_levels = get_jl_xfer_penalty(
-                local_modes + premium_modes, 
+                local_modes + premium_modes,
                 params["effective_headway_source"],
                 params["transfer_wait_perception_factor"],
                 params.get("transfer_boarding_penalty")
@@ -563,6 +572,16 @@ class TransitAssignment(_Component):
                 ),
             ]
         )
+        if self.config.transit.get("override_connector_times", False):
+            skim_parameters["BUS"]["aux_transit_cost"] = {
+                "penalty": "@walk_time_bus", "perception_factor": params["walk_perception_factor"]
+            }
+            skim_parameters["PREM"]["aux_transit_cost"] = {
+                "penalty": "@walk_time_prem", "perception_factor": params["walk_perception_factor"]
+            }
+            skim_parameters["ALLPEN"]["aux_transit_cost"] = {
+                "penalty": "@walk_time_all", "perception_factor": params["walk_perception_factor"]
+            }
 
         if use_ccr:
             assign_transit = modeller.tool(
@@ -583,6 +602,8 @@ class TransitAssignment(_Component):
                 #     continue  # don't include if no demand
                 spec["demand"] = demand_matrix
                 spec["journey_levels"] = parameters["journey_levels"]
+                # Optional aux_transit_cost, used for walk time on connectors, set if override_connector_times
+                spec["aux_transit_cost"] = parameters.get("aux_transit_cost")
                 specs.append(spec)
                 names.append(mode_name)
             func = {
@@ -605,6 +626,7 @@ class TransitAssignment(_Component):
                 "relative_difference": 0.01,
                 "percent_segments_over_capacity": 0.01,
             }
+
             assign_transit(
                 specs,
                 congestion_function=func,
@@ -626,26 +648,26 @@ class TransitAssignment(_Component):
                     set=_set_dict[mode_name], period=period.name
                 )
                 spec["journey_levels"] = parameters["journey_levels"]
+                # Optional aux_transit_cost, used for walk time on connectors, set if override_connector_times
+                spec["aux_transit_cost"] = parameters.get("aux_transit_cost")
                 assign_transit(
                     spec, class_name=mode_name, add_volumes=add_volumes, scenario=scenario
                 )
                 add_volumes = True
 
     def run_skims(self,
-        scenario,
-        name,
-        period,
-        valid_modes,
-        network,
-        use_fares=False,
-        use_ccr=False,
-    ):
+                  scenario,
+                  name,
+                  period,
+                  valid_modes,
+                  network,
+                  use_fares=False,
+                  use_ccr=False,
+                  ):
         # REVIEW: separate method into smaller steps
         #     - specify class structure in config
         #     - specify skims by name
-        params = self.config.transit
         modeller = self._emme_manager.modeller
-        emmebank = scenario.emmebank
         num_processors = self._num_processors
         matrix_calc = modeller.tool("inro.emme.matrix_calculation.matrix_calculator")
         network_calc = modeller.tool("inro.emme.network_calculation.network_calculator")
@@ -662,10 +684,11 @@ class TransitAssignment(_Component):
             "inro.emme.transit_assignment.extended.strategy_based_analysis"
         )
 
+        override_connectors = self.config.transit.get("override_connector_times", False)
         class_name = name
         skim_name = "%s_%s" % (period.name, name)
         with self._emme_manager.logbook_trace(
-            "First and total wait time, number of boardings, fares, total walk time"
+                "First and total wait time, number of boardings, fares, total walk time"
         ):
             # First and total wait time, number of boardings, fares, total walk time, in-vehicle time
             spec = {
@@ -679,17 +702,18 @@ class TransitAssignment(_Component):
                         if m.type in ["TRANSIT", "AUX_TRANSIT"]
                     ],
                     "avg_boardings": 'mf"%s_XFERS"' % skim_name,
-                    # "actual_in_vehicle_times": 'mf"%s_TOTALIVTT"' % skim_name,
                     "actual_aux_transit_times": 'mf"%s_TOTALWALK"' % skim_name,
                 },
             }
             if use_fares:
                 spec["by_mode_subset"]["actual_in_vehicle_costs"] = (
-                    'mf"%s_IN_VEHICLE_COST"' % skim_name
+                        'mf"%s_IN_VEHICLE_COST"' % skim_name
                 )
                 spec["by_mode_subset"]["actual_total_boarding_costs"] = (
-                    'mf"%s_FARE"' % skim_name
+                        'mf"%s_FARE"' % skim_name
                 )
+            if override_connectors:
+                spec["by_mode_subset"]["actual_aux_transit_times"] = 'mf"%s_XFERWALK"' % skim_name
             matrix_results(
                 spec,
                 class_name=class_name,
@@ -764,7 +788,7 @@ class TransitAssignment(_Component):
                     )
 
         with self._emme_manager.logbook_trace(
-            "Calculate total IVTT, number of transfers, transfer walk and wait times"
+                "Calculate total IVTT, number of transfers, transfer walk and wait times"
         ):
             spec_list = [
                 {  # sum total ivtt across all modes
@@ -785,12 +809,6 @@ class TransitAssignment(_Component):
                     },
                     "result": f'mf"{skim_name}_XFERS"',
                     "expression": f'(mf"{skim_name}_XFERS" - 1).max.0',
-                },
-                {  # transfer walk time = total - access - egress
-                    "type": "MATRIX_CALCULATION",
-                    "constraint": None,
-                    "result": f'mf"{skim_name}_XFERWALK"',
-                    "expression": f'(mf"{skim_name}_TOTALWALK" - 0.66).max.0',
                 },
                 {
                     "type": "MATRIX_CALCULATION",
@@ -813,6 +831,29 @@ class TransitAssignment(_Component):
                     "constraint": None,
                     "result": f'mf"{skim_name}_FARE"',
                     "expression": f'(mf"{skim_name}_FARE" + mf"{skim_name}_IN_VEHICLE_COST)"'})
+
+            if override_connectors:
+                # walk time skim updates for TAZ based assignment: XFERWALK contains the connector times,
+                # and TOTALWALK contains the xfer (real) walk times, swap matrix results
+                spec_list.append({  # total walk time = transfer walk plus connector walk
+                    "type": "MATRIX_CALCULATION",
+                    "constraint": None,
+                    "result": f'mf"{skim_name}_TOTALWALK"',
+                    "expression": f'(mf"{skim_name}_TOTALWALK" + mf"{skim_name}_XFERWALK").max.0',
+                })
+                spec_list.append({  # transfer walk time = total walk time - connector walk time
+                    "type": "MATRIX_CALCULATION",
+                    "constraint": None,
+                    "result": f'mf"{skim_name}_XFERWALK"',
+                    "expression": f'(mf"{skim_name}_TOTALWALK" - mf"{skim_name}_XFERWALK").max.0',
+                })
+            else:  # For TAP-based assignment, nominal walk time on connectors of 0.33
+                spec_list.append({  # transfer walk time = total - access - egress
+                    "type": "MATRIX_CALCULATION",
+                    "constraint": None,
+                    "result": f'mf"{skim_name}_XFERWALK"',
+                    "expression": f'(mf"{skim_name}_TOTALWALK" - 0.66).max.0',
+                })
             matrix_calc(spec_list, scenario=scenario, num_processors=num_processors)
 
         if use_ccr:
@@ -824,7 +865,8 @@ class TransitAssignment(_Component):
                     overwrite=True,
                     scenario=scenario,
                 )
-                # create_extra("TRANSIT_SEGMENT", "@crowding_factor", "crowding factor along segments", overwrite=True, scenario=scenario)
+                # create_extra("TRANSIT_SEGMENT", "@crowding_factor",
+                # "crowding factor along segments", overwrite=True, scenario=scenario)
                 create_extra(
                     "TRANSIT_SEGMENT",
                     "@capacity_penalty",
@@ -872,8 +914,8 @@ class TransitAssignment(_Component):
                     segment["@eawt"] = calc_eawt(segment, vcr, headway)
                     # segment["@crowding_penalty"] = calc_segment_cost(transit_volume, capacity, segment)
                     segment["@capacity_penalty"] = (
-                        max(segment["@phdwy"] - segment["@eawt"] - headway, 0)
-                        * hdwy_fraction
+                            max(segment["@phdwy"] - segment["@eawt"] - headway, 0)
+                            * hdwy_fraction
                     )
 
                 values = network.get_attribute_values(
@@ -920,8 +962,8 @@ class TransitAssignment(_Component):
         # Reset skims to 0 if not both local and premium
         localivt_skim = self._matrix_cache.get_data(f'mf"{period}_ALLPEN_LBIVTT"')
         totalivt_skim = self._matrix_cache.get_data(f'mf"{period}_ALLPEN_TOTALIVTT"')
-        has_premium = numpy.greater((totalivt_skim - localivt_skim), 0)
-        has_both = numpy.greater(localivt_skim, 0) * has_premium
+        has_premium = np.greater((totalivt_skim - localivt_skim), 0)
+        has_both = np.greater(localivt_skim, 0) * has_premium
         for skim in _skim_names:
             mat_name = f'mf"{period}_ALLPEN_{skim}"'
             data = self._matrix_cache.get_data(mat_name)
@@ -945,12 +987,12 @@ class TransitAssignment(_Component):
         for skim_set in ["BUS", "PREM", "ALLPEN"]:
             for skim in _skim_names:
                 matrices.append(f'mf"{period}_{skim_set}_{skim}"')
-        omx_file_path = _join(
-            self.root_dir, 
+        omx_file_path = os.path.join(
+            self.root_dir,
             self.config.transit.output_skim_path.format(period=period))
         os.makedirs(os.path.dirname(omx_file_path), exist_ok=True)
         with _emme_tools.OMX(
-            omx_file_path, "w", scenario, matrix_cache=self._matrix_cache, mask_max_value=1e7
+                omx_file_path, "w", scenario, matrix_cache=self._matrix_cache, mask_max_value=1e7
         ) as omx_file:
             omx_file.write_matrices(matrices)
         self._matrix_cache.clear()
@@ -985,6 +1027,89 @@ class TransitAssignment(_Component):
         table.export(output_transit_boardings_file)
         table.close()
 
+    def update_connector_times(self, scenario, network, period):
+        # walk time attributes per skim set
+        connector_attrs = {1: "@walk_time_bus", 2: "@walk_time_prem", 3: "@walk_time_all"}
+        for attr_name in connector_attrs.values():
+            if scenario.extra_attribute(attr_name) is None:
+                scenario.create_extra_attribute("LINK", attr_name)
+            # delete attribute in network object to reinitialize to default values
+            if attr_name in network.attributes("LINK"):
+                network.delete_attribute("LINK", attr_name)
+            network.create_attribute("LINK", attr_name, 9999)
+        period_name = period.name.lower()
+
+        # lookup adjacent real stop to account for connector splitting
+        connectors = _defaultdict(lambda: {})
+        for zone in network.centroids():
+            taz_id = int(zone["@taz_id"])
+            for link in zone.outgoing_links():
+                stop_id = int(link.j_node["#node_id"])
+                connectors[taz_id][stop_id] = link
+            for link in zone.incoming_links():
+                stop_id = int(link.i_node["#node_id"])
+                connectors[stop_id][taz_id] = link
+        with open(os.path.join(self.root_dir, self.config.transit.input_connector_access_times_path), 'r') as f:
+            header = [x.strip() for x in next(f).split(",")]
+            for line in f:
+                tokens = line.split(",")
+                data = dict(zip(header, tokens))
+                if data["time_period"].lower() == period_name:
+                    taz = int(data["from_taz"])
+                    stop = int(data["to_stop"])
+                    connector = connectors[taz][stop]
+                    attr_name = connector_attrs[int(data["skim_set"])]
+                    connector[attr_name] = float(data["est_walk_min"])
+        with open(os.path.join(self.root_dir, self.config.transit.input_connector_egress_times_path), 'r') as f:
+            header = [x.strip() for x in next(f).split(",")]
+            for line in f:
+                tokens = line.split(",")
+                data = dict(zip(header, tokens))
+                if data["time_period"].lower() == period_name:
+                    taz = int(data["to_taz"])
+                    stop = int(data["from_stop"])
+                    connector = connectors[stop][taz]
+                    attr_name = connector_attrs[int(data["skim_set"])]
+                    connector[attr_name] = float(data["est_walk_min"])
+        attrs = connector_attrs.values()
+        values = network.get_attribute_values("LINK", attrs)
+        scenario.set_attribute_values("LINK", attrs, values)
+
+    def export_connector_flows(self, scenario, period):
+        # export boardings and alightings by stop (connector) and TAZ
+        modeller = self._emme_manager.modeller
+        network_results = modeller.tool(
+            "inro.emme.transit_assignment.extended.matrix_results"
+        )
+        create_extra = modeller.tool(
+            "inro.emme.data.extra_attribute.create_extra_attribute"
+        )
+        skim_sets = []
+        for name in skim_sets:
+            create_extra("LINK", f"@aux_volume_{name}", overwrite=True, scenario=scenario)
+            spec = {
+                "type": "EXTENDED_TRANSIT_NETWORK_RESULTS",
+                "on_links": {"aux_transit_volumes": f"@aux_volume_{name}"}
+            }
+            network_results(spec, class_name=name, scenario=scenario)
+
+        # TODO: optimization: partial network to only load links and certain attributes
+        network = scenario.get_network()
+        path_tmplt = os.path.join(self.root_dir, self.config.transit.output_stop_usage_path)
+        with open(path_tmplt.format(period=period.name), "w") as f:
+            f.write(",".join(["mode", "taz", "stop", "boardings", "alightings"]))
+            for node in network.centroids():
+                for link in node.outgoing_links():
+                    for name in skim_sets:
+                        data = [
+                            name,
+                            node["@taz_id"],
+                            link.j_node["#node_id"],
+                            link[f"@aux_volume_{name}"],
+                            link.reverse_link[f"@aux_volume_{name}"]
+                        ]
+                        f.write(",".join(data))
+
     def report(self, scenario, period):
         # TODO: untested
         text = ['<div class="preformat">']
@@ -1004,7 +1129,7 @@ class TransitAssignment(_Component):
         )
         for name in matrices:
             data = self._matrix_cache.get_data(name)
-            data = numpy.ma.masked_outside(data, -9999999, 9999999)
+            data = np.ma.masked_outside(data, -9999999, 9999999)
             stats = (
                 name,
                 data.min(),
@@ -1027,25 +1152,24 @@ def get_jl_xfer_penalty(modes, effective_headway_source, xfer_perception_factor,
         "destinations_reachable": True,
         "transition_rules": [{"mode": m, "next_journey_level": 1} for m in modes],
     },
-    {
-        "description": "",
-        "destinations_reachable": True,
-        "transition_rules": [{"mode": m, "next_journey_level": 1} for m in modes],
-        "waiting_time": {
-            "headway_fraction": 0.5,
-            "effective_headways": effective_headway_source,
-            "spread_factor": 1,
-            "perception_factor": xfer_perception_factor
-        }
+        {
+            "description": "",
+            "destinations_reachable": True,
+            "transition_rules": [{"mode": m, "next_journey_level": 1} for m in modes],
+            "waiting_time": {
+                "headway_fraction": 0.5,
+                "effective_headways": effective_headway_source,
+                "spread_factor": 1,
+                "perception_factor": xfer_perception_factor
+            }
 
-    }]
+        }]
 
     if xfer_boarding_penalty is not None:
         level_rules[1]["boarding_time"] = {"global": {
             "penalty": xfer_boarding_penalty, "perception_factor": 1}
         }
     return level_rules
-
 
 
 def get_strat_spec(components, matrix_name):

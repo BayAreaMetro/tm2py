@@ -142,10 +142,11 @@ class CreateTODScenarios(_Component):
             required_dims = {
                 "full_matrices": 9999,
                 "scenarios": 6,
-                "regular_nodes": 550000,
-                "links": 1200000,
+                "regular_nodes": 650000,
+                "links": 1900000,
                 "transit_vehicles": 200,
-                "extra_attribute_values": 100000000
+                "transit_segments": 1800000,
+                "extra_attribute_values": 200000000
             }
             self._emme_manager.change_emmebank_dimensions(emmebank, required_dims)
             for ident in ["ft1", "ft2", "ft3"]:
@@ -190,8 +191,6 @@ class CreateTODScenarios(_Component):
                         f"mode {mode_data['id']} already exists with type {mode.type} instead of {mode_data['assign_type']}")
                 mode.description = mode_data['name']
                 if mode_data['assign_type'] == "AUX_TRANSIT":
-                    # NOTE: Joel's version was using ul2*1.0 for spdfac,
-                    #       only the TAP-TAP walk links had real distance, the others had distance of 999
                     mode.speed = mode_data['speed_miles_per_hour']
                 if mode_data["type"] == "WALK":
                     walk_modes.add(mode.id)
