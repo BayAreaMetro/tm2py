@@ -1089,31 +1089,37 @@ class TransitAssignment(_Component):
         create_extra = modeller.tool(
             "inro.emme.data.extra_attribute.create_extra_attribute"
         )
-        skim_sets = []
+        skim_sets = ["BUS", "PREM", "ALLPEN"]
+        names = []
         for name in skim_sets:
-            create_extra("LINK", f"@aux_volume_{name}", overwrite=True, scenario=scenario)
+            attr_name = f"@aux_volume_{name}".lower()
+            create_extra("LINK", attr_name, overwrite=True, scenario=scenario)
             spec = {
                 "type": "EXTENDED_TRANSIT_NETWORK_RESULTS",
-                "on_links": {"aux_transit_volumes": f"@aux_volume_{name}"}
+                "on_links": {"aux_transit_volumes": attr_name}
             }
             network_results(spec, class_name=name, scenario=scenario)
+            names.append((name, attr_name))
 
         # TODO: optimization: partial network to only load links and certain attributes
         network = scenario.get_network()
         path_tmplt = os.path.join(self.root_dir, self.config.transit.output_stop_usage_path)
         with open(path_tmplt.format(period=period.name), "w") as f:
             f.write(",".join(["mode", "taz", "stop", "boardings", "alightings"]))
-            for node in network.centroids():
-                for link in node.outgoing_links():
-                    for name in skim_sets:
-                        data = [
-                            name,
-                            node["@taz_id"],
-                            link.j_node["#node_id"],
-                            link[f"@aux_volume_{name}"],
-                            link.reverse_link[f"@aux_volume_{name}"]
-                        ]
-                        f.write(",".join(data))
+            for zone in network.centroids():
+                taz_id = zone["@taz_id"]
+                for link in zone.outgoing_links():
+                    stop_id = link.j_node["#node_id"]
+                    for name, attr_name in names:
+                        boardings = link[attr_name]
+                        alightings = link.reverse_link[attr_name] if link.reverse_link else 0
+                        f.write(",".join([name, taz_id, stop_id, boardings, alightings]))
+                for link in zone.incoming_links():
+                    if link.reverse_link:  # already exported
+                        continue
+                    stop_id = link.i_node["#node_id"]
+                    for name, attr_name in names:
+                        f.write(",".join([name, taz_id, stop_id, 0, link[attr_name]]))
 
     def report(self, scenario, period):
         # TODO: untested
