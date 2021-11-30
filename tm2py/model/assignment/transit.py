@@ -1084,7 +1084,7 @@ class TransitAssignment(_Component):
         # export boardings and alightings by stop (connector) and TAZ
         modeller = self._emme_manager.modeller
         network_results = modeller.tool(
-            "inro.emme.transit_assignment.extended.matrix_results"
+            "inro.emme.transit_assignment.extended.network_results"
         )
         create_extra = modeller.tool(
             "inro.emme.data.extra_attribute.create_extra_attribute"

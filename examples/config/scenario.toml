@@ -349,7 +349,14 @@
     fare_matrix_path = "inputs\\trn\\fareMatrix.txt"
     # max expected transfer distance for mode-to-mode transfer fare table generation
     fare_max_transfer_distance_miles = 3.0
+    # use with TAP assignment to control TAP access to rest of network
+    split_connectors_to_prevent_walk = True
     use_fares = false
+    # for TAZ instead of TAPs
+    # override_connector_times = true
+    # input_connector_access_times_path = "inputs\\trn\\estimated_taz_access_connectors.csv"
+    # input_connector_egress_times_path = "inputs\\trn\\estimated_taz_egress_connectors.csv"
+    # output_stop_usage_path = "inputs\\trn\\stop_usage_{period}.csv"
 
 [emme]
     num_processors = "max-1"

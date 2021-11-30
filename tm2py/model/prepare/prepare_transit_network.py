@@ -61,7 +61,8 @@ class PrepareTransitNetwork(_Component):
                 # self.calc_link_unreliability(network, period)
                 if self.config.transit.use_fares:
                     self.apply_fares(scenario, network, period.name)
-                self.split_tap_connectors_to_prevent_walk(network)
+                if self.config.transit.get("split_connectors_to_prevent_walk", False):
+                    self.split_tap_connectors_to_prevent_walk(network)
                 # TODO: missing the input data files for apply station attributes
                 # self.apply_station_attributes(input_dir, network)
                 scenario.publish_network(network)
