@@ -1107,19 +1107,21 @@ class TransitAssignment(_Component):
         with open(path_tmplt.format(period=period.name), "w") as f:
             f.write(",".join(["mode", "taz", "stop", "boardings", "alightings"]))
             for zone in network.centroids():
-                taz_id = zone["@taz_id"]
+                taz_id = int(zone["@taz_id"])
                 for link in zone.outgoing_links():
                     stop_id = link.j_node["#node_id"]
                     for name, attr_name in names:
                         boardings = link[attr_name]
-                        alightings = link.reverse_link[attr_name] if link.reverse_link else 0
-                        f.write(",".join([name, taz_id, stop_id, boardings, alightings]))
+                        alightings = link.reverse_link[attr_name] if link.reverse_link else 0.0
+                        f.write(",".join([str(x) for x in [name, taz_id, stop_id, boardings, alightings]]))
+                        f.write("\n")
                 for link in zone.incoming_links():
                     if link.reverse_link:  # already exported
                         continue
                     stop_id = link.i_node["#node_id"]
                     for name, attr_name in names:
-                        f.write(",".join([name, taz_id, stop_id, 0, link[attr_name]]))
+                        f.write(",".join([str(x) for x in [name, taz_id, stop_id, 0.0, link[attr_name]]]))
+                        f.write("\n")
 
     def report(self, scenario, period):
         # TODO: untested
