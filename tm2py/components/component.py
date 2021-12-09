@@ -1,6 +1,8 @@
 """ tktk
 """
+import os
 from abc import ABC, abstractmethod
+
 from ..controller import RunController
 
 
@@ -36,6 +38,10 @@ class Component(ABC):
         """Parent controller"""
         return self._controller
 
+    def get_abs_path(self, rel_path):
+        """Get the absolute path from the root run director given a relative path."""
+        return os.path.join(self.controller.run_dir, rel_path)
+
     @property
     def config(self):
         """Configuration settings loaded from config files"""
@@ -60,7 +66,7 @@ class Component(ABC):
         """Validate inputs are correct at model initiation, fail fast if not"""
 
     @abstractmethod
-    def run(self):
+    def run(self, time_periods=None):
         """Run model component"""
 
     def report_progress(self):
