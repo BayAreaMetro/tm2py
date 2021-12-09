@@ -1,20 +1,17 @@
-import os
-
-from ....logger import Logger
 from ...component import Component
-from ....controller import Controller
+from ....controller import RunController
+
 
 class HighwaySkim(Component):
     """Highway network preparation"""
 
-    def __init__(self, controller: Controller):
+    def __init__(self, controller: RunController):
         """Highway assignment and skims.
         Args:
-            controller: parent Controller object
+            controller: parent RunController object
         """
         super().__init__(controller)
         self.iteration = controller.iteration.copy()
-
 
     def write_omx(self, period, scenario):
         """Export skims to OMX files by period."""
@@ -79,7 +76,7 @@ class HighwayAnalysis:
         return analysis_spec
 
     @staticmethod
-    def _skim_analysis_link_attribute(skim:str,group) -> str:
+    def _skim_analysis_link_attribute(skim: str, group) -> str:
         lookup = {
             "dist": "length",  # NOTE: length must be in miles
             "hovdist": "@hov_length",

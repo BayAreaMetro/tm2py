@@ -1,40 +1,39 @@
-import os
 from typing import Union, Collection
 
-from .highway_skim import HighwayAnalysis
 from .highway_network import PrepareNetwork
-from ...demand import PrepareDemand
+from .highway_skim import HighwayAnalysis
 from ...component import Component
-from ....logger import Logger
-from ....controller import Controller
+from ...demand import PrepareDemand
+from ....controller import RunController
+
 
 class HighwayAssignment(Component):
     """Highway assignment"""
 
-    def __init__(self, controller: Controller):
+    def __init__(self, controller: RunController):
         """Highway assignment and skims.
         Args:
-            controller: parent Controller object
+            controller: parent RunController object
         """
         super().__init__(controller)
         self.demand = PrepareDemand(self.controller)
         self.network = PrepareNetwork(self.controller)
         self.local_traffic = Maz
         self.iteration = controller.iteration.copy()
-        
-        self.time_periods = [
-            time.short_name for time in self.config.time_periods
-        ]
+
+        self.time_periods = [time.short_name for time in self.config.time_periods]
         self.scenario_id_to_time_periods = {
             i + 1: tp for i, tp in enumerate(self.transit_time_periods)
         }
 
-        self.time_periods_to_scenario_id = {v:k for k,v in self.scenario_id_to_time_periods.items()}
-    
+        self.time_periods_to_scenario_id = {
+            v: k for k, v in self.scenario_id_to_time_periods.items()
+        }
+
         self.traffic_assign = self._modeller.tool(
             "inro.emme.traffic_assignment.sola_traffic_assignment"
         )
-        
+
     @property
     def assignment_classes(self, time_period):
         config_classes = self.config.highway.classes
@@ -47,44 +46,40 @@ class HighwayAssignment(Component):
         ]
         return spec
 
-    def run(self, time_period:Union[Collection[str],str] = None):
+    def run(self, time_period: Union[Collection[str], str] = None):
         """Run highway assignment"""
         if not time_period:
             time_period = self.time_periods
         if type(time_period) is Collection:
             for tp in time_period:
-                self.run(time_period = tp)
+                self.run(time_period=tp)
 
         _scenario_id = self.time_periods_to_scenario_id[time_period]
         scenario = self._modeller._emmebank.scenario(_scenario_id)
 
         self.network.run(
-            time_period = time_period, 
-            assignment_classes = self.assignment_classes
+            time_period=time_period, assignment_classes=self.assignment_classes
         )
-        self.demand.run(time_period = time_period)
+        self.demand.run(time_period=time_period)
 
-        self.local_traffic.run(time_period = time_period)
+        self.local_traffic.run(time_period=time_period)
 
         self.traffic_assign(
-            self.assign_spec(time_period),
-            scenario, 
-            chart_log_interval=1
+            self.assign_spec(time_period), scenario, chart_log_interval=1
         )
 
 
 class AssignmentClass:
-
     def __init__(self, class_config):
         self.class_config
         self.name = class_config["name"].lower()
-        self.skims = class_config.get("skims",[])
+        self.skims = class_config.get("skims", [])
 
     @property
     def cost_expression(self):
         op_cost = self.class_config["operating_cost"]
-        toll = self.class_config.get("toll",0)
-        toll_factor = self.class_config.get("toll_factor",1)
+        toll = self.class_config.get("toll", 0)
+        toll_factor = self.class_config.get("toll_factor", 1)
         cost_exp = f"length * {op_cost} + {toll} * {toll_factor}"
         return cost_exp
 
@@ -98,7 +93,7 @@ class AssignmentClass:
         Returns:
             [type]: [description]
         """
-        class_spec =  {
+        class_spec = {
             "mode": self.class_config["code"],
             "demand": f'mf"{time_period}_{self.name}"',
             "generalized_cost": {
@@ -108,7 +103,9 @@ class AssignmentClass:
             },
             "results": {
                 "link_volumes": f"@flow_{self.name}",
-                "od_travel_times": {"shortest_paths": f"{time_period}_{self.name}_time"},
+                "od_travel_times": {
+                    "shortest_paths": f"{time_period}_{self.name}_time"
+                },
             },
             "path_analyses": self.emme_class_analysis(time_period),
         }
@@ -127,21 +124,22 @@ class AssignmentClass:
         class_analysis = []
         if "time" in self.skims:
             class_analysis.append(
-                HighwayAnalysis._emme_analysis_spec(f"{time_period}_{self.name}_cost", f"@cost_{self.name}".lower())
+                HighwayAnalysis._emme_analysis_spec(
+                    f"{time_period}_{self.name}_cost", f"@cost_{self.name}".lower()
+                )
             )
         for skim_type in self.skims:
             if "_" in skim_type:
                 skim_type, group = skim_type.split("_")
                 matrix_name = f"{time_period}_{self.name}_{skim_type}{group}"
             else:
-                group = ''
+                group = ""
                 matrix_name = f"{time_period}_{self.name}_{skim_type}"
 
             class_analysis.append(
                 HighwayAnalysis._emme_analysis_spec(
-                    matrix_name, 
-                    HighwayAnalysis._skim_analysis_link_attribute(skim_type, group))
+                    matrix_name,
+                    HighwayAnalysis._skim_analysis_link_attribute(skim_type, group),
+                )
             )
         return class_analysis
-
-    
