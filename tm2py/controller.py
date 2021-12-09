@@ -4,13 +4,13 @@
 import argparse
 import itertools
 import os
+from typing import Union, List
 
 from .config import Configuration
 from .emme.manager import EmmeManager
 from .logger import Logger
 from . import components
 
-from typing import Union, List
 
 # pylint: disable=too-many-instance-attributes
 
