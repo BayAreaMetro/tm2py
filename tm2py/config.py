@@ -51,8 +51,11 @@ class ConfigItem(ABC):
             raise Exception(f"unexpected key(s): {', '.join(extra_keys)}")
         for field in fields:
             value = kwargs.get(field.name, _MISSING)
-            if value is _MISSING and field.default is _MISSING:
-                raise Exception(f"missing key {field.name}")
+            if value is _MISSING:
+                if field.default is _MISSING:
+                    raise Exception(f"missing key {field.name}")
+                self.__dict__[field.name] = field.default
+                continue
             try:
                 atype = get_type(field.type)
                 value = atype(value)
@@ -270,19 +273,19 @@ class TransitMode(ConfigItem):
     name: str
     type: str
     assign_type: str
-    speed_miles_per_hour: float
+    speed_miles_per_hour: float = None
 
 
 @dataclass(init=False, frozen=True)
 class TransitVehicle(ConfigItem):
     """Transit vehicle definition (see also transit vehicle in the Emme API)"""
 
-    line_id: int
+    vehicle_id: int
     mode: str
     name: str
     auto_equivalent: float
-    seated_capacity: int
-    total_capacity: int
+    seated_capacity: int = None
+    total_capacity: int = None
 
 
 @dataclass(init=False, frozen=True)
