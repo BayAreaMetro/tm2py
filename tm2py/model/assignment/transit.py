@@ -459,8 +459,10 @@ class TransitAssignment(_Component):
                         use_fares,
                         use_ccr,
                     )
-                    self.mask_allpen(period.name)
-                self.mask_transfers(period.name)
+                    if self.config.transit.get("mask_noncombo_allpen", True):
+                        self.mask_allpen(period.name)
+                if self.config.transit.get("mask_over_3_xfers", True):
+                    self.mask_transfers(period.name)
                 # report(scenario, period)
 
     def run_assignment(
