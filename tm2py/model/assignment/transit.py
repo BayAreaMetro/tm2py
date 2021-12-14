@@ -767,14 +767,20 @@ class TransitAssignment(_Component):
                 spec["by_mode_subset"]["actual_total_boarding_costs"] = (
                         'mf"%s_FARE"' % skim_name
                 )
-            if override_connectors:
-                spec["by_mode_subset"]["actual_aux_transit_times"] = 'mf"%s_XFERWALK"' % skim_name
             matrix_results(
                 spec,
                 class_name=class_name,
                 scenario=scenario,
                 num_processors=num_processors,
             )
+            xfer_modes = []
+            for mode in self.config.transit.modes:
+                if mode.type == "WALK":
+                    xfer_modes.append(mode.id)
+            spec = {
+                "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
+                "by_mode_subset": {"modes": xfer_modes, "actual_aux_transit_times": 'mf"%s_XFERWALK"' % skim_name},
+            }
 
         with self._emme_manager.logbook_trace("In-vehicle time by mode"):
             mode_combinations = [
@@ -887,28 +893,6 @@ class TransitAssignment(_Component):
                     "result": f'mf"{skim_name}_FARE"',
                     "expression": f'(mf"{skim_name}_FARE" + mf"{skim_name}_IN_VEHICLE_COST)"'})
 
-            if override_connectors:
-                # walk time skim updates for TAZ based assignment: XFERWALK contains the connector times,
-                # and TOTALWALK contains the xfer (real) walk times, swap matrix results
-                spec_list.append({  # total walk time = transfer walk plus connector walk
-                    "type": "MATRIX_CALCULATION",
-                    "constraint": None,
-                    "result": f'mf"{skim_name}_TOTALWALK"',
-                    "expression": f'(mf"{skim_name}_TOTALWALK" + mf"{skim_name}_XFERWALK").max.0',
-                })
-                spec_list.append({  # transfer walk time = total walk time - connector walk time
-                    "type": "MATRIX_CALCULATION",
-                    "constraint": None,
-                    "result": f'mf"{skim_name}_XFERWALK"',
-                    "expression": f'(mf"{skim_name}_TOTALWALK" - mf"{skim_name}_XFERWALK").max.0',
-                })
-            else:  # For TAP-based assignment, nominal walk time on connectors of 0.33
-                spec_list.append({  # transfer walk time = total - access - egress
-                    "type": "MATRIX_CALCULATION",
-                    "constraint": None,
-                    "result": f'mf"{skim_name}_XFERWALK"',
-                    "expression": f'(mf"{skim_name}_TOTALWALK" - 0.66).max.0',
-                })
             matrix_calc(spec_list, scenario=scenario, num_processors=num_processors)
 
         if use_ccr:
