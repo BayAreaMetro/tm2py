@@ -159,7 +159,8 @@ class CreateTODScenarios(_Component):
 
             ref_scenario = emmebank.scenario(self.config.emme.all_day_scenario_id)
             attributes = {
-                "LINK": ["@trantime", "@area_type", "@capclass", "@free_flow_speed", "@free_flow_time"]
+                "LINK": ["@trantime", "@area_type", "@capclass", "@free_flow_speed", "@free_flow_time"],
+                "TRANSIT_LINE": ["@invehicle_factor"]
             }
             for domain, attrs in attributes.items():
                 for name in attrs:
@@ -179,6 +180,8 @@ class CreateTODScenarios(_Component):
                     link[attr] = auto_link[attr]
 
             mode_table = self.config.transit.modes
+            in_vehicle_factors = {}
+            default_in_vehicle_factor = self.config.transit.get("in_vehicle_perception_factor", 1.0)
             walk_modes = set()
             access_modes = set()
             egress_modes = set()
@@ -198,6 +201,8 @@ class CreateTODScenarios(_Component):
                     access_modes.add(mode.id)
                 if mode_data["type"] == "EGRESS":
                     egress_modes.add(mode.id)
+                in_vehicle_factors[mode.id] = mode_data.get(
+                    "in_vehicle_perception_factor", default_in_vehicle_factor)
             aux_transit_modes = walk_modes | access_modes | egress_modes
             # TODO: validate at least one mode of each type
             # create vehicles
@@ -238,6 +243,8 @@ class CreateTODScenarios(_Component):
                 for seg in line.segments():
                     seg.link.modes |= {line_mode}
                 line.vehicle = line_veh
+                # Set the perception factor from the mode table
+                line["@invehicle_factor"] = in_vehicle_factors[line.vehicle.mode.id]
 
             for link in network.links():
                 # add access, egress and walk modes to links

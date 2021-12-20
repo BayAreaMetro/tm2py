@@ -495,7 +495,7 @@ class TransitAssignment(_Component):
                 "penalty": params["initial_boarding_penalty"], "perception_factor": 1}
             },
             "in_vehicle_cost": None,
-            "in_vehicle_time": {"perception_factor": params["in_vehicle_perception_factor"]},
+            "in_vehicle_time": {"perception_factor": "@invehicle_factor"},
             "aux_transit_time": {"perception_factor": params["walk_perception_factor"]},
             "aux_transit_cost": None,
             "journey_levels": [],
