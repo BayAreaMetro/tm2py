@@ -781,6 +781,12 @@ class TransitAssignment(_Component):
                 "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
                 "by_mode_subset": {"modes": xfer_modes, "actual_aux_transit_times": 'mf"%s_XFERWALK"' % skim_name},
             }
+            matrix_results(
+                spec,
+                class_name=class_name,
+                scenario=scenario,
+                num_processors=num_processors,
+            )
 
         with self._emme_manager.logbook_trace("In-vehicle time by mode"):
             mode_combinations = [
