@@ -185,6 +185,8 @@ class CreateTODScenarios(_Component):
             walk_modes = set()
             access_modes = set()
             egress_modes = set()
+            local_modes = set()
+            premium_modes = set()
             for mode_data in mode_table:
                 mode = network.mode(mode_data['id'])
                 if mode is None:
@@ -197,14 +199,17 @@ class CreateTODScenarios(_Component):
                     mode.speed = mode_data['speed_miles_per_hour']
                 if mode_data["type"] == "WALK":
                     walk_modes.add(mode.id)
-                if mode_data["type"] == "ACCESS":
+                elif mode_data["type"] == "ACCESS":
                     access_modes.add(mode.id)
-                if mode_data["type"] == "EGRESS":
+                elif mode_data["type"] == "EGRESS":
                     egress_modes.add(mode.id)
+                elif mode_data["type"] == "LOCAL":
+                    local_modes.add(mode.id)
+                elif mode_data["type"] == "PREMIUM":
+                    premium_modes.add(mode.id)
                 in_vehicle_factors[mode.id] = mode_data.get(
                     "in_vehicle_perception_factor", default_in_vehicle_factor)
-            aux_transit_modes = walk_modes | access_modes | egress_modes
-            # TODO: validate at least one mode of each type
+
             # create vehicles
             vehicle_table = self.config.transit.vehicles
             for veh_data in vehicle_table:
@@ -219,7 +224,7 @@ class CreateTODScenarios(_Component):
                 vehicle.total_capacity = veh_data["total_capacity"]
 
             # set fixed guideway times, and initial free flow auto link times
-            # TODO: to config
+            # TODO: cntype_speed_map to config
             cntype_speed_map = {"CRAIL": 45.0, "HRAIL": 40.0, "LRAIL": 30.0, "FERRY": 15.0}
             for link in network.links():
                 speed = cntype_speed_map.get(link["#cntype"])
@@ -246,16 +251,30 @@ class CreateTODScenarios(_Component):
                 # Set the perception factor from the mode table
                 line["@invehicle_factor"] = in_vehicle_factors[line.vehicle.mode.id]
 
+            # set link modes to the minimum set
+            auto_mode = {self.config.highway.generic_highway_mode_code}
             for link in network.links():
-                # add access, egress and walk modes to links
-                link.modes -= aux_transit_modes
+                # get used transit modes on link
+                modes = {seg.line.mode for seg in link.segments()}
+                # add in available modes based on link type
+                if link["@drive_link"]:
+                    modes |= local_modes
+                    modes |= auto_mode
+                if link["@bus_only"]:
+                    modes |= local_modes
+                if link["@rail_link"] and not modes:
+                    modes |= premium_modes
+                # add access, egress or walk mode (auxilary transit modes)
                 if link.i_node.is_centroid:
-                    link.modes |= egress_modes
+                    modes |= egress_modes
                 elif link.j_node.is_centroid:
-                    link.modes |= access_modes
+                    modes |= access_modes
                 elif link["@walk_link"]:
-                    link.modes |= walk_modes
-                # TODO: remove transit modes which should not be available
+                    modes |= walk_modes
+                if not modes:  # in case link is unused, give it the auto mode
+                    link.modes = auto_mode
+                else:
+                    link.modes = modes
 
             ref_scenario.publish_network(network)
 
