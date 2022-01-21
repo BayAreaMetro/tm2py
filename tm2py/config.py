@@ -1,14 +1,12 @@
 """Config implementation and schema.
-
-
 """
 # pylint: disable=too-many-instance-attributes
 
 from abc import ABC
 from dataclasses import dataclass, fields as _get_fields
+import toml
 from typing import List, Union
 
-import toml
 
 __BANNED_KEYS = ["items", "get"]
 
@@ -31,8 +29,14 @@ class ConfigItem(ABC):
     Loads dataclass from dictionary kwargs with table structure validation
     and value type casting. Allow use of .X and ["X"] and .get("X") from configuration.
 
+    Note that datatypes must always have a single declared type, no use of Union or 
+    Any types.
+
     Not to be constructed directly. To be used a mixin for dataclasses
     representing config schema.
+
+    Implement _validate method to add additional validation steps, such as values 
+    in right range, or conditional dependancies between items.
 
     Args:
         kwargs: input dictionary loaded from one or more TOML files
@@ -104,7 +108,7 @@ class Run(ConfigItem):
 
 @dataclass(init=False, frozen=True)
 class TimePeriod(ConfigItem):
-    """Time period entry"""
+    """Time time_period entry"""
 
     name: str
     length_hours: float
@@ -175,8 +179,8 @@ class ActiveModeShortestPathSkim(ConfigItem):
     mode: str
     roots: str
     leaves: str
-    max_dist_miles: float
     output: str
+    max_dist_miles: float = None
 
 
 @dataclass(init=False, frozen=True)
@@ -273,6 +277,7 @@ class TransitMode(ConfigItem):
     name: str
     type: str
     assign_type: str
+    in_vehicle_perception_factor: float
     speed_miles_per_hour: float = None
 
 
@@ -301,7 +306,6 @@ class Transit(ConfigItem):
     initial_wait_perception_factor: float
     transfer_wait_perception_factor: float
     walk_perception_factor: float
-    in_vehicle_perception_factor: float
     initial_boarding_penalty: float
     transfer_boarding_penalty: float
     max_transfers: int
@@ -311,9 +315,9 @@ class Transit(ConfigItem):
     fare_max_transfer_distance_miles: float
     use_fares: bool
     override_connector_times: bool
-    input_connector_access_times_path: str
-    input_connector_egress_times_path: str
-    output_stop_usage_path: str
+    input_connector_access_times_path: str = None
+    input_connector_egress_times_path: str = None
+    output_stop_usage_path: str = None
 
 
 @dataclass(init=False, frozen=True)
@@ -324,7 +328,7 @@ class Emme(ConfigItem):
     all_day_scenario_id: int
     project_path: str
     highway_database_path: str
-    active_database_paths: str
+    active_database_paths: List[str]
     transit_database_path: str
 
 
