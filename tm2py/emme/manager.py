@@ -3,12 +3,13 @@
 from contextlib import contextmanager as _context
 import os
 from socket import error as _socket_error
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 # PyLint cannot build AST from compiled Emme libraries
 # so disabling relevant import module checks
 # pylint: disable=E0611, E0401, E1101
 from inro.emme.database.emmebank import Emmebank
+from inro.emme.database.scenario import Scenario as EmmeScenario
 import inro.emme.desktop.app as _app
 import inro.modeller as _m
 
@@ -82,7 +83,9 @@ class EmmeManager:
             path = os.path.join(path, "emmebank")
         return Emmebank(path)
 
-    def change_emmebank_dimensions(self, emmebank: Emmebank, dimensions: Dict[str, int]):
+    def change_emmebank_dimensions(
+        self, emmebank: Emmebank, dimensions: Dict[str, int]
+    ):
         """Change the Emmebank dimensions as specified. See the Emme API help for details.
 
         Args:
@@ -111,7 +114,7 @@ class EmmeManager:
         """
         try:
             return _m.Modeller()
-        except AssertionError:
+        except AssertionError as error:
             if emme_project is None:
                 if self._project_cache:
                     emme_project = next(iter(self._project_cache.values()))
@@ -119,11 +122,69 @@ class EmmeManager:
                     raise Exception(
                         "modeller not yet initialized and no cached Emme project,"
                         " emme_project arg must be provided"
-                    )
+                    ) from error
             return _m.Modeller(emme_project)
 
     def tool(self, namespace: str):
+        """Return the Modeller tool at namespace."""
         return self.modeller().tool(namespace)
+
+    @staticmethod
+    @_context
+    def temp_attributes_and_restore(
+        scenario: EmmeScenario, attributes: List[List[str]]
+    ):
+        """Create temp extra attribute and network field, and backup values and state and restore.
+
+        Allows the use of temporary attributes which may conflict with existing attributes.
+        The temp created attributes are deleted at the end, and if there were pre-existing
+        attributes with the same names the values are restored.
+
+        Note that name conflicts may still arise in the shorthand inheritance systems
+        for the network hierarchy tree (@node attribute reserves -> @nodei, @nodej, etc,
+        see Emme help Network calculations for full list) which will raise an error in the
+        Emme API.
+
+        Args:
+            scenario: Emme scenario object
+            attributes: list of attribute details, where details is a list of 3 items
+                for extra attributes and 4 for network fields: domain, name, description[, atype]
+        """
+        attrs_to_delete = []
+        fields_to_delete = []
+        attrs_to_restore = dict(
+            (d, []) for d in ["NODE", "LINK", "TURN", "TRANSIT_LINE", "TRANSIT_SEGMENT"]
+        )
+        for details in attributes:
+            domain, name, desc = details[:3]
+            attr = scenario.extra_attribute(name)
+            field = scenario.network_field(domain, name)
+            if attr or field:
+                attrs_to_restore[domain].append(name)
+            elif name.startswith("@"):
+                attr = scenario.create_extra_attribute(domain, name)
+                attr.description = desc
+                attrs_to_delete.append(name)
+            else:
+                atype = details[3]
+                field = scenario.create_nertwork_field(domain, name, atype)
+                field.description = desc
+                fields_to_delete.append((domain, name))
+        backup = []
+        for domain, names in attrs_to_restore.items():
+            if names:
+                backup.append(
+                    (domain, names, scenario.get_attribute_values(domain, names))
+                )
+        try:
+            yield
+        finally:
+            for name in attrs_to_delete:
+                scenario.delete_extra_attribute(name)
+            for domain, name in fields_to_delete:
+                scenario.delete_network_field(domain, name)
+            for domain, names, values in backup:
+                scenario.set_attribute_values(domain, names, values)
 
     @staticmethod
     def logbook_write(name: str, value: str = None, attributes: Dict[str, Any] = None):
