@@ -1,9 +1,13 @@
 """ tktk
 """
+from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 
-import tm2py.controller as _controller
+from typing import TYPE_CHECKING, Union, Collection, List
+
+if TYPE_CHECKING:
+    from tm2py.controller import RunController
 
 
 class Component(ABC):
@@ -28,8 +32,7 @@ class Component(ABC):
             pass
     """
 
-    def __init__(self, controller: '_controller.RunController'):
-        super().__init__()
+    def __init__(self, controller: RunController):
         self._controller = controller
         self._trace = None
 
@@ -81,7 +84,7 @@ class Component(ABC):
         """Validate inputs are correct at model initiation, fail fast if not"""
 
     @abstractmethod
-    def run(self, time_periods=None):
+    def run(self, time_period: Union[Collection[str], str] = None):
         """Run model component"""
 
     def report_progress(self):
@@ -95,3 +98,21 @@ class Component(ABC):
 
     def verify(self):
         """Verify component ouputs / results"""
+
+    def _process_time_period(
+        self, time_period: Union[Collection[str], str]
+    ) -> List[str]:
+        """Process input time_period name or names and return list of time_period names.
+
+        If time_period is None return list of names from config.time_periods
+
+        Args:
+            time_period: list of str names of time_periods, or name of a single time_period or None
+
+        Returns: list of string names of time periods
+        """
+        if time_period is None:
+            return [time.name for time in self.config.time_periods]
+        if isinstance(time_period, str):
+            return [time_period]
+        return list(time_period)
