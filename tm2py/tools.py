@@ -19,13 +19,11 @@ def parse_num_processors(value: Union[str, int, float]):
         result = re.split(r"^MAX[\s]*-[\s]*", result)
         if len(result) == 2:
             return max(max_processors - int(result[1]), 1)
-        else:
-            raise Exception(f"Input value {value} is an int or string as 'MAX-X'")
-    else:
-        result = int(value)
+        raise Exception(f"Input value {value} is an int or string as 'MAX-X'")
+
+    result = int(value)
     if result > max_processors:
         raise Exception(f"Input value {value} exceeds number of available processors")
     if result < 1:
         raise Exception(f"Input value {value} gives less than 1 processors")
-
     return value

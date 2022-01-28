@@ -23,7 +23,7 @@ def test_config_read():
         "air_passenger",
         "highway_maz_maz",
         "highway",
-        "transit"
+        "transit",
     ]
     assert len(my_config.time_periods) == 5
     assert my_config.highway.classes[0].description == "drive alone"

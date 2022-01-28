@@ -71,6 +71,7 @@ class Logger:
         yield
         self.log_end(msg, level)
 
+
 # pylint: disable=too-few-public-methods
 
 

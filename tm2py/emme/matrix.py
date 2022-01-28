@@ -1,5 +1,6 @@
+"""Module for Emme-related matrix management """
 
-from typing import List, Union, Any, Dict, Callable
+from typing import List, Union, Dict
 
 import numpy as _np
 import openmatrix as _omx
@@ -66,6 +67,8 @@ class MatrixCache:
         self._data = {}
 
 
+# disable too-many-instance-attributes recommendation
+# pylint: disable=R0902
 class OMXManager:
     """Wrapper for the OMX interface to write from Emme matrices and numpy arrays."""
 
@@ -76,7 +79,7 @@ class OMXManager:
         scenario: EmmeScenario = None,
         omx_key: str = "NAME",
         matrix_cache: MatrixCache = None,
-        mask_max_value: float = None
+        mask_max_value: float = None,
     ):  # pylint: disable=R0913
         """Write from Emmebank or Matrix Cache to OMX file, or read from OMX to Numpy.
 
@@ -110,7 +113,7 @@ class OMXManager:
             return matrix.name
         if self._omx_key == "ID":
             return matrix.id
-        raise Exception("invalid omx_key: {0}".format(self._omx_key))
+        raise Exception(f"invalid omx_key: {self._omx_key}")
 
     def open(self):
         """Open the OMX file."""
@@ -162,7 +165,7 @@ class OMXManager:
                 Emme matrix data
         """
         if self._mode not in ["a", "w"]:
-            raise Exception("{0}: open in read-only mode".format(self._file_path))
+            raise Exception(f"{self._file_path}: open in read-only mode")
         if not isinstance(matrix, EmmeMatrix):
             matrix = self._scenario.emmebank.matrix(matrix)
         if name is None:
@@ -214,7 +217,7 @@ class OMXManager:
             attrs:
         """
         if self._mode not in ["a", "w"]:
-            raise Exception("{0}: open in read-only mode".format(self._file_path))
+            raise Exception(f"{self._file_path}: open in read-only mode")
         shape = numpy_array.shape
         if len(shape) == 2:
             chunkshape = (1, shape[0])

@@ -1,12 +1,13 @@
+"""Module for Emme network calculations"""
+
 from typing import Union, Dict
-
-
-import tm2py.emme.manager as _manager
 
 # PyLint cannot build AST from compiled Emme libraries
 # so disabling relevant import module checks
 # pylint: disable=E0611, E0401, E1101
 from inro.emme.database.scenario import Scenario as EmmeScenario
+
+import tm2py.emme.manager as _manager
 
 
 class NetworkCalculator:
