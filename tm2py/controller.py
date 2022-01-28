@@ -6,10 +6,12 @@ import itertools
 import os
 from typing import Union, List
 
-from .config import Configuration
-from .emme.manager import EmmeManager
-from .logger import Logger
-from . import components
+from tm2py.config import Configuration
+from tm2py.emme.manager import EmmeManager
+from tm2py.logger import Logger
+from tm2py.components.network.highway.highway_assign import HighwayAssignment
+from tm2py.components.network.highway.highway_network import PrepareNetwork
+from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, SkimMAZCosts
 
 
 # pylint: disable=too-many-instance-attributes
@@ -25,9 +27,9 @@ class RunController:
     def __init__(self, config_file: Union[List[str], str] = None, run_dir: str = None):
         if not isinstance(config_file, list):
             config_file = [config_file]
+        if run_dir is None:
+            run_dir = os.path.dirname(config_file[0])
         self._run_dir = run_dir
-        if self._run_dir is None:
-            self._run_dir = os.path.dirname(config_file[0])
 
         self.config = Configuration(config_file)
         self.logger = Logger(self)
@@ -35,13 +37,18 @@ class RunController:
         self.top_sheet = None
         self.trace = None
 
-        self._emme_manager = EmmeManager()
-        self._emme_manager.project(self.run_dir)
+        self.emme_manager = EmmeManager()
+        project = self.emme_manager.project(
+            os.path.join(self.run_dir, self.config.emme.project_path)
+        )
+        # Initialize Modeller to use Emme assignment tools and other APIs
+        self.emme_manager.modeller(project)
 
         self.component_map = {
-            "highway": components.network.highway.highway_assign.HighwayAssignment(
-                self
-            ),
+            "prepare_network_highway": PrepareNetwork(self),
+            "highway": HighwayAssignment(self),
+            "highway_maz_assign": AssignMAZSPDemand(self),
+            "highway_maz_skim": SkimMAZCosts(self),
         }
         self.completed_components = []
         self._iteration = None
@@ -51,7 +58,7 @@ class RunController:
 
     @property
     def run_dir(self):
-        """Shortcut to access run directory"""
+        """The root run directory of the model run"""
         return self._run_dir
 
     @property
@@ -73,6 +80,8 @@ class RunController:
         """Main interface to run model"""
         self.validate_inputs()
         for iteration, component in self._queued_components:
+            if self._iteration != iteration:
+                self.logger.log_time(f"start iteration {iteration}")
             self._iteration = iteration
             self._component = component
             component.run()
@@ -85,15 +94,20 @@ class RunController:
                 (0, self.component_map[c_name])
                 for c_name in self.config.run.initial_components
             ]
-        self._queued_components += list(
-            itertools.product(
-                range(
-                    max(1, self.config.run.start_iteration),
-                    self.config.run.end_iteration + 1,
-                ),
-                self.config.run.global_iteration_components,
-            )
+        iteration_nums = range(
+            max(1, self.config.run.start_iteration), self.config.run.end_iteration + 1
         )
+        iteration_components = [
+            self.component_map[c_name]
+            for c_name in self.config.run.global_iteration_components
+        ]
+        self._queued_components += list(
+            itertools.product(iteration_nums, iteration_components)
+        )
+        self._queued_components += [
+            (self.config.run.end_iteration + 1, self.component_map[c_name])
+            for c_name in self.config.run.final_components
+        ]
 
         if self.config.run.start_component:
             start_index = [
