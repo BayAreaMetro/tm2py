@@ -4,8 +4,9 @@
 
 from abc import ABC
 from dataclasses import dataclass, fields as _get_fields
-import toml
 from typing import List, Union
+
+import toml
 
 
 __BANNED_KEYS = ["items", "get"]
@@ -29,13 +30,13 @@ class ConfigItem(ABC):
     Loads dataclass from dictionary kwargs with table structure validation
     and value type casting. Allow use of .X and ["X"] and .get("X") from configuration.
 
-    Note that datatypes must always have a single declared type, no use of Union or 
+    Note that datatypes must always have a single declared type, no use of Union or
     Any types.
 
     Not to be constructed directly. To be used a mixin for dataclasses
     representing config schema.
 
-    Implement _validate method to add additional validation steps, such as values 
+    Implement _validate method to add additional validation steps, such as values
     in right range, or conditional dependancies between items.
 
     Args:
@@ -64,7 +65,14 @@ class ConfigItem(ABC):
                 atype = get_type(field.type)
                 value = atype(value)
                 if isinstance(value, list):
-                    value = list(map(get_type(field.type.__args__[0]), value))
+                    item_atype = get_type(field.type.__args__[0])
+                    processed_items = []
+                    for i, item in enumerate(value):
+                        try:
+                            processed_items.append(item_atype(item))
+                        except Exception as error:
+                            raise Exception(f"[{i}]: {error}") from error
+                    value = processed_items
                 self.__dict__[field.name] = value
             except Exception as error:
                 raise Exception(f"{field.name}: {error}") from error
@@ -209,6 +217,18 @@ class HighwayClassDemand(ConfigItem):
     name: str
     factor: float = 1.0
 
+    def _validate(self):
+        valid_demand_components = [
+            "household",
+            "air_passenger",
+            "internal_external",
+            "truck",
+        ]
+        assert (
+            self.source in valid_demand_components
+        ), f"source must be one of {', '.join(valid_demand_components)}"
+        assert self.factor > 0
+
 
 @dataclass(init=False, frozen=True)
 class HighwayClass(ConfigItem):
@@ -241,6 +261,14 @@ class HighwayTolls(ConfigItem):
 
 
 @dataclass(init=False, frozen=True)
+class DemandCountyGroup(ConfigItem):
+    """Grouping of counties for assignment and demand files"""
+
+    number: int
+    counties: List[str]
+
+
+@dataclass(init=False, frozen=True)
 class HighwayMazToMaz(ConfigItem):
     """Highway MAZ to MAZ shortest path assignment and skim parameters"""
 
@@ -248,10 +276,11 @@ class HighwayMazToMaz(ConfigItem):
     excluded_links: List[str]
     operating_cost_per_mile: float
     value_of_time: float
-    input_maz_highway_demand_file: str
     output_skim_file: str
     skim_period: str
     max_skim_cost: float
+    demand_file: str
+    demand_county_groups: List[DemandCountyGroup]
 
 
 @dataclass(init=False, frozen=True)
@@ -277,8 +306,26 @@ class TransitMode(ConfigItem):
     name: str
     type: str
     assign_type: str
-    in_vehicle_perception_factor: float
+    in_vehicle_perception_factor: float = None
     speed_miles_per_hour: float = None
+
+    def _validate(self):
+        assert len(self.mode_id) == 1, "mode_id must be one character"
+        valid_types = ["WALK", "ACCESS", "EGRESS", "LOCAL", "PREMIUM"]
+        assert (
+            self.type in valid_types
+        ), f"assign_type must be one of {', '.join(valid_types)}"
+        valid_assign_types = ["TRANSIT", "AUX_TRANSIT"]
+        assert (
+            self.assign_type in valid_assign_types
+        ), f"assign_type must be one of {', '.join(valid_assign_types)}"
+        assert (
+            self.assign_type != "TRANSIT"
+            or self.in_vehicle_perception_factor is not None
+        ), "in_vehicle_perception_factor must be specified for TRANSIT mode"
+        assert (
+            self.assign_type != "AUX_TRANSIT" or self.speed_miles_per_hour is not None
+        ), "speed_miles_per_hour must be specified for AUX_TRANSIT mode"
 
 
 @dataclass(init=False, frozen=True)
@@ -340,6 +387,7 @@ class Configuration(ConfigItem):
         path: a valid system path to a .toml file or list of the same
     """
 
+    version: str
     scenario: Scenario
     run: Run
     time_periods: List[TimePeriod]
@@ -359,6 +407,9 @@ class Configuration(ConfigItem):
         for path_item in path[1:]:
             _merge_dicts(data, _load_toml(path_item))
         super().__init__(data)
+
+    def _validate(self):
+        assert self.version == "0.0.0"
 
 
 def _load_toml(path: str) -> dict:
