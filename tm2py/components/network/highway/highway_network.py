@@ -1,8 +1,55 @@
-"""Module for highway network preparation steps."""
+"""Module for highway network preparation steps.
+
+Creates required attributes and populates input values needed
+for highway assignments. The toll values, VDFs, per-class cost
+(tolls+operating costs), modes and skim link attributes are calculated.
+
+The following link attributes are used as input:
+    - "@capclass": link capclass index
+    - "length": standard link length, in miles
+    - "@tollbooth": label to separate bridgetolls from valuetolls
+    - "@tollseg": toll segment, used to index toll value lookups from the toll file
+        (under config.highway.tolls.file_path)
+    - "@ft": functional class, used to assign VDFs
+
+The following keys and tables are used from the config:
+    highway.tolls.file_path: relative path to input toll file
+    highway.tolls.src_vehicle_group_names: names used in tolls file for
+        toll class values
+    highway.tolls.dst_vehicle_group_names: corresponding names used in
+        network attributes toll classes
+    highway.tolls.tollbooth_start_index: index to split point bridge tolls
+        (< this value) from distance value tolls (>= this value)
+    highway.classes: the list of assignment classes, see the notes under
+        highway_assign for detailed explanation
+    highway.capclass_lookup: the lookup table mapping the link @capclass setting
+        to capacity (@capacity), free_flow_speed (@free_flow_speec) and
+        critical_speed (used to calculate @ja for akcelik type functions)
+    highway.generic_highway_mode_code: unique (with other mode_codes) single
+        character used to label entire auto network in Emme
+    highway.maz_to_maz.mode_code: unique (with other mode_codes) single
+        character used to label MAZ local auto network including connectors
+
+The following link attributes are created (overwritten) and are subsequently used in
+the highway assignments.
+    - "@flow_XX": link PCE flows per class, where XX is the class name in the config
+    - "@maz_flow": Assigned MAZ-to-MAZ flow
+
+The following attributes are calculated:
+    - vdf: volume delay function to use
+    - "@capacity": total link capacity
+    - "@ja": akcelik delay parameter
+    - "@hov_length": length with HOV lanes
+    - "@toll_length": length with tolls
+    - "@bridgetoll_YY": the bridge toll for class subgroup YY
+    - "@valuetoll_YY": the "value", non-bridge toll for class subgroup YY
+    - "@cost_YY": total cost for class YY
+"""
+
+
 from typing import Union, Collection
 
 from tm2py.components.component import Component
-from tm2py.emme.network import NetworkCalculator
 from tm2py.logger import LogStartEnd
 
 
@@ -24,11 +71,12 @@ class PrepareNetwork(Component):
                     self.config.emme.highway_database_path, time
                 )
                 self._create_class_attributes(scenario, time)
-                self._calc_link_costs_lengths(scenario)
                 network = scenario.get_network()
                 self._set_tolls(network, time)
                 self._set_vdf_attributes(network, time)
                 self._set_link_modes(network)
+                self._calc_link_skim_lengths(network)
+                self._calc_link_class_costs(network)
                 scenario.publish_network(network)
 
     def _create_class_attributes(self, scenario, time_period):
@@ -71,27 +119,6 @@ class PrepareNetwork(Component):
         for domain, attrs in attributes.items():
             for name, desc in attrs:
                 create_attribute(domain, name, desc, overwrite=True, scenario=scenario)
-
-    def _calc_link_costs_lengths(self, scenario):
-        net_calc = NetworkCalculator(scenario)
-        net_calc("@hov_length", "length * (@useclass >= 2 && @useclass <= 3)")
-        # non-bridge toll facilities
-        tollbooth_start_index = self.config.highway.tolls.tollbooth_start_index
-        net_calc("@toll_length", f"length * (@tollbooth >= {tollbooth_start_index})")
-        for assign_class in self.config.highway.classes:
-            net_calc(
-                f"@cost_{assign_class.name.lower()}",
-                self._get_cost_expression(assign_class),
-            )
-
-    @staticmethod
-    def _get_cost_expression(assign_class):
-        op_cost = assign_class["operating_cost_per_mile"]
-        toll = assign_class["toll"]
-        toll_factor = assign_class.get("toll_factor")
-        if toll_factor is None:
-            return f"length * {op_cost} + {toll}"
-        return f"length * {op_cost} + ({toll}) * {toll_factor}"
 
     def _set_tolls(self, network, time_period: str):
         toll_index = self._get_toll_indices()
@@ -244,3 +271,32 @@ class PrepareNetwork(Component):
             if link_values[criteria]:
                 return
         modes_set.add(mode_code)
+
+    def _calc_link_skim_lengths(self, network):
+        tollbooth_start_index = self.config.highway.tolls.tollbooth_start_index
+        for link in network.links():
+            # distance in hov lanes / facilities
+            if 2 <= link["@useclass"] <= 3:
+                link["@hov_length"] = link.length
+            else:
+                link["@hov_length"] = 0
+            # distance on non-bridge toll facilities
+            if link["@tollbooth"] > tollbooth_start_index:
+                link["@toll_length"] = link.length
+            else:
+                link["@toll_length"] = 0
+
+    def _calc_link_class_costs(self, network):
+        for assign_class in self.config.highway.classes:
+            op_cost = assign_class["operating_cost_per_mile"]
+            toll_attr = assign_class["toll"]
+            toll_factor = assign_class.get("toll_factor")
+            cost_attr = f"@cost_{assign_class.name.lower()}"
+            if toll_factor is not None:
+                for link in network.links():
+                    link[cost_attr] = (
+                        link.length * op_cost + link[toll_attr] * toll_factor
+                    )
+            else:
+                for link in network.links():
+                    link[cost_attr] = link.length * op_cost + link[toll_attr]

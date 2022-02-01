@@ -37,7 +37,7 @@ class ConfigItem(ABC):
     representing config schema.
 
     Implement _validate method to add additional validation steps, such as values
-    in right range, or conditional dependancies between items.
+    in right range, or conditional dependencies between items.
 
     Args:
         kwargs: input dictionary loaded from one or more TOML files

@@ -1,4 +1,4 @@
-""" tktk
+"""Root component ABC
 """
 from __future__ import annotations
 import os
@@ -97,7 +97,7 @@ class Component(ABC):
         """Write key outputs to the model top sheet"""
 
     def verify(self):
-        """Verify component ouputs / results"""
+        """Verify component outputs / results"""
 
     def _process_time_period(
         self, time_period: Union[Collection[str], str]

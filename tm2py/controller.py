@@ -1,4 +1,4 @@
-"""tktk
+"""RunController - model operation controller
 """
 
 import argparse
@@ -78,6 +78,7 @@ class RunController:
 
     def run(self):
         """Main interface to run model"""
+        self._iteration = None
         self.validate_inputs()
         for iteration, component in self._queued_components:
             if self._iteration != iteration:
@@ -126,6 +127,7 @@ class RunController:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Main: run MTC TM2PY")
     parser.add_argument("-s", "--scenario", help=r"Scenario config file path")
+    parser.add_argument("-m", "--model", help=r"Model config file path")
     args = parser.parse_args()
-    controller = RunController(args.scenario)
+    controller = RunController([args.scenario, args.model])
     controller.run()

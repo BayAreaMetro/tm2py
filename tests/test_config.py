@@ -25,7 +25,7 @@ def test_config_read():
         "prepare_network_highway",
         "highway",
         "highway_maz_skim",
-        "transit"
+        "transit",
     ]
     assert len(my_config.time_periods) == 5
     assert my_config.highway.classes[0].description == "drive alone"

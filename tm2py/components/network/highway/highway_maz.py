@@ -1,9 +1,7 @@
-"""Assigns MAZ-to-MAZ demand along shortest generalized cost path for nearby trips.
+"""Assigns and skims MAZ-to-MAZ demand along shortest generalized cost path.
 
- MAZ to MAZ demand is read in 3 separate OMX matrices are as follows:
-         (1) counties 1, 2, and 3 ("San Francisco", "San Mateo", "Santa Clara")
-         (2) counties 4 and 5 ("Alameda", "Contra Costa")
-         (3) counties 6, 7, 8, and 9 ("Solano", "Napa", "Sonoma", "Marin")
+MAZ to MAZ demand is read in from separate OMX matrices as defined under
+the config table highway.maz_to_maz.demand_county_groups,
 
 The demand is expected to be short distance (e.g. <0.5 miles), or within the
 same TAZ. The demand is grouped into bins of origin -> all destinations, by
@@ -12,23 +10,21 @@ shortest path calculated to the minimum required.
 The bin edges have been predefined after testing as (in miles):
     [0.0, 0.9, 1.2, 1.8, 2.5, 5.0, 10.0, max_dist]
 
-
 Input:
 Emme network with:
     Link attributes:
         - time attribute, either timau (resulting VDF congested time)
           or @free_flow_time
     Node attributes: @maz_id, x, y, and #node_county
-Demand matrices under /demand_matrices/highway/maz_demand"
-    auto_{period}_MAZ_AUTO_1_{period}.omx
-    auto_{period}_MAZ_AUTO_2_{period}.omx
-    auto_{period}_MAZ_AUTO_3_{period}.omx
-    NOTE: demand structured is fixed
+Demand matrices under highway.maz_to_maz.demand_file,
+and can have a place
+    auto_{period}_MAZ_AUTO_{number}_{period}.omx
 
 Output:
 The resulting MAZ-MAZ flows are saved in link @maz_flow which is
 used as background traffic in the general Highway assignment.
 """
+
 from __future__ import annotations
 
 import array as _array
@@ -52,24 +48,6 @@ if TYPE_CHECKING:
     from tm2py.controller import RunController
 
 _default_bin_edges = [0.0, 0.9, 1.2, 1.8, 2.5, 5.0, 10.0]
-# Grouping of output demand files for MAZ-MAZ pairs
-# moved to config
-# _county_sets = {
-#     1: ["San Francisco", "San Mateo", "Santa Clara"],
-#     2: ["Alameda", "Contra Costa"],
-#     3: ["Solano", "Napa", "Sonoma", "Marin"],
-# }
-# _counties = [
-#     "San Francisco",
-#     "San Mateo",
-#     "Santa Clara",
-#     "Alameda",
-#     "Contra Costa",
-#     "Solano",
-#     "Napa",
-#     "Sonoma",
-#     "Marin",
-# ]
 # Using text file format for now, can upgrade to binary format (faster) once
 # compatibility with new networks is verified
 _USE_BINARY = False
@@ -236,9 +214,7 @@ class AssignMAZSPDemand(Component):
             )
 
     def _read_demand_array(self, time, index):
-        file_path_tmplt = self.get_abs_path(
-            self.config.highway.maz_to_maz.demand_file
-        )
+        file_path_tmplt = self.get_abs_path(self.config.highway.maz_to_maz.demand_file)
         omx_file_path = self.get_abs_path(
             file_path_tmplt.format(period=time, number=index)
         )

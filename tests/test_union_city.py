@@ -13,8 +13,8 @@ def test_highway():
 
     controller = _controller.RunController(
         [
-            os.path.join(r"example_union\scenario_arch.toml"),
-            os.path.join(r"example_union\model.toml"),
+            os.path.join(_UNION_CITY_ROOT_DIR, r"example_union\scenario_arch.toml"),
+            os.path.join(_UNION_CITY_ROOT_DIR, r"example_union\model.toml"),
         ]
     )
     controller.run()
