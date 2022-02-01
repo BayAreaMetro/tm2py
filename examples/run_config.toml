@@ -26,7 +26,7 @@ version = "0.0.0"
         "truck", 
         "highway_maz_assign", 
         "highway", 
-        #"transit"
+        "transit"
     ]
     final_components = []
     start_iteration = 0
