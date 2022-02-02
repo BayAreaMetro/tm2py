@@ -288,15 +288,16 @@ class PrepareNetwork(Component):
 
     def _calc_link_class_costs(self, network):
         for assign_class in self.config.highway.classes:
-            op_cost = assign_class["operating_cost_per_mile"]
-            toll_attr = assign_class["toll"]
-            toll_factor = assign_class.get("toll_factor")
             cost_attr = f"@cost_{assign_class.name.lower()}"
-            if toll_factor is not None:
-                for link in network.links():
-                    link[cost_attr] = (
-                        link.length * op_cost + link[toll_attr] * toll_factor
-                    )
+            op_cost = assign_class["operating_cost_per_mile"]
+            toll_factor = assign_class.get("toll_factor")
+            if toll_factor is None:
+                toll_factor = 1.0
+            tolls = assign_class["toll"]
+            if "+" in tolls:
+                tolls = [x.strip() for x in tolls.split("+")]
             else:
-                for link in network.links():
-                    link[cost_attr] = link.length * op_cost + link[toll_attr]
+                tolls = [tolls]
+            for link in network.links():
+                toll_value = sum(link[toll_attr] for toll_attr in tolls)
+                link[cost_attr] = link.length * op_cost + toll_value * toll_factor

@@ -5,16 +5,25 @@ import os
 from socket import error as _socket_error
 from typing import Any, Dict, List
 
-# PyLint cannot build AST from compiled Emme libraries
-# so disabling relevant import module checks
-# pylint: disable=E0611, E0401, E1101
-from inro.emme.database.emmebank import Emmebank
-from inro.emme.database.scenario import Scenario as EmmeScenario
-import inro.emme.desktop.app as _app
-import inro.modeller as _m
+try:
+    # skip Emme import to support testing where Emme is not installed
 
-EmmeDesktopApp = _app.App
-EmmeModeller = _m.Modeller
+    # PyLint cannot build AST from compiled Emme libraries
+    # so disabling relevant import module checks
+    # pylint: disable=E0611, E0401, E1101
+    from inro.emme.database.emmebank import Emmebank
+    from inro.emme.database.scenario import Scenario as EmmeScenario
+    import inro.emme.desktop.app as _app
+    import inro.modeller as _m
+
+    EmmeDesktopApp = _app.App
+    EmmeModeller = _m.Modeller
+except ModuleNotFoundError:
+    # pylint: disable=C0103
+    Emmebank = None
+    EmmeScenario = None
+    EmmeDesktopApp = None
+    EmmeModeller = None
 
 # Cache running Emme projects from this process (simple singleton implementation)
 _EMME_PROJECT_REF = {}
@@ -112,6 +121,7 @@ class EmmeManager:
         Args:
             emme_project: open 'Emme Desktop' application (inro.emme.desktop.app)
         """
+        # pylint: disable=E0611, E0401, E1101
         try:
             return _m.Modeller()
         except AssertionError as error:
@@ -199,6 +209,7 @@ class EmmeManager:
             value: Optional. An HTML string value to be displayed in main detail
                    pane of the logbook entry
         """
+        # pylint: disable=E0611, E0401, E1101
         attributes = attributes if attributes else {}
         _m.logbook_write(name, value=value, attributes=attributes)
 
@@ -221,6 +232,7 @@ class EmmeManager:
             value: Optional. An HTML string value to be displayed in main detail
                    pane of the logbook entry.
         """
+        # pylint: disable=E0611, E0401, E1101
         attributes = attributes if attributes else {}
         with _m.logbook_trace(name, value=value, attributes=attributes):
             yield

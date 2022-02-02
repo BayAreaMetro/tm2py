@@ -2,10 +2,15 @@
 
 from typing import Union, Dict
 
-# PyLint cannot build AST from compiled Emme libraries
-# so disabling relevant import module checks
-# pylint: disable=E0611, E0401, E1101
-from inro.emme.database.scenario import Scenario as EmmeScenario
+try:
+    # skip Emme import to support testing where Emme is not installed
+    # PyLint cannot build AST from compiled Emme libraries
+    # so disabling relevant import module checks
+    # pylint: disable=E0611, E0401, E1101
+    from inro.emme.database.scenario import Scenario as EmmeScenario
+except ModuleNotFoundError:
+    # pylint: disable=C0103
+    EmmeScenario = None
 
 import tm2py.emme.manager as _manager
 

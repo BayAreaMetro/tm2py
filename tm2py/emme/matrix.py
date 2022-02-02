@@ -5,18 +5,20 @@ from typing import List, Union, Dict
 import numpy as _np
 import openmatrix as _omx
 
-# PyLint cannot build AST from compiled Emme libraries
-# so disabling relevant import module checks
-# pylint: disable=E0611, E0401, E1101
-from inro.emme.database.scenario import Scenario as EmmeScenario
-from inro.emme.database.matrix import Matrix as EmmeMatrix
-import inro.emme.desktop.app as _app
-import inro.modeller as _m
+try:
+    # skip Emme import to support testing where Emme is not installed
+
+    # PyLint cannot build AST from compiled Emme libraries
+    # so disabling relevant import module checks
+    # pylint: disable=E0611, E0401, E1101
+    from inro.emme.database.scenario import Scenario as EmmeScenario
+    from inro.emme.database.matrix import Matrix as EmmeMatrix
+except ModuleNotFoundError:
+    # pylint: disable=C0103
+    EmmeScenario = None
+    EmmeMatrix = None
 
 NumpyArray = _np.array
-EmmeDesktopApp = _app.App
-EmmeModeller = _m.Modeller
-PageBuilder = _m.PageBuilder
 
 
 class MatrixCache:

@@ -22,7 +22,7 @@ and can have a place
 
 Output:
 The resulting MAZ-MAZ flows are saved in link @maz_flow which is
-used as background traffic in the general Highway assignment.
+used as background traffic in the equilibrium Highway assignment.
 """
 
 from __future__ import annotations

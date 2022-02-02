@@ -1,7 +1,5 @@
 import os
-
 import pytest
-import openmatrix as _omx
 
 
 _UNION_CITY_ROOT_DIR = ""
@@ -9,9 +7,10 @@ _UNION_CITY_ROOT_DIR = ""
 
 @pytest.mark.skipci
 def test_highway():
-    import tm2py.controller as _controller
+    from tm2py.controller import RunController
+    import openmatrix as _omx
 
-    controller = _controller.RunController(
+    controller = RunController(
         [
             os.path.join(_UNION_CITY_ROOT_DIR, r"example_union\scenario_arch.toml"),
             os.path.join(_UNION_CITY_ROOT_DIR, r"example_union\model.toml"),

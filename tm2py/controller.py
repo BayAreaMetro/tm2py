@@ -28,21 +28,13 @@ class RunController:
         if not isinstance(config_file, list):
             config_file = [config_file]
         if run_dir is None:
-            run_dir = os.path.dirname(config_file[0])
+            run_dir = os.path.abspath(os.path.dirname(config_file[0]))
         self._run_dir = run_dir
 
         self.config = Configuration(config_file)
         self.logger = Logger(self)
-
         self.top_sheet = None
         self.trace = None
-
-        self.emme_manager = EmmeManager()
-        project = self.emme_manager.project(
-            os.path.join(self.run_dir, self.config.emme.project_path)
-        )
-        # Initialize Modeller to use Emme assignment tools and other APIs
-        self.emme_manager.modeller(project)
 
         self.component_map = {
             "prepare_network_highway": PrepareNetwork(self),
@@ -51,6 +43,7 @@ class RunController:
             "highway_maz_skim": SkimMAZCosts(self),
         }
         self.completed_components = []
+        self._emme_manager = None
         self._iteration = None
         self._component = None
         self._queued_components = []
@@ -76,6 +69,18 @@ class RunController:
         """Current component of model"""
         return self._component
 
+    @property
+    def emme_manager(self) -> EmmeManager:
+        """Cached Emme Manager object"""
+        if self._emme_manager is None:
+            self._emme_manager = EmmeManager()
+            project = self._emme_manager.project(
+                os.path.join(self.run_dir, self.config.emme.project_path)
+            )
+            # Initialize Modeller to use Emme assignment tools and other APIs
+            self._emme_manager.modeller(project)
+        return self._emme_manager
+
     def run(self):
         """Main interface to run model"""
         self._iteration = None
@@ -89,7 +94,7 @@ class RunController:
             self.completed_components.append((iteration, component))
 
     def _queue_components(self):
-        """[summary]"""
+        """Add components per iteration to queue according to input Config"""
         if self.config.run.start_iteration == 0:
             self._queued_components += [
                 (0, self.component_map[c_name])
