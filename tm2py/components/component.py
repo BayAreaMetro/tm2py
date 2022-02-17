@@ -45,16 +45,17 @@ class Component(ABC):
         """Get the absolute path from the root run directory given a relative path."""
         return os.path.join(self.controller.run_dir, rel_path)
 
-    def get_emme_scenario(self, emmebank_path: str, time_period: str):
+    def get_emme_scenario(self, emmebank: str, time_period: str):
         """Get the Emme scenario object from the Emmebank at emmebank_path for the time_period ID.
 
         Args:
-            emmebank_path: valid Emmebank path, relative to root run directory
+            emmebank: Emmebank object or valid Emmebank path, can be relative to root run directory
             time_period: valid time_period ID
         """
-        if not os.path.isabs(emmebank_path):
-            emmebank_path = self.get_abs_path(emmebank_path)
-        emmebank = self.controller.emme_manager.emmebank(emmebank_path)
+        if isinstance(emmebank, str):
+            if not os.path.isabs(emmebank):
+                emmebank = self.get_abs_path(emmebank)
+            emmebank = self.controller.emme_manager.emmebank(emmebank)
         scenario_id = {tp.name: tp.emme_scenario_id for tp in self.config.time_periods}[
             time_period
         ]
