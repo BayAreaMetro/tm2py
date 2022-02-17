@@ -3,7 +3,7 @@
 from contextlib import contextmanager as _context
 import os
 from socket import error as _socket_error
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 try:
     # skip Emme import to support testing where Emme is not installed
@@ -109,6 +109,25 @@ class EmmeManager:
                 "inro.emme.data.database.change_database_dimensions"
             )
             change_dimensions(new_dims, emmebank, keep_backup=False)
+
+    def prepare_zero_matrix(self, emmebank: Union[Emmebank, str]):
+        """Create zero "demand" matrix from assignments.
+
+        Creates a new matrix named "zero" in the specified emmebank if it does
+        not already exist.
+
+        Args:
+            emmebank: the Emmebank object or path to change the dimensions
+        """
+        if not isinstance(emmebank, Emmebank):
+            emmebank = self.emmebank(emmebank)
+        zero_matrix = emmebank.matrix('ms"zero"')
+        if zero_matrix is None:
+            ident = emmebank.available_matrix_identifier("SCALAR")
+            zero_matrix = emmebank.create_matrix(ident)
+            zero_matrix.name = "zero"
+            zero_matrix.description = "zero demand matrix"
+        zero_matrix.data = 0
 
     def modeller(self, emme_project: EmmeDesktopApp = None) -> EmmeModeller:
         """Initialize and return Modeller object.
