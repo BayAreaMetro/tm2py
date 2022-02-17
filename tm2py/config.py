@@ -9,7 +9,7 @@ from typing import List, Union
 import toml
 
 
-__BANNED_KEYS = ["items", "get"]
+# __BANNED_KEYS = ["items", "get", "_validate"]
 
 
 def __get_missing_sentinel():
@@ -38,6 +38,8 @@ class ConfigItem(ABC):
 
     Implement _validate method to add additional validation steps, such as values
     in right range, or conditional dependencies between items.
+
+    Do not use any defined method ("get", "items", "_validate") for key names.
 
     Args:
         kwargs: input dictionary loaded from one or more TOML files
@@ -210,7 +212,7 @@ class HighwayCapClass(ConfigItem):
 
 
 @dataclass(init=False, frozen=True)
-class HighwayClassDemand(ConfigItem):
+class Demand(ConfigItem):
     """Highway class input source for demand"""
 
     source: str
@@ -241,7 +243,7 @@ class HighwayClass(ConfigItem):
     value_of_time: float
     operating_cost_per_mile: float
     skims: List[str]
-    demand: List[HighwayClassDemand]
+    demand: List[Demand]
     toll: str
     toll_factor: float = None
     pce: float = 1.0
@@ -306,6 +308,7 @@ class TransitMode(ConfigItem):
     name: str
     type: str
     assign_type: str
+    short_name: str = None
     in_vehicle_perception_factor: float = None
     speed_miles_per_hour: float = None
 
@@ -322,10 +325,13 @@ class TransitMode(ConfigItem):
         assert (
             self.assign_type != "TRANSIT"
             or self.in_vehicle_perception_factor is not None
-        ), "in_vehicle_perception_factor must be specified for TRANSIT mode"
+        ), "in_vehicle_perception_factor must be specified for TRANSIT assign_type"
+        assert (
+            self.assign_type != "TRANSIT" or self.short_name is not None
+        ), "short_name must be specified for TRANSIT assign_type"
         assert (
             self.assign_type != "AUX_TRANSIT" or self.speed_miles_per_hour is not None
-        ), "speed_miles_per_hour must be specified for AUX_TRANSIT mode"
+        ), "speed_miles_per_hour must be specified for AUX_TRANSIT assign_type"
 
 
 @dataclass(init=False, frozen=True)
@@ -341,12 +347,23 @@ class TransitVehicle(ConfigItem):
 
 
 @dataclass(init=False, frozen=True)
+class TransitClass(ConfigItem):
+    """Transit demand class definition"""
+
+    skim_set_id: str
+    name: str
+    description: str
+    mode_types: List[str]
+    demand: List[Demand]
+
+
+@dataclass(init=False, frozen=True)
 class Transit(ConfigItem):
     """Transit assignment parameters"""
 
     modes: List[TransitMode]
     vehicles: List[TransitVehicle]
-
+    classes: List[TransitClass]
     apply_msa_demand: bool
     value_of_time: float
     effective_headway_source: str
@@ -362,9 +379,12 @@ class Transit(ConfigItem):
     fare_max_transfer_distance_miles: float
     use_fares: bool
     override_connector_times: bool
+    use_ccr: bool
+    max_ccr_iterations: float = None
     input_connector_access_times_path: str = None
     input_connector_egress_times_path: str = None
     output_stop_usage_path: str = None
+    output_transit_boardings_path: str = None
 
 
 @dataclass(init=False, frozen=True)

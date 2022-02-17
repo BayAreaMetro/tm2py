@@ -18,7 +18,9 @@ version = "0.0.0"
         "prepare_network_highway", 
         "highway", 
         "highway_maz_skim", 
-        "transit"
+        "prepare_network_transit",
+        "transit_assign",
+        "transit_skim"
     ]
     global_iteration_components = [
         "household", 
@@ -26,7 +28,9 @@ version = "0.0.0"
         "truck", 
         "highway_maz_assign", 
         "highway", 
-        "transit"
+        "prepare_network_transit",
+        "transit_assign",
+        "transit_skim"
     ]
     final_components = []
     start_iteration = 0
@@ -60,7 +64,7 @@ version = "0.0.0"
 
 [household]
     highway_demand_file = "demand_matrices\\highway\\household\\TAZ_Demand_{period}.omx"
-    transit_demand_file = "demand_matrices\\transit\\TAP_Demand_{set}_{period}.omx"
+    transit_demand_file = "demand_matrices\\transit\\TAP_Demand_{skim_set_id}_{period}.omx"
 
 [air_passenger]
     highway_demand_file = "demand_matrices\\highway\\air_passenger\\tripsAirPax{period}.omx"
@@ -150,8 +154,11 @@ version = "0.0.0"
         file_path = "inputs\\hwy\\tolls.csv"
         src_vehicle_group_names = ["da", "s2",  "s3",  "vsm", "sml", "med", "lrg"]
         # the dst_vehicle_group_names is used in the class group suffix for the
-        # highway.classes toll attribute names and the skims names
+        # highway.classes toll attribute name and the skims name, "bridgetoll_{}" 
+        # and "valuetoll_{}"
         dst_vehicle_group_names = ["da", "sr2", "sr3", "vsm", "sml", "med", "lrg"]
+        # tollbooth separates links with "bridge" tolls (index < this value)
+        # (used in all classes) vs. "value" tolls (used in toll-available classes only)
         tollbooth_start_index = 11
     [highway.maz_to_maz]
         mode_code = "x"
@@ -363,8 +370,8 @@ version = "0.0.0"
     initial_wait_perception_factor = 1.5
     transfer_wait_perception_factor = 3.0
     walk_perception_factor = 2.0
-    initial_boarding_penalty = 10
-    transfer_boarding_penalty = 10
+    initial_boarding_penalty = 0
+    transfer_boarding_penalty = 40
     max_transfers = 3
     output_skim_path = "skim_matrices\\transit\\transit_skims_{period}.omx"
     fares_path = "inputs\\trn\\fares.far"
@@ -372,12 +379,54 @@ version = "0.0.0"
     # max expected transfer distance for mode-to-mode transfer fare table generation
     fare_max_transfer_distance_miles = 3.0
     use_fares = false
+    use_ccr = false
+    # max_ccr_iterations = 3
     # for TAZ instead of TAPs
     override_connector_times = false
     #input_connector_access_times_path = "inputs\\trn\\estimated_taz_access_connectors.csv"
     #input_connector_egress_times_path = "inputs\\trn\\estimated_taz_egress_connectors.csv"
     #output_stop_usage_path = "inputs\\trn\\stop_usage_{period}.csv"
-
+    [[transit.classes]]
+        skim_set_id = "SET1"
+        name = "BUS"
+        description = "Local bus"
+        mode_types = ["ACCESS", "EGRESS", "WALK", "LOCAL"]
+        [[transit.classes.demand]]
+            source = "household"
+            name = "WLK_SET_{period}"
+        [[transit.classes.demand]]
+            source = "household"
+            name = "PNR_SET_{period}"
+        [[transit.classes.demand]]
+            source = "household"
+            name = "KNR_SET_{period}"
+    [[transit.classes]]
+        skim_set_id = "SET2"
+        name = "PREM"
+        description = "Premium modes"
+        mode_types = ["ACCESS", "EGRESS", "WALK", "PREMIUM"]
+        [[transit.classes.demand]]
+            source = "household"
+            name = "WLK_SET_{period}"
+        [[transit.classes.demand]]
+            source = "household"
+            name = "PNR_SET_{period}"
+        [[transit.classes.demand]]
+            source = "household"
+            name = "KNR_SET_{period}"
+    [[transit.classes]]
+        skim_set_id = "SET3"
+        name = "ALLPEN"
+        description = "All w/ xfer pen"
+        mode_types = ["ACCESS", "EGRESS", "WALK", "LOCAL", "PREMIUM"]
+        [[transit.classes.demand]]
+            source = "household"
+            name = "WLK_SET_{period}"
+        [[transit.classes.demand]]
+            source = "household"
+            name = "PNR_SET_{period}"
+        [[transit.classes.demand]]
+            source = "household"
 [emme]
     num_processors = "max-1"
     all_day_scenario_id = 1

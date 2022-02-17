@@ -601,36 +601,42 @@
 [[transit.modes]]
     mode_id = "b"
     name = "local_bus"
+    short_name = "LB"
     type = "LOCAL"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
 [[transit.modes]]
     mode_id = "x"
     name = "exp_bus"
+    short_name = "EB"
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
 [[transit.modes]]
     mode_id = "f"
     name = "ferry"
+    short_name = "FR"
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
 [[transit.modes]]
     mode_id = "l"
     name = "light_rail"
+    short_name = "LR"
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
 [[transit.modes]]
     mode_id = "h"
     name = "heavy_rail"
+    short_name = "HR"
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
 [[transit.modes]]
     mode_id = "r"
     name = "comm_rail"
+    short_name = "CR"
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
