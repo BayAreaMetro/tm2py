@@ -87,7 +87,7 @@ class RunController:
         self.validate_inputs()
         for iteration, component in self._queued_components:
             if self._iteration != iteration:
-                self.logger.log_time(f"start iteration {iteration}")
+                self.logger.log_time(f"Start iteration {iteration}")
             self._iteration = iteration
             self._component = component
             component.run()
@@ -116,17 +116,21 @@ class RunController:
         ]
 
         if self.config.run.start_component:
+            start_component = self.component_map[self.config.run.start_component]
             start_index = [
                 idx
                 for idx, c in enumerate(self._queued_components)
-                if self.config.run.start_component in c[1]
+                if start_component == c[1]
             ][0]
             self._queued_components = self._queued_components[start_index:]
 
     def validate_inputs(self):
         """Validate input state prior to run"""
+        already_validated_components = set()
         for _, component in self._queued_components:
-            component.validate_inputs()
+            if component not in already_validated_components:
+                component.validate_inputs()
+                already_validated_components.add(component)
 
 
 if __name__ == "__main__":
