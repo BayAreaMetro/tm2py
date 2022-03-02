@@ -12,7 +12,9 @@ from tm2py.logger import Logger
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
 from tm2py.components.network.highway.highway_network import PrepareNetwork
 from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, SkimMAZCosts
-
+from tm2py.components.network.transit.transit_assign import TransitAssignment
+from tm2py.components.network.transit.transit_network import PrepareTransitNetwork
+from tm2py.components.network.transit.transit_skim import TransitSkim
 
 # pylint: disable=too-many-instance-attributes
 
@@ -41,6 +43,9 @@ class RunController:
             "highway": HighwayAssignment(self),
             "highway_maz_assign": AssignMAZSPDemand(self),
             "highway_maz_skim": SkimMAZCosts(self),
+            "prepare_network_transit": PrepareTransitNetwork(self),
+            "transit_assign": TransitAssignment(self),
+            "transit_skim": TransitSkim(self),
         }
         self.completed_components = []
         self._emme_manager = None

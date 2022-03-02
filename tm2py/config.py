@@ -380,6 +380,7 @@ class Transit(ConfigItem):
     use_fares: bool
     override_connector_times: bool
     use_ccr: bool
+    split_connectors_to_prevent_walk: bool = True
     max_ccr_iterations: float = None
     input_connector_access_times_path: str = None
     input_connector_egress_times_path: str = None

@@ -159,6 +159,20 @@ class EmmeManager:
         return self.modeller().tool(namespace)
 
     @staticmethod
+    def copy_attribute_values(src, dst, attributes: Dict[str, List[str]]):
+        """Copy network/scenario attribute values from src to dst.
+
+        Args:
+            src: Emme scenario object or Emme Network object
+            dst: Emme scenario object or Emme Network object
+            attributes: dictionary or Emme network domain to list of attribute names
+                NODE, LINK, TURN, TRANSIT_LINE, TRANSIT_SEGMENT
+        """
+        for domain, attrs in attributes.items():
+            values = src.get_attribute_values(domain, attrs)
+            dst.set_attribute_values(domain, attrs, values)
+
+    @staticmethod
     @_context
     def temp_attributes_and_restore(
         scenario: EmmeScenario, attributes: List[List[str]]
