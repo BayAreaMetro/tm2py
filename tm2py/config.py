@@ -289,8 +289,8 @@ class HighwayTolls(ConfigItem):
     tollbooth_start_index: int
 
     def _validate(self):
-        assert len(src_vehicle_group_names) == len(
-            dst_vehicle_group_names
+        assert len(self.src_vehicle_group_names) == len(
+            self.dst_vehicle_group_names
         ), "dst_vehicle_group_names: must have number of items as src_vehicle_group_names"
 
 
@@ -375,11 +375,10 @@ class Highway(ConfigItem):
         assert len(class_names) == len(set(class_names))
         # validate class skim name list and toll attribute against toll setup
         # also if any mode IDs are used twice, that they have the same excluded links sets
-        group_names = self.tolls.dst_vehicle_group_names
         avail_skims = ["dist", "hovdist", "tolldist", "freeflowtime"]
         avail_toll_attrs = []
         for name in self.tolls.dst_vehicle_group_names:
-            toll_types = [f"bridgetoll_{group}", f"valuetoll_{group}"]
+            toll_types = [f"bridgetoll_{name}", f"valuetoll_{name}"]
             avail_skims.extend(toll_types)
             avail_toll_attrs.extend(["@" + name for name in toll_types])
 
