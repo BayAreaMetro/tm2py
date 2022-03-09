@@ -38,6 +38,19 @@ cd tm2py
 pip install -e .
 ```
 
+Note that you'll also need to install Emme's python packages into this conda environment.
+Following these instructions from an INRO community forum post: In the Emme Desktop application, open Tools->Application Options->Modeller, change your Python path as desired and click the "Install Modeller Package" button.
+
+If this is successful, the following packages will be visible in your environment when you type `pip list`:
+* inro-dynameq
+* inro-emme
+* inro-emme-agent
+* inro-emme-engine
+* inro-modeller
+
+Note that doing the emme package install will also install the package *pywin32*; if *pywin32* gets installed by other means (like
+conda or pip), then I got DLL load errors when tryring to import the emme packages, so I recommend uninstalling *pywin32* before
+installing the emme packages.
 
 ## Basic Usage
 
