@@ -54,6 +54,11 @@ installing the emme packages.
 
 ## Basic Usage
 
+Copy and unzip [example_union_test_highway.zip](https://mtcdrive.box.com/s/3entr016e9teq2wt46x1os3fjqylfoge) to a local
+drive and from within that directory run:
+```
+python %TM2PYPATH%\tm2py\controller.py -s scenario_arch.toml -m model.toml
+```
 
 ## Contributing
 
