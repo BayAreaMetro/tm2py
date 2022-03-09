@@ -135,8 +135,8 @@ class RunController:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Main: run MTC TM2PY")
-    parser.add_argument("-s", "--scenario", help=r"Scenario config file path")
-    parser.add_argument("-m", "--model", help=r"Model config file path")
+    parser.add_argument("-s", "--scenario", required=True, help=r"Scenario config file path")
+    parser.add_argument("-m", "--model",    required=True, help=r"Model config file path")
     args = parser.parse_args()
     controller = RunController([args.scenario, args.model])
     controller.run()
