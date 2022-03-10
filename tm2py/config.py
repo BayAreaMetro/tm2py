@@ -4,7 +4,7 @@
 
 from abc import ABC
 from dataclasses import dataclass, fields as _get_fields
-from typing import List, Union
+from typing import List, Tuple, Union
 
 import toml
 
@@ -64,7 +64,7 @@ class ConfigItem(ABC):
             try:
                 atype = get_type(field.type)
                 value = atype(value)
-                if isinstance(value, list):
+                if isinstance(value, tuple):
                     item_atype = get_type(field.type.__args__[0])
                     processed_items = []
                     for i, item in enumerate(value):
@@ -72,7 +72,7 @@ class ConfigItem(ABC):
                             processed_items.append(item_atype(item))
                         except Exception as error:
                             raise Exception(f"[{i}]: {error}") from error
-                    value = processed_items
+                    value = tuple(processed_items)
                 self.__dict__[field.name] = value
             except Exception as error:
                 raise Exception(f"{field.name}: {error}") from error
@@ -109,9 +109,9 @@ class Run(ConfigItem):
     start_iteration: int
     end_iteration: int
     start_component: str
-    initial_components: List[str]
-    global_iteration_components: List[str]
-    final_components: List[str]
+    initial_components: Tuple[str]
+    global_iteration_components: Tuple[str]
+    final_components: Tuple[str]
 
 
 @dataclass(init=False, frozen=True)
@@ -138,7 +138,7 @@ class AirPassengerDemandAggregation(ConfigItem):
 
     result_class_name: str
     src_group_name: str
-    access_modes: List[str]
+    access_modes: Tuple[str]
 
 
 @dataclass(init=False, frozen=True)
@@ -149,7 +149,7 @@ class AirPassenger(ConfigItem):
     input_demand_folder: str
     reference_start_year: str
     reference_end_year: str
-    demand_aggregation: List[AirPassengerDemandAggregation]
+    demand_aggregation: Tuple[AirPassengerDemandAggregation]
 
 
 @dataclass(init=False, frozen=True)
@@ -196,7 +196,7 @@ class ActiveModes(ConfigItem):
     """Active Mode skim parameters"""
 
     emme_scenario_id: int
-    shortest_path_skims: List[ActiveModeShortestPathSkim]
+    shortest_path_skims: Tuple[ActiveModeShortestPathSkim]
 
 
 @dataclass(init=False, frozen=True)
@@ -237,11 +237,11 @@ class HighwayClass(ConfigItem):
     name: str
     description: str
     mode_code: str
-    excluded_links: List[str]
+    excluded_links: Tuple[str]
     value_of_time: float
     operating_cost_per_mile: float
-    skims: List[str]
-    demand: List[HighwayClassDemand]
+    skims: Tuple[str]
+    demand: Tuple[HighwayClassDemand]
     toll: str
     toll_factor: float = None
     pce: float = 1.0
@@ -255,8 +255,8 @@ class HighwayTolls(ConfigItem):
     """Highway assignment and skim input tolls and related parameters"""
 
     file_path: str
-    src_vehicle_group_names: List[str]
-    dst_vehicle_group_names: List[str]
+    src_vehicle_group_names: Tuple[str]
+    dst_vehicle_group_names: Tuple[str]
     tollbooth_start_index: int
 
 
@@ -265,7 +265,7 @@ class DemandCountyGroup(ConfigItem):
     """Grouping of counties for assignment and demand files"""
 
     number: int
-    counties: List[str]
+    counties: Tuple[str]
 
 
 @dataclass(init=False, frozen=True)
@@ -273,14 +273,14 @@ class HighwayMazToMaz(ConfigItem):
     """Highway MAZ to MAZ shortest path assignment and skim parameters"""
 
     mode_code: str
-    excluded_links: List[str]
+    excluded_links: Tuple[str]
     operating_cost_per_mile: float
     value_of_time: float
     output_skim_file: str
     skim_period: str
     max_skim_cost: float
     demand_file: str
-    demand_county_groups: List[DemandCountyGroup]
+    demand_county_groups: Tuple[DemandCountyGroup]
 
 
 @dataclass(init=False, frozen=True)
@@ -294,8 +294,8 @@ class Highway(ConfigItem):
     area_type_buffer_dist_miles: float
     tolls: HighwayTolls
     maz_to_maz: HighwayMazToMaz
-    capclass_lookup: List[HighwayCapClass]
-    classes: List[HighwayClass]
+    capclass_lookup: Tuple[HighwayCapClass]
+    classes: Tuple[HighwayClass]
 
 
 @dataclass(init=False, frozen=True)
@@ -344,8 +344,8 @@ class TransitVehicle(ConfigItem):
 class Transit(ConfigItem):
     """Transit assignment parameters"""
 
-    modes: List[TransitMode]
-    vehicles: List[TransitVehicle]
+    modes: Tuple[TransitMode]
+    vehicles: Tuple[TransitVehicle]
 
     apply_msa_demand: bool
     value_of_time: float
@@ -375,7 +375,7 @@ class Emme(ConfigItem):
     all_day_scenario_id: int
     project_path: str
     highway_database_path: str
-    active_database_paths: List[str]
+    active_database_paths: Tuple[str]
     transit_database_path: str
 
 
@@ -390,7 +390,7 @@ class Configuration(ConfigItem):
     version: str
     scenario: Scenario
     run: Run
-    time_periods: List[TimePeriod]
+    time_periods: Tuple[TimePeriod]
     household: Household
     air_passenger: AirPassenger
     internal_external: InternalExternal
