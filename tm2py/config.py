@@ -3,7 +3,7 @@
 # pylint: disable=too-many-instance-attributes
 
 from abc import ABC
-from dataclasses import dataclass, fields as _get_fields
+from dataclasses import dataclass, field, fields as _get_fields
 from typing import List, Union
 
 import toml
@@ -250,7 +250,7 @@ class HighwayClass(ConfigItem):
     operating_cost_per_mile: float
     skims: List[str]
     demand: List[HighwayClassDemand]
-    toll: List[str] = []
+    toll: List[str] = field(default_factory=list)
     toll_factor: float = None
     pce: float = 1.0
 
