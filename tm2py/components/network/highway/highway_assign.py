@@ -91,7 +91,8 @@ The Emme network must have the following attributes available:
     - volau: total assigned flow in PCE
 
  Notes:
-    - Output matrices are in miles, minutes, and cents (2010 dollars) and are stored as real values;
+    - Output matrices are in miles, minutes, and cents (2010 dollars) and are stored/
+    as real values;
     - Intrazonal distance/time is one half the distance/time to the nearest neighbor;
     - Intrazonal bridge and value tolls are assumed to be zero
 
