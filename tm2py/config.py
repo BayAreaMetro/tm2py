@@ -437,6 +437,6 @@ def _merge_dicts(right, left, path=None):
                 _merge_dicts(right[key], left[key], path + [str(key)])
             else:
                 path = ".".join(path + [str(key)])
-                raise Exception(f"duplicate keys in source .toml files at {path}")
+                raise Exception(f"duplicate keys in source .toml files: {path}")
         else:
             right[key] = left[key]

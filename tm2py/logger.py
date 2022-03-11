@@ -21,8 +21,7 @@ class Logger:
             text (str): text to log
             level (int): logging level of the message text
         """
-        if level < 999:
-            print(text)
+        print(text)
 
     def log_time(self, msg: str, level: int = 1, indent: bool = False):
         """Log message with timestamp
