@@ -14,16 +14,20 @@ try:
     from inro.emme.database.emmebank import Emmebank
     from inro.emme.database.scenario import Scenario as EmmeScenario
     import inro.emme.desktop.app as _app
-    import inro.modeller as _m
+    from inro.modeller import Modeller as EmmeModeller, logbook_write, logbook_trace
 
     EmmeDesktopApp = _app.App
-    EmmeModeller = _m.Modeller
 except ModuleNotFoundError:
+    # TODO: probably should know if we are actually doing a test
     # pylint: disable=C0103
-    Emmebank = None
-    EmmeScenario = None
-    EmmeDesktopApp = None
-    EmmeModeller = None
+    from unittest.mock import Mock
+    Emmebank = Mock()
+    EmmeScenario = Mock()
+    EmmeDesktopApp = Mock()
+    EmmeModeller = Mock()
+    logbook_write = Mock()
+    logbook_trace = Mock()
+    _app = Mock()
 
 # Cache running Emme projects from this process (simple singleton implementation)
 _EMME_PROJECT_REF = {}
@@ -123,7 +127,7 @@ class EmmeManager:
         """
         # pylint: disable=E0611, E0401, E1101
         try:
-            return _m.Modeller()
+            return EmmeModeller()
         except AssertionError as error:
             if emme_project is None:
                 if self._project_cache:
@@ -133,7 +137,7 @@ class EmmeManager:
                         "modeller not yet initialized and no cached Emme project,"
                         " emme_project arg must be provided"
                     ) from error
-            return _m.Modeller(emme_project)
+            return EmmeModeller(emme_project)
 
     def tool(self, namespace: str):
         """Return the Modeller tool at namespace."""
@@ -211,7 +215,7 @@ class EmmeManager:
         """
         # pylint: disable=E0611, E0401, E1101
         attributes = attributes if attributes else {}
-        _m.logbook_write(name, value=value, attributes=attributes)
+        logbook_write(name, value=value, attributes=attributes)
 
     @staticmethod
     @_context
@@ -234,5 +238,5 @@ class EmmeManager:
         """
         # pylint: disable=E0611, E0401, E1101
         attributes = attributes if attributes else {}
-        with _m.logbook_trace(name, value=value, attributes=attributes):
+        with logbook_trace(name, value=value, attributes=attributes):
             yield

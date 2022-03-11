@@ -208,7 +208,8 @@ class PrepareNetwork(Component):
             if link["@drive_link"]:
                 link.modes |= auto_mode
         for mode in used_modes:
-            network.delete_mode(mode)
+            if mode is not None:
+                network.delete_mode(mode)
 
         # Create special access/egress mode for MAZ connectors
         maz_access_mode = network.create_mode(
@@ -300,11 +301,6 @@ class PrepareNetwork(Component):
             toll_factor = assign_class.get("toll_factor")
             if toll_factor is None:
                 toll_factor = 1.0
-            tolls = assign_class["toll"]
-            if "+" in tolls:
-                tolls = [x.strip() for x in tolls.split("+")]
-            else:
-                tolls = [tolls]
             for link in network.links():
-                toll_value = sum(link[toll_attr] for toll_attr in tolls)
+                toll_value = sum(link[toll_attr] for toll_attr in assign_class["toll"])
                 link[cost_attr] = link.length * op_cost + toll_value * toll_factor

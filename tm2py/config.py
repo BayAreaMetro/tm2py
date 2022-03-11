@@ -3,13 +3,13 @@
 # pylint: disable=too-many-instance-attributes
 
 from abc import ABC
-from dataclasses import dataclass, fields as _get_fields
+from dataclasses import dataclass, field, fields as _get_fields
 from typing import List, Tuple, Union
 
 import toml
 
 
-__BANNED_KEYS = ["items", "get"]
+# __BANNED_KEYS = ["items", "get", "_validate"]
 
 
 def __get_missing_sentinel():
@@ -38,6 +38,8 @@ class ConfigItem(ABC):
 
     Implement _validate method to add additional validation steps, such as values
     in right range, or conditional dependencies between items.
+
+    Do not use any defined method ("get", "items", "_validate") for key names.
 
     Args:
         kwargs: input dictionary loaded from one or more TOML files
@@ -116,7 +118,7 @@ class Run(ConfigItem):
 
 @dataclass(init=False, frozen=True)
 class TimePeriod(ConfigItem):
-    """Time time_period entry"""
+    """Time _time_period entry"""
 
     name: str
     length_hours: float
@@ -208,6 +210,12 @@ class HighwayCapClass(ConfigItem):
     free_flow_speed: float
     critical_speed: float
 
+    def _validate(self):
+        assert self.capclass >= 1
+        assert self.capacity >= 0
+        assert self.free_flow_speed >= 0
+        assert self.critical_speed >= 0
+
 
 @dataclass(init=False, frozen=True)
 class HighwayClassDemand(ConfigItem):
@@ -242,12 +250,33 @@ class HighwayClass(ConfigItem):
     operating_cost_per_mile: float
     skims: Tuple[str]
     demand: Tuple[HighwayClassDemand]
-    toll: str
+    toll: List[str] = field(default_factory=list)
     toll_factor: float = None
     pce: float = 1.0
 
     def _validate(self):
+        assert len(self.name) <= 6, "name: maximum of 6 characters"
         assert len(self.mode_code) == 1, "mode_code: must be exactly 1 character"
+        available_link_sets = [
+            "is_sr2",
+            "is_sr3",
+            "is_toll_da",
+            "is_toll_sr2",
+            "is_toll_sr3",
+            "is_toll_truck",
+            "is_auto_only",
+        ]
+        extra_keys = set(self.excluded_links) - set(available_link_sets)
+        assert not extra_keys, (
+            f"excluded_links: unrecognized selection keyword(s): {','.join(extra_keys)}"
+            f" - available keywords are {','.join(available_link_sets)}"
+        )
+        assert self.value_of_time > 0
+        assert self.operating_cost_per_mile >= 0
+        # list of skims validated under Highway to match toll dst group names
+        # toll attribute expression validated under Highway to match toll dst group names
+        assert self.toll_factor > 0 or self.toll_factor is None
+        assert self.pce > 0
 
 
 @dataclass(init=False, frozen=True)
@@ -259,6 +288,11 @@ class HighwayTolls(ConfigItem):
     dst_vehicle_group_names: Tuple[str]
     tollbooth_start_index: int
 
+    def _validate(self):
+        assert len(self.src_vehicle_group_names) == len(
+            self.dst_vehicle_group_names
+        ), "dst_vehicle_group_names: must have number of items as src_vehicle_group_names"
+
 
 @dataclass(init=False, frozen=True)
 class DemandCountyGroup(ConfigItem):
@@ -266,6 +300,24 @@ class DemandCountyGroup(ConfigItem):
 
     number: int
     counties: Tuple[str]
+
+    def _validate(self):
+        avialable_counties = [
+            "San Francisco",
+            "San Mateo",
+            "Santa Clara",
+            "Alameda",
+            "Contra Costa",
+            "Solano",
+            "Napa",
+            "Sonoma",
+            "Marin",
+        ]
+        extra_counties = set(self.counties) - set(avialable_counties)
+        assert not extra_counties, (
+            f"counties: unrecognized names {','.join(extra_counties)} - "
+            f"available counties are {','.join(avialable_counties)}"
+        )
 
 
 @dataclass(init=False, frozen=True)
@@ -282,6 +334,17 @@ class HighwayMazToMaz(ConfigItem):
     demand_file: str
     demand_county_groups: Tuple[DemandCountyGroup]
 
+    def _validate(self):
+        assert len(self.mode_code) == 1, "mode_code: must be exactly 1 character"
+        assert self.operating_cost_per_mile > 0
+        assert self.value_of_time > 0
+        # skim_period validated under top-level config
+        assert self.max_skim_cost > 0
+        group_ids = [group.number for group in self.demand_county_groups]
+        assert len(group_ids) == len(
+            set(group_ids)
+        ), "demand_county_groups: number must be unique in list"
+
 
 @dataclass(init=False, frozen=True)
 class Highway(ConfigItem):
@@ -296,6 +359,55 @@ class Highway(ConfigItem):
     maz_to_maz: HighwayMazToMaz
     capclass_lookup: Tuple[HighwayCapClass]
     classes: Tuple[HighwayClass]
+
+    def _validate(self):
+        assert self.relative_gap >= 0
+        assert self.max_iterations >= 0
+        error_msg = "generic_highway_mode_code: must be exactly 1 character"
+        assert len(self.generic_highway_mode_code) == 1, error_msg
+        assert self.area_type_buffer_dist_miles > 0
+        capclass_ids = [i.capclass for i in self.capclass_lookup]
+        error_msg = "capclass_lookup: capclass value must be unique in list"
+        assert len(capclass_ids) == len(set(capclass_ids)), error_msg
+        # validate class unique items
+        class_names = [highway_class.name for highway_class in self.classes]
+        error_msg = "classes: names must be unique"
+        assert len(class_names) == len(set(class_names))
+        # validate class skim name list and toll attribute against toll setup
+        # also if any mode IDs are used twice, that they have the same excluded links sets
+        avail_skims = ["dist", "hovdist", "tolldist", "freeflowtime"]
+        avail_toll_attrs = []
+        for name in self.tolls.dst_vehicle_group_names:
+            toll_types = [f"bridgetoll_{name}", f"valuetoll_{name}"]
+            avail_skims.extend(toll_types)
+            avail_toll_attrs.extend(["@" + name for name in toll_types])
+
+        def check_keywords(class_num, key, value, available):
+            extra_keys = set(value) - set(available)
+            error_msg = (
+                f"classes: [{class_num}]: {key}: unrecognized {key} name(s) "
+                f"{','.join(extra_keys)} - available are {','.join(available)}"
+            )
+            assert not extra_keys, error_msg
+
+        mode_excluded_links = {self.generic_highway_mode_code: set([])}
+        for i, highway_class in enumerate(self.classes):
+            check_keywords(i, "skim", highway_class.skims, avail_skims)
+            check_keywords(i, "toll", highway_class.toll, avail_toll_attrs)
+            # maz_to_maz.mode_code must be unique
+            assert (
+                highway_class.mode_code != self.maz_to_maz.mode_code
+            ), f"classes: [{i}]: mode_code: cannot be the same as the highay.maz_to_maz.mode_code"
+            # make sure that if any mode IDs are used twice, they have the same excluded links sets
+            if highway_class.mode_code in mode_excluded_links:
+                ex_links1 = highway_class.excluded_links
+                ex_links2 = mode_excluded_links[highway_class.mode_code]
+                error_msg = (
+                    f"classes: [{i}]: duplicated mode codes ('{highway_class.mode_code}') "
+                    f"with different excluded links: {ex_links1} and {ex_links2}"
+                )
+                assert ex_links1 == ex_links2, error_msg
+            mode_excluded_links[highway_class.mode_code] = highway_class.excluded_links
 
 
 @dataclass(init=False, frozen=True)
@@ -410,6 +522,11 @@ class Configuration(ConfigItem):
 
     def _validate(self):
         assert self.version == "0.0.0"
+        # validate highway.maz_to_maz.skim_period refers to a valid period
+        time_period_names = set(time.name for time in self.time_periods)
+        assert (
+            self.highway.maz_to_maz.skim_period in time_period_names
+        ), "highway: maz_to_maz: skim_period: unrecognized period name"
 
 
 def _load_toml(path: str) -> dict:

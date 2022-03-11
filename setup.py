@@ -41,4 +41,5 @@ setup(
     packages=["tm2py"],
     include_package_data=True,
     install_requires=install_requires,
+    scripts=["bin/tm2py","bin/get_test_data"],
 )

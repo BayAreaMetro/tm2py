@@ -3,31 +3,31 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - fiona=1.8.20=py37hab7fe08_1
+  - fiona=1.8.20
   - folium=0.12.0=pyhd8ed1ab_1
-  - gdal=3.3.1=py37hba6e793_1
+  - gdal=3.3.1
   - geographiclib=1.52=pyhd8ed1ab_0
   - geojson=2.5.0=py_0
   - geopandas=0.9.0=pyhd8ed1ab_1
   - geopandas-base=0.9.0=pyhd8ed1ab_1
-  - geos=3.9.1=he49afe7_2
+  - geos=3.9.1
   - jsonschema=3.2.0=pyhd8ed1ab_3
-  - jupyter=1.0.0=py37hf985489_6
+  - jupyter=1.0.0
   - jupyterlab_widgets=1.0.0=pyhd8ed1ab_1
   - lark-parser=0.11.3=pyhd8ed1ab_0
   - networkx=2.3=py_0
   - notebook=6.4.0=pyha770c72_0
-  - numpy=1.21.1=py37h84c02c4_0
+  - numpy=1.21.1
   - osmnx=1.1.1=pyhd8ed1ab_0
-  - pandas=1.3.1=py37hb23ed4d_0
-  - proj=8.0.1=h1512c50_0
-  - pyproj=3.1.0=py37h4d4cb89_3
-  - python=3.7.10=h7728216_100_cpython
+  - pandas=1.3.1
+  - proj=8.0.1
+  - pyproj=3.1.0
+  - python=3.7.10
   - pytz=2021.1=pyhd8ed1ab_0
-  - pyyaml=5.4.1=py37hf967b71_0
+  - pyyaml=5.4.1
   - requests=2.26.0=pyhd8ed1ab_0
-  - rtree=0.9.7=py37hf13911c_2
-  - shapely=1.7.1=py37h8e0fcb3_5
-  - yaml=0.2.5=haf1e3a3_0
+  - rtree=0.9.7
+  - shapely=1.7.1
+  - yaml=0.2.5
 
 

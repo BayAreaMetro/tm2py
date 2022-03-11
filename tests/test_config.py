@@ -36,4 +36,4 @@ def test_config_read_badfile():
     """Should have good behavior when file isn't there."""
     from tm2py.config import Configuration
 
-    my_config = Configuration("this_is_not_a_valid_file.toml")
+    Configuration("this_is_not_a_valid_file.toml")
