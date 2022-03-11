@@ -19,5 +19,5 @@ __all__ = [
     "RunController",
     # logger
     "Logger",
-    "LogStartEnd"
+    "LogStartEnd",
 ]
