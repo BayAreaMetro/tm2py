@@ -211,7 +211,7 @@ class HighwayCapClass(ConfigItem):
     critical_speed: float
 
     def _validate(self):
-        assert self.capclass >= 1
+        assert self.capclass >= 0
         assert self.capacity >= 0
         assert self.free_flow_speed >= 0
         assert self.critical_speed >= 0
@@ -255,27 +255,13 @@ class HighwayClass(ConfigItem):
     pce: float = 1.0
 
     def _validate(self):
-        assert len(self.name) <= 6, "name: maximum of 6 characters"
+        assert len(self.name) <= 10, "name: maximum of 10 characters"
         assert len(self.mode_code) == 1, "mode_code: must be exactly 1 character"
-        available_link_sets = [
-            "is_sr2",
-            "is_sr3",
-            "is_toll_da",
-            "is_toll_sr2",
-            "is_toll_sr3",
-            "is_toll_truck",
-            "is_auto_only",
-        ]
-        extra_keys = set(self.excluded_links) - set(available_link_sets)
-        assert not extra_keys, (
-            f"excluded_links: unrecognized selection keyword(s): {','.join(extra_keys)}"
-            f" - available keywords are {','.join(available_link_sets)}"
-        )
         assert self.value_of_time > 0
         assert self.operating_cost_per_mile >= 0
         # list of skims validated under Highway to match toll dst group names
         # toll attribute expression validated under Highway to match toll dst group names
-        assert self.toll_factor > 0 or self.toll_factor is None
+        assert self.toll_factor is None or self.toll_factor > 0
         assert self.pce > 0
 
 
@@ -375,18 +361,20 @@ class Highway(ConfigItem):
         assert len(class_names) == len(set(class_names))
         # validate class skim name list and toll attribute against toll setup
         # also if any mode IDs are used twice, that they have the same excluded links sets
-        avail_skims = ["dist", "hovdist", "tolldist", "freeflowtime"]
+        avail_skims = ["time", "dist", "hovdist", "tolldist", "freeflowtime"]
+        available_link_sets = ["is_sr", "is_sr2", "is_sr3", "is_auto_only"]
         avail_toll_attrs = []
         for name in self.tolls.dst_vehicle_group_names:
             toll_types = [f"bridgetoll_{name}", f"valuetoll_{name}"]
             avail_skims.extend(toll_types)
             avail_toll_attrs.extend(["@" + name for name in toll_types])
+            available_link_sets.append(f"is_toll_{name}")
 
         def check_keywords(class_num, key, value, available):
             extra_keys = set(value) - set(available)
             error_msg = (
-                f"classes: [{class_num}]: {key}: unrecognized {key} name(s) "
-                f"{','.join(extra_keys)} - available are {','.join(available)}"
+                f"classes: [{class_num}]: {key}: unrecognized {key} name(s): "
+                f"{','.join(extra_keys)}.  Available are: {', '.join(available)}"
             )
             assert not extra_keys, error_msg
 
@@ -394,10 +382,11 @@ class Highway(ConfigItem):
         for i, highway_class in enumerate(self.classes):
             check_keywords(i, "skim", highway_class.skims, avail_skims)
             check_keywords(i, "toll", highway_class.toll, avail_toll_attrs)
+            check_keywords(i, "excluded_links", highway_class.excluded_links, available_link_sets)
             # maz_to_maz.mode_code must be unique
             assert (
                 highway_class.mode_code != self.maz_to_maz.mode_code
-            ), f"classes: [{i}]: mode_code: cannot be the same as the highay.maz_to_maz.mode_code"
+            ), f"classes: [{i}]: mode_code: cannot be the same as the highway.maz_to_maz.mode_code"
             # make sure that if any mode IDs are used twice, they have the same excluded links sets
             if highway_class.mode_code in mode_excluded_links:
                 ex_links1 = highway_class.excluded_links

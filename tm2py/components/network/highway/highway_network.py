@@ -248,6 +248,7 @@ class PrepareNetwork(Component):
                 continue
             exclude_links_map = {
                 "is_sr": link["@useclass"] in [2, 3],
+                "is_sr2": link["@useclass"] == 2,
                 "is_sr3": link["@useclass"] == 3,
                 "is_auto_only": link["@useclass"] in [2, 3, 4],
             }

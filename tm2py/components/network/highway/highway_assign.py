@@ -21,7 +21,8 @@ the following schema. All items are required unless indicated.
     "excluded_links": list of keywords to identify links to exclude from
         this class' available subnetwork (generate link.modes)
         Options are:
-            - "is_sr2": is reserved for shared ride 2+ (@useclass in 2,3)
+            - "is_sr": is reserved for shared ride (@useclass in 2,3)
+            - "is_sr2": is reserved for shared ride 2+ (@useclass == 2)
             - "is_sr3": is reserved for shared ride 3+ (@useclass == 3)
             - "is_toll_da": has a value (non-bridge) toll for drive alone
             - "is_toll_sr2": has a value (non-bridge) toll for shared ride 2
