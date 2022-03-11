@@ -80,6 +80,7 @@ class PrepareNetwork(Component):
                 scenario.publish_network(network)
 
     def _create_class_attributes(self, scenario, time_period):
+        """Create required network attributes including per-class cost and flow attributes."""
         create_attribute = self.controller.emme_manager.tool(
             "inro.emme.data.extra_attribute.create_extra_attribute"
         )
@@ -121,6 +122,7 @@ class PrepareNetwork(Component):
                 create_attribute(domain, name, desc, overwrite=True, scenario=scenario)
 
     def _set_tolls(self, network, time_period: str):
+        """Set the tolls in the network from the toll reference file."""
         toll_index = self._get_toll_indices()
         src_veh_groups = self.config.highway.tolls.src_vehicle_group_names
         dst_veh_groups = self.config.highway.tolls.dst_vehicle_group_names
@@ -151,6 +153,7 @@ class PrepareNetwork(Component):
                         )
 
     def _get_toll_indices(self):
+        """Get the mapping of toll lookup table from the toll reference file."""
         toll_file_path = self.get_abs_path(self.config.highway.tolls.file_path)
         tolls = {}
         with open(toll_file_path, "r", encoding="UTF8") as toll_file:
@@ -161,7 +164,7 @@ class PrepareNetwork(Component):
         return tolls
 
     def _set_vdf_attributes(self, network, time_period: str):
-        # Set capacity, VDF and critical speed on links
+        """Set capacity, VDF and critical speed on links"""
         capacity_map = {}
         critical_speed_map = {}
         for row in self.config.highway.capclass_lookup:
@@ -191,6 +194,7 @@ class PrepareNetwork(Component):
                 link["@ja"] = 16 * (t_c - t_o) ** 2
 
     def _set_link_modes(self, network):
+        """Set the link modes based on the per-class 'excluded_links' set."""
         # first reset link modes (script run more than once)
         # "generic_highway_mode_code" must already be created (in import to Emme script)
         auto_mode = {network.mode(self.config.highway.generic_highway_mode_code)}
@@ -267,12 +271,14 @@ class PrepareNetwork(Component):
 
     @staticmethod
     def _apply_exclusions(excluded_links_criteria, mode_code, modes_set, link_values):
+        """Apply the exclusion criteria to set the link modes."""
         for criteria in excluded_links_criteria:
             if link_values[criteria]:
                 return
         modes_set.add(mode_code)
 
     def _calc_link_skim_lengths(self, network):
+        """Calculate the length attributes used in the highway skims."""
         tollbooth_start_index = self.config.highway.tolls.tollbooth_start_index
         for link in network.links():
             # distance in hov lanes / facilities
@@ -287,6 +293,7 @@ class PrepareNetwork(Component):
                 link["@toll_length"] = 0
 
     def _calc_link_class_costs(self, network):
+        """Calculate the per-class link cost from the tolls and operating costs."""
         for assign_class in self.config.highway.classes:
             cost_attr = f"@cost_{assign_class.name.lower()}"
             op_cost = assign_class["operating_cost_per_mile"]
