@@ -103,6 +103,9 @@ class Scenario(ConfigItem):
     verify: bool
     maz_landuse_file: str
 
+    def _validate(self):
+        assert self.year >= 2005, "year must be at least 2005"
+
 
 @dataclass(init=False, frozen=True)
 class Run(ConfigItem):
@@ -358,7 +361,7 @@ class Highway(ConfigItem):
         # validate class unique items
         class_names = [highway_class.name for highway_class in self.classes]
         error_msg = "classes: names must be unique"
-        assert len(class_names) == len(set(class_names))
+        assert len(class_names) == len(set(class_names)), error_msg
         # validate class skim name list and toll attribute against toll setup
         # also if any mode IDs are used twice, that they have the same excluded links sets
         avail_skims = ["time", "dist", "hovdist", "tolldist", "freeflowtime"]
@@ -488,7 +491,6 @@ class Configuration(ConfigItem):
         path: a valid system path to a .toml file or list of the same
     """
 
-    version: str
     scenario: Scenario
     run: Run
     time_periods: Tuple[TimePeriod]
@@ -510,7 +512,6 @@ class Configuration(ConfigItem):
         super().__init__(data)
 
     def _validate(self):
-        assert self.version == "0.0.0"
         # validate highway.maz_to_maz.skim_period refers to a valid period
         time_period_names = set(time.name for time in self.time_periods)
         assert (
