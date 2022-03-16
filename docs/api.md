@@ -1,6 +1,6 @@
 # API Documentation
 
-::: tm2py.template.TemplateClass
-    rendering:
-      show_root_heading: True
-      heading_level: 2
+::: tm2py.components.component
+::: tm2py.config
+::: tm2py.controller
+::: tm2py.logger

@@ -21,6 +21,7 @@ except ModuleNotFoundError:
     # TODO: probably should know if we are actually doing a test
     # pylint: disable=C0103
     from unittest.mock import Mock
+
     Emmebank = Mock()
     EmmeScenario = Mock()
     EmmeDesktopApp = Mock()

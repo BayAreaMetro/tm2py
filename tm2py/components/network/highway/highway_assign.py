@@ -155,7 +155,7 @@ class HighwayAssignment(Component):
                 assign_spec = self._get_assignment_spec(assign_classes)
                 # self.logger.log_dict(assign_spec, level="DEBUG")
                 with self.logger.log_start_end(
-                        "Run SOLA assignment with path analyses", level="INFO"
+                    "Run SOLA assignment with path analyses", level="INFO"
                 ):
                     assign = self.controller.emme_manager.tool(
                         "inro.emme.traffic_assignment.sola_traffic_assignment"
@@ -176,7 +176,7 @@ class HighwayAssignment(Component):
 
     @_context
     def _setup(self, scenario, time_period):
-        """ Setup and teardown for Emme Matrix cache and list of skim matrices
+        """Setup and teardown for Emme Matrix cache and list of skim matrices
 
         Args:
             scenario: Emme scenario object
@@ -198,7 +198,9 @@ class HighwayAssignment(Component):
 
         Args:
             scenario: Emme scenario object"""
-        self.logger.log_time("Copy @maz_flow to ul1 for background traffic", indent=True, level="DETAIL")
+        self.logger.log_time(
+            "Copy @maz_flow to ul1 for background traffic", indent=True, level="DETAIL"
+        )
         net_calc = NetworkCalculator(scenario)
         net_calc("ul1", "@maz_flow")
 
@@ -207,7 +209,9 @@ class HighwayAssignment(Component):
 
         Args:
             scenario: Emme scenario object"""
-        self.logger.log_time("Set ul1 to 0 for background traffic", indent=True, level="DETAIL")
+        self.logger.log_time(
+            "Set ul1 to 0 for background traffic", indent=True, level="DETAIL"
+        )
         net_calc = NetworkCalculator(scenario)
         net_calc("ul1", "0")
 
@@ -232,7 +236,10 @@ class HighwayAssignment(Component):
                         matrix = create_matrix(
                             "mf", matrix_name, scenario=scenario, overwrite=True
                         )
-                        self.logger.log(f"Create matrix name: {matrix_name}, id: {matrix.id}", level="DEBUG")
+                        self.logger.log(
+                            f"Create matrix name: {matrix_name}, id: {matrix.id}",
+                            level="DEBUG",
+                        )
                     self._skim_matrices.append(matrix)
 
     def _get_assignment_spec(self, assign_classes):
@@ -310,7 +317,7 @@ class HighwayAssignment(Component):
         )
         os.makedirs(os.path.dirname(omx_file_path), exist_ok=True)
         with OMXManager(
-                omx_file_path, "w", scenario, matrix_cache=self._matrix_cache
+            omx_file_path, "w", scenario, matrix_cache=self._matrix_cache
         ) as omx_file:
             omx_file.write_matrices(self._skim_matrices)
 
@@ -405,7 +412,9 @@ class AssignmentClass:
         return skim_matrices
 
     @staticmethod
-    def emme_analysis_spec(link_attr: str, matrix_name: str) -> Dict[str, str | bool | None]:
+    def emme_analysis_spec(
+        link_attr: str, matrix_name: str
+    ) -> Dict[str, str | bool | None]:
         """Returns Emme highway class path analysis spec as a sum of link attribute values.
 
         See Emme Help for SOLA assignment for full specification details.

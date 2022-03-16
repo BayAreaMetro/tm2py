@@ -385,7 +385,9 @@ class Highway(ConfigItem):
         for i, highway_class in enumerate(self.classes):
             check_keywords(i, "skim", highway_class.skims, avail_skims)
             check_keywords(i, "toll", highway_class.toll, avail_toll_attrs)
-            check_keywords(i, "excluded_links", highway_class.excluded_links, available_link_sets)
+            check_keywords(
+                i, "excluded_links", highway_class.excluded_links, available_link_sets
+            )
             # maz_to_maz.mode_code must be unique
             assert (
                 highway_class.mode_code != self.maz_to_maz.mode_code
