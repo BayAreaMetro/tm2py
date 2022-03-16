@@ -57,13 +57,10 @@ class PrepareNetwork(Component):
     """Highway network preparation"""
 
     @LogStartEnd("prepare network attributes and modes")
-    def run(self, time_period: Union[Collection[str], str] = None):
+    def run(self):
         """Run network preparation step
-
-        Args:
-            time_period: list of str names of time_periods, or name of a single time_period
         """
-        for time in self._process_time_period(time_period):
+        for time in self.time_period_names():
             with self.controller.emme_manager.logbook_trace(
                 f"prepare for highway assignment {time}"
             ):

@@ -83,16 +83,13 @@ class PrepareHighwayDemand(PrepareDemand):
         self._emmebank = None
 
     # @LogStartEnd("prepare highway demand")
-    def run(self, time_period: Union[Collection[str], str] = None):
+    def run(self):
         """Open combined demand OMX files from demand models and prepare for assignment.
-
-        Args:
-            time_period: list of str names of time_periods, or name of a single time_period
         """
         emmebank_path = self.get_abs_path(self.config.emme.highway_database_path)
         self._emmebank = self.controller.emme_manager.emmebank(emmebank_path)
         self._create_zero_matrix()
-        for time in self._process_time_period(time_period):
+        for time in self.time_period_names():
             for klass in self.config.highway.classes:
                 self._prepare_demand(klass.name, klass.description, klass.demand, time)
 
@@ -147,6 +144,3 @@ class PrepareTransitDemand(PrepareDemand):
         emmebank_path = self.get_abs_path(self.config.emme.transit_database_path)
         self._emmebank = self.controller.emme_manager.emmebank(emmebank_path)
         self._create_zero_matrix()
-
-        # for time in self._process_time_period(time_period):
-        #     pass

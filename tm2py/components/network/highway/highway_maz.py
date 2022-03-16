@@ -75,7 +75,6 @@ class AssignMAZSPDemand(Component):
         #       to limit shortest path calculation by origin to furthest destination
         #       semi-exposed for performance testing
         self._bin_edges = _default_bin_edges
-        self._debug_report = []
         self._debug = False
 
         # Internal attributes to track data through the sequence of steps
@@ -88,11 +87,8 @@ class AssignMAZSPDemand(Component):
         self._leaf_index = None
 
     @LogStartEnd()
-    def run(self, time_period: Union[Collection[str], str] = None):
+    def run(self):
         """Run MAZ-to-MAZ shortest path assignment.
-
-        Args:
-            time_period: list of str names of time_periods, or name of a single time_period
         """
         emme_manager = self.controller.emme_manager
         emmebank = emme_manager.emmebank(
@@ -102,7 +98,7 @@ class AssignMAZSPDemand(Component):
         county_groups = {}
         for group in self.config.highway.maz_to_maz.demand_county_groups:
             county_groups[group.number] = group.counties
-        for time in self._process_time_period(time_period):
+        for time in self.time_period_names():
             with self.logger.log_start_end(f"period {time}"):
                 self._scenario = self.get_emme_scenario(emmebank.path, time)
                 with self._setup(time):
@@ -129,7 +125,6 @@ class AssignMAZSPDemand(Component):
         self._network = None
         self._root_index = None
         self._leaf_index = None
-        self._debug_report = []
         attributes = [
             ("LINK", "@link_cost", "total cost MAZ-MAZ"),
             ("LINK", "@link_cost_maz", "cost MAZ-MAZ, unused MAZs blocked"),
@@ -155,9 +150,6 @@ class AssignMAZSPDemand(Component):
                         )
                         if os.path.exists(file_path):
                             os.remove(file_path)
-                else:
-                    for item in self._debug_report:
-                        self.logger.log(item)
 
     def _prepare_network(self):
         if self._scenario.has_traffic_results:
@@ -242,8 +234,9 @@ class AssignMAZSPDemand(Component):
                     group["demand"].extend(data)
                     break
         for group in demand_groups:
-            self._debug_report.append(
-                f"       bin dist {group['dist']}, size {len(group['demand'])}"
+            self.logger.log_time(
+                f"bin dist {group['dist']}, size {len(group['demand'])}",
+                level="DEBUG"
             )
         # Filter out groups without any demend
         demand_groups = [group for group in demand_groups if group["demand"]]
@@ -336,12 +329,10 @@ class AssignMAZSPDemand(Component):
                 link["temp_flow"] += dem
                 i_node = j_node
             assigned += dem
-        self._debug_report.extend(
-            [
-                f"    ASSIGN bin {bin_no}: total: {len(demand)}",
-                f"         assigned: {assigned}, not assigned: {not_assigned}",
-            ]
-        )
+        self.logger.log_time(
+            f"ASSIGN bin {bin_no}: total: {len(demand)}", level="DEBUG")
+        self.logger.log_time(
+            f"assigned: {assigned}, not assigned: {not_assigned}", level="DEBUG")
 
     def _load_text_format_paths(self, bin_no, period):
         paths = _defaultdict(lambda: {})
@@ -378,9 +369,10 @@ class AssignMAZSPDemand(Component):
                 assigned += data["dem"]
                 bytes_read += (end - start) * 4
         self._save_attr_values("LINK", ["temp_flow"], ["@maz_flow"])
-        self._debug_report.append(
-            f"    ASSIGN bin {bin_no}, total {len(demand)}, assign "
-            f"{assigned}, not assign {not_assigned}, bytes {bytes_read}"
+        self.logger.log_time(
+            f"ASSIGN bin {bin_no}, total {len(demand)}, assign "
+            f"{assigned}, not assign {not_assigned}, bytes {bytes_read}",
+            level="DEBUG"
         )
 
     @staticmethod

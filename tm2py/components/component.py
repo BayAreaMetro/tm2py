@@ -84,7 +84,7 @@ class Component(ABC):
         """Validate inputs are correct at model initiation, fail fast if not"""
 
     @abstractmethod
-    def run(self, time_period: Union[Collection[str], str] = None):
+    def run(self):
         """Run model component"""
 
     def report_progress(self):
@@ -99,20 +99,9 @@ class Component(ABC):
     def verify(self):
         """Verify component outputs / results"""
 
-    def _process_time_period(
-        self, time_period: Union[Collection[str], str]
-    ) -> List[str]:
-        """Process input time_period name or names and return list of time_period names.
-
-        If time_period is None return list of names from config.time_periods
-
-        Args:
-            time_period: list of str names of time_periods, or name of a single time_period or None
+    def time_period_names(self) -> List[str]:
+        """Return input time_period name or names and return list of time_period names.
 
         Returns: list of string names of time periods
         """
-        if time_period is None:
-            return [time.name for time in self.config.time_periods]
-        if isinstance(time_period, str):
-            return [time_period]
-        return list(time_period)
+        return [time.name for time in self.config.time_periods]

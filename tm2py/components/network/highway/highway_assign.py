@@ -125,7 +125,6 @@ class HighwayAssignment(Component):
 
     def __init__(self, controller: RunController):
         super().__init__(controller)
-        self.demand = PrepareHighwayDemand(self.controller)
         self._num_processors = tools.parse_num_processors(
             self.config.emme.num_processors
         )
@@ -133,13 +132,12 @@ class HighwayAssignment(Component):
         self._skim_matrices = []
 
     @LogStartEnd("Highway assignment and skims", level="STATUS")
-    def run(self, time_period: Union[Collection[str], str] = None):
+    def run(self):
         """Run highway assignment
-
-        Args:
-            time_period: list of str names of time_periods, or name of a single time_period
         """
-        for time in self._process_time_period(time_period):
+        demand = PrepareHighwayDemand(self.controller)
+        demand.run()
+        for time in self.time_period_names():
             scenario = self.get_emme_scenario(
                 self.config.emme.highway_database_path, time
             )
@@ -149,7 +147,6 @@ class HighwayAssignment(Component):
                     AssignmentClass(c, time, iteration)
                     for c in self.config.highway.classes
                 ]
-                self.demand.run(time_period=time)
                 if iteration > 0:
                     self._copy_maz_flow(scenario)
                 else:
