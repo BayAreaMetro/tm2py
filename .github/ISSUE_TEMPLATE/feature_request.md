@@ -10,6 +10,12 @@ assignees: ''
 ### User Story
 *As a ...insert type of user... I'd like to ...insert desired feature or behavior...*
 
+- [ ] User story satisfied
+- [ ] Doc strings
+- [ ] General documentation
+- [ ] Tests
+- [ ] Passing tests
+
 ### Priority 
 
 ### Level of Effort
@@ -20,8 +26,6 @@ assignees: ''
 *Is there a funder or project associated with this feature?*
 
 ### Who should be involved?
-Implementer: 
-Commenters: 
 Users: 
 Reviewers: 
 
@@ -30,3 +34,6 @@ Reviewers:
 
 #### Tests
 *What are relevant tests or what tests need to be created in order to determine that this issue is complete?*
+
+- [ ] Test for...
+
