@@ -12,6 +12,7 @@ try:
     # so disabling relevant import module checks
     # pylint: disable=E0611, E0401, E1101
     from inro.emme.database.emmebank import Emmebank
+    from inro.emme.network import Network as EmmeNetwork
     from inro.emme.database.scenario import Scenario as EmmeScenario
     import inro.emme.desktop.app as _app
     from inro.modeller import Modeller as EmmeModeller, logbook_write, logbook_trace
@@ -26,6 +27,7 @@ except ModuleNotFoundError:
     EmmeScenario = Mock()
     EmmeDesktopApp = Mock()
     EmmeModeller = Mock()
+    EmmeNetwork = Mock()
     logbook_write = Mock()
     logbook_trace = Mock()
     _app = Mock()

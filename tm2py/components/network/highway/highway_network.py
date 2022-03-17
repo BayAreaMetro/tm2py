@@ -47,10 +47,11 @@ The following attributes are calculated:
 """
 
 
-from typing import Union, Collection
+from typing import Dict, List, Set  # Union, Collection
 
 from tm2py.components.component import Component
 from tm2py.logger import LogStartEnd
+from tm2py.emme.manager import EmmeScenario, EmmeNetwork
 
 
 class PrepareNetwork(Component):
@@ -76,7 +77,7 @@ class PrepareNetwork(Component):
                 self._calc_link_class_costs(network)
                 scenario.publish_network(network)
 
-    def _create_class_attributes(self, scenario, time_period):
+    def _create_class_attributes(self, scenario: EmmeScenario, time_period: str):
         """Create required network attributes including per-class cost and flow attributes."""
         create_attribute = self.controller.emme_manager.tool(
             "inro.emme.data.extra_attribute.create_extra_attribute"
@@ -118,7 +119,7 @@ class PrepareNetwork(Component):
             for name, desc in attrs:
                 create_attribute(domain, name, desc, overwrite=True, scenario=scenario)
 
-    def _set_tolls(self, network, time_period: str):
+    def _set_tolls(self, network: EmmeNetwork, time_period: str):
         """Set the tolls in the network from the toll reference file."""
         toll_index = self._get_toll_indices()
         src_veh_groups = self.config.highway.tolls.src_vehicle_group_names
@@ -133,6 +134,7 @@ class PrepareNetwork(Component):
                 )
                 data_row = toll_index.get(index)
                 if data_row is None:
+                    self.logger.log(f"set tolls failed index lookup {index}, link {link.id}", level="TRACE")
                     continue  # tolls will remain at zero
                 # if index is below tollbooth start index then this is a bridge
                 # (point toll), available for all traffic assignment classes
@@ -149,7 +151,7 @@ class PrepareNetwork(Component):
                             * 100
                         )
 
-    def _get_toll_indices(self):
+    def _get_toll_indices(self) -> Dict[int, Dict[str, str]]:
         """Get the mapping of toll lookup table from the toll reference file."""
         toll_file_path = self.get_abs_path(self.config.highway.tolls.file_path)
         tolls = {}
@@ -157,10 +159,10 @@ class PrepareNetwork(Component):
             header = next(toll_file).split(",")
             for line in toll_file:
                 data = dict(zip(header, line.split(",")))
-                tolls[data["fac_index"]] = data
+                tolls[int(data["fac_index"])] = data
         return tolls
 
-    def _set_vdf_attributes(self, network, time_period: str):
+    def _set_vdf_attributes(self, network: EmmeNetwork, time_period: str):
         """Set capacity, VDF and critical speed on links"""
         capacity_map = {}
         critical_speed_map = {}
@@ -190,7 +192,7 @@ class PrepareNetwork(Component):
                 t_o = dist / link["@free_flow_speed"]
                 link["@ja"] = 16 * (t_c - t_o) ** 2
 
-    def _set_link_modes(self, network):
+    def _set_link_modes(self, network: EmmeNetwork):
         """Set the link modes based on the per-class 'excluded_links' set."""
         # first reset link modes (script run more than once)
         # "generic_highway_mode_code" must already be created (in import to Emme script)
@@ -269,14 +271,15 @@ class PrepareNetwork(Component):
             link.modes = modes
 
     @staticmethod
-    def _apply_exclusions(excluded_links_criteria, mode_code, modes_set, link_values):
+    def _apply_exclusions(
+            excluded_links_criteria: List[str], mode_code: str, modes_set: Set[str], link_values: Dict[str, bool]):
         """Apply the exclusion criteria to set the link modes."""
         for criteria in excluded_links_criteria:
             if link_values[criteria]:
                 return
         modes_set.add(mode_code)
 
-    def _calc_link_skim_lengths(self, network):
+    def _calc_link_skim_lengths(self, network: EmmeNetwork):
         """Calculate the length attributes used in the highway skims."""
         tollbooth_start_index = self.config.highway.tolls.tollbooth_start_index
         for link in network.links():
@@ -291,7 +294,7 @@ class PrepareNetwork(Component):
             else:
                 link["@toll_length"] = 0
 
-    def _calc_link_class_costs(self, network):
+    def _calc_link_class_costs(self, network: EmmeNetwork):
         """Calculate the per-class link cost from the tolls and operating costs."""
         for assign_class in self.config.highway.classes:
             cost_attr = f"@cost_{assign_class.name.lower()}"
