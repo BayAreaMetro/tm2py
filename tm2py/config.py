@@ -120,6 +120,18 @@ class RunConfig(ConfigItem):
 
 
 @dataclass(init=False, frozen=True)
+class LoggingConfig(ConfigItem):
+    """Logging parameters"""
+
+    log_file_path: str
+    error_file_path: str
+    notify_slack: bool
+    display_level: str = "STATUS"
+    file_level: str = "DETAIL"
+    iter_component_level: List[List[str]] = None
+
+
+@dataclass(init=False, frozen=True)
 class TimePeriodConfig(ConfigItem):
     """Time _time_period entry"""
 
@@ -495,6 +507,7 @@ class Configuration(ConfigItem):
 
     scenario: ScenarioConfig
     run: RunConfig
+    logging: LoggingConfig
     time_periods: Tuple[TimePeriodConfig]
     household: HouseholdConfig
     air_passenger: AirPassengerConfig
