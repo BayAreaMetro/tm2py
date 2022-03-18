@@ -1,0 +1,33 @@
+name: Release Planning Milestone
+
+on:
+  milestone:
+    types: 
+      - created
+
+jobs:
+  create_issue:
+    name: Create Full Test with Emme Issue
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      MILESTONE:  ${{ github.event.milestone.number }}
+    steps:
+      - name: Create Full Test with Emme Issue
+        uses: imjohnbo/issue-bot@3daae12aa54d38685d7ff8459fc8a2aee8cea98b
+        with:
+          assignees: "flaviatsang"
+          labels: "test-run"
+          title: "Run Full Emme Tests for $MILESTONE"
+          body: |
+            ### Checklist
+
+            - [ ] Run full tests with Emme environment installed
+            - [ ] Generate bug issues for any failing tests
+            - [ ] Update any relevant EmmeMock output
+          milestone: $MILESTONE
+          pinned: false
+          close-previous: false
+        
