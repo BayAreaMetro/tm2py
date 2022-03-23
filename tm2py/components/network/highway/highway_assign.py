@@ -102,12 +102,13 @@ The Emme network must have the following attributes available:
 from __future__ import annotations
 from contextlib import contextmanager as _context
 import os
-from typing import Dict, Union, Collection, List, TYPE_CHECKING
+from typing import Dict, Union, List, TYPE_CHECKING
 
 import numpy as np
 
 from tm2py.components.component import Component
 from tm2py.components.demand.demand import PrepareHighwayDemand
+from tm2py.emme.manager import EmmeScenario
 from tm2py.emme.matrix import MatrixCache, OMXManager
 from tm2py.emme.network import NetworkCalculator
 from tm2py.logger import LogStartEnd
@@ -115,6 +116,31 @@ from tm2py import tools
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
+
+    EmmeHighwayAnalysisSpec = Dict[
+        str,
+        Union[
+            str,
+            bool,
+            None,
+            Dict[
+                str,
+                Union[str, bool, None, Dict[str, Union[str, bool, None]]],
+            ],
+        ],
+    ]
+    EmmeHighwayClassSpec = Dict[
+        str,
+        Union[
+            str,
+            Dict[str, Union[str, float, Dict[str, str]]],
+            List[EmmeHighwayAnalysisSpec],
+        ],
+    ]
+    EmmeTrafficAssignmentSpec = Dict[
+        str,
+        Union[str, Union[str, bool, None, float, List[EmmeHighwayClassSpec]]],
+    ]
 
 
 class HighwayAssignment(Component):
@@ -133,8 +159,7 @@ class HighwayAssignment(Component):
 
     @LogStartEnd("Highway assignment and skims", level="STATUS")
     def run(self):
-        """Run highway assignment
-        """
+        """Run highway assignment"""
         demand = PrepareHighwayDemand(self.controller)
         demand.run()
         for time in self.time_period_names():
@@ -175,7 +200,7 @@ class HighwayAssignment(Component):
                 self._export_skims(scenario, time)
 
     @_context
-    def _setup(self, scenario, time_period):
+    def _setup(self, scenario: EmmeScenario, time_period: str):
         """Setup and teardown for Emme Matrix cache and list of skim matrices
 
         Args:
@@ -193,7 +218,7 @@ class HighwayAssignment(Component):
                 self._matrix_cache = None
                 self._skim_matrices = []
 
-    def _copy_maz_flow(self, scenario):
+    def _copy_maz_flow(self, scenario: EmmeScenario):
         """Copy maz_flow from MAZ demand assignment to ul1 for background traffic.
 
         Args:
@@ -204,7 +229,7 @@ class HighwayAssignment(Component):
         net_calc = NetworkCalculator(scenario)
         net_calc("ul1", "@maz_flow")
 
-    def _reset_background_traffic(self, scenario):
+    def _reset_background_traffic(self, scenario: EmmeScenario):
         """Set ul1 for background traffic to 0 (no maz-maz flow)
 
         Args:
@@ -215,7 +240,9 @@ class HighwayAssignment(Component):
         net_calc = NetworkCalculator(scenario)
         net_calc("ul1", "0")
 
-    def _create_skim_matrices(self, scenario, assign_classes):
+    def _create_skim_matrices(
+        self, scenario: EmmeScenario, assign_classes: List[AssignmentClass]
+    ):
         """Create matrices to store skim results in Emme database.
 
         Also add the matrices to list of self._skim_matrices.
@@ -242,11 +269,18 @@ class HighwayAssignment(Component):
                         )
                     self._skim_matrices.append(matrix)
 
-    def _get_assignment_spec(self, assign_classes):
+    def _get_assignment_spec(
+        self, assign_classes: List[AssignmentClass]
+    ) -> EmmeTrafficAssignmentSpec:
         """Generate template Emme SOLA assignment specification
 
         Args:
-            assign_classes: list of AssignmentClass objects"""
+            assign_classes: list of AssignmentClass objects
+
+        Returns
+            Emme specification for SOLA traffic assignment
+
+        """
         relative_gap = self.config.highway.relative_gap
         max_iterations = self.config.highway.max_iterations
         # NOTE: mazmazvol as background traffic in link.data1 ("ul1")
@@ -268,7 +302,7 @@ class HighwayAssignment(Component):
         }
         return base_spec
 
-    def _calc_time_skim(self, emme_class_spec):
+    def _calc_time_skim(self, emme_class_spec: EmmeHighwayClassSpec):
         """Calculate the real time skim =gen_cost-per_fac*link_costs.
 
         Args:
@@ -287,7 +321,9 @@ class HighwayAssignment(Component):
             time_data = gencost_data - (factor * cost_data)
             self._matrix_cache.set_data(od_travel_times, time_data)
 
-    def _set_intrazonal_values(self, time_period, class_name, skims):
+    def _set_intrazonal_values(
+        self, time_period: str, class_name: str, skims: List[str]
+    ):
         """Set the intrazonal values to 1/2 nearest neighbour for time and distance skims.
 
         Args:
@@ -304,7 +340,7 @@ class HighwayAssignment(Component):
                 data[np.diag_indices_from(data)] = 0.5 * np.nanmin(data, 1)
                 self._matrix_cache.set_data(matrix_name, data)
 
-    def _export_skims(self, scenario, time_period):
+    def _export_skims(self, scenario: EmmeScenario, time_period: str):
         """Export skims to OMX files by period.
 
         Args:
@@ -333,13 +369,16 @@ class AssignmentClass:
         self.skims = class_config.get("skims", [])
 
     @property
-    def emme_highway_class_spec(self) -> Dict[str, str | float]:
-        """Returns Emme traffic assignment class specification
+    def emme_highway_class_spec(self) -> EmmeHighwayClassSpec:
+        """Construct and return Emme traffic assignment class specification
 
         Converted from input config (highway.classes), see Emme Help for
         SOLA traffic assignment for specification details.
-
         Adds time_period as part of demand and skim matrix names.
+
+        Returns:
+            A nested dictionary corresponding to the expected Emme traffic
+            class specification used in the SOLA assignment.
         """
         if self.iteration == 0:
             demand_matrix = 'ms"zero"'
@@ -364,8 +403,13 @@ class AssignmentClass:
         return class_spec
 
     @property
-    def emme_class_analysis(self) -> List[Dict[str, str | float]]:
-        """Return list of path analyses specs for this class which generate the required skims."""
+    def emme_class_analysis(self) -> List[EmmeHighwayAnalysisSpec]:
+        """Construct and return a list of path analyses specs which generate the required skims.
+
+        Returns:
+            A list of nested dictionaries corresponding to the Emme path analysis
+            (per-class) specification used in the SOLA assignment.
+        """
         class_analysis = []
         if "time" in self.skims:
             class_analysis.append(
@@ -392,7 +436,7 @@ class AssignmentClass:
 
     @property
     def skim_matrices(self) -> List[str]:
-        """List of skim matrix names for this class."""
+        """Returns: List of skim matrix names for this class."""
         skim_matrices = []
         if "time" in self.skims:
             skim_matrices.extend(
@@ -412,15 +456,17 @@ class AssignmentClass:
         return skim_matrices
 
     @staticmethod
-    def emme_analysis_spec(
-        link_attr: str, matrix_name: str
-    ) -> Dict[str, str | bool | None]:
-        """Returns Emme highway class path analysis spec as a sum of link attribute values.
+    def emme_analysis_spec(link_attr: str, matrix_name: str) -> EmmeHighwayAnalysisSpec:
+        """Returns Emme highway class path analysis spec.
 
         See Emme Help for SOLA assignment for full specification details.
         Args:
             link_attr: input link attribute for which to sum values along the paths
             matrix_name: full matrix name to store the result of the path analysis
+
+        Returns:
+            The nested dictionary specification which will generate the skim
+            of link attribute values.
         """
         analysis_spec = {
             "link_component": link_attr,
@@ -451,6 +497,8 @@ class AssignmentClass:
                 bridgetoll, or valuetoll
             group: subgroup name for the bridgetoll or valuetoll, corresponds to one of
                 the names from config.highway.tolls.dst_vehicle_group_names
+        Returns:
+            A string of the link attribute name used in the analysis.
         """
         lookup = {
             "dist": "length",  # NOTE: length must be in miles

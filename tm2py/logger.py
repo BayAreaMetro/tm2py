@@ -21,7 +21,8 @@ class Logger:
             text (str): text to log
             level (str): logging level of the message text
         """
-        print(text)
+        if level:
+            print(text)
 
     def log_time(self, msg: str, level: str = "INFO", indent: bool = True):
         """Log message with timestamp

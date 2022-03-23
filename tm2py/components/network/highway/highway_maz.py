@@ -32,13 +32,15 @@ from collections import defaultdict as _defaultdict
 from contextlib import contextmanager as _context
 from math import sqrt as _sqrt
 import os
-from typing import Collection, Union, TYPE_CHECKING
+from typing import Dict, List, Union, BinaryIO, TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from tables import NoSuchNodeError
+
+# from tables import NoSuchNodeError
 
 from tm2py.components.component import Component
+from tm2py.emme.manager import EmmeNode
 from tm2py.emme.matrix import OMXManager
 from tm2py.emme.network import NetworkCalculator
 from tm2py.logger import LogStartEnd
@@ -51,6 +53,7 @@ _default_bin_edges = [0.0, 0.9, 1.2, 1.8, 2.5, 5.0, 10.0]
 # Using text file format for now, can upgrade to binary format (faster) once
 # compatibility with new networks is verified
 _USE_BINARY = False
+NumpyArray = np.array
 
 
 class AssignMAZSPDemand(Component):
@@ -88,8 +91,7 @@ class AssignMAZSPDemand(Component):
 
     @LogStartEnd()
     def run(self):
-        """Run MAZ-to-MAZ shortest path assignment.
-        """
+        """Run MAZ-to-MAZ shortest path assignment."""
         emme_manager = self.controller.emme_manager
         emmebank = emme_manager.emmebank(
             self.get_abs_path(self.config.emme.highway_database_path)
@@ -114,11 +116,17 @@ class AssignMAZSPDemand(Component):
                     demand_bins = self._group_demand()
                     for i, demand_group in enumerate(demand_bins):
                         self._find_roots_and_leaves(demand_group["demand"])
-                        self._run_shortest_path(i, demand_group["dist"], time)
-                        self._assign_flow(i, demand_group["demand"], time)
+                        self._set_link_cost_maz()
+                        self._run_shortest_path(time, i, demand_group["dist"])
+                        self._assign_flow(time, i, demand_group["demand"])
 
     @_context
-    def _setup(self, period):
+    def _setup(self, time: str):
+        """Context setup / teardown, initializes internal attributes.
+
+        Args:
+            time: name of the time period
+        """
         self._mazs = None
         self._demand = _defaultdict(lambda: [])
         self._max_dist = 0
@@ -146,12 +154,18 @@ class AssignMAZSPDemand(Component):
                     # delete sp path files
                     for bin_no in range(len(self._bin_edges)):
                         file_path = os.path.join(
-                            self._eb_dir, f"sp_{period}_{bin_no}.ebp"
+                            self._eb_dir, f"sp_{time}_{bin_no}.ebp"
                         )
                         if os.path.exists(file_path):
                             os.remove(file_path)
 
     def _prepare_network(self):
+        """Calculate link cost (travel time + bridge tolls + operating cost) and load network.
+
+        Reads Emme network from disk for later node lookups. Optimized to only load
+        attribute values of interest, additional attributes must be added in
+        order to be read from disk.
+        """
         if self._scenario.has_traffic_results:
             time_attr = "(@free_flow_time.max.timau)"
         else:
@@ -160,16 +174,25 @@ class AssignMAZSPDemand(Component):
         op_cost = self.config.highway.maz_to_maz.operating_cost_per_mile
         net_calc = NetworkCalculator(self._scenario)
         net_calc("@link_cost", f"{time_attr} + 0.6 / {vot} * (length * {op_cost})")
-        net_calc("ul1", "0")
-        self._network = self._scenario.get_partial_network(
-            ["NODE", "LINK"], include_attributes=False
+        # net_calc("ul1", "0")
+        self._network = self.controller.emme_manager.get_network(
+            self._scenario, {"NODE": ["@maz_id", "x", "y", "#node_county"], "LINK": []}
         )
         self._network.create_attribute("LINK", "temp_flow")
-        attrs_to_read = [("NODE", ["@maz_id", "x", "y", "#node_county"])]
-        for domain, attrs in attrs_to_read:
-            self._read_attr_values(domain, attrs)
 
-    def _get_county_mazs(self, counties):
+    def _get_county_mazs(self, counties: List[str]) -> List[EmmeNode]:
+        """Get all MAZ nodes which are located in one of these counties.
+
+        Used the node attribute #node_county to identify the node location.
+        Name must be an exact match. Catches a mapping of the county names
+        to nodes so nodes are processed only once.
+
+        Args:
+            counties: list of county names
+
+        Returns:
+            List of MAZ nodes (Emme Node) which are in these counties.
+        """
         network = self._network
         # NOTE: every maz must have a valid #node_county
         if self._mazs is None:
@@ -182,7 +205,19 @@ class AssignMAZSPDemand(Component):
             mazs.extend(self._mazs[county])
         return sorted(mazs, key=lambda n: n["@maz_id"])
 
-    def _process_demand(self, time, index, maz_ids):
+    def _process_demand(self, time: str, index: int, maz_ids: List[EmmeNode]):
+        """Loads the demand from file and groups by origin node.
+
+        Sets the demand to self._demand for later processing, grouping the demand in
+        a dictionary by origin node (Emme Node object) to list of dictionaries
+        {"orig": orig_node, "dest": dest_node, "dem": demand, "dist": dist}
+
+        Args:
+            time: time period name
+            index: group index of the demand file, used to find the file by name
+            maz_ids: indexed list of MAZ ID nodes for the county group
+                (active counties for this demand file)
+        """
         data = self._read_demand_array(time, index)
         origins, destinations = data.nonzero()
         for orig, dest in zip(origins, destinations):
@@ -205,19 +240,32 @@ class AssignMAZSPDemand(Component):
                 }
             )
 
-    def _read_demand_array(self, time, index):
+    def _read_demand_array(self, time: str, index: int) -> NumpyArray:
+        """Load the demand from file with the specified time and index name.
+
+        Args:
+            time: time period name
+            index: group index of the demand file, used to find the file by name
+        """
         file_path_tmplt = self.get_abs_path(self.config.highway.maz_to_maz.demand_file)
         omx_file_path = self.get_abs_path(
             file_path_tmplt.format(period=time, number=index)
         )
         with OMXManager(omx_file_path, "r") as omx_file:
-            try:
-                demand_array = omx_file.read_hdf5("/matrices/M0")
-            except NoSuchNodeError:
-                demand_array = omx_file.read("M0")
+            demand_array = omx_file.read("M0")
         return demand_array
 
-    def _group_demand(self):
+    def _group_demand(
+        self,
+    ) -> List[Dict[str, Union[float, List[Dict[str, Union[float, EmmeNode]]]]]]:
+        """Process the demand loaded from files and create groups based on the
+        origin to the furthest destination with demand.
+
+        Returns:
+            List of dictionaries, containing the demand in the format
+                {"orig": EmmeNode, "dest": EmmeNode, "dem": float (demand value)}
+
+        """
         # group demand from same origin into distance bins by furthest
         # distance destination to limit shortest path search radius
         bin_edges = self._bin_edges[:]
@@ -235,14 +283,23 @@ class AssignMAZSPDemand(Component):
                     break
         for group in demand_groups:
             self.logger.log_time(
-                f"bin dist {group['dist']}, size {len(group['demand'])}",
-                level="DEBUG"
+                f"bin dist {group['dist']}, size {len(group['demand'])}", level="DEBUG"
             )
         # Filter out groups without any demend
         demand_groups = [group for group in demand_groups if group["demand"]]
         return demand_groups
 
-    def _find_roots_and_leaves(self, demand):
+    def _find_roots_and_leaves(self, demand: List[Dict[str, Union[float, EmmeNode]]]):
+        """Label available MAZ root nodes and leaf nodes for the path calculation.
+
+        The MAZ nodes which are found as origins in the demand are "activated"
+        by setting @maz_root to non-zero, and similarly the leaves have @maz_leaf
+        set to non-zero.
+
+        Args:
+            demand: list of dictionaries, containing the demand in the format
+                {"orig": EmmeNode, "dest": EmmeNode, "dem": float (demand value)}
+        """
         network = self._network
         attrs_to_init = [("NODE", ["@maz_root", "@maz_leaf"]), ("LINK", ["maz_cost"])]
         for domain, attrs in attrs_to_init:
@@ -258,7 +315,17 @@ class AssignMAZSPDemand(Component):
             leaf_maz_ids[d_node.number] = d_node["@maz_leaf"] = d_node["@maz_id"]
         self._root_index = {p: i for i, p in enumerate(sorted(root_maz_ids.keys()))}
         self._leaf_index = {q: i for i, q in enumerate(sorted(leaf_maz_ids.keys()))}
-        self._save_attr_values("NODE", ["@maz_root", "@maz_leaf"])
+        self.controller.emme_manager.copy_attr_values(
+            "NODE", self._network, self._scenario, ["@maz_root", "@maz_leaf"]
+        )
+
+    def _set_link_cost_maz(self):
+        """Set link cost used in the shortest path forbidden using unavailable connectors.
+
+        Copy the pre-calculated cost @link_cost to @link_cost_maz,
+        setting value to 1e20 on connectors to unused zone leaves / from
+        unused roots.
+        """
         # forbid egress from MAZ nodes which are not demand roots /
         #        access to MAZ nodes which are not demand leafs
         net_calc = NetworkCalculator(self._scenario)
@@ -267,13 +334,20 @@ class AssignMAZSPDemand(Component):
         net_calc.add_calc("@link_cost_maz", "1e20", "@maz_leafj=0 and !@maz_idj=0")
         net_calc.run()
 
-    def _run_shortest_path(self, bin_no, max_radius, period):
+    def _run_shortest_path(self, time: str, bin_no: int, max_radius: float):
+        """Run the shortest path tool to generate paths between the marked nodes.
+
+        Args:
+            time: time period name
+            bin_no: bin number (id) for this demand segment
+            max_radius: max unit coordinate distance to limit search tree
+        """
         shortest_paths_tool = self.controller.emme_manager.tool(
             "inro.emme.network_calculation.shortest_path"
         )
         max_radius = max_radius * 5280 + 100  # add some buffer for rounding error
         ext = "ebp" if _USE_BINARY else "txt"
-        file_name = f"sp_{period}_{bin_no}.{ext}"
+        file_name = f"sp_{time}_{bin_no}.{ext}"
         num_processors = parse_num_processors(self.config.emme.num_processors)
         spec = {
             "type": "SHORTEST_PATH",
@@ -308,14 +382,38 @@ class AssignMAZSPDemand(Component):
         }
         shortest_paths_tool(spec, self._scenario)
 
-    def _assign_flow(self, bin_no, demand, period):
-        if _USE_BINARY:
-            self._assign_flow_binary(bin_no, demand, period)
-        else:
-            self._assign_flow_text(bin_no, demand, period)
+    def _assign_flow(
+        self, time: str, bin_no: int, demand: List[Dict[str, Union[float, EmmeNode]]]
+    ):
+        """Assign the demand along the paths generated from the shortest path tool.
 
-    def _assign_flow_text(self, bin_no, demand, period):
-        paths = self._load_text_format_paths(bin_no, period)
+        Args:
+            time: time period name
+            bin_no: bin number (id) for this demand segment
+            demand: list of dictionaries, containing the demand in the format
+                {"orig": EmmeNode, "dest": EmmeNode, "dem": float (demand value)}
+        """
+        if _USE_BINARY:
+            self._assign_flow_binary(time, bin_no, demand)
+        else:
+            self._assign_flow_text(time, bin_no, demand)
+
+    def _assign_flow_text(
+        self, time: str, bin_no: int, demand: List[Dict[str, Union[float, EmmeNode]]]
+    ):
+        """Assign the demand along the paths generated from the shortest path tool.
+
+        The paths are read from a text format file, see Emme help for details.
+        Demand is summed in self._network (in memory) using temp_flow attribute
+        and written to scenario (Emmebank / disk) @maz_flow.
+
+        Args:
+            time: time period name
+            bin_no: bin number (id) for this demand segment
+            demand: list of dictionaries, containin the demand in the format
+                {"orig": EmmeNode, "dest": EmmeNode, "dem": float (demand value)}
+        """
+        paths = self._load_text_format_paths(time, bin_no)
         not_assigned, assigned = 0, 0
         for data in demand:
             orig, dest, dem = data["orig"].number, data["dest"].number, data["dem"]
@@ -330,14 +428,28 @@ class AssignMAZSPDemand(Component):
                 i_node = j_node
             assigned += dem
         self.logger.log_time(
-            f"ASSIGN bin {bin_no}: total: {len(demand)}", level="DEBUG")
+            f"ASSIGN bin {bin_no}: total: {len(demand)}", level="DEBUG"
+        )
         self.logger.log_time(
-            f"assigned: {assigned}, not assigned: {not_assigned}", level="DEBUG")
+            f"assigned: {assigned}, not assigned: {not_assigned}", level="DEBUG"
+        )
 
-    def _load_text_format_paths(self, bin_no, period):
+    def _load_text_format_paths(
+        self, time: str, bin_no: int
+    ) -> Dict[int, Dict[int, List[int]]]:
+        """Load all paths from text file and return as nested dictionary.
+
+        Args:
+            time: time period name
+            bin_no: bin number (id) for this demand segment
+
+        Returns:
+            All paths as a nested dictionary, path = paths[origin][destination],
+            using the node IDs as integers.
+        """
         paths = _defaultdict(lambda: {})
         with open(
-            os.path.join(self._eb_dir, f"sp_{period}_{bin_no}.txt"),
+            os.path.join(self._eb_dir, f"sp_{time}_{bin_no}.txt"),
             "r",
             encoding="utf8",
         ) as paths_file:
@@ -346,11 +458,25 @@ class AssignMAZSPDemand(Component):
                 paths[nodes[0]][nodes[-1]] = nodes[1:]
         return paths
 
-    def _assign_flow_binary(self, bin_no, demand, period):
-        file_name = f"sp_{period}_{bin_no}.ebp"
+    def _assign_flow_binary(
+        self, time: str, bin_no: int, demand: List[Dict[str, Union[float, EmmeNode]]]
+    ):
+        """Assign the demand along the paths generated from the shortest path tool.
+
+        The paths are read from a binary format file, see Emme help for details.
+        Demand is summed in self._network (in memory) using temp_flow attribute
+        and written to scenario (Emmebank / disk) @maz_flow.
+
+        Args:
+            time: time period name
+            bin_no: bin number (id) for this demand segment
+            demand: list of dictionaries, containin the demand in the format
+                {"orig": EmmeNode, "dest": EmmeNode, "dem": float (demand value)}
+        """
+        file_name = f"sp_{time}_{bin_no}.ebp"
         with open(os.path.join(self._eb_dir, file_name), "rb") as paths_file:
             # read set of path pointers by Orig-Dest sequence from file
-            offset, leafs_nb, path_indicies = self._get_path_indices(paths_file)
+            offset, leaves_nb, path_indicies = self._get_path_indices(paths_file)
             assigned = 0
             not_assigned = 0
             bytes_read = offset * 8
@@ -358,7 +484,7 @@ class AssignMAZSPDemand(Component):
             for data in demand:
                 # get file position based on orig-dest index
                 start, end = self._get_path_location(
-                    data["orig"].number, data["dest"].number, leafs_nb, path_indicies
+                    data["orig"].number, data["dest"].number, leaves_nb, path_indicies
                 )
                 # no path found, disconnected zone
                 if start == end:
@@ -368,35 +494,80 @@ class AssignMAZSPDemand(Component):
                 self._assign_path_flow(paths_file, start, end, data["dem"])
                 assigned += data["dem"]
                 bytes_read += (end - start) * 4
-        self._save_attr_values("LINK", ["temp_flow"], ["@maz_flow"])
+        self.controller.emme_manager.copy_attr_values(
+            "LINK", self._network, self._scenario, ["temp_flow"], ["@maz_flow"]
+        )
         self.logger.log_time(
             f"ASSIGN bin {bin_no}, total {len(demand)}, assign "
             f"{assigned}, not assign {not_assigned}, bytes {bytes_read}",
-            level="DEBUG"
+            level="DEBUG",
         )
 
     @staticmethod
-    def _get_path_indices(paths_file):
+    def _get_path_indices(paths_file: BinaryIO) -> [int, int, _array.array]:
+        """Get the path header indices.
+
+        See the Emme Shortest path tool doc for additional details on reading
+        this file.
+
+        Args:
+            paths_file: binary file access to the generated paths file
+
+        Returns:
+            2 ints + array of ints: offset, leafs_nb, path_indicies
+            offset: starting index to read the paths
+            leafs_nb: number of leafs in the shortest path file
+            path_indicies: array of the start index for each root, leaf path in paths_file.
+        """
         # read first 4 integers from file (Q=64-bit unsigned integers)
         header = _array.array("Q")
         header.fromfile(paths_file, 4)
-        roots_nb, leafs_nb = header[2:4]
+        roots_nb, leaves_nb = header[2:4]
         # Load sequence of path indices (positions by orig-dest index),
         # pointing to list of path node IDs in file
         path_indicies = _array.array("Q")
-        path_indicies.fromfile(paths_file, roots_nb * leafs_nb + 1)
-        offset = roots_nb * leafs_nb + 1 + 4
-        return offset, leafs_nb, path_indicies
+        path_indicies.fromfile(paths_file, roots_nb * leaves_nb + 1)
+        offset = roots_nb * leaves_nb + 1 + 4
+        return offset, leaves_nb, path_indicies
 
-    def _get_path_location(self, orig, dest, leafs_nb, path_indicies):
+    def _get_path_location(
+        self,
+        orig: EmmeNode,
+        dest: EmmeNode,
+        leaves_nb: int,
+        path_indicies: _array.array,
+    ) -> [int, int]:
+        """Get the location in the paths_file to read.
+
+        Args:
+            orig: Emme Node object, origin MAZ to query the path
+            dest: Emme Node object, destination MAZ to query the path
+            leaves_nb: number of leaves
+            path_indicies: array of the start index for each root, leaf path in paths_file.
+
+        Returns:
+            Two integers, start, end
+            start: starting index to read Node ID bytes from paths_file
+            end: ending index to read bytes from paths_file
+        """
         p_index = self._root_index[orig]
         q_index = self._leaf_index[dest]
-        index = p_index * leafs_nb + q_index
+        index = p_index * leaves_nb + q_index
         start = path_indicies[index]
         end = path_indicies[index + 1]
         return start, end
 
-    def _assign_path_flow(self, paths_file, start, end, demand):
+    def _assign_path_flow(
+        self, paths_file: BinaryIO, start: int, end: int, demand: float
+    ):
+        """Add demand to link temp_flow for the path.
+
+        Args:
+            paths_file: binary file access to read path from
+            start: starting index to read Node ID bytes from paths_file
+            end: ending index to read bytes from paths_file
+            demand: flow demand to add on link
+        """
         # load sequence of Node IDs which define the path (L=32-bit unsigned integers)
         path = _array.array("L")
         path.fromfile(paths_file, end - start)
@@ -407,23 +578,6 @@ class AssignMAZSPDemand(Component):
             link = self._network.link(i_node, j_node)
             link["temp_flow"] += demand
             i_node = j_node
-
-    def _read_attr_values(self, domain, src_names, dst_names=None):
-        self._copy_attr_values(
-            domain, self._scenario, self._network, src_names, dst_names
-        )
-
-    def _save_attr_values(self, domain, src_names, dst_names=None):
-        self._copy_attr_values(
-            domain, self._network, self._scenario, src_names, dst_names
-        )
-
-    @staticmethod
-    def _copy_attr_values(domain, src, dst, src_names, dst_names=None):
-        if dst_names is None:
-            dst_names = src_names
-        values = src.get_attribute_values(domain, src_names)
-        dst.set_attribute_values(domain, dst_names, values)
 
 
 class SkimMAZCosts(Component):
@@ -437,10 +591,35 @@ class SkimMAZCosts(Component):
         super().__init__(controller)
         self._scenario = None
         self._network = None
-        self._modeller = None
 
     @LogStartEnd()
     def run(self):
+        """Run shortest path skims for all available MAZ-to-MAZ O-D pairs.
+
+        Runs a shortest path builder for each county, using a maz_skim_cost
+        to limit the search. The valid gen cost (time + cost), distance and toll (drive alone)
+        are written to CSV at the output_skim_file path:
+        FROM_ZONE, TO_ZONE, COST, DISTANCE, BRIDGETOLL
+
+        The following config inputs are used directly in this component. Note also
+        that the network mode_code is prepared in the highway_network component
+        using the excluded_links.
+
+        config.highway.maz_to_maz:
+            skim_period: name of the period used for the skim, must match one the
+                defined config.time_periods
+            demand_county_groups: used for the list of counties, creates a list out
+                of all listed counties under [].counties
+            output_skim_file: relative path to save the skims
+            value_of_time: value of time used to convert tolls and auto operating cost
+            operating_cost_per_mile: auto operating cost
+            max_skim_cost: max cost value used to limit the shortest path search
+            mode_code:
+
+        config.emme.num_processors
+
+
+        """
         ref_period = None
         ref_period_name = self.config.highway.maz_to_maz.skim_period
         for period in self.config.time_periods:
@@ -473,6 +652,7 @@ class SkimMAZCosts(Component):
 
     @_context
     def _setup(self):
+        """Creates the temp attributes used in the component."""
         attributes = [
             ("LINK", "@link_cost", "total cost MAZ-MAZ"),
             ("NODE", "@maz_root", "selected roots (origins)"),
@@ -487,6 +667,7 @@ class SkimMAZCosts(Component):
 
     @LogStartEnd()
     def _prepare_network(self):
+        """Calculates the link cost in @link_cost and loads the network to self._network"""
         net_calc = NetworkCalculator(self._scenario)
         if self._scenario.has_traffic_results:
             time_attr = "(@free_flow_time.max.timau)"
@@ -495,15 +676,12 @@ class SkimMAZCosts(Component):
         vot = self.config.highway.maz_to_maz.value_of_time
         op_cost = self.config.highway.maz_to_maz.operating_cost_per_mile
         net_calc("@link_cost", f"{time_attr} + 0.6 / {vot} * (length * {op_cost})")
-        self._network = self._scenario.get_partial_network(
-            ["NODE"], include_attributes=False
+        self._network = self.controller.emme_manager.get_network(
+            self._scenario, {"NODE": ["@maz_id", "#node_county"]}
         )
-        attrs_to_read = [("NODE", ["@maz_id", "#node_county"])]
-        for domain, attrs in attrs_to_read:
-            values = self._scenario.get_attribute_values(domain, attrs)
-            self._network.set_attribute_values(domain, attrs, values)
 
-    def _mark_roots(self, county):
+    def _mark_roots(self, county: str) -> int:
+        """Mark the available roots in the county."""
         count_roots = 0
         for node in self._network.nodes():
             if node["@maz_id"] > 0 and node["#node_county"] == county:
@@ -515,7 +693,16 @@ class SkimMAZCosts(Component):
         self._scenario.set_attribute_values("NODE", ["@maz_root"], values)
         return count_roots
 
-    def _run_shortest_path(self):
+    def _run_shortest_path(self) -> Dict[str, NumpyArray]:
+        """Run shortest paths tool and return dictionary of skim results name, numpy arrays.
+
+        O-D pairs are limited by a max cost value from config.highway.maz_to_maz.max_skim_cost,
+        from roots marked by @maz_root to all available leaves at @maz_id.
+
+        Returns:
+            A dictionary with keys "COST", "DISTANCE", and "BRIDGETOLL", and numpy
+            arrays of SP values for available O-D pairs
+        """
         shortest_paths_tool = self.controller.emme_manager.tool(
             "inro.emme.network_calculation.shortest_path"
         )
@@ -569,7 +756,15 @@ class SkimMAZCosts(Component):
         sp_values = shortest_paths_tool(spec, self._scenario)
         return sp_values
 
-    def _export_results(self, sp_values):
+    def _export_results(self, sp_values: Dict[str, NumpyArray]):
+        """Write matrix skims to CSV.
+
+        The matrices are filtered to omit rows for which the COST is
+        < 0 or > 1e19 (Emme uses 1e20 to indicate inaccessible zone pairs).
+
+        sp_values: dictionary of matrix costs, with the three keys
+            "COST", "DISTANCE", and "BRIDGETOLL" and Numpy arrays of values
+        """
         # get list of MAZ IDS
         roots = [
             node["@maz_root"] for node in self._network.nodes() if node["@maz_root"]

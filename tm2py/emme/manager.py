@@ -3,33 +3,58 @@
 from contextlib import contextmanager as _context
 import os
 from socket import error as _socket_error
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 try:
     # skip Emme import to support testing where Emme is not installed
-
+    # Note: some imports unused (W0611 message), so as to be available
+    #       to other tools, all Emme imports in one place, and can
+    #       be replaced with a Mock for testing
     # PyLint cannot build AST from compiled Emme libraries
     # so disabling relevant import module checks
     # pylint: disable=E0611, E0401, E1101
     from inro.emme.database.emmebank import Emmebank
     from inro.emme.network import Network as EmmeNetwork
     from inro.emme.database.scenario import Scenario as EmmeScenario
+    from inro.emme.database.matrix import Matrix as EmmeMatrix  # pylint: disable=W0611
+    from inro.emme.network.node import Node as EmmeNode  # pylint: disable=W0611
     import inro.emme.desktop.app as _app
     from inro.modeller import Modeller as EmmeModeller, logbook_write, logbook_trace
 
     EmmeDesktopApp = _app.App
 except ModuleNotFoundError:
-    # TODO: probably should know if we are actually doing a test
     # pylint: disable=C0103
-    from unittest.mock import Mock
+    from unittest.mock import Mock, MagicMock
+    from numpy import zeros
 
-    Emmebank = Mock()
+    EmmeNetwork = Mock()
+    EmmeNetwork.links = MagicMock(return_value=[])
+    EmmeNetwork.nodes = MagicMock(return_value=[])
     EmmeScenario = Mock()
+    EmmeScenario.get_network = MagicMock(return_value=EmmeNetwork)
+    EmmeScenario.get_partial_network = MagicMock(return_value=EmmeNetwork)
+    EmmeScenario.zone_numbers = list(range(43))
+
+    EmmeMatrix = Mock()
+    EmmeMatrix.get_numpy_data = MagicMock(return_value=zeros([43, 43]))
+    matrix_ids = iter(range(99999))
+    type(EmmeMatrix).name = property(
+        fget=lambda s: "test" + str(next(matrix_ids)),
+        fset=lambda s, v: None)
+    EmmeMatrix.description = "testtest"
+
+    EmmebankMock = Mock()
+    EmmebankMock.matrix = Mock(return_value=EmmeMatrix)
+    EmmebankMock.scenario = Mock(return_value=EmmeScenario)
+    EmmebankMock.path = ""
+    EmmeScenario.emmebank = EmmebankMock
+    Emmebank = Mock(return_value=EmmebankMock)
+
     EmmeDesktopApp = Mock()
     EmmeModeller = Mock()
-    EmmeNetwork = Mock()
+    EmmeNode = Mock()
     logbook_write = Mock()
-    logbook_trace = Mock()
+    logbook_trace = MagicMock()
     _app = Mock()
 
 # Cache running Emme projects from this process (simple singleton implementation)
@@ -61,6 +86,9 @@ class EmmeManager:
         Args:
             project_dir: path to Emme root directory for new Emme project
             name: name for the Emme project
+
+        Returns:
+            Emme Desktop App object, see Emme API Reference, Desktop section for details.
         """
         emp_path = _app.create_project(project_dir, name)
         return self.project(emp_path)
@@ -70,6 +98,9 @@ class EmmeManager:
 
         Args:
             project_path: valid path to Emme project *.emp file
+
+        Returns:
+            Emme Desktop App object, see Emme API Reference, Desktop section for details.
         """
         project_path = os.path.normcase(os.path.realpath(project_path))
         emme_project = self._project_cache.get(project_path)
@@ -94,6 +125,8 @@ class EmmeManager:
 
         Args:
             path: valid system path pointing to an Emmebank file
+        Returns:
+            Emmebank object, see Emme API Reference, Database section for details.
         """
         if not path.endswith("emmebank"):
             path = os.path.join(path, "emmebank")
@@ -127,6 +160,9 @@ class EmmeManager:
 
         Args:
             emme_project: open 'Emme Desktop' application (inro.emme.desktop.app)
+
+        Returns:
+            Emme Modeller object, see Emme API Reference, Modeller section for details.
         """
         # pylint: disable=E0611, E0401, E1101
         try:
@@ -143,7 +179,11 @@ class EmmeManager:
             return EmmeModeller(emme_project)
 
     def tool(self, namespace: str):
-        """Return the Modeller tool at namespace."""
+        """Return the Modeller tool at namespace.
+
+        Returns:
+            Corresponding Tool object, see Emme Help for full details.
+        """
         return self.modeller().tool(namespace)
 
     @staticmethod
@@ -202,6 +242,63 @@ class EmmeManager:
                 scenario.delete_network_field(domain, name)
             for domain, names, values in backup:
                 scenario.set_attribute_values(domain, names, values)
+
+    @staticmethod
+    def copy_attr_values(
+        domain: str,
+        src: Union[EmmeScenario, EmmeNetwork],
+        dst: Union[EmmeScenario, EmmeNetwork],
+        src_names: List[str],
+        dst_names: List[str] = None,
+    ):
+        """Copy attribute values between Emme scenario (on disk) and network (in memory).
+
+        Args:
+            domain: attribute domain, one of "NODE", "LINK", "TURN", "TRANSIT_LINE",
+                "TRANSIT_SEGMENT"
+            src: source Emme scenario or network to load values from
+            dst: destination Emme scenario or network to save values to
+            src_names: names of the attributes for loading values
+            dst_names: optional, names of the attributes to save values as, defaults
+                to using the src_names if not specified
+
+        Returns:
+            Emme Modeller object, see Emme API Reference, Modeller section for details.
+        """
+        if dst_names is None:
+            dst_names = src_names
+        values = src.get_attribute_values(domain, src_names)
+        dst.set_attribute_values(domain, dst_names, values)
+
+    def get_network(
+        self, scenario: EmmeScenario, attributes: Dict[str, List[str]] = None
+    ) -> EmmeNetwork:
+        """Read partial Emme network from the scenario for the domains and attributes specified.
+
+        Optimized load of network object from scenario (disk / emmebank) for only the
+        domains specified, and only reads the attributes specified. The attributes is a
+        dictionary with keys for the required domains, and values as lists of the
+        attributes required by domain.
+
+        Wrapper for scenario.get_partial_network followed by scenario.get_attribute_values
+        and network.set_attribute_values.
+
+        Args:
+            scenario: Emme scenario object, see Emme API reference
+            attributes: dictionary of domain names to lists of attribute names
+
+        Returns:
+            Emme Network object, see Emme API Reference, Network section for details.
+        """
+        if attributes is None:
+            return scenario.get_network()
+        network = scenario.get_partial_network(
+            attributes.keys(), include_attributes=False
+        )
+        for domain, attrs in attributes.items():
+            if attrs:
+                self.copy_attr_values(domain, scenario, network, attrs)
+        return network
 
     @staticmethod
     def logbook_write(name: str, value: str = None, attributes: Dict[str, Any] = None):

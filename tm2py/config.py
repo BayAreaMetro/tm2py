@@ -56,18 +56,18 @@ class ConfigItem(ABC):
         extra_keys = set(kwargs.keys()) - set(f.name for f in fields)
         if extra_keys:
             raise Exception(f"unexpected key(s): {', '.join(extra_keys)}")
-        for field in fields:
-            value = kwargs.get(field.name, _MISSING)
+        for afield in fields:
+            value = kwargs.get(afield.name, _MISSING)
             if value is _MISSING:
-                if field.default is _MISSING:
-                    raise Exception(f"missing key {field.name}")
-                self.__dict__[field.name] = field.default
+                if afield.default is _MISSING:
+                    raise Exception(f"missing key {afield.name}")
+                self.__dict__[afield.name] = afield.default
                 continue
             try:
-                atype = get_type(field.type)
+                atype = get_type(afield.type)
                 value = atype(value)
                 if isinstance(value, tuple):
-                    item_atype = get_type(field.type.__args__[0])
+                    item_atype = get_type(afield.type.__args__[0])
                     processed_items = []
                     for i, item in enumerate(value):
                         try:
@@ -75,9 +75,9 @@ class ConfigItem(ABC):
                         except Exception as error:
                             raise Exception(f"[{i}]: {error}") from error
                     value = tuple(processed_items)
-                self.__dict__[field.name] = value
+                self.__dict__[afield.name] = value
             except Exception as error:
-                raise Exception(f"{field.name}: {error}") from error
+                raise Exception(f"{afield.name}: {error}") from error
         self._validate()
 
     def _validate(self):
@@ -121,7 +121,7 @@ class RunConfig(ConfigItem):
 
 @dataclass(init=False, frozen=True)
 class TimePeriodConfig(ConfigItem):
-    """Time _time_period entry"""
+    """Time time period entry"""
 
     name: str
     length_hours: float
@@ -253,7 +253,7 @@ class HighwayClassConfig(ConfigItem):
     operating_cost_per_mile: float
     skims: Tuple[str]
     demand: Tuple[HighwayClassDemandConfig]
-    toll: List[str] = field(default_factory=list)
+    toll: Tuple[str] = field(default_factory=tuple)
     toll_factor: float = None
     pce: float = 1.0
 
@@ -291,7 +291,7 @@ class DemandCountyGroupConfig(ConfigItem):
     counties: Tuple[str]
 
     def _validate(self):
-        avialable_counties = [
+        available_counties = [
             "San Francisco",
             "San Mateo",
             "Santa Clara",
@@ -302,10 +302,10 @@ class DemandCountyGroupConfig(ConfigItem):
             "Sonoma",
             "Marin",
         ]
-        extra_counties = set(self.counties) - set(avialable_counties)
+        extra_counties = set(self.counties) - set(available_counties)
         assert not extra_counties, (
             f"counties: unrecognized names {','.join(extra_counties)} - "
-            f"available counties are {','.join(avialable_counties)}"
+            f"available counties are {','.join(available_counties)}"
         )
 
 

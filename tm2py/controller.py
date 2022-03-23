@@ -1,4 +1,17 @@
-"""RunController - model operation controller
+"""RunController - model operation controller.
+
+Main interface to start a TM2PY model run. Provide one or more configuration
+files in .toml format (by convention a scenario.toml and a model.toml)
+
+  Typical usage example:
+  from tm2py.controller import RunController
+  controller = RunController(
+    [r"example_union\\scenario.toml", r"example_union\\model.toml"])
+  controller.run()
+
+  Or from the command-line:
+  python <path>\\tm2py\\tm2py\\controller.py –s scenario.toml –m model.toml
+
 """
 
 import argparse
@@ -12,7 +25,12 @@ from tm2py.logger import Logger
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
 from tm2py.components.network.highway.highway_network import PrepareNetwork
 from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, SkimMAZCosts
-
+component_cls_map = {
+    "prepare_network_highway": PrepareNetwork,
+    "highway": HighwayAssignment,
+    "highway_maz_assign": AssignMAZSPDemand,
+    "highway_maz_skim": SkimMAZCosts,
+}
 
 # pylint: disable=too-many-instance-attributes
 
@@ -36,12 +54,7 @@ class RunController:
         self.top_sheet = None
         self.trace = None
 
-        self.component_map = {
-            "prepare_network_highway": PrepareNetwork(self),
-            "highway": HighwayAssignment(self),
-            "highway_maz_assign": AssignMAZSPDemand(self),
-            "highway_maz_skim": SkimMAZCosts(self),
-        }
+        self._component_map = {k: v(self) for k, v in component_cls_map.items()}
         self.completed_components = []
         self._emme_manager = None
         self._iteration = None
@@ -97,26 +110,26 @@ class RunController:
         """Add components per iteration to queue according to input Config"""
         if self.config.run.start_iteration == 0:
             self._queued_components += [
-                (0, self.component_map[c_name])
+                (0, self._component_map[c_name])
                 for c_name in self.config.run.initial_components
             ]
         iteration_nums = range(
             max(1, self.config.run.start_iteration), self.config.run.end_iteration + 1
         )
         iteration_components = [
-            self.component_map[c_name]
+            self._component_map[c_name]
             for c_name in self.config.run.global_iteration_components
         ]
         self._queued_components += list(
             itertools.product(iteration_nums, iteration_components)
         )
         self._queued_components += [
-            (self.config.run.end_iteration + 1, self.component_map[c_name])
+            (self.config.run.end_iteration + 1, self._component_map[c_name])
             for c_name in self.config.run.final_components
         ]
 
         if self.config.run.start_component:
-            start_component = self.component_map[self.config.run.start_component]
+            start_component = self._component_map[self.config.run.start_component]
             start_index = [
                 idx
                 for idx, c in enumerate(self._queued_components)

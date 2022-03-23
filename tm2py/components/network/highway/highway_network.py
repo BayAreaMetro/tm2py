@@ -47,7 +47,7 @@ The following attributes are calculated:
 """
 
 
-from typing import Dict, List, Set  # Union, Collection
+from typing import Dict, List, Set
 
 from tm2py.components.component import Component
 from tm2py.logger import LogStartEnd
@@ -59,8 +59,7 @@ class PrepareNetwork(Component):
 
     @LogStartEnd("prepare network attributes and modes")
     def run(self):
-        """Run network preparation step
-        """
+        """Run network preparation step"""
         for time in self.time_period_names():
             with self.controller.emme_manager.logbook_trace(
                 f"prepare for highway assignment {time}"
@@ -134,7 +133,10 @@ class PrepareNetwork(Component):
                 )
                 data_row = toll_index.get(index)
                 if data_row is None:
-                    self.logger.log(f"set tolls failed index lookup {index}, link {link.id}", level="TRACE")
+                    self.logger.log(
+                        f"set tolls failed index lookup {index}, link {link.id}",
+                        level="TRACE",
+                    )
                     continue  # tolls will remain at zero
                 # if index is below tollbooth start index then this is a bridge
                 # (point toll), available for all traffic assignment classes
@@ -219,7 +221,7 @@ class PrepareNetwork(Component):
         # (duplicate mode codes allowed provided the excluded_links is the same)
         mode_excluded_links = {}
         for assign_class in self.config.highway.classes:
-            if network.mode(assign_class.mode_code):
+            if assign_class.mode_code in mode_excluded_links:
                 if (
                     assign_class.excluded_links
                     != mode_excluded_links[assign_class.mode_code]
@@ -272,7 +274,11 @@ class PrepareNetwork(Component):
 
     @staticmethod
     def _apply_exclusions(
-            excluded_links_criteria: List[str], mode_code: str, modes_set: Set[str], link_values: Dict[str, bool]):
+        excluded_links_criteria: List[str],
+        mode_code: str,
+        modes_set: Set[str],
+        link_values: Dict[str, bool],
+    ):
         """Apply the exclusion criteria to set the link modes."""
         for criteria in excluded_links_criteria:
             if link_values[criteria]:

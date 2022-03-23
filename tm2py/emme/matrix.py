@@ -2,44 +2,33 @@
 
 from typing import List, Union, Dict
 
-import numpy as _np
+from numpy import array as NumpyArray, resize
 import openmatrix as _omx
 
-try:
-    # skip Emme import to support testing where Emme is not installed
-
-    # PyLint cannot build AST from compiled Emme libraries
-    # so disabling relevant import module checks
-    # pylint: disable=E0611, E0401, E1101
-    from inro.emme.database.scenario import Scenario as EmmeScenario
-    from inro.emme.database.matrix import Matrix as EmmeMatrix
-except ModuleNotFoundError:
-    # pylint: disable=C0103
-    EmmeScenario = None
-    EmmeMatrix = None
-
-NumpyArray = _np.array
+from tm2py.emme.manager import EmmeScenario, EmmeMatrix
 
 
 class MatrixCache:
-    """Write through cache of Emme matrix data via Numpy arrays"""
+    """Write through cache of Emme matrix data via Numpy arrays
+
+    Args:
+        scenario: reference scenario for the active Emmebank and matrix zone system
+    """
 
     def __init__(self, scenario: EmmeScenario):
-        """
-
-        Args:
-            scenario: reference scenario for the active Emmebank and matrix zone system
-        """
         self._scenario = scenario
         self._emmebank = scenario.emmebank
         self._timestamps = {}
         self._data = {}
 
-    def get_data(self, matrix: [str, EmmeMatrix]) -> NumpyArray:
+    def get_data(self, matrix: Union[str, EmmeMatrix]) -> NumpyArray:
         """Get Emme matrix data as numpy array.
 
         Args:
             matrix: Emme matrix object or unique name / ID for Emme matrix in Emmebank
+
+        Returns:
+            The Numpy array of values for this matrix / matrix ID.
         """
         if isinstance(matrix, str):
             matrix = self._emmebank.matrix(matrix)
@@ -50,7 +39,7 @@ class MatrixCache:
             self._data[matrix] = matrix.get_numpy_data(self._scenario.id)
         return self._data[matrix]
 
-    def set_data(self, matrix: [str, EmmeMatrix], data: NumpyArray):
+    def set_data(self, matrix: Union[str, EmmeMatrix], data: NumpyArray):
         """Set numpy array to Emme matrix (write through cache).
 
         Args:
@@ -72,7 +61,23 @@ class MatrixCache:
 # disable too-many-instance-attributes recommendation
 # pylint: disable=R0902
 class OMXManager:
-    """Wrapper for the OMX interface to write from Emme matrices and numpy arrays."""
+    """Wrapper for the OMX interface to write from Emme matrices and numpy arrays.
+
+    Write from Emmebank or Matrix Cache to OMX file, or read from OMX to Numpy.
+    Also supports with statement.
+
+    Args:
+        file_path: path of OMX file
+        mode: "r", "w" or "a"
+        scenario: Emme scenario object for zone system and reference
+            Emmebank
+        omx_key: "ID_NAME", "NAME", "ID", format for generating
+            OMX key from Emme matrix data
+        matrix_cache: optional, Matrix Cache to support write data
+            from cache (instead of always reading from Emmmebank)
+        mask_max_value: optional, max value above which to write
+            zero instead ("big to zero" behavior)
+    """
 
     def __init__(
         self,
@@ -83,22 +88,6 @@ class OMXManager:
         matrix_cache: MatrixCache = None,
         mask_max_value: float = None,
     ):  # pylint: disable=R0913
-        """Write from Emmebank or Matrix Cache to OMX file, or read from OMX to Numpy.
-
-        Also supports with statement.
-
-        Args:
-            file_path: path of OMX file
-            mode: "r", "w" or "a"
-            scenario: Emme scenario object for zone system and reference
-                Emmebank
-            omx_key: "ID_NAME", "NAME", "ID", format for generating
-                OMX key from Emme matrix data
-            matrix_cache: optional, Matrix Cache to support write data
-                from cache (instead of always reading from Emmmebank)
-            mask_max_value: optional, max value above which to write
-                zero instead ("big to zero" behavior)
-        """
         self._file_path = file_path
         self._mode = mode
         self._scenario = scenario
@@ -108,7 +97,7 @@ class OMXManager:
         self._emme_matrix_cache = matrix_cache
         self._read_cache = {}
 
-    def _generate_name(self, matrix):
+    def _generate_name(self, matrix: EmmeMatrix) -> str:
         if self._omx_key == "ID_NAME":
             return f"{matrix.id}_{matrix.name}"
         if self._omx_key == "NAME":
@@ -168,7 +157,7 @@ class OMXManager:
         """
         if self._mode not in ["a", "w"]:
             raise Exception(f"{self._file_path}: open in read-only mode")
-        if not isinstance(matrix, EmmeMatrix):
+        if isinstance(matrix, str):
             matrix = self._scenario.emmebank.matrix(matrix)
         if name is None:
             name = self._generate_name(matrix)
@@ -178,10 +167,10 @@ class OMXManager:
             numpy_array = matrix.get_numpy_data(self._scenario.id)
         if matrix.type == "DESTINATION":
             n_zones = len(numpy_array)
-            numpy_array = _np.resize(numpy_array, (1, n_zones))
+            numpy_array = resize(numpy_array, (1, n_zones))
         elif matrix.type == "ORIGIN":
             n_zones = len(numpy_array)
-            numpy_array = _np.resize(numpy_array, (n_zones, 1))
+            numpy_array = resize(numpy_array, (n_zones, 1))
         attrs = {"description": matrix.description}
         self.write_array(numpy_array, name, attrs)
 
@@ -214,9 +203,9 @@ class OMXManager:
         """Write array with name and optional attrs to OMX file.
 
         Args:
-            numpy_array:
-            name:
-            attrs:
+            numpy_array:: Numpy array
+            name: name to use for the OMX key
+            attrs: additional attribute key value pairs to write to OMX file
         """
         if self._mode not in ["a", "w"]:
             raise Exception(f"{self._file_path}: open in read-only mode")
@@ -239,6 +228,9 @@ class OMXManager:
 
         Args:
             name: name of OMX matrix
+
+        Returns:
+            Numpy array from OMX file
         """
         if name in self._read_cache:
             return self._read_cache[name]
@@ -253,5 +245,8 @@ class OMXManager:
 
         Args:
             path: hdf5 reference path to matrix data
+
+        Returns:
+            Numpy array from OMX file
         """
         return self._omx_file.get_node(path).read()
