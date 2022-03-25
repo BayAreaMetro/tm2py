@@ -13,7 +13,7 @@ def test_config_read():
     """Configuration should load parameters to the correct namespaces."""
     from tm2py.config import Configuration
 
-    my_config = Configuration([TEST_CONFIG, MODEL_CONFIG])
+    my_config = Configuration.load_toml([TEST_CONFIG, MODEL_CONFIG])
 
     assert my_config.run.start_iteration == 0
     assert my_config.run.end_iteration == 2
@@ -36,4 +36,4 @@ def test_config_read_badfile():
     """Should have good behavior when file isn't there."""
     from tm2py.config import Configuration
 
-    Configuration("this_is_not_a_valid_file.toml")
+    Configuration.load_toml("this_is_not_a_valid_file.toml")

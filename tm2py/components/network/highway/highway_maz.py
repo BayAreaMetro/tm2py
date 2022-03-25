@@ -17,7 +17,7 @@ Emme network with:
           or @free_flow_time
     Node attributes: @maz_id, x, y, and #node_county
 Demand matrices under highway.maz_to_maz.demand_file,
-and can have a place
+and can have a placeholder
     auto_{period}_MAZ_AUTO_{number}_{period}.omx
 
 Output:
@@ -170,11 +170,11 @@ class AssignMAZSPDemand(Component):
             time_attr = "(@free_flow_time.max.timau)"
         else:
             time_attr = "@free_flow_time"
+        self.logger.log(f"Calculating link costs using time {time_attr}", level="DEBUG")
         vot = self.config.highway.maz_to_maz.value_of_time
         op_cost = self.config.highway.maz_to_maz.operating_cost_per_mile
         net_calc = NetworkCalculator(self._scenario)
         net_calc("@link_cost", f"{time_attr} + 0.6 / {vot} * (length * {op_cost})")
-        # net_calc("ul1", "0")
         self._network = self.controller.emme_manager.get_network(
             self._scenario, {"NODE": ["@maz_id", "x", "y", "#node_county"], "LINK": []}
         )
@@ -285,7 +285,7 @@ class AssignMAZSPDemand(Component):
             self.logger.log_time(
                 f"bin dist {group['dist']}, size {len(group['demand'])}", level="DEBUG"
             )
-        # Filter out groups without any demend
+        # Filter out groups without any demand
         demand_groups = [group for group in demand_groups if group["demand"]]
         return demand_groups
 

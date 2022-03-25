@@ -25,6 +25,7 @@ from tm2py.logger import Logger
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
 from tm2py.components.network.highway.highway_network import PrepareNetwork
 from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, SkimMAZCosts
+
 component_cls_map = {
     "prepare_network_highway": PrepareNetwork,
     "highway": HighwayAssignment,
@@ -49,7 +50,7 @@ class RunController:
             run_dir = os.path.abspath(os.path.dirname(config_file[0]))
         self._run_dir = run_dir
 
-        self.config = Configuration(config_file)
+        self.config = Configuration.load_toml(config_file)
         self.logger = Logger(self)
         self.top_sheet = None
         self.trace = None

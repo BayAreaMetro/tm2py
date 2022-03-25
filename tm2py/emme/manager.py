@@ -39,8 +39,8 @@ except ModuleNotFoundError:
     EmmeMatrix.get_numpy_data = MagicMock(return_value=zeros([43, 43]))
     matrix_ids = iter(range(99999))
     type(EmmeMatrix).name = property(
-        fget=lambda s: "test" + str(next(matrix_ids)),
-        fset=lambda s, v: None)
+        fget=lambda s: "test" + str(next(matrix_ids)), fset=lambda s, v: None
+    )
     EmmeMatrix.description = "testtest"
 
     EmmebankMock = Mock()
