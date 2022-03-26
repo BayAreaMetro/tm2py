@@ -1,4 +1,12 @@
-"""Module for Emme Manager for centralized management of Emme projects"""
+"""Module for Emme Manager for centralized management of Emme projects
+
+Centralized location for Emme API imports, which are automatically replaced
+by unittest.Mock / MagicMock to support testing where Emme is not installed.
+
+Contains EmmeManager class for access to common Emme-related procedures
+(common-code / utility-type methods) and caching access to Emme project,
+and Modeller.
+"""
 
 from contextlib import contextmanager as _context
 import os
@@ -23,6 +31,9 @@ try:
 
     EmmeDesktopApp = _app.App
 except ModuleNotFoundError:
+    if "PYTEST_CURRENT_TEST" not in os.environ:
+        raise
+    # if running from pytest replace objects with Mocks
     # pylint: disable=C0103
     from unittest.mock import Mock, MagicMock
     from numpy import zeros
@@ -68,6 +79,8 @@ class EmmeManager:
     """
 
     def __init__(self):
+        # mapping of Emme project path to Emme Desktop API object for reference
+        # (projects are opened only once)
         self._project_cache = _EMME_PROJECT_REF
 
     def close_all(self):

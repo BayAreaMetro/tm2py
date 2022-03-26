@@ -1,4 +1,7 @@
-"""Module for Emme network calculations"""
+"""Module for Emme network calculations.
+
+Contains NetworkCalculator class to generate Emme format specifications for
+the Network calculator."""
 
 from typing import Union, Dict, List
 

@@ -1,4 +1,14 @@
-"""Module for Emme-related matrix management """
+"""Module for Emme-related matrix management.
+
+Contains the MatrixCache class for write through matrix data management of Emme
+matrices (in Emmebank) to avoid repeated read-from-disk of skim matrices
+during post-assignment processing and export to OMX.
+
+Contains the OMXManager which is a thin wrapper on the openmatrix (OMX)
+library for transfer between Emme (emmebank) <-> OMX files. Integrates with
+the MatrixCache to support easy write from Emmebank without re-reading data
+from disk.
+"""
 
 from typing import List, Union, Dict
 
@@ -18,7 +28,9 @@ class MatrixCache:
     def __init__(self, scenario: EmmeScenario):
         self._scenario = scenario
         self._emmebank = scenario.emmebank
+        # mapping from matrix object to last read/write timestamp for cache invalidation
         self._timestamps = {}
+        # cache of Emme matrix data, key: matrix object, value: numpy array of data
         self._data = {}
 
     def get_data(self, matrix: Union[str, EmmeMatrix]) -> NumpyArray:

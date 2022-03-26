@@ -51,6 +51,23 @@ class ScenarioConfig(ConfigItem):
     verify: Optional[bool] = Field(default=False)
 
 
+ComponentNames = Literal[
+    "create_tod_scenarios",
+    "active_modes",
+    "air_passenger",
+    "prepare_network_highway",
+    "highway_maz_assign",
+    "highway",
+    "highway_maz_skim",
+    "transit",
+    "household",
+    "visitor",
+    "internal_external",
+    "truck",
+]
+EmptyString = Literal[""]
+
+
 @dataclass(frozen=True)
 class RunConfig(ConfigItem):
     """Model run parameters
@@ -65,27 +82,22 @@ class RunConfig(ConfigItem):
         final_components: list of components to run after final iteration, in order
     """
 
-    initial_components: Tuple[str, ...]
-    global_iteration_components: Tuple[str, ...]
-    final_components: Tuple[str, ...]
+    initial_components: Tuple[ComponentNames, ...]
+    global_iteration_components: Tuple[ComponentNames, ...]
+    final_components: Tuple[ComponentNames, ...]
     start_iteration: int = Field(ge=0)
     end_iteration: int = Field(gt=0)
-    start_component: Optional[str] = Field(default=None)
+    start_component: Optional[Union[ComponentNames, EmptyString]] = Field(default="")
 
     @classmethod
     @validator("end_iteration")
     def end_iteration_gt_start(cls, value, values):
         """Validate end_iteration greater than start_iteration"""
         if "start_iteration" in values:
-            assert value > values["start_iteration"], "must be greater than start_iteration"
+            assert (
+                value > values["start_iteration"]
+            ), "must be greater than start_iteration"
         return value
-
-    # @classmethod
-    # @validator("initial_components", "global_iteration_components", "final_components", "start_component")
-    # def components_exists(cls, value):
-    #     """Validate referenced components exists"""
-    #     assert value in available_components, "unknown component name"
-    #     return value
 
 
 @dataclass(frozen=True)
