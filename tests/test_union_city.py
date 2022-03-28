@@ -12,8 +12,8 @@ def test_highway():
 
     controller = RunController(
         [
-            os.path.join(_UNION_CITY_ROOT_DIR, r"example_union\scenario_arch.toml"),
-            os.path.join(_UNION_CITY_ROOT_DIR, r"example_union\model.toml"),
+            os.path.join(_UNION_CITY_ROOT_DIR, r"example_union\scenario_config.toml"),
+            os.path.join(_UNION_CITY_ROOT_DIR, r"example_union\model_config.toml"),
         ]
     )
     controller.run()
@@ -50,4 +50,4 @@ def test_highway():
                     count_different_lines += 1
     assert (
         count_different_lines == 0
-    ), f"HWYSKIM_MAZMAZ_DA.csv differes on {count_different_lines} lines"
+    ), f"HWYSKIM_MAZMAZ_DA.csv differs on {count_different_lines} lines"

@@ -1,18 +1,14 @@
-"""Module for Emme network calculations"""
+"""Module for Emme network calculations.
 
-from typing import Union, Dict
+Contains NetworkCalculator class to generate Emme format specifications for
+the Network calculator."""
 
-try:
-    # skip Emme import to support testing where Emme is not installed
-    # PyLint cannot build AST from compiled Emme libraries
-    # so disabling relevant import module checks
-    # pylint: disable=E0611, E0401, E1101
-    from inro.emme.database.scenario import Scenario as EmmeScenario
-except ModuleNotFoundError:
-    # pylint: disable=C0103
-    EmmeScenario = None
+from typing import Union, Dict, List
 
 import tm2py.emme.manager as _manager
+
+EmmeScenario = _manager.EmmeScenario
+EmmeNetworkCalcSpecification = Dict[str, Union[str, Dict[str, str]]]
 
 
 class NetworkCalculator:
@@ -21,14 +17,12 @@ class NetworkCalculator:
     Used to generate the standard network calculator specification (dictionary)
     from argument inputs. Useful when NOT (commonly) using selection or
     aggregation options, and mostly running link expression calculations
+
+    Args:
+        scenario: Emme scenario object
     """
 
     def __init__(self, scenario: EmmeScenario):
-        """
-
-        Args:
-            scenario:
-        """
         self._scenario = scenario
         emme_manager = _manager.EmmeManager()
         modeller = emme_manager.modeller()
@@ -43,7 +37,7 @@ class NetworkCalculator:
         expression: str,
         selections: Union[str, Dict[str, str]] = None,
         aggregation: Dict[str, str] = None,
-    ):
+    ) -> Dict[str, float]:
         """Run a network calculation in the scenario, see the Emme help for more.
 
         Args:
@@ -53,6 +47,10 @@ class NetworkCalculator:
                         not specified, and is used as a link selection expression
                         if specified as a string.
             aggregation: Aggregation operators if aggregating between network domains.
+
+        Returns:
+            A dictionary report with min, max, average and sum of the calculation
+            expression. See Emme help 'Network calculator' for more.
         """
         spec = self._format_spec(result, expression, selections, aggregation)
         return self._network_calc(spec, self._scenario)
@@ -61,10 +59,10 @@ class NetworkCalculator:
         self,
         result: str,
         expression: str,
-        selections: Union[str, dict] = None,
-        aggregation: [dict] = None,
+        selections: Union[str, Dict[str, str]] = None,
+        aggregation: Dict[str, str] = None,
     ):
-        """Add calculation to list of network calclations to run.
+        """Add calculation to list of network calculations to run.
 
         Args:
             result: Name of network attribute
@@ -78,14 +76,24 @@ class NetworkCalculator:
             self._format_spec(result, expression, selections, aggregation)
         )
 
-    def run(self):
-        """Run accumulated network calculations all at once."""
+    def run(self) -> List[Dict[str, float]]:
+        """Run accumulated network calculations all at once.
+
+        Returns:
+            A list of dictionary reports with min, max, average and sum of the
+            calculation expression. See Emme help 'Network calculator' for more.
+        """
         reports = self._network_calc(self._specs, self._scenario)
         self._specs = []
         return reports
 
     @staticmethod
-    def _format_spec(result, expression, selections, aggregation):
+    def _format_spec(
+        result: str,
+        expression: str,
+        selections: Union[str, Dict[str, str]],
+        aggregation: Dict[str, str],
+    ) -> EmmeNetworkCalcSpecification:
         spec = {
             "result": result,
             "expression": expression,

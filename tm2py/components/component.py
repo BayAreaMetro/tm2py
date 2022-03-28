@@ -4,7 +4,9 @@ from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 
-from typing import TYPE_CHECKING, Union, Collection, List
+from typing import TYPE_CHECKING, List
+
+from tm2py.emme.manager import EmmeScenario
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
@@ -45,12 +47,15 @@ class Component(ABC):
         """Get the absolute path from the root run directory given a relative path."""
         return os.path.join(self.controller.run_dir, rel_path)
 
-    def get_emme_scenario(self, emmebank_path: str, time_period: str):
+    def get_emme_scenario(self, emmebank_path: str, time_period: str) -> EmmeScenario:
         """Get the Emme scenario object from the Emmebank at emmebank_path for the time_period ID.
 
         Args:
-            emmebank_path: valid Emmebank path, relative to root run directory
+            emmebank_path: valid Emmebank path, absolute or relative to root run directory
             time_period: valid time_period ID
+
+        Returns
+            Emme Scenario object (see Emme API Reference)
         """
         if not os.path.isabs(emmebank_path):
             emmebank_path = self.get_abs_path(emmebank_path)

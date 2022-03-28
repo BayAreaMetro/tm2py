@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 from abc import ABC
-from typing import Dict, Union, Collection, List, TYPE_CHECKING
+from typing import Dict, Union, List, TYPE_CHECKING
 import numpy as np
 
-# from tm2py.logger import Logger
 from tm2py.components.component import Component
 from tm2py.emme.matrix import OMXManager
 
@@ -80,14 +79,13 @@ class PrepareHighwayDemand(PrepareDemand):
 
     def __init__(self, controller: RunController):
         super().__init__(controller)
-        self._emmebank = None
+        self._emmebank_path = None
 
     # @LogStartEnd("prepare highway demand")
     def run(self):
-        """Open combined demand OMX files from demand models and prepare for assignment.
-        """
-        emmebank_path = self.get_abs_path(self.config.emme.highway_database_path)
-        self._emmebank = self.controller.emme_manager.emmebank(emmebank_path)
+        """Open combined demand OMX files from demand models and prepare for assignment."""
+        self._emmebank_path = self.get_abs_path(self.config.emme.highway_database_path)
+        self._emmebank = self.controller.emme_manager.emmebank(self._emmebank_path)
         self._create_zero_matrix()
         for time in self.time_period_names():
             for klass in self.config.highway.classes:
@@ -113,7 +111,7 @@ class PrepareHighwayDemand(PrepareDemand):
                  "factor": <factor to apply to demand in this file>}
             time_period (str): the time time_period ID (name)
         """
-        scenario = self.get_emme_scenario(self._emmebank.path, time_period)
+        scenario = self.get_emme_scenario(self._emmebank_path, time_period)
         num_zones = len(scenario.zone_numbers)
         demand = self._read_demand(demand_config[0], time_period, num_zones)
         for file_config in demand_config[1:]:
@@ -132,15 +130,15 @@ class PrepareHighwayDemand(PrepareDemand):
         return self._read(path.format(period=time_period), name, num_zones, factor)
 
 
-class PrepareTransitDemand(PrepareDemand):
-    """Import transit demand."""
-
-    def run(self, time_period: Union[Collection[str], str] = None):
-        """Open combined demand OMX files from demand models and prepare for assignment.
-
-        Args:
-            time_period: list of str names of time_periods, or name of a single time_period
-        """
-        emmebank_path = self.get_abs_path(self.config.emme.transit_database_path)
-        self._emmebank = self.controller.emme_manager.emmebank(emmebank_path)
-        self._create_zero_matrix()
+# class PrepareTransitDemand(PrepareDemand):
+#     """Import transit demand."""
+#
+#     def run(self, time_period: Union[Collection[str], str] = None):
+#         """Open combined demand OMX files from demand models and prepare for assignment.
+#
+#         Args:
+#             time_period: list of str names of time_periods, or name of a single time_period
+#         """
+#         emmebank_path = self.get_abs_path(self.config.emme.transit_database_path)
+#         self._emmebank = self.controller.emme_manager.emmebank(emmebank_path)
+#         self._create_zero_matrix()

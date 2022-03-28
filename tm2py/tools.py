@@ -7,7 +7,13 @@ from typing import Union
 def parse_num_processors(value: Union[str, int, float]):
     """Convert input value (parse if string) to number of processors.
     Args:
-        value: int, float or string; string value can be "X" or "MAX-X"
+        value: an int, float or string; string value can be "X" or "MAX-X"
+    Returns:
+        An int of the number of processors to use
+
+    Raises:
+        Exception: Input value exceeds number of available processors
+        Exception: Input value less than 1 processors
     """
     max_processors = multiprocessing.cpu_count()
     if isinstance(value, str):
@@ -23,7 +29,7 @@ def parse_num_processors(value: Union[str, int, float]):
 
     result = int(value)
     if result > max_processors:
-        raise Exception(f"Input value {value} exceeds number of available processors")
+        raise Exception(f"Input value {value} greater than available processors")
     if result < 1:
-        raise Exception(f"Input value {value} gives less than 1 processors")
+        raise Exception(f"Input value {value} less than 1 processors")
     return value
