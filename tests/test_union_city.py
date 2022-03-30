@@ -2,7 +2,7 @@ import os
 import pytest
 
 
-_UNION_CITY_ROOT_DIR = ""
+_EXAMPLES_ROOT_DIR = r"examples"
 
 
 @pytest.mark.skipci
@@ -10,10 +10,25 @@ def test_highway():
     from tm2py.controller import RunController
     import openmatrix as _omx
 
+    union_city_root = os.path.join(os.getcwd(), _EXAMPLES_ROOT_DIR, "UnionCity")
+    if not os.path.isdir(union_city_root):
+        root_dir = os.path.dirname(os.path.dirname(__file__))
+        if os.name == "nt":
+            os.popen(f"{root_dir}\\bin\\get_test_data.bat {_EXAMPLES_ROOT_DIR}")
+            import zipfile
+
+            with zipfile.ZipFile(
+                os.path.join(os.getcwd(), _EXAMPLES_ROOT_DIR, "test_data.zip"), "r"
+            ) as zip_ref:
+                zip_ref.extractall(union_city_root)
+            os.remove("test_data.zip")
+        else:
+            os.popen(f"{root_dir}\\bin\\get_test_data {_EXAMPLES_ROOT_DIR}")
+
     controller = RunController(
         [
-            os.path.join(_UNION_CITY_ROOT_DIR, r"example_union\scenario_config.toml"),
-            os.path.join(_UNION_CITY_ROOT_DIR, r"example_union\model_config.toml"),
+            os.path.join(union_city_root, r"scenario_config.toml"),
+            os.path.join(union_city_root, r"model_config.toml"),
         ]
     )
     controller.run()
