@@ -13,60 +13,22 @@ import os
 from socket import error as _socket_error
 from typing import Any, Dict, List, Union
 
-try:
-    # skip Emme import to support testing where Emme is not installed
-    # Note: some imports unused (W0611 message), so as to be available
-    #       to other tools, all Emme imports in one place, and can
-    #       be replaced with a Mock for testing
-    # PyLint cannot build AST from compiled Emme libraries
-    # so disabling relevant import module checks
-    # pylint: disable=E0611, E0401, E1101
-    from inro.emme.database.emmebank import Emmebank
-    from inro.emme.network import Network as EmmeNetwork
-    from inro.emme.database.scenario import Scenario as EmmeScenario
-    from inro.emme.database.matrix import Matrix as EmmeMatrix  # pylint: disable=W0611
-    from inro.emme.network.node import Node as EmmeNode  # pylint: disable=W0611
-    import inro.emme.desktop.app as _app
-    from inro.modeller import Modeller as EmmeModeller, logbook_write, logbook_trace
+# PyLint cannot build AST from compiled Emme libraries
+# so disabling relevant import module checks
+# pylint: disable=E0611, E0401, E1101
+from inro.emme.database.emmebank import Emmebank
+from inro.emme.network import Network as EmmeNetwork
+from inro.emme.database.scenario import Scenario as EmmeScenario
+from inro.emme.database.matrix import Matrix as EmmeMatrix  # pylint: disable=W0611
+from inro.emme.network.node import Node as EmmeNode  # pylint: disable=W0611
+import inro.emme.desktop.app as _app
+from inro.modeller import Modeller as EmmeModeller, logbook_write, logbook_trace
 
-    EmmeDesktopApp = _app.App
-except ModuleNotFoundError:
-    if "PYTEST_CURRENT_TEST" not in os.environ:
-        raise
-    # if running from pytest replace objects with Mocks
-    # pylint: disable=C0103
-    from unittest.mock import Mock, MagicMock
-    from numpy import zeros
+EmmeDesktopApp = _app.App
 
-    EmmeNetwork = Mock()
-    EmmeNetwork.links = MagicMock(return_value=[])
-    EmmeNetwork.nodes = MagicMock(return_value=[])
-    EmmeScenario = Mock()
-    EmmeScenario.get_network = MagicMock(return_value=EmmeNetwork)
-    EmmeScenario.get_partial_network = MagicMock(return_value=EmmeNetwork)
-    EmmeScenario.zone_numbers = list(range(43))
+#"Emme Manager requires Emme to be installed unless running in a test environment."
+#"Please install Emme and try again."
 
-    EmmeMatrix = Mock()
-    EmmeMatrix.get_numpy_data = MagicMock(return_value=zeros([43, 43]))
-    matrix_ids = iter(range(99999))
-    type(EmmeMatrix).name = property(
-        fget=lambda s: "test" + str(next(matrix_ids)), fset=lambda s, v: None
-    )
-    EmmeMatrix.description = "testtest"
-
-    EmmebankMock = Mock()
-    EmmebankMock.matrix = Mock(return_value=EmmeMatrix)
-    EmmebankMock.scenario = Mock(return_value=EmmeScenario)
-    EmmebankMock.path = ""
-    EmmeScenario.emmebank = EmmebankMock
-    Emmebank = Mock(return_value=EmmebankMock)
-
-    EmmeDesktopApp = Mock()
-    EmmeModeller = Mock()
-    EmmeNode = Mock()
-    logbook_write = Mock()
-    logbook_trace = MagicMock()
-    _app = Mock()
 
 # Cache running Emme projects from this process (simple singleton implementation)
 _EMME_PROJECT_REF = {}

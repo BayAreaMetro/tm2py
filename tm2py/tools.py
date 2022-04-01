@@ -48,13 +48,13 @@ def download_unzip(
         target_dir (str): What to unzip the file as.
         zip_filename (str, optional): Filename to store zip file as. Defaults to "test_data.zip".
     """
-    import urllib
+    import urllib.request
 
     target_zip = os.path.join(out_base_dir, zip_filename)
 
     if not os.path.isdir(out_base_dir):
         os.makedirs(out_base_dir)
-    urllib.urlretrieve(url, target_zip)
+    urllib.request.urlretrieve(url, target_zip)
 
     import zipfile
 

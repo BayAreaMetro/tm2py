@@ -1,7 +1,10 @@
 import os
+from unittest.mock import MagicMock
+import sys
+import numpy as np
 import pytest
 
-from tm2py.examples import get_example
+from pytest_mock.plugin import MockerFixture
 
 _EXAMPLES_DIR = r"examples"
 _ROOT_DIR = r".."
@@ -9,12 +12,25 @@ _ROOT_DIR = r".."
 
 @pytest.mark.menow
 def test_example_download():
+
+    sys.modules['inro.emme.database.emmebank'] = MagicMock()
+    sys.modules['inro.emme.network']=MagicMock()
+    sys.modules['inro.emme.database.scenario']=MagicMock()
+    sys.modules['inro.emme.database.matrix']=MagicMock()
+    sys.modules['inro.emme.network.node']=MagicMock()
+    sys.modules['inro.emme.desktop.app']=MagicMock()
+    sys.modules['inro']=MagicMock()
+    sys.modules['inro.modeller']=MagicMock()
+    #tm2py.emme.network.EmmeNetwork = Mock()
+    #EmmeNetwork.links = MagicMock(return_value=[])
+    from tm2py.examples import get_example
+
     example_dir = get_example("Union City")
     print(example_dir)
 
 
 @pytest.mark.skipci
-def test_highway():
+def test_highway(emme_mocker):
     from tm2py.controller import RunController
     import openmatrix as _omx
 
