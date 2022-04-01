@@ -1,5 +1,6 @@
 """Tools module for common resources / shared code and "utilities" in the tm2py package."""
 import multiprocessing
+from multiprocessing.sharedctypes import Value
 import os
 import re
 
@@ -37,6 +38,30 @@ def parse_num_processors(value: Union[str, int, float]):
     return value
 
 
+def _download(url,target_destination):
+    """Download fie with redirects (i.e. box)
+
+    Args:
+        url (_type_): _description_
+        target_destination (_type_): _description_
+
+    Raises:
+        ValueError: _description_
+    """    
+    import urllib.request
+    _request = urllib.request.Request(url)
+    # Handle Redirects using solution shown by user: metatoaster on StackOverflow
+    # https://stackoverflow.com/questions/62384020/python-3-7-urllib-request-doesnt-follow-redirect-url
+    try:
+        _response = urllib.request.urlopen(_request)
+    except urllib.error.HTTPError as e:
+        if e.status != 307:
+            raise  ValueError(f"HTTP Error {e.status}")
+        _redirected_url = urllib.parse.urljoin(url, e.headers['Location'])
+        _response = urllib.request.urlopen(_redirected_url)
+    with open(target_destination, 'wb') as f:
+        f.write(_response.read())
+
 def download_unzip(
     url: str, out_base_dir: str, target_dir: str, zip_filename: str = "test_data.zip"
 ) -> None:
@@ -54,7 +79,10 @@ def download_unzip(
 
     if not os.path.isdir(out_base_dir):
         os.makedirs(out_base_dir)
-    urllib.request.urlretrieve(url, target_zip)
+
+    _request = urllib.request.Request(url)
+
+    target_zip = _download(url,target_zip)
 
     import zipfile
 

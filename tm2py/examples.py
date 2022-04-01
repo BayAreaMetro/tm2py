@@ -8,7 +8,6 @@ _DEFAULT_EXAMPLE_URL = r"https://mtcdrive.box.com/s/3entr016e9teq2wt46x1os3fjqyl
 _DEFAULT_EXAMPLE_SUBDIR = r"examples"
 _DEFAULT_EXAMPLE_NAME = "UnionCity"
 
-
 def get_example(
     example_name: str = _DEFAULT_EXAMPLE_NAME,
     example_subdir: str = _DEFAULT_EXAMPLE_SUBDIR,

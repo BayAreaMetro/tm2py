@@ -9,8 +9,6 @@ from pytest_mock.plugin import MockerFixture
 _EXAMPLES_DIR = r"examples"
 _ROOT_DIR = r".."
 
-
-@pytest.mark.menow
 def test_example_download():
 
     sys.modules['inro.emme.database.emmebank'] = MagicMock()
@@ -23,6 +21,7 @@ def test_example_download():
     sys.modules['inro.modeller']=MagicMock()
     #tm2py.emme.network.EmmeNetwork = Mock()
     #EmmeNetwork.links = MagicMock(return_value=[])
+
     from tm2py.examples import get_example
 
     example_dir = get_example("Union City")
