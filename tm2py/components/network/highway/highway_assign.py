@@ -137,6 +137,8 @@ class HighwayAssignment(Component):
                         class_config["skims"],
                     )
                 self._export_skims(scenario, time)
+                if self.logger.debug_enabled:
+                    self._log_debug_report(scenario, time)
 
     @_context
     def _setup(self, scenario: EmmeScenario, time_period: str):
@@ -295,6 +297,30 @@ class HighwayAssignment(Component):
             omx_file_path, "w", scenario, matrix_cache=self._matrix_cache
         ) as omx_file:
             omx_file.write_matrices(self._skim_matrices)
+
+    def _log_debug_report(self, scenario: EmmeScenario, time_period: str):
+        num_zones = len(scenario.zone_numbers)
+        num_cells = num_zones * num_zones
+        self.logger.log(
+            f"Highway skim summary for period {time_period}", level="DEBUG"
+        )
+        self.logger.log(
+            f"Number of zones: {num_zones}. Number of O-D pairs: {num_cells}. "
+            "Values outside -9999999, 9999999 are masked in summaries.",
+            level="DEBUG",
+        )
+        self.logger.log(
+            "name                            min       max      mean           sum",
+            level="DEBUG",
+        )
+        for matrix in self._skim_matrices:
+            values = self._matrix_cache.get_data(matrix)
+            data = np.ma.masked_outside(values, -9999999, 9999999)
+            stats = (
+                f"{matrix.name:25} {data.min():9.4g} {data.max():9.4g} "
+                f"{data.mean():9.4g} {data.sum(): 13.7g}"
+            )
+            self.logger.log(stats, level="DEBUG")
 
 
 class AssignmentClass:

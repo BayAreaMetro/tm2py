@@ -102,21 +102,41 @@ class RunConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class LoggingConfig(ConfigItem):
-    """Logging parameters"""
+    """Logging parameters
+
+    Properties:
+        log_file_path
+        error_file_path
+        notify_slack
+        use_emme_logbook
+        display_level
+        file_level
+        iter_component_level
+    """
 
     log_file_path: str
     error_file_path: str
     notify_slack: bool
+    use_emme_logbook: bool
     display_level: str = "STATUS"
     file_level: str = "DETAIL"
-    iter_component_level: List[List[str]] = None
+    iter_component_level: Optional[Tuple[Tuple[str, ...], ...]] = Field(defaul=None)
 
 
 @dataclass(frozen=True)
 class TimePeriodConfig(ConfigItem):
-    """Time time period entry"""
+    """Time time period entry
 
-    name: str
+    Properties:
+        name: name of the time period, up to four characters
+        length_hours: length of the time period in hours
+        highway_capacity_factor: factor to use to multiple the per-hour
+            capacites in the highway network
+        emme_scenario_id: scenario ID to use for Emme per-period
+            assignment (highway and transit) scenarios
+    """
+
+    name: str = Field(max_length=4)
     length_hours: float = Field(gt=0)
     highway_capacity_factor: float = Field(gt=0)
     emme_scenario_id: int = Field(ge=1)
@@ -205,7 +225,7 @@ class HighwayCapClassConfig(ConfigItem):
         capclass: cross index for link @capclass lookup
         capacity: value for link capacity, PCE / hour
         free_flow_speed: value for link free flow speed, miles / hour
-        critical_speed: value for cirtical speed (Ja) used in Akcelik
+        critical_speed: value for critical speed (Ja) used in Akcelik
             type functions
     """
 
@@ -244,7 +264,7 @@ class HighwayClassConfig(ConfigItem):
     Note that excluded_links, skims and toll attribute names include
     vehicle groups ("{vehicle}") which reference the list of
     highway.toll.dst_vehicle_group_names (see HighwayTollsConfig).
-    The default example model config uses:
+    The example model config uses:
     "da", "sr2", "sr3", "vsm", sml", "med", "lrg"
 
     Example single class config:
@@ -305,7 +325,7 @@ class HighwayClassConfig(ConfigItem):
     """
 
     name: str = Field(min_length=1, max_length=10)
-    description: str = Field(default="")
+    description: Optional[str] = Field(default="")
     mode_code: str = Field(min_length=1, max_length=1)
     value_of_time: float = Field(gt=0)
     operating_cost_per_mile: float = Field(ge=0)
@@ -334,7 +354,8 @@ class HighwayTollsConfig(ConfigItem):
         dst_vehicle_group_names: list of names used in destination network
             for the corresponding vehicle group. Length of list must be the same
             as src_vehicle_group_names. Used for toll related attributes and
-            resulting skim matrices. Cross-referenced in list of highway.classes[]:
+            resulting skim matrices. Cross-referenced in list of highway.classes[],
+            valid keywords for:
                 excluded_links: "is_toll_{vehicle}"
                 tolls: "@bridgetoll_{vehicle}", "@valuetoll_{vehicle}"
                 skims: "bridgetoll_{vehicle}", "valuetoll_{vehicle}"
@@ -353,6 +374,13 @@ class HighwayTollsConfig(ConfigItem):
             assert len(value) == len(
                 values["src_vehicle_group_names"]
             ), "must be same length as src_vehicle_group_names"
+        return value
+
+    @classmethod
+    @validator("dst_vehicle_group_names", each=True)
+    def dst_vehicle_group_names_length(cls, value):
+        """Validate dst_vehicle_group_names items are 4 characters or less"""
+        assert len(value) <= 4, "must be 4 characters or less"
         return value
 
 
@@ -637,7 +665,8 @@ class Configuration(ConfigItem):
     scenario: ScenarioConfig
     run: RunConfig
     time_periods: Tuple[TimePeriodConfig, ...]
-    logging: LoggingConfig    household: HouseholdConfig
+    logging: LoggingConfig
+    household: HouseholdConfig
     air_passenger: AirPassengerConfig
     internal_external: InternalExternalConfig
     truck: TruckConfig
@@ -672,9 +701,9 @@ class Configuration(ConfigItem):
         """Validate highway.maz_to_maz.skim_period refers to a valid period"""
         if "time_periods" in values:
             time_period_names = set(time.name for time in values["time_periods"])
-        assert (
-                value.maz_to_maz.skim_period in time_period_names
-            ), "maz_to_maz -> skim_period -> name not found in time_periods list"
+            assert (
+                    value.maz_to_maz.skim_period in time_period_names
+                ), "maz_to_maz -> skim_period -> name not found in time_periods list"
         return value
 
 
