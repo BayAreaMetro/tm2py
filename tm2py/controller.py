@@ -103,26 +103,26 @@ class RunController:
 
     def _init_emme_manager(self):
         """Initialize Emme manager, start Emme desktop App, and initialize Modeller"""
-            self._emme_manager = EmmeManager()
-            project = self._emme_manager.project(
-                os.path.join(self.run_dir, self.config.emme.project_path)
-            )
-            # Initialize Modeller to use Emme assignment tools and other APIs
-            self._emme_manager.modeller(project)
+        self._emme_manager = EmmeManager()
+        project = self._emme_manager.project(
+            os.path.join(self.run_dir, self.config.emme.project_path)
+        )
+        # Initialize Modeller to use Emme assignment tools and other APIs
+        self._emme_manager.modeller(project)
 
     def run(self):
         """Main interface to run model"""
         with self.logger:
             self._iteration = None
             self.validate_inputs()
-        for iteration, name, component in self._queued_components:
+            for iteration, name, component in self._queued_components:
                 if self._iteration != iteration:
                     self.logger.log_time(f"Start iteration {iteration}")
                     self.logger.notify_slack(f"Start iteration {iteration} in {self.run_dir}")
-                self._iteration = iteration
+                    self._iteration = iteration
                 self._component = component
                 component.run()
-            self.completed_components.append((iteration, name, component))
+                self.completed_components.append((iteration, name, component))
                 self.logger.clear_msg_cache()
             self.logger.notify_slack(f"Finished model run without error in {self.run_dir}")
 
