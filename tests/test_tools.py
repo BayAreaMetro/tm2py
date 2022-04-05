@@ -39,7 +39,7 @@ def test_download_unzip():
         files_to_check = [
             "scenario_config.toml",
             "model_config.toml",
-            "inputs\\landuse\\maz_data.csv",
+            os.path.join("inputs", "landuse", "maz_data.csv"),
         ]
         for file_name in files_to_check:
             assert os.path.exists(
