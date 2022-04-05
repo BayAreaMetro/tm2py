@@ -3,32 +3,45 @@ import sys
 import os
 import pytest
 
-@pytest.mark.menow
-def test_download():
-
-    sys.modules['inro.emme.database.emmebank'] = MagicMock()
-    sys.modules['inro.emme.network']=MagicMock()
-    sys.modules['inro.emme.database.scenario']=MagicMock()
-    sys.modules['inro.emme.database.matrix']=MagicMock()
-    sys.modules['inro.emme.network.node']=MagicMock()
-    sys.modules['inro.emme.desktop.app']=MagicMock()
-    sys.modules['inro']=MagicMock()
-    sys.modules['inro.modeller']=MagicMock()
-    #tm2py.emme.network.EmmeNetwork = Mock()
-    #EmmeNetwork.links = MagicMock(return_value=[])
-
-    from tm2py.tools import _download
-    _EXAMPLE_URL = r"https://mtcdrive.box.com/s/3entr016e9teq2wt46x1os3fjqylfoge"
-    import tempfile
-    temp_file = os.path.join(tempfile.gettempdir(), "test_download.zip")
-    downloaded_file = _download(_EXAMPLE_URL,temp_file)
-    file_size = os.path.getsize(downloaded_file)
-    print(f"Downloaded file size: {file_size}")
-    print(f"Downloaded file size: {file_size}")
-    assert file_size>0
+_EXAMPLE_URL = (
+    r"https://mtcdrive.box.com/shared/static/3entr016e9teq2wt46x1os3fjqylfoge.zip"
+)
 
 
 @pytest.mark.menow
 def test_download_unzip():
-    pass
-    ##TODO KEVIN
+    # If (and only if) Emme is not installed, replace INRO libraries with MagicMock
+    try:
+        import inro.emme.database.emmebank
+    except ModuleNotFoundError:
+        sys.modules["inro.emme.database.emmebank"] = MagicMock()
+        sys.modules["inro.emme.network"] = MagicMock()
+        sys.modules["inro.emme.database.scenario"] = MagicMock()
+        sys.modules["inro.emme.database.matrix"] = MagicMock()
+        sys.modules["inro.emme.network.node"] = MagicMock()
+        sys.modules["inro.emme.desktop.app"] = MagicMock()
+        sys.modules["inro"] = MagicMock()
+        sys.modules["inro.modeller"] = MagicMock()
+
+    from tm2py.tools import _download, _unzip
+
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_file = os.path.join(temp_dir, "test_download.zip")
+        unzip_directory = os.path.join(temp_dir, "test_download")
+        _download(_EXAMPLE_URL, temp_file)
+        assert os.path.getsize(temp_file) > 0, "download failed"
+
+        _unzip(temp_file, unzip_directory)
+        assert os.path.exists(unzip_directory), "unzip failed, no directory"
+        assert os.path.getsize(unzip_directory) > 0, "unzip failed, empty directory"
+        files_to_check = [
+            "scenario_config.toml",
+            "model_config.toml",
+            "inputs\\landuse\\maz_data.csv",
+        ]
+        for file_name in files_to_check:
+            assert os.path.exists(
+                os.path.join(unzip_directory, file_name)
+            ), f"unzip failed, missing {file_name}"

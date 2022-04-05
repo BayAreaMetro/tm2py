@@ -26,8 +26,8 @@ from inro.modeller import Modeller as EmmeModeller, logbook_write, logbook_trace
 
 EmmeDesktopApp = _app.App
 
-#"Emme Manager requires Emme to be installed unless running in a test environment."
-#"Please install Emme and try again."
+# "Emme Manager requires Emme to be installed unless running in a test environment."
+# "Please install Emme and try again."
 
 
 # Cache running Emme projects from this process (simple singleton implementation)
