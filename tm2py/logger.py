@@ -20,6 +20,7 @@ ERROR: problem causing operation to halt which is normal
 FATAL: severe problem requiring operation to stop immediately.
 """
 
+from __future__ import annotations
 from contextlib import contextmanager as _context
 from datetime import datetime
 import functools
@@ -28,14 +29,14 @@ from pprint import pformat
 import requests
 import socket
 import traceback as _traceback
-from typing import TYPE_CHECKING, get_args
-from typing_extensions import Literal
+from typing import TYPE_CHECKING, Union
+from typing_extensions import Literal, get_args
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
 
 LogLevel = Literal["TRACE", "DEBUG", "DETAIL", "INFO", "STATUS", "WARN", "ERROR", "FATAL"]
-levels = dict(enumerate(get_args(LogLevel)))
+levels = dict((k, i) for i, k in enumerate(get_args(LogLevel)))
 
 
 class Logger:
@@ -45,22 +46,74 @@ class Logger:
     TRACE, DEBUG, DETAIL, INFO, STATUS, WARN, ERROR, FATAL
     Which will filter all messages of that severity and higher.
     See module note on use of descriptive level names.
+
+    To be used as a context, e.g.::
+
+        with Logger(controller) as logger:
+            logger.log("a message")
+            with logger.log_start_end("Running a set of steps"):
+                logger.log_time("Message with timestamp")
+                logger.log("A debug message", level="DEBUG")
+                if logger.debug_enabled:
+                    # only generate this report if logging DEBUG
+                    logger.log(
+                        "A debug report that takes time to produce",
+                        level="DEBUG")
+
+    Note that the Logger should not be used until opened with a context.
+    Logger.log will not write to file.
+
+    Note that the Logger should only be initialized once per model run.
+    In places where the controller is not available, the last Logger
+    initialized can be obtained from the class method get_logger::
+
+        logger = Logger.get_logger()
+
+
+    Internal properties:
+        _indentation: current indentation level, used to group
+            messages within the same context with log_start_end
+        _log_file_path: absolute path to write standard log file
+        _error_file_path: absolute path to write log on error file
+        _log_file: open log file object
+        _msg_cache: all messages which have been logged
+        _display_level: input display filter log level
+        _default_print_level: input print (log to file) level
+        _iter_component_level: dictionary of (iter, component) : int level
+            overrides _default_print_level
+        _use_emme_logbook: whether Emme logbook is enabled
+        _slack_notifier: SlackNotifier object for sending messages to slack
     """
+
+    # used to cache last initialized Logger
+    _instance = None
+
+    def __new__(cls, controller: RunController):
+        cls._instance = super(Logger, cls).__new__(cls)
+        return cls._instance
 
     def __init__(self, controller: RunController):
         super().__init__()
         self.controller = controller
         log_config = controller.config.logging
-        self._indentation = 0
+        self._display_indent = 0
+        self._log_indent = 0
         self._log_file_path = os.path.join(controller.run_dir, log_config.log_file_path)
-        self._error_file_path = os.path.join(controller.run_dir, log_config.error_file_path)
         self._log_file = None
+        self._error_file_path = os.path.join(controller.run_dir, log_config.error_file_path)
+
         self._msg_cache = []
         self._display_level = levels[log_config.log_display_level]
-        self.__print_level = levels[log_config.log_file_level]
-        self._iter_component_level = dict(((i, c), levels[l]) for i, c, l in log_config.iter_component_level)
+        self._default_print_level = levels[log_config.log_file_level]
+        iter_component_level = log_config.iter_component_level or []
+        self._iter_component_level = dict(((i, c), levels[l]) for i, c, l in iter_component_level)
         self._use_emme_logbook = self.controller.config.logging.use_emme_logbook
         self._slack_notifier = SlackNotifier(self)
+
+    @classmethod
+    def get_logger(cls):
+        """Return the last initialized logger object """
+        return cls._instance
 
     def notify_slack(self, text: str):
         """Send message to slack if enabled by config
@@ -71,27 +124,59 @@ class Logger:
         if self.controller.config.logging.notify_slack:
             self._slack_notifier.post_message(text)
 
-    def log(self, text: str, level: LogLevel = "INFO"):
+    def log(self, text: str, level: LogLevel = "INFO", indent: bool = False, time: bool = False):
         """Log text to file and display depending upon log level and config
+
+        Note that log will not write to file until opened with a context.
 
         Args:
             text (str): text to log
             level (str): logging level
+            indent (bool): if true indent text based on the number of open contexts
+            time (bool): if true include timestamp
         """
+        timestamp = datetime.now() if time else None
         if levels[level] >= self._display_level:
-            print(text)
-        if levels[level] >= self._print_level:
-            self._log_file.write(f"{text}\n")
+            print(self._format_text(text, indent, timestamp, True))
+        text = self._format_text(text, indent, timestamp, False)
+        if levels[level] >= self._print_level and self._log_file:
+            self._log_file.write(text)
             if self._use_emme_logbook:
                 self.controller.emme_manager.logbook_write(text)
         self._msg_cache.append((level, text))
 
+    def _format_text(self, text: str, indent: bool, timestamp: Union[datetime, None], is_display: bool):
+        """Format text for logging
+
+        Args:
+            text (str): text to format
+            indent (bool): if true indent text based on the number of open contexts and
+                timestamp width
+            timestamp (datetime): datetime or None for timestamp
+            is_display (bool): format for display (print) if True, else for write to file
+        """
+        if timestamp is not None:
+            timestamp = timestamp.strftime("%d-%b-%Y (%H:%M:%S): ")
+        elif indent:
+            timestamp = "                        "
+        else:
+            timestamp = ""
+        if indent:
+            num_indents = self._display_indent if is_display else self._log_indent
+            indent = "  " * max(num_indents, 0)
+        else:
+            indent = ""
+        if is_display:
+            return f"{timestamp}{indent}{text}"
+        return f"{timestamp}{indent}{text}\n"
+
     @property
     def _print_level(self):
+        """Current log level, includes iter_component_level config override."""
         level = self._iter_component_level.get(self.controller.iter_component)
         if level is not None:
             return level
-        return self.__print_level
+        return self._default_print_level
 
     def log_time(self, text: str, level: LogLevel = "INFO", indent: bool = True):
         """Log message with timestamp
@@ -99,16 +184,91 @@ class Logger:
         Args:
             text (str): text to log
             level (str): logging level
-            indent (bool): if true indent any messages based on the number of open contexts
+            indent (bool): if true indent text based on the number of open contexts
         """
-        timestamp = datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
-        if indent:
-            indent = "  " * self._indentation
-            self.log(f"{timestamp}: {indent}{text}", level)
-        else:
-            self.log(f"{timestamp}: {text}", level)
+        self.log(text, level, indent, time=True)
 
-    def log_start(self, text: str, level: LogLevel = "INFO"):
+    def trace(self, text: str, indent: bool = False, time: bool = False):
+        """Log text with level=TRACE
+
+        Args:
+            text (str): text to log
+            indent (bool): if true indent text based on the number of open contexts
+            time (bool): if true include timestamp
+        """
+        self.log(text, "TRACE", indent, time)
+
+    def debug(self, text: str, indent: bool = False, time: bool = False):
+        """Log text with level=DEBUG
+
+        Args:
+            text (str): text to log
+            indent (bool): if true indent text based on the number of open contexts
+            time (bool): if true include timestamp
+        """
+        self.log(text, "DEBUG", indent, time)
+
+    def detail(self, text: str, indent: bool = False, time: bool = False):
+        """Log text with level=DETAIL
+
+        Args:
+            text (str): text to log
+            indent (bool): if true indent text based on the number of open contexts
+            time (bool): if true include timestamp
+        """
+        self.log(text, "DETAIL", indent, time)
+
+    def info(self, text: str, indent: bool = False, time: bool = False):
+        """Log text with level=INFO
+
+        Args:
+            text (str): text to log
+            indent (bool): if true indent text based on the number of open contexts
+            time (bool): if true include timestamp
+        """
+        self.log(text, "INFO", indent, time)
+
+    def status(self, text: str, indent: bool = False, time: bool = False):
+        """Log text with level=STATUS
+
+        Args:
+            text (str): text to log
+            indent (bool): if true indent text based on the number of open contexts
+            time (bool): if true include timestamp
+        """
+        self.log(text, "STATUS", indent, time)
+
+    def warn(self, text: str, indent: bool = False, time: bool = False):
+        """Log text with level=WARN
+
+        Args:
+            text (str): text to log
+            indent (bool): if true indent text based on the number of open contexts
+            time (bool): if true include timestamp
+        """
+        self.log(text, "WARN", indent, time)
+
+    def error(self, text: str, indent: bool = False, time: bool = False):
+        """Log text with level=ERROR
+
+        Args:
+            text (str): text to log
+            indent (bool): if true indent text based on the number of open contexts
+            time (bool): if true include timestamp
+        """
+        self.log(text, "ERROR", indent, time)
+
+    def fatal(self, text: str, indent: bool = False, time: bool = False):
+        """Log text with level=FATAL
+
+        Args:
+            text (str): text to log
+            indent (bool): if true indent text based on the number of open contexts
+            time (bool): if true include timestamp
+        """
+        self.log(text, "FATAL", indent, time)
+
+    def _log_start(self, text: str, level: LogLevel = "INFO"):
         """Log message with timestamp and 'Start'.
 
         Args:
@@ -116,20 +276,26 @@ class Logger:
             level (str): logging level
         """
         self.log_time(f"Start {text}", level, indent=True)
-        self._indentation += 1
+        if levels[level] >= self._display_level:
+            self._display_indent += 1
+        if levels[level] >= self._print_level:
+            self._log_indent += 1
 
-    def log_end(self, text: str, level: LogLevel = "INFO"):
+    def _log_end(self, text: str, level: LogLevel = "INFO"):
         """Log message with timestamp and 'End'.
 
         Args:
             text (str): message text
             level (str): logging level
         """
-        self._indentation -= 1
+        if levels[level] >= self._display_level:
+            self._display_indent -= 1
+        if levels[level] >= self._print_level:
+            self._log_indent -= 1
         self.log_time(f"End {text}", level, indent=True)
 
     @_context
-    def log_start_end(self, text: str, level: LogLevel = "INFO"):
+    def log_start_end(self, text: str, level: LogLevel = "STATUS"):
         """Use with 'with' statement to log the start and end time with message.
 
         If using the Emme logbook (config.logging.use_emme_logbook is True), will
@@ -140,14 +306,14 @@ class Logger:
             level (str): logging level
         """
         with self._skip_emme_logging():
-            self.log_start(text, level)
+            self._log_start(text, level)
         if self._use_emme_logbook:
             with self.controller.emme_manager.logbook_trace(text):
                 yield
         else:
             yield
         with self._skip_emme_logging():
-            self.log_end(text, level)
+            self._log_end(text, level)
 
     def log_dict(self, mapping: dict, level: LogLevel = "DEBUG"):
         """Format dictionary to string and log as text"""
@@ -167,19 +333,22 @@ class Logger:
 
     def __enter__(self):
         self._log_file = open(self._log_file_path, "w", encoding="utf8")
-        os.remove(self._error_file_path)
+        if os.path.exists(self._error_file_path):
+            os.remove(self._error_file_path)
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
+            self.log("Error during model run", level="ERROR")
             with open(self._error_file_path, "w", encoding="utf8") as file:
                 for level, text in self._msg_cache:
-                    file.write(f"{level:6} {text}\n")
+                    file.write(f"{level:6} {text}")
                 _traceback.print_exception(exc_type, exc_val, exc_tb, file=file)
-            self.log("Error during model run", level="ERROR")
             self.notify_slack(f"Error during model run in {self.controller.run_dir}.")
             self.notify_slack(f"{exc_val}")
             _traceback.print_exception(exc_type, exc_val, exc_tb, file=self._log_file)
         self._log_file.close()
+        self._log_file = None
 
     def clear_msg_cache(self):
         """Clear all log messages from cache."""
@@ -192,7 +361,8 @@ class Logger:
         Can be used to enable / disable debug logging which may have a performance
         impact.
         """
-        return "DEBUG" in self._print_level or "DEBUG" in self._display_level
+        debug = levels["DEBUG"]
+        return self._print_level <= debug or self._display_level <= debug
 
     @property
     def trace_enabled(self) -> bool:
@@ -201,7 +371,8 @@ class Logger:
         Can be used to enable / disable trace logging which may have a performance
         impact.
         """
-        return "TRACE" in self._print_level or "TRACE" in self._display_level
+        trace = levels["TRACE"]
+        return self._print_level <= trace or self._display_level <= trace
 
 
 # pylint: disable=too-few-public-methods
@@ -209,8 +380,8 @@ class Logger:
 
 class LogStartEnd:
     """Log the start and end time with optional message.
-
     Used as a Component method decorator. If msg is not provided a default message
+
     is generated with the object class and method name.
 
     Args:
@@ -226,7 +397,7 @@ class LogStartEnd:
         @functools.wraps(func)
         def wrapper(obj, *args, **kwargs):
             text = self.text or obj.__class__.__name__ + " " + func.__name__
-            with obj.logger.log_start_end(text, self.level)
+            with obj.logger.log_start_end(text, self.level):
                 value = func(obj, *args, **kwargs)
             return value
 
@@ -247,6 +418,9 @@ class SlackNotifier:
 
     def __init__(self, logger: Logger, slack_webhook_url: str = None):
         self.logger = logger
+        if not logger.controller.config.logging.notify_slack:
+            self._slack_webhook_url = None
+            return
         if slack_webhook_url is None:
             hostname = socket.getfqdn()
             if hostname.endswith(".mtc.ca.gov"):
@@ -272,9 +446,10 @@ class SlackNotifier:
         Args:
             - text: text message to send to slack
         """
+        if self._slack_webhook_url is None:
+            return
         headers = {"Content-type": "application/json"}
         data = {"text": text}
-        if self._slack_webhook_url:
-            self.logger.log(f"Sending message to slack: {text}", level="TRACE")
-            response = requests.post(self._slack_webhook_url, headers=headers, json=data)
-            self.logger.log(f"Receiving response: {response}", level="TRACE")
+        self.logger.log(f"Sending message to slack: {text}", level="TRACE")
+        response = requests.post(self._slack_webhook_url, headers=headers, json=data)
+        self.logger.log(f"Receiving response: {response}", level="TRACE")
