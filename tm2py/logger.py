@@ -44,6 +44,7 @@ levels = dict((k, i) for i, k in enumerate(get_args(LogLevel)))
 
 # pylint: disable=too-many-instance-attributes
 
+
 class Logger:
     """Logging of message text for display, text file, and Emme logbook, as well as notify to slack.
 
