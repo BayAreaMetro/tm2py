@@ -7,11 +7,6 @@ from typing import Union, Collection  # , TYPE_CHECKING
 from tm2py.components.component import Component
 from tm2py.logger import LogStartEnd
 
-# from tm2py import tools
-
-# if TYPE_CHECKING:
-#     from tm2py.controller import RunController
-
 
 class PrepareTransitNetwork(Component):
     """Transit assignment and skim-related network preparation"""
@@ -38,6 +33,13 @@ class PrepareTransitNetwork(Component):
                 self._update_connector_times(scenario, network, time)
 
     def _update_auto_times(self, scenario, transit_network, period):
+        """
+
+        Args:
+            scenario:
+            transit_network:
+            period:
+        """
         emme_manager = self.controller.emme_manager
         attributes = {
             "LINK": ["#link_id", "@trantime"],
@@ -77,6 +79,13 @@ class PrepareTransitNetwork(Component):
         emme_manager.copy_attribute_values(transit_network, scenario, attributes)
 
     def _update_connector_times(self, scenario, network, period):
+        """
+
+        Args:
+            scenario:
+            network:
+            period:
+        """
         # walk time attributes per skim set
         emme_manager = self.controller.emme_manager
         attributes = {"NODE": ["@taz_id", "#node_id"]}
@@ -107,6 +116,14 @@ class PrepareTransitNetwork(Component):
         )
 
     def _process_connector_file(self, direction, connectors, class_attr_map, period):
+        """
+
+        Args:
+            direction:
+            connectors:
+            class_attr_map:
+            period:
+        """
         period_name = period.lower()
         if direction == "access":
             from_name = "from_taz"

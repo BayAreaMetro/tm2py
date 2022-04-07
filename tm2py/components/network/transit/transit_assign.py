@@ -384,7 +384,20 @@ class TransitAssignment(Component):
 
 
 class AssignmentClass:
-    """Transit assignment class, represents data from config and conversion to Emme specs"""
+    """Transit assignment class, represents data from config and conversion to Emme specs
+
+    Internal properties:
+        _name: the class name loaded from config (not to be changed)
+        _class_config: the transit class config (TransitClassConfig)
+        _transit_config: the root transit assignment config (TransitConfig)
+        _time_period: the time period name
+        _iteration: the current iteration
+        _num_processors: the number of processors to use, loaded from config
+        _fare_modes: the mapping from the generated fare mode ID to the original
+            source mode ID
+        _spec_dir: directory to find the generated journey levels tables from
+            the apply fares step
+    """
 
     # disable too many instance attributes and arguments recommendations
     # pylint: disable=R0902, R0913
@@ -399,6 +412,19 @@ class AssignmentClass:
         fare_modes: Dict[str, Set[str]],
         spec_dir: str,
     ):
+        """
+
+        Args:
+            class_config: the transit class config (TransitClassConfig)
+            transit_config: the root transit assignment config (TransitConfig)
+            time_period: the time period name
+            iteration: the current iteration
+            num_processors: the number of processors to use, loaded from config
+            fare_modes: the mapping from the generated fare mode ID to the original
+                source mode ID
+            spec_dir: directory to find the generated journey levels tables from
+                the apply fares step
+        """
         self._name = class_config.name
         self._class_config = class_config
         self._transit_config = transit_config

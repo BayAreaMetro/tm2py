@@ -74,6 +74,11 @@ class TransitSkim(Component):
                     self._matrix_cache = None
 
     def _tmplt_skim_matrices(self, names_only=False):
+        """
+
+        Args:
+            names_only:
+        """
         tmplt_matrices = [
             ("FIRSTWAIT", "first wait time"),
             ("XFERWAIT", "transfer wait time"),
@@ -106,6 +111,7 @@ class TransitSkim(Component):
         return tmplt_matrices
 
     def _create_skim_matrices(self):
+        """"""""
         time = self._time_period
         scenario = self._scenario
         create_matrix = self.controller.emme_manager.tool(
@@ -127,6 +133,7 @@ class TransitSkim(Component):
                     self._skim_matrices.append(matrix)
 
     def _run_skims(self):
+        """"""
         use_ccr = False
         if self.controller.iteration >= 1:
             use_ccr = self.config.transit.use_ccr
@@ -142,6 +149,7 @@ class TransitSkim(Component):
                 self._ccr_skims()
 
     def _skim_walk_wait_fares(self):
+        """"""
         # First and total wait time, number of boardings, fares, total walk time, in-vehicle time
         name = f"{self._time_period}_{self._assign_class.name}"
         all_modes = [
@@ -223,6 +231,7 @@ class TransitSkim(Component):
         )
 
     def _invehicle_time_by_mode(self):
+        """"""
         network = self._network
         matrix_calc = self.controller.emme_manager.tool(
             "inro.emme.matrix_calculation.matrix_calculator"
@@ -273,6 +282,7 @@ class TransitSkim(Component):
         matrix_calc(spec, scenario=self._scenario, num_processors=self._num_processors)
 
     def _get_emme_mode_ids(self):
+        """"""
         attributes = {"TRANSIT_LINE": ["#src_mode"], "TRANSIT_SEGMENT": ["@base_timtr"]}
         self._copy_attribute_values(self._scenario, self._network, attributes)
         valid_modes = [
@@ -295,6 +305,7 @@ class TransitSkim(Component):
         return emme_mode_ids
 
     def _ccr_skims(self):
+        """"""
         name = f"{self._time_period}_{self._assign_class.name}"
         # # Link unreliability
         # self._run_strategy_analysis({"in_vehicle": "@ul1"}, f'mf"{name}_LINKREL"')
@@ -308,6 +319,7 @@ class TransitSkim(Component):
         )
 
     def _run_matrix_results(self, spec):
+        """"""
         matrix_results = self.controller.emme_manager.tool(
             "inro.emme.transit_assignment.extended.matrix_results"
         )
@@ -319,6 +331,12 @@ class TransitSkim(Component):
         )
 
     def _run_strategy_analysis(self, components, matrix_name):
+        """
+
+        Args:
+            components:
+            matrix_name:
+        """
         strategy_analysis = self.controller.emme_manager.tool(
             "inro.emme.transit_assignment.extended.strategy_based_analysis"
         )
@@ -343,7 +361,7 @@ class TransitSkim(Component):
         )
 
     def _mask_allpen(self):
-        # Reset skims to 0 if not both local and premium
+        """Reset skims to 0 if not both local and premium"""
         localivt_skim = self._matrix_cache.get_data(
             f'mf"{self._time_period}_ALLPEN_LBIVTT"'
         )
@@ -358,7 +376,7 @@ class TransitSkim(Component):
             self._matrix_cache.set_data(mat_name, data * has_both)
 
     def _mask_transfers(self):
-        # Reset skims to 0 if number of transfers is greater than max_transfers
+        """Reset skims to 0 if number of transfers is greater than max_transfers"""
         max_transfers = self.config.transit.max_transfers
         for klass in self.config.transit.classes:
             xfers = self._matrix_cache.get_data(
@@ -386,7 +404,7 @@ class TransitSkim(Component):
         ) as omx_file:
             omx_file.write_matrices(self._skim_matrices)
 
-    def _report(self):
+    def _debug_report(self):
         num_zones = len(self._scenario.zone_numbers)
         num_cells = num_zones * num_zones
         self.logger.log(
