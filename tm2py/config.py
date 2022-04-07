@@ -105,7 +105,8 @@ class RunConfig(ConfigItem):
     @classmethod
     @validator("start_component")
     def start_component_used(cls, value, values):
-        """Validate start_component is listed in initial_components or global_iteration_components"""
+        """Validate start_component is listed in initial_components or global_iteration_components
+        """
         if "start_iteration" in values:
             if values["start_iteration"] == 0:
                 if "initial_components" in values:
@@ -119,7 +120,9 @@ class RunConfig(ConfigItem):
         return value
 
 
-LogLevel = Literal["TRACE", "DEBUG", "DETAIL", "INFO", "STATUS", "WARN", "ERROR", "FATAL"]
+LogLevel = Literal[
+    "TRACE", "DEBUG", "DETAIL", "INFO", "STATUS", "WARN", "ERROR", "FATAL"
+]
 
 
 @dataclass(frozen=True)
@@ -150,7 +153,9 @@ class LoggingConfig(ConfigItem):
     use_emme_logbook: Optional[bool] = Field(default=True)
     log_display_level: Optional[LogLevel] = Field(default="STATUS")
     log_file_level: Optional[LogLevel] = Field(default="DETAIL")
-    iter_component_level: Optional[Tuple[Tuple[int, ComponentNames, LogLevel], ...]] = Field(default=None)
+    iter_component_level: Optional[
+        Tuple[Tuple[int, ComponentNames, LogLevel], ...]
+    ] = Field(default=None)
 
 
 @dataclass(frozen=True)
@@ -415,15 +420,15 @@ class HighwayTollsConfig(ConfigItem):
 
 
 COUNTY_NAMES = Literal[
-            "San Francisco",
-            "San Mateo",
-            "Santa Clara",
-            "Alameda",
-            "Contra Costa",
-            "Solano",
-            "Napa",
-            "Sonoma",
-            "Marin",
+    "San Francisco",
+    "San Mateo",
+    "Santa Clara",
+    "Alameda",
+    "Contra Costa",
+    "Solano",
+    "Napa",
+    "Sonoma",
+    "Marin",
 ]
 
 
@@ -703,7 +708,7 @@ class Configuration(ConfigItem):
     highway: HighwayConfig
     transit: TransitConfig
     emme: EmmeConfig
-    logging: Optional[LoggingConfig] = Field(default_factory=lambda: LoggingConfig())
+    logging: Optional[LoggingConfig] = Field(default_factory=LoggingConfig)
 
     @classmethod
     def load_toml(cls, path: Union[str, List[str]]):
@@ -732,8 +737,8 @@ class Configuration(ConfigItem):
         if "time_periods" in values:
             time_period_names = set(time.name for time in values["time_periods"])
             assert (
-                    value.maz_to_maz.skim_period in time_period_names
-                ), "maz_to_maz -> skim_period -> name not found in time_periods list"
+                value.maz_to_maz.skim_period in time_period_names
+            ), "maz_to_maz -> skim_period -> name not found in time_periods list"
         return value
 
 

@@ -26,18 +26,23 @@ from datetime import datetime
 import functools
 import os
 from pprint import pformat
-import requests
 import socket
 import traceback as _traceback
 from typing import TYPE_CHECKING, Union
 from typing_extensions import Literal, get_args
 
+import requests
+
 if TYPE_CHECKING:
     from tm2py.controller import RunController
 
-LogLevel = Literal["TRACE", "DEBUG", "DETAIL", "INFO", "STATUS", "WARN", "ERROR", "FATAL"]
+LogLevel = Literal[
+    "TRACE", "DEBUG", "DETAIL", "INFO", "STATUS", "WARN", "ERROR", "FATAL"
+]
 levels = dict((k, i) for i, k in enumerate(get_args(LogLevel)))
 
+
+# pylint: disable=too-many-instance-attributes
 
 class Logger:
     """Logging of message text for display, text file, and Emme logbook, as well as notify to slack.
@@ -76,7 +81,7 @@ class Logger:
         _log_file_path: absolute path to write standard log file
         _error_file_path: absolute path to write log on error file
         _log_file: open log file object
-        _msg_cache: all messages which have been logged
+        _msg_cache: all messages which have been logged since last clear_msg_cache()
         _display_level: input display filter log level
         _default_print_level: input print (log to file) level
         _iter_component_level: dictionary of (iter, component) : int level
@@ -89,6 +94,7 @@ class Logger:
     _instance = None
 
     def __new__(cls, controller: RunController):
+        # pylint: disable=unused-argument
         cls._instance = super(Logger, cls).__new__(cls)
         return cls._instance
 
@@ -100,19 +106,23 @@ class Logger:
         self._log_indent = 0
         self._log_file_path = os.path.join(controller.run_dir, log_config.log_file_path)
         self._log_file = None
-        self._error_file_path = os.path.join(controller.run_dir, log_config.error_file_path)
+        self._error_file_path = os.path.join(
+            controller.run_dir, log_config.error_file_path
+        )
 
         self._msg_cache = []
         self._display_level = levels[log_config.log_display_level]
         self._default_print_level = levels[log_config.log_file_level]
         iter_component_level = log_config.iter_component_level or []
-        self._iter_component_level = dict(((i, c), levels[l]) for i, c, l in iter_component_level)
+        self._iter_component_level = dict(
+            ((i, c), levels[l]) for i, c, l in iter_component_level
+        )
         self._use_emme_logbook = self.controller.config.logging.use_emme_logbook
         self._slack_notifier = SlackNotifier(self)
 
     @classmethod
     def get_logger(cls):
-        """Return the last initialized logger object """
+        """Return the last initialized logger object"""
         return cls._instance
 
     def notify_slack(self, text: str):
@@ -124,7 +134,13 @@ class Logger:
         if self.controller.config.logging.notify_slack:
             self._slack_notifier.post_message(text)
 
-    def log(self, text: str, level: LogLevel = "INFO", indent: bool = False, time: bool = False):
+    def log(
+        self,
+        text: str,
+        level: LogLevel = "INFO",
+        indent: bool = False,
+        time: bool = False,
+    ):
         """Log text to file and display depending upon log level and config
 
         Note that log will not write to file until opened with a context.
@@ -145,7 +161,13 @@ class Logger:
                 self.controller.emme_manager.logbook_write(text)
         self._msg_cache.append((level, text))
 
-    def _format_text(self, text: str, indent: bool, timestamp: Union[datetime, None], is_display: bool):
+    def _format_text(
+        self,
+        text: str,
+        indent: bool,
+        timestamp: Union[datetime, None],
+        is_display: bool,
+    ):
         """Format text for logging
 
         Args:
@@ -324,7 +346,7 @@ class Logger:
         """Temporary disable Emme logging (if enabled) and restore on exit
 
         Intended use is with the log_start_end context and LogStartEnd decorator
-        to allow use of the Emme context without double logging of the 
+        to allow use of the Emme context without double logging of the
         messages in the Emme logbook.
         """
         self._use_emme_logbook, use_emme = False, self._use_emme_logbook
@@ -424,19 +446,32 @@ class SlackNotifier:
         if slack_webhook_url is None:
             hostname = socket.getfqdn()
             if hostname.endswith(".mtc.ca.gov"):
-                slack_webhook_url_file = r"M:\Software\Slack\TravelModel_SlackWebhook.txt"
-                self.logger.log(f"SlackNotifier running on mtc host; using {slack_webhook_url_file}", level="TRACE")
+                slack_webhook_url_file = (
+                    r"M:\Software\Slack\TravelModel_SlackWebhook.txt"
+                )
+                self.logger.log(
+                    f"SlackNotifier running on mtc host; using {slack_webhook_url_file}",
+                    level="TRACE",
+                )
             else:
-                slack_webhook_url_file = r"C:\Software\Slack\TravelModel_SlackWebhook.txt"
-                self.logger.log(f"SlackNotifier running on non-mtc host; using {slack_webhook_url_file}", level="TRACE")
+                slack_webhook_url_file = (
+                    r"C:\Software\Slack\TravelModel_SlackWebhook.txt"
+                )
+                self.logger.log(
+                    f"SlackNotifier running on non-mtc host; using {slack_webhook_url_file}",
+                    level="TRACE",
+                )
             if os.path.isfile(slack_webhook_url_file):
-                with open(slack_webhook_url_file, 'r', encoding="utf8") as f:
-                    self._slack_webhook_url = f.read()
+                with open(slack_webhook_url_file, "r", encoding="utf8") as url_file:
+                    self._slack_webhook_url = url_file.read()
             else:
                 self._slack_webhook_url = None
         else:
             self._slack_webhook_url = slack_webhook_url
-        self.logger.log(f"SlackNotifier using slack webhook url {self._slack_webhook_url}", level="TRACE")
+        self.logger.log(
+            f"SlackNotifier using slack webhook url {self._slack_webhook_url}",
+            level="TRACE",
+        )
 
     def post_message(self, text):
         """

@@ -43,6 +43,9 @@ def test_config_read():
     )
     assert len(my_config.time_periods) == 5
     assert my_config.highway.classes[0].description == "drive alone"
+    # use default values for logging parameters
+    assert my_config.logging.log_file_path == "log.txt"
+    assert my_config.logging.log_display_level == "STATUS"
 
 
 @pytest.mark.xfail

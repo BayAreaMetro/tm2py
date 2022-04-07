@@ -125,14 +125,18 @@ class RunController:
             for iteration, name, component in self._queued_components:
                 if self._iteration != iteration:
                     self.logger.log_time(f"Start iteration {iteration}")
-                    self.logger.notify_slack(f"Start iteration {iteration} in {self.run_dir}")
+                    self.logger.notify_slack(
+                        f"Start iteration {iteration} in {self.run_dir}"
+                    )
                     self._iteration = iteration
                 self._component = component
                 self._component_name = name
                 component.run()
                 self.completed_components.append((iteration, name, component))
                 self.logger.clear_msg_cache()
-            self.logger.notify_slack(f"Finished model run without error in {self.run_dir}")
+            self.logger.notify_slack(
+                f"Finished model run without error in {self.run_dir}"
+            )
 
     def _queue_components(self):
         """Add components per iteration to queue according to input Config"""
@@ -156,7 +160,7 @@ class RunController:
                 iteration_nums,
                 iteration_components,
                 self.config.run.global_iteration_components,
-        )
+            )
         )
         self._queued_components += [
             (self.config.run.end_iteration + 1, component_map[c_name])
