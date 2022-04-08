@@ -4,7 +4,9 @@ from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 
-from typing import TYPE_CHECKING, Union, Collection, List
+from typing import TYPE_CHECKING, List
+
+from tm2py.emme.manager import EmmeScenario, Emmebank
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
@@ -45,12 +47,16 @@ class Component(ABC):
         """Get the absolute path from the root run directory given a relative path."""
         return os.path.join(self.controller.run_dir, rel_path)
 
-    def get_emme_scenario(self, emmebank: str, time_period: str):
+    def get_emme_scenario(self, emmebank: Union[Emmebank, str], time_period: str) -> EmmeScenario:
         """Get the Emme scenario object from the Emmebank at emmebank_path for the time_period ID.
 
         Args:
-            emmebank: Emmebank object or valid Emmebank path, can be relative to root run directory
+            emmebank: valid Emmebank path, absolute or relative to root run directory, 
+                or already constructed Emmebank object
             time_period: valid time_period ID
+
+        Returns
+            Emme Scenario object (see Emme API Reference)
         """
         if isinstance(emmebank, str):
             if not os.path.isabs(emmebank):
@@ -85,7 +91,7 @@ class Component(ABC):
         """Validate inputs are correct at model initiation, fail fast if not"""
 
     @abstractmethod
-    def run(self, time_period: Union[Collection[str], str] = None):
+    def run(self):
         """Run model component"""
 
     def report_progress(self):
@@ -100,20 +106,9 @@ class Component(ABC):
     def verify(self):
         """Verify component outputs / results"""
 
-    def _process_time_period(
-        self, time_period: Union[Collection[str], str]
-    ) -> List[str]:
-        """Process input time_period name or names and return list of time_period names.
-
-        If time_period is None return list of names from config.time_periods
-
-        Args:
-            time_period: list of str names of time_periods, or name of a single time_period or None
+    def time_period_names(self) -> List[str]:
+        """Return input time_period name or names and return list of time_period names.
 
         Returns: list of string names of time periods
         """
-        if time_period is None:
-            return [time.name for time in self.config.time_periods]
-        if isinstance(time_period, str):
-            return [time_period]
-        return list(time_period)
+        return [time.name for time in self.config.time_periods]
