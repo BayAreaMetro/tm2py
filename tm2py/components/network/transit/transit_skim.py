@@ -33,13 +33,10 @@ class TransitSkim(Component):
         self._assign_class = None
 
     @LogStartEnd("Transit skims")
-    def run(self, time_period: Union[Collection[str], str] = None):
+    def run(self):
         """Run highway assignment
-
-        Args:
-            time_period: list of str names of time_periods, or name of a single _time_period
         """
-        for self._time_period in self._process_time_period(time_period):
+        for self._time_period in self.time_period_names():
             with self._setup():
                 self._create_skim_matrices()
                 for self._assign_class in self.config.transit.classes:
@@ -47,7 +44,8 @@ class TransitSkim(Component):
                 self._mask_transfers()
                 self._mask_allpen()
                 self._export_skims()
-                self._report()
+                # if self.logger.debug_enabled:
+                #     self._debug_report()
 
     @_context
     def _setup(self):
@@ -91,10 +89,11 @@ class TransitSkim(Component):
         ]
         for mode in self.config.transit.modes:
             if mode.assign_type == "TRANSIT":
+                desc = mode.description or mode.name
                 tmplt_matrices.append(
                     (
-                        f"{mode.short_name}IVTT",
-                        f"{mode.name} in-vehicle travel time"[:40],
+                        f"{mode.name}IVTT",
+                        f"{desc} in-vehicle travel time"[:40],
                     )
                 )
         if self.config.transit.use_ccr:
@@ -297,11 +296,11 @@ class TransitSkim(Component):
             for line in self._network.transit_lines():
                 fare_modes[line["#src_mode"]].add(line.mode.id)
             emme_mode_ids = [
-                (mode.short_name, list(fare_modes[mode.mode_id]))
+                (mode.name, list(fare_modes[mode.mode_id]))
                 for mode in valid_modes
             ]
         else:
-            emme_mode_ids = [(mode.short_name, [mode.mode_id]) for mode in valid_modes]
+            emme_mode_ids = [(mode.name, [mode.mode_id]) for mode in valid_modes]
         return emme_mode_ids
 
     def _ccr_skims(self):

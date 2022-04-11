@@ -43,8 +43,9 @@ def calc_segment_cost(transit_volume, capacity, segment):
            +(min_stand_weight+(max_stand_weight-min_stand_weight)*(transit_volume/capacity)**power_stand_weight)*num_standing
            )/(transit_volume+0.01)))
 
-    # Toronto implementation limited factor between 1.0 and 10.0
-    return crowded_factor
+    # Toronto implementation limited factor between 1.0 and 10.0, 
+    # for use with Emme Capacitated assignment normalize by subtracting 1 
+    return max(crowded_factor -1, 0)
 """
 
 _HEADWAY_COST_FUNCTION = """
@@ -95,7 +96,6 @@ def calc_headway(transit_volume, transit_boardings, headway, capacity, segment):
     eawt = calc_eawt(segment, vcr, segment.line.headway)
     adj_hdwy = calc_adj_headway(transit_volume, transit_boardings, headway, capacity, segment)
     return adj_hdwy + eawt
-
 """
 
 
@@ -112,18 +112,15 @@ class TransitAssignment(Component):
         self._scenario = None
 
     @LogStartEnd("Transit assignments")
-    def run(self, time_period: Union[Collection[str], str] = None):
+    def run(self):
         """Run transit assignments
-
-        Args:
-            time_period: list of str names of time_periods, or name of a single time_period
         """
         emmebank_path = self.get_abs_path(self.config.emme.transit_database_path)
         emmebank = self.controller.emme_manager.emmebank(emmebank_path)
         use_ccr = False
         if self.controller.iteration >= 1:
             use_ccr = self.config.transit.use_ccr
-        for self._time_period in self._process_time_period(time_period):
+        for self._time_period in self.time_period_names():
             msg = f"Transit assignment for period {self._time_period}"
             with self.logger.log_start_end(msg):
                 self._scenario = self.get_emme_scenario(emmebank, self._time_period)

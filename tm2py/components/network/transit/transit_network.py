@@ -14,16 +14,13 @@ class PrepareTransitNetwork(Component):
     @LogStartEnd(
         "Prepare transit network attributes and update times from auto network"
     )
-    def run(self, time_period: Union[Collection[str], str] = None):
+    def run(self):
         """Prepare transit network for assignment by updating link travel times from auto
         network and (if using TAZ-connectors for assignment) update connector walk times.
-
-        Args:
-            time_period: list of str names of time_periods, or name of a single _time_period
         """
         emmebank_path = self.get_abs_path(self.config.emme.transit_database_path)
         emmebank = self.controller.emme_manager.emmebank(emmebank_path)
-        for time in self._process_time_period(time_period):
+        for time in self.time_period_names():
             scenario = self.get_emme_scenario(emmebank.path, time)
             network = scenario.get_partial_network(
                 ["TRANSIT_SEGMENT"], include_attributes=False

@@ -59,7 +59,9 @@ ComponentNames = Literal[
     "highway_maz_assign",
     "highway",
     "highway_maz_skim",
-    "transit",
+    "prepare_network_transit",
+    "transit_assign",
+    "transit_skim",
     "household",
     "visitor",
     "internal_external",
@@ -205,10 +207,10 @@ class HighwayCapClassConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class ClassDemandConfig(ConfigItem):
-    """Highway class input source for demand.
+    """Input source for demand for highway or transit assignment class.
 
     Used to specify where to find related demand file for this
-    highway or transit class. Multiple
+    highway or transit class.
 
     Properties:
         source: reference name of the component section for the
@@ -535,6 +537,7 @@ class TransitModeConfig(ConfigItem):
     assign_type: Literal["TRANSIT", "AUX_TRANSIT"]
     mode_id: str = Field(min_length=1, max_length=1)
     name: str = Field(max_length=10)
+    description: Optional[str] = ""
     in_vehicle_perception_factor: Optional[float] = Field(default=None, ge=0)
     speed_miles_per_hour: Optional[float] = Field(default=None, gt=0)
 
@@ -558,7 +561,7 @@ class TransitModeConfig(ConfigItem):
     @validator("speed_miles_per_hour")
     def mode_id_valid(cls, value):
         """Validate mode_id"""
-        assert len(self.mode_id) == 1, "mode_id must be one character"
+        assert len(value) == 1, "mode_id must be one character"
         return value
 
 
@@ -574,7 +577,7 @@ class TransitVehicleConfig(ConfigItem):
     total_capacity: Optional[int] = Field(default=None, ge=0)
 
 
-@dataclass(init=False, frozen=True)
+@dataclass(frozen=True)
 class TransitClassConfig(ConfigItem):
     """Transit demand class definition"""
 
@@ -585,7 +588,7 @@ class TransitClassConfig(ConfigItem):
     demand: Tuple[ClassDemandConfig, ...]
 
 
-@dataclass(init=False, frozen=True)
+@dataclass(frozen=True)
 class TransitConfig(ConfigItem):
     """Transit assignment parameters"""
 
