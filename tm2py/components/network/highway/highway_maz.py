@@ -315,8 +315,8 @@ class AssignMAZSPDemand(Component):
             leaf_maz_ids[d_node.number] = d_node["@maz_leaf"] = d_node["@maz_id"]
         self._root_index = {p: i for i, p in enumerate(sorted(root_maz_ids.keys()))}
         self._leaf_index = {q: i for i, q in enumerate(sorted(leaf_maz_ids.keys()))}
-        self.controller.emme_manager.copy_attr_values(
-            "NODE", self._network, self._scenario, ["@maz_root", "@maz_leaf"]
+        self.controller.emme_manager.copy_attribute_values(
+            self._network, self._scenario, {"NODE": ["@maz_root", "@maz_leaf"]}
         )
 
     def _set_link_cost_maz(self):
@@ -494,8 +494,11 @@ class AssignMAZSPDemand(Component):
                 self._assign_path_flow(paths_file, start, end, data["dem"])
                 assigned += data["dem"]
                 bytes_read += (end - start) * 4
-        self.controller.emme_manager.copy_attr_values(
-            "LINK", self._network, self._scenario, ["temp_flow"], ["@maz_flow"]
+        self.controller.emme_manager.copy_attribute_values(
+            self._network,
+            self._scenario,
+            {"LINK": ["temp_flow"]},
+            {"LINK": ["@maz_flow"]},
         )
         self.logger.log_time(
             f"ASSIGN bin {bin_no}, total {len(demand)}, assign "

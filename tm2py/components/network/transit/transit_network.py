@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 from collections import defaultdict as _defaultdict
-from typing import Union, Collection  # , TYPE_CHECKING
+from typing import Literal
 
 from tm2py.components.component import Component
+from tm2py.emme.manager import EmmeScenario, EmmeNetwork, EmmeLink
 from tm2py.logger import LogStartEnd
 
 
@@ -29,8 +30,10 @@ class PrepareTransitNetwork(Component):
             if self.config.transit.get("override_connector_times", False):
                 self._update_connector_times(scenario, network, time)
 
-    def _update_auto_times(self, scenario, transit_network, period):
-        """
+    def _update_auto_times(
+        self, scenario: EmmeScenario, transit_network: EmmeNetwork, period: str
+    ):
+        """Update the auto travel times from the last auto assignment to the transit scenario.
 
         Args:
             scenario:
@@ -75,8 +78,12 @@ class PrepareTransitNetwork(Component):
         }
         emme_manager.copy_attribute_values(transit_network, scenario, attributes)
 
-    def _update_connector_times(self, scenario, network, period):
-        """
+    def _update_connector_times(
+        self, scenario: EmmeScenario, network: EmmeNetwork, period: str
+    ):
+        """Set the connector times from the source connector times files.
+
+        See also _process_connector_file
 
         Args:
             scenario:
@@ -112,8 +119,14 @@ class PrepareTransitNetwork(Component):
             network, scenario, {"LINK": class_attr_map.values()}
         )
 
-    def _process_connector_file(self, direction, connectors, class_attr_map, period):
-        """
+    def _process_connector_file(
+        self,
+        direction: Literal["access", "egress"],
+        connectors: Dict[int, Dict[int, EmmeLink]],
+        class_attr_map,
+        period,
+    ):
+        """Process the input connector times files and set the times on the connector links.
 
         Args:
             direction:

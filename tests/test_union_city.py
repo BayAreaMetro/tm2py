@@ -63,7 +63,7 @@ def test_highway():
         example_name="UnionCity", example_subdir=_EXAMPLES_DIR, root_dir=os.getcwd()
     )
     scen_config_path = os.path.join(union_city_root, r"scenario_config.toml")
-    with open(scen_config_path, 'r') as fin:
+    with open(scen_config_path, "r") as fin:
         scen_config = toml.load(fin)
     scen_config["run"]["initial_components"] = [
         "prepare_network_highway",
@@ -72,7 +72,7 @@ def test_highway():
     ]
     scen_config["run"]["start_iteration"] = 0
     scen_config["run"]["end_iteration"] = 1
-    with open(scen_config_path, 'w') as fout:
+    with open(scen_config_path, "w") as fout:
         toml.dump(scen_config, fout)
 
     controller = RunController(
@@ -129,16 +129,16 @@ def test_transit():
         example_name="UnionCity", example_subdir=_EXAMPLES_DIR, root_dir=os.getcwd()
     )
     scen_config_path = os.path.join(union_city_root, r"scenario_config.toml")
-    with open(scen_config_path, 'r') as fin:
+    with open(scen_config_path, "r") as fin:
         scen_config = toml.load(fin)
     scen_config["run"]["initial_components"] = [
         "prepare_network_transit",
         "transit_assign",
-        "transit_skim"
+        "transit_skim",
     ]
     scen_config["run"]["start_iteration"] = 0
     scen_config["run"]["end_iteration"] = 1
-    with open(scen_config_path, 'w') as fout:
+    with open(scen_config_path, "w") as fout:
         toml.dump(scen_config, fout)
     controller = RunController(
         [

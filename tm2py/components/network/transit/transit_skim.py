@@ -34,8 +34,6 @@ class TransitSkim(Component):
 
     @LogStartEnd("Transit skims")
     def run(self):
-        """Run highway assignment
-        """
         for self._time_period in self.time_period_names():
             with self._setup():
                 self._create_skim_matrices()
@@ -71,7 +69,7 @@ class TransitSkim(Component):
                     self._matrix_cache.clear()
                     self._matrix_cache = None
 
-    def _tmplt_skim_matrices(self, names_only=False):
+    def _tmplt_skim_matrices(self, names_only: bool = False):
         """
 
         Args:
@@ -110,7 +108,7 @@ class TransitSkim(Component):
         return tmplt_matrices
 
     def _create_skim_matrices(self):
-        """"""""
+        """Create required skim matrices in Emmebank"""
         time = self._time_period
         scenario = self._scenario
         create_matrix = self.controller.emme_manager.tool(
@@ -132,7 +130,7 @@ class TransitSkim(Component):
                     self._skim_matrices.append(matrix)
 
     def _run_skims(self):
-        """"""
+        """Run the skim calculations, matrix result extraction and strategy analysis"""
         use_ccr = False
         if self.controller.iteration >= 1:
             use_ccr = self.config.transit.use_ccr
@@ -148,8 +146,7 @@ class TransitSkim(Component):
                 self._ccr_skims()
 
     def _skim_walk_wait_fares(self):
-        """"""
-        # First and total wait time, number of boardings, fares, total walk time, in-vehicle time
+        """Skim the First and total wait time, number of boardings, fares, total walk time, in-vehicle time"""
         name = f"{self._time_period}_{self._assign_class.name}"
         all_modes = [
             m.id for m in self._network.modes() if m.type in ["TRANSIT", "AUX_TRANSIT"]
@@ -251,8 +248,9 @@ class TransitSkim(Component):
                         if line.mode.id in modes:
                             for segment in line.segments():
                                 segment["@mode_timtr"] = segment["@base_timtr"]
-                    attributes = {"TRANSIT_SEGMENT": ["@mode_timtr"]}
-                    self._copy_attribute_values(network, self._scenario, attributes)
+                    self.controller.emme_manager.copy_attribute_values(
+                        network, self._scenario, {"TRANSIT_SEGMENT": ["@mode_timtr"]}
+                    )
                     network.delete_attribute("TRANSIT_SEGMENT", "@mode_timtr")
                     ivtt_matrix = f'mf"{name}_{mode_name}IVTT"'
                     total_ivtt_expr.append(ivtt_matrix)
@@ -282,8 +280,12 @@ class TransitSkim(Component):
 
     def _get_emme_mode_ids(self):
         """"""
-        attributes = {"TRANSIT_LINE": ["#src_mode"], "TRANSIT_SEGMENT": ["@base_timtr"]}
-        self._copy_attribute_values(self._scenario, self._network, attributes)
+        self.controller.emme_manager.copy_attribute_values(
+            self._scenario, self._network, {"TRANSIT_LINE": ["#src_mode"]}
+        )
+        self.controller.emme_manager.copy_attribute_values(
+            self._scenario, self._network, {"TRANSIT_SEGMENT": ["@base_timtr"]}
+        )
         valid_modes = [
             mode
             for mode in self.config.transit.modes
@@ -296,8 +298,7 @@ class TransitSkim(Component):
             for line in self._network.transit_lines():
                 fare_modes[line["#src_mode"]].add(line.mode.id)
             emme_mode_ids = [
-                (mode.name, list(fare_modes[mode.mode_id]))
-                for mode in valid_modes
+                (mode.name, list(fare_modes[mode.mode_id])) for mode in valid_modes
             ]
         else:
             emme_mode_ids = [(mode.name, [mode.mode_id]) for mode in valid_modes]

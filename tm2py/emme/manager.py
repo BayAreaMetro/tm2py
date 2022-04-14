@@ -11,7 +11,7 @@ and Modeller.
 from contextlib import contextmanager as _context
 import os
 from socket import error as _socket_error
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Optional
 
 # PyLint cannot build AST from compiled Emme libraries
 # so disabling relevant import module checks
@@ -20,6 +20,8 @@ from inro.emme.database.emmebank import Emmebank
 from inro.emme.network import Network as EmmeNetwork
 from inro.emme.database.scenario import Scenario as EmmeScenario
 from inro.emme.database.matrix import Matrix as EmmeMatrix  # pylint: disable=W0611
+from inro.emme.network.link import Link as EmmeLink  # pylint: disable=W0611
+from inro.emme.network.mode import Mode as EmmeMode  # pylint: disable=W0611
 from inro.emme.network.node import Node as EmmeNode  # pylint: disable=W0611
 import inro.emme.desktop.app as _app
 from inro.modeller import Modeller as EmmeModeller, logbook_write, logbook_trace
@@ -181,18 +183,29 @@ class EmmeManager:
         return self.modeller().tool(namespace)
 
     @staticmethod
-    def copy_attribute_values(src, dst, attributes: Dict[str, List[str]]):
+    def copy_attribute_values(
+        src,
+        dst,
+        src_attributes: Dict[str, List[str]],
+        dst_attributes: Optional[Dict[str, List[str]]] = None,
+    ):
         """Copy network/scenario attribute values from src to dst.
 
         Args:
             src: Emme scenario object or Emme Network object
             dst: Emme scenario object or Emme Network object
-            attributes: dictionary or Emme network domain to list of attribute names
+            src_attributes: dictionary or Emme network domain to list of attribute names
                 NODE, LINK, TURN, TRANSIT_LINE, TRANSIT_SEGMENT
+            dst_attributes: Optional, names to use for the attributes in the dst object,
+                if not specified these are the same as src_attributes
         """
-        for domain, attrs in attributes.items():
-            values = src.get_attribute_values(domain, attrs)
-            dst.set_attribute_values(domain, attrs, values)
+        for domain, src_attrs in src_attributes.items():
+            if src_attrs:
+                dst_attrs = src_attrs
+                if dst_attributes is not None:
+                    dst_attrs = dst_attributes.get(domain, src_attrs)
+                values = src.get_attribute_values(domain, src_attrs)
+                dst.set_attribute_values(domain, dst_attrs, values)
 
     @staticmethod
     @_context
@@ -251,33 +264,6 @@ class EmmeManager:
             for domain, names, values in backup:
                 scenario.set_attribute_values(domain, names, values)
 
-    @staticmethod
-    def copy_attr_values(
-        domain: str,
-        src: Union[EmmeScenario, EmmeNetwork],
-        dst: Union[EmmeScenario, EmmeNetwork],
-        src_names: List[str],
-        dst_names: List[str] = None,
-    ):
-        """Copy attribute values between Emme scenario (on disk) and network (in memory).
-
-        Args:
-            domain: attribute domain, one of "NODE", "LINK", "TURN", "TRANSIT_LINE",
-                "TRANSIT_SEGMENT"
-            src: source Emme scenario or network to load values from
-            dst: destination Emme scenario or network to save values to
-            src_names: names of the attributes for loading values
-            dst_names: optional, names of the attributes to save values as, defaults
-                to using the src_names if not specified
-
-        Returns:
-            Emme Modeller object, see Emme API Reference, Modeller section for details.
-        """
-        if dst_names is None:
-            dst_names = src_names
-        values = src.get_attribute_values(domain, src_names)
-        dst.set_attribute_values(domain, dst_names, values)
-
     def get_network(
         self, scenario: EmmeScenario, attributes: Dict[str, List[str]] = None
     ) -> EmmeNetwork:
@@ -303,9 +289,7 @@ class EmmeManager:
         network = scenario.get_partial_network(
             attributes.keys(), include_attributes=False
         )
-        for domain, attrs in attributes.items():
-            if attrs:
-                self.copy_attr_values(domain, scenario, network, attrs)
+        self.copy_attribute_values(scenario, network, attributes)
         return network
 
     @staticmethod
