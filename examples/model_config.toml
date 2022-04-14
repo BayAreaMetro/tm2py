@@ -37,6 +37,7 @@
     input_demand_folder = "inputs\\nonres"
     reference_start_year = "2007"
     reference_end_year = "2035"
+    airport_names = [ "SFO", "OAK", "SJC",]
     [[air_passenger.demand_aggregation]]
         result_class_name = "da"
         src_group_name = "DA"

@@ -108,6 +108,7 @@ class TimePeriodConfig(ConfigItem):
     length_hours: float = Field(gt=0)
     highway_capacity_factor: float = Field(gt=0)
     emme_scenario_id: int = Field(ge=1)
+    description: Optional[str] = Field(default="")
 
 
 @dataclass(frozen=True)
@@ -120,7 +121,17 @@ class HouseholdConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class AirPassengerDemandAggregationConfig(ConfigItem):
-    """Air passenger demand aggregation input parameters"""
+    """Air passenger demand aggregation input parameters.
+
+    Properties:
+        result_class_name: name used in the output OMX matrix names, note
+            that this should match the expected naming convention in the
+            HighwayClassDemandConfig name(s)
+        src_group_name: name used for the class group in the input columns
+            for the trip tables,
+        access_modes: list of names used for the access modes in the input
+            columns for the trip tables
+    """
 
     result_class_name: str
     src_group_name: str
@@ -129,12 +140,29 @@ class AirPassengerDemandAggregationConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class AirPassengerConfig(ConfigItem):
-    """Air passenger model parameters"""
+    """Air passenger model parameters
+
+    Properties
+
+    highway_demand_file: output OMX file
+    input_demand_folder: location to find the input
+    reference_start_year: base start year for input demand tables
+        used to calculate the linear interpolation, as well as
+        in the file name template {year}_{direction}{airport}.csv
+    reference_end_year: end year for input demand tables
+        used to calculate the linear interpolation, as well as
+        in the file name template {year}_{direction}{airport}.csv
+    airport_names: list of one or more airport names / codes as used in
+        the input file names
+    demand_aggregation: specification of aggregation of by-access mode
+        demand to highway class demand
+    """
 
     highway_demand_file: str
     input_demand_folder: str
     reference_start_year: str
     reference_end_year: str
+    airport_names: Tuple[str, ...]
     demand_aggregation: Tuple[AirPassengerDemandAggregationConfig, ...]
 
 
