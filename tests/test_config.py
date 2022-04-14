@@ -20,7 +20,9 @@ def test_config_read():
         sys.modules["inro.emme.database.emmebank"] = MagicMock()
         sys.modules["inro.emme.network"] = MagicMock()
         sys.modules["inro.emme.database.scenario"] = MagicMock()
+        sys.modules["inro.emme.network.link"] = MagicMock()
         sys.modules["inro.emme.database.matrix"] = MagicMock()
+        sys.modules["inro.emme.database.mode"] = MagicMock()
         sys.modules["inro.emme.network.node"] = MagicMock()
         sys.modules["inro.emme.desktop.app"] = MagicMock()
         sys.modules["inro"] = MagicMock()
@@ -41,7 +43,7 @@ def test_config_read():
         "highway_maz_skim",
         "prepare_network_transit",
         "transit_assign",
-        "transit_skim"
+        "transit_skim",
     )
     assert len(my_config.time_periods) == 5
     assert my_config.highway.classes[0].description == "drive alone"
