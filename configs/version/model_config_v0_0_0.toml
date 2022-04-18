@@ -1,0 +1,450 @@
+####################################
+#       MODEL CONFIGURATION        #
+####################################
+
+version = 0.0.0
+
+[dir]
+skims = "skims"
+assignment = "assign"
+demand = "demand"
+
+[model_process]
+initialize_components = [
+    "prepare_network",
+    "air_passenger_demand",
+    "active_mode_skim",
+    "highway_assignment",
+    "transit_assignment",
+]
+
+global_iteration_components = [
+    "resident_demand",
+    "internal_external_demand",
+    "truck_demand",
+    "average_demand",
+    "highway_assignment",
+    "transit_assignment",
+]
+
+
+####################################
+#           TIME PERIODS           #
+####################################
+
+[[time_periods]]
+name = "early am"
+short_name = "ea"
+duration_hours = 3
+peaking_factor = 1
+
+[[time_periods]]
+name = "am peak"
+short_name = "am"
+duration_hours = 4
+peaking_factor = 1.1
+
+[[time_periods]]
+name = "midday"
+short_name = "md"
+duration_hours = 5
+peaking_factor = 1
+
+[[time_periods]]
+name = "pm peak"
+short_name = "pm"
+duration_hours = 4
+peaking_factor = 1.1
+
+[[time_periods]]
+name = "evening"
+short_name = "ev"
+duration_hours = 8
+peaking_factor = 1
+
+
+[highway]
+
+[highway.assignment]
+type = "SOLA_TRAFFIC_ASSIGNMENT"
+
+[highway.assignment.stopping_criteria]
+relative_gap = 0.0005
+best_relative_gap: 0.0,
+max_iterations = 30
+"normalized_gap": 0.0,
+
+[highway.assignment.background_traffic]
+"link_component": "ul1",
+"turn_component": None,
+"add_transit_vehicles": False,
+
+# TODO document what this is
+tollbooth_start_index = 11
+
+
+####################################
+#           HIGHWAY CLASSES        #
+####################################
+
+[[highway.classes]]
+name = "drive alone"
+short_name = "da"
+code = "d"
+excluded_links = [ "is_toll_da", "is_sr2",]
+value_of_time = 18.93
+operating_cost = 17.23
+link_price = "@bridgetoll_da"
+skims = [ "time", "dist", "freeflowtime", "bridgetoll_da"]
+
+[[highway.classes]]
+name = "shared ride 2"
+short_name = "sr2"
+code  = "e"
+excluded_links = [ "is_toll_sr2", "is_sr3",]
+value_of_time = 18.93
+operating_cost = 17.23
+link_price = "@bridgetoll_sr2"
+skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr2", "hovdist"]
+
+[[highway.classes]]
+name = "shared ride 3+"
+short_name = "sr3"
+code = "f"
+excluded_links = [ "is_toll_sr3",]
+value_of_time = 18.93
+operating_cost = 17.23
+link_price = "@bridgetoll_sr3"
+skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr3", "hovdist",]
+
+[[highway.classes]]
+name = "truck"
+short_name = "trk"
+code = "t"
+excluded_links = [ "is_toll_trk", "is_sr2",]
+value_of_time = 37.87
+operating_cost = 31.28
+link_price = "@bridgetoll_sml"
+skims = [ "time", "dist", "freeflowtime", "bridgetoll_vsm", "bridgetoll_sml", "bridgetoll_med",]
+
+[[highway.classes]]
+name = "large truck"
+short_name = "lrgtrk"
+code = "l"
+excluded_links = [ "is_toll_lrgtrk", "is_auto_only",]
+value_of_time = 37.87
+operating_cost = 31.28
+link_price = "@bridgetoll_lrg"
+skims = [ "time", "dist", "freeflowtime", "bridgetoll_lrg",]
+
+[[highway.classes]]
+short_name = "datoll"
+name = "drive alone toll"
+code = "D"
+excluded_links = [ "is_sr2",]
+value_of_time = 18.93
+operating_cost = 17.23
+link_price = "@toll_da"
+skims = [ "time", "dist", "freeflowtime", "bridgetoll_da", "valuetoll_da", "tolldist",]
+
+[[highway.classes]]
+name = "shared ride 2 toll"
+short_name = "sr2toll"
+code = "E"
+excluded_links = [ "is_sr3",]
+value_of_time = 18.93
+operating_cost = 17.23
+link_price = "@toll_sr2"
+price_factor = 0.57
+skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr2", "valuetoll_sr2", "hovdist", "tolldist",]
+
+[[highway.classes]]
+name = "shared ride 3+ toll"
+short_name = "sr3toll"
+code = "F"
+excluded_links = []
+value_of_time = 18.93
+operating_cost = 17.23
+link_price = "@toll_sr3"
+price_factor = 0.4
+skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr3", "valuetoll_sr3", "hovdist", "tolldist",]
+
+[[highway.classes]]
+name = "truck toll"
+short_name = "trktoll"
+code = "T"
+excluded_links = [ "is_sr2",]
+value_of_time = 37.87
+operating_cost = 31.28
+link_price = "@toll_sml"
+skims = [ "time", "dist", "freeflowtime", "bridgetoll_vsm", "bridgetoll_sml", "bridgetoll_med", "valuetoll_vsm", "valuetoll_sml", "valuetoll_med",]
+
+[[highway.classes]]
+name = "large truck toll"
+short_name = "lrgtrktoll"
+code = "L"
+excluded_links = [ "is_auto_only", "is_sr2",]
+value_of_time = 37.87
+operating_cost = 31.28
+toll = "@toll_lrg"
+skims = [ "time", "dist", "freeflowtime", "bridgetoll_lrg", "valuetoll_lrg",]
+
+
+####################################
+#           HIGHWAY DEMAND         #
+####################################
+
+
+###### HOUSEHOLD ######
+
+[[highway.demand]]
+name = "drive alone"
+file = ["household","TAZ_Demand_{time_period}.omx"]
+matrix = "SOV_GP_{time_period}"
+highway_class = "drive alone"
+average_occupancy = 1.0
+
+[[highway.demand]]
+name = "shared ride 2 general purpose lanes"
+file = ["household","TAZ_Demand_{time_period}.omx"]
+matrix = "SR2_GP_{time_period}"
+highway_class =
+average_occupancy = 1.75
+
+[[highway.demand]]
+name = "shared ride 2 HOV lanes"
+file = ["household","TAZ_Demand_{time_period}.omx"]
+matrix = "SR2_HOV_{time_period}"
+highway_class =
+average_occupancy = 1.75
+
+[[highway.demand]]
+name = "shared ride 2 Toll Paying"
+file = ["household","TAZ_Demand_{time_period}.omx"]
+matrix = "SR2_PAY_{period}"
+highway_class =
+average_occupancy = 1.75
+
+[[highway.demand]]
+name = "shared ride 3 general HOV lanes"
+file = ["household","TAZ_Demand_{time_period}.omx"]
+matrix = "SR3_HOV_{period}"
+highway_class =
+average_occupancy = 2.5
+
+[[highway.demand]]
+name = "shared ride 3 general purpose lanes"
+file = ["household","TAZ_Demand_{time_period}.omx"]
+matrix = "SR3_GP_{period}"
+highway_class =
+average_occupancy = 2.5
+
+[[highway.demand]]
+name = "shared ride 3 toll-paying"
+file = ["household","TAZ_Demand_{time_period}.omx"]
+matrix = "SR3_PAY_{period}"
+highway_class =
+average_occupancy = 2.5
+
+###### AIR PAX ######
+
+[[highway.demand]]
+name = "air passenger drive alone"
+file = ["air_passenger","tripsAirPax{period}.omx"]
+matrix = "DA"
+highway_class = "drive alone"
+average_occupancy = 1.0
+
+[[highway.demand]]
+name = "air passenger shared ride 2"
+file = ["air_passenger","tripsAirPax{period}.omx"]
+matrix = "SR2"
+highway_class = 
+average_occupancy = 1.75 
+
+[[highway.demand]]
+name = "air passenger shared ride 2 toll-paying"
+file = ["air_passenger","tripsAirPax{period}.omx"]
+matrix = "SR2TOLL"
+highway_class = 
+average_occupancy = 1.75
+
+[[highway.demand]]
+name = "air passenger shared ride 3+"
+file = ["air_passenger","tripsAirPax{period}.omx"]
+matrix = "SR3"
+highway_class = 
+average_occupancy = 2.5
+
+[[highway.demand]]
+name = name = "air passenger shared ride 3+ toll-paying"
+file = ["air_passenger","tripsAirPax{period}.omx"]
+mattrix = "SR3TOLL"
+highway_class = 
+average_occupancy = 2.5 
+
+
+###### INTERNAL EXTERNAL ######
+
+[[highway.demand]]
+name = "internal external drive alone"
+file = ["internal_external","tripsIx{time_period}.omx"]
+matrix = "DA"
+highway_class = "drive alone"
+average_occupancy = 1.0
+
+[[highway.demand]]
+name = "internal external shared ride 2"
+file = ["internal_external","tripsIx{time_period}.omx"]
+matrix = "SR2"
+highway_class = "shared ride 2"
+average_occupancy = 
+
+[[emme.highway.classes.demand]]
+name = "internal external shared ride 2 toll-paying"
+file = ["internal_external","tripsIx{time_period}.omx"]
+matrix = "SR2TOLL"
+highway_class =
+average_occupancy = 
+
+[[highway.demand]]
+name = "internal external shared ride 3+"
+file = ["internal_external","tripsIx{time_period}.omx"]
+matrix = "SR3"
+highway_class = "shared ride 3+"
+average_occupancy = 
+
+[[highway.demand]]
+name = "internal external shared ride 3+ toll-paying"
+file = ["internal_external","tripsIx{time_period}.omx"]
+matrix = "SR3TOLL"
+highway_class = 
+average_occupancy = 
+
+###### COMMERCIAL VEHICLES ######
+
+[[highway.demand]]
+name = "commercial vehicles"
+file = ["commercial","tripstrk{time_period}.omx"]
+matrix = "CTRUCK"
+highway_class = 
+average_occupancy = 
+pce = 2.0
+
+[[highway.demand]]
+name = "commercial vehicles toll-paying"
+file = ["commercial","tripstrk{time_period}.omx"]
+matrix = "CTRUCKTOLL"
+highway_class = 
+average_occupancy = 
+pce = 2.0
+
+[[highway.demand]]
+name = "very small trucks"
+file = ["commercial","tripstrk{time_period}.omx"]
+matrix = "VSTRUCK"
+highway_class = 
+average_occupancy = 
+pce = 2.0
+
+[[highway.demand]]
+name = "very small trucks toll-paying"
+file = ["commercial","tripstrk{time_period}.omx"]
+matrix = "VSTRUCKTOLL"
+highway_class = 
+average_occupancy = 
+pce = 2.0
+
+[[highway.demand]]
+name = "small trucks"
+file = ["commercial","tripstrk{time_period}.omx"]
+matrix = "STRUCK"
+highway_class = 
+average_occupancy = 
+pce = 2.0
+
+[[highway.demand]]
+name = "small trucks toll-paying"
+file = ["commercial","tripstrk{time_period}.omx"]
+name = "STRUCKTOLL"
+highway_class = 
+average_occupancy = 
+pce = 2.0
+
+[[highway.demand]]
+name = "medium trucks"
+file = ["commercial","tripstrk{time_period}.omx"]
+matrix = "MTRUCK"
+highway_class = 
+average_occupancy = 
+pce = 2.0
+
+[[highway.demand]]
+name = "medium trucks toll-paying"
+file = ["commercial","tripstrk{time_period}.omx"]
+matrix = "MTRUCKTOLL"
+highway_class = 
+average_occupancy = 
+pce = 2.0
+
+
+###############################
+#      Transit                #
+###############################
+[transit]
+
+
+skim_name = "{access_mode}_TRN_{transit_set}_{time_period}_{iteration}"
+skim_files = "transit_skim_{skim_name}.omx"
+
+assignment_name = "TRN_{set}_{period}"
+assignment_files = "transit_assign_{assignment_name}.omx"
+
+access_modes = ["WLK", "PNR", "KNRTNC", "KNRPRV"]
+
+[[transit_set]]
+name = "BUS"
+
+[[transit_set]]
+name = "PREM"
+
+[[transit_set]]
+name = "ALLPEN"
+
+[[transit_mode]]
+code = "b"
+type = "local"
+
+[[transit_mode]]
+code = "x"
+type = "premium"
+
+[[transit_mode]]
+code = "f"
+type = "premium"
+
+[[transit_mode]]
+code = "l"
+type = "premium"
+
+[[transit_mode]]
+code = "h"
+type = "premium"
+
+[[transit_mode]]
+code = "r"
+type = "premium"
+
+[[aux_mode]]
+code = "w"
+type = "walk"
+
+[[aux_mode]]
+code = "a"
+type = "walk"
+
+[[aux_mode]]
+code = "e"
+type = "walk"
+
+

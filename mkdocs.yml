@@ -28,10 +28,13 @@ plugins:
   - awesome-pages
   - mkdocstrings:
       default_handler: python
+      enable_inventory: true
       handlers:
         python:
           rendering:
-            show_source: false
+            show_root_heading: true
+            show_source: true
+            heading_level: 3
       custom_templates: templates
       watch:
         - tm2py

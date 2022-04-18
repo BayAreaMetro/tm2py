@@ -10,4 +10,3 @@ def test_skipci():
 def test_testing():
     """Tests that tests are run."""
     print("Tests are being run!")
-    import tm2py
