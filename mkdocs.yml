@@ -31,6 +31,23 @@ plugins:
       enable_inventory: true
       handlers:
         python:
+          setup_commands:
+           - import sys
+           - from unittest.mock import MagicMock as mock
+           - sys.path.append('../')  
+           - sys.modules["inro"] = mock()
+           - sys.modules["inro.emme"] = mock()
+           - sys.modules["inro.emme.database"] = mock()
+           - sys.modules["inro.emme.database.emmebank"] = mock()
+           - sys.modules["inro.emme.database.scenario"] = mock()
+           - sys.modules["inro.emme.database.matrix"] = mock()
+           - sys.modules["inro.emme.network"] = mock()
+           - sys.modules["inro.emme.network.node"] = mock()
+           - sys.modules["inro.emme.desktop"] = mock()
+           - sys.modules["inro.emme.desktop.app"] = mock()
+           - sys.modules["inro.modeller"] = mock()
+          selection:
+            new_path_syntax: true
           rendering:
             show_root_heading: true
             show_source: true

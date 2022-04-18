@@ -8,7 +8,6 @@ _EXAMPLE_URL = (
 )
 
 
-@pytest.mark.menow
 def test_download_unzip():
     # If (and only if) Emme is not installed, replace INRO libraries with MagicMock
     try:
