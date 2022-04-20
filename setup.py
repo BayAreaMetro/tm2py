@@ -1,3 +1,4 @@
+import os
 from setuptools import setup
 
 version = "0.0.1"
@@ -24,10 +25,10 @@ with open("dev-requirements.txt") as f:
     dev_requirements = f.readlines()
 install_requires_dev = [r.strip() for r in dev_requirements]
 
-# While version is in active development, install both development and base requirements. 
-major_version_number = int(version.split('.')[0])
+# While version is in active development, install both development and base requirements.
+major_version_number = int(version.split(".")[0])
 if major_version_number < 1:
-  install_requires = install_requires + install_requires_dev
+    install_requires = install_requires + install_requires_dev
 
 setup(
     name="tm2py",
@@ -41,4 +42,5 @@ setup(
     packages=["tm2py"],
     include_package_data=True,
     install_requires=install_requires,
+    scripts=["bin/tm2py", "bin/get_test_data"],
 )

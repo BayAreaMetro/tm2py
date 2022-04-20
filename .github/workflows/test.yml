@@ -33,3 +33,10 @@ jobs:
     - name: Test with pytest
       run: |
         pytest -s -m "not skipci"
+    - name: Test documentation build
+      uses: Tiryoh/actions-mkdocs@v0
+      with:
+        mkdocs_version: 'latest' 
+        requirements: 'docs/requirements.txt' 
+        configfile: 'mkdocs.yml' 
+

@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+
+import argparse
+
+from tm2py.controller import RunController
+
+def usage():
+    print("tm2py -s scenario.toml -m model.toml")
+
+def run():
+    parser = argparse.ArgumentParser(description="Main: run MTC TM2PY")
+
+    parser.add_argument(
+        "-s", "--scenario", required=True, help=r"Scenario config file path"
+    )
+    parser.add_argument("-m", "--model", required=True, help=r"Model config file path")
+
+    args = parser.parse_args()
+    controller = RunController([args.scenario, args.model])
+    controller.run()
+
+if __name__ == "__main__":
+    run()

@@ -72,10 +72,8 @@ coverage.xml
 *.mo
 *.pot
 
-# Sphinx documentation
-docs/_build/
-docs/_generated/*
-docs/_autosummary/*
+# mkdocs documentation
+site/*
 
 # mkdocs documentation
 site/*
