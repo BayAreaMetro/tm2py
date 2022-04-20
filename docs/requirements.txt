@@ -5,3 +5,4 @@ mkdocs-macros-plugin
 mkdocs-material
 mkdocstrings
 mkdocs-autorefs
+typing_extensions
