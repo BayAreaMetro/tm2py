@@ -4,6 +4,7 @@ geopandas > 0.8.0
 fiona
 folium
 fontawesome_markdown
+jinja2 < 3.1.0
 jsonschema
 jupyter
 lark-parser
