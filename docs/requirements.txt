@@ -5,4 +5,5 @@ mkdocs-macros-plugin
 mkdocs-material
 mkdocstrings
 mkdocs-autorefs
+pydantic
 typing_extensions
