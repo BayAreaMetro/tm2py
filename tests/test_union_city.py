@@ -39,9 +39,11 @@ def test_example_download():
     assert os.path.isdir(os.path.join(example_dir, name))
     # check some expected files exists
     files_to_check = [
-        "scenario_config.toml",
-        "model_config.toml",
+        os.path.join("inputs", "hwy", "tolls.csv"),
+        os.path.join("inputs", "nonres", "2035_fromOAK.csv"),
         os.path.join("inputs", "landuse", "maz_data.csv"),
+        os.path.join("emme_project", "mtc_emme.emp"),
+        os.path.join("emme_project", "Database_highway", "emmebank"),
     ]
     for file_name in files_to_check:
         assert os.path.exists(
@@ -63,9 +65,10 @@ def test_highway():
     )
     controller = RunController(
         [
-            os.path.join(union_city_root, r"scenario_config.toml"),
-            os.path.join(union_city_root, r"model_config.toml"),
-        ]
+            os.path.join(_EXAMPLES_DIR, r"scenario_config.toml"),
+            os.path.join(_EXAMPLES_DIR, r"model_config.toml"),
+        ],
+        run_dir=union_city_root
     )
     controller.run()
 

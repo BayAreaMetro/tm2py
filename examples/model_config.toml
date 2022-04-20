@@ -120,8 +120,11 @@
         file_path = "inputs\\hwy\\tolls.csv"
         src_vehicle_group_names = ["da", "s2",  "s3",  "vsm", "sml", "med", "lrg"]
         # the dst_vehicle_group_names is used in the class group suffix for the
-        # highway.classes toll attribute names and the skims names
+        # highway.classes toll attribute name and the skims name, "bridgetoll_{}"
+        # and "valuetoll_{}"
         dst_vehicle_group_names = ["da", "sr2", "sr3", "vsm", "sml", "med", "lrg"]
+        # tollbooth separates links with "bridge" tolls (index < this value)
+        # (used in all classes) vs. "value" tolls (used in toll-available classes only)
         tollbooth_start_index = 11
     [highway.maz_to_maz]
         mode_code = "x"
@@ -152,7 +155,7 @@
         excluded_links = [ "is_toll_da", "is_sr",]
         value_of_time = 18.93
         operating_cost_per_mile = 17.23
-        toll = [ "@bridgetoll_da" ]
+        toll = ["@bridgetoll_da"]
         skims = [ "time", "dist", "freeflowtime", "bridgetoll_da",]
         [[highway.classes.demand]]
             source = "household"
@@ -170,7 +173,7 @@
         excluded_links = [ "is_toll_sr2", "is_sr3",]
         value_of_time = 18.93
         operating_cost_per_mile = 17.23
-        toll = ["@bridgetoll_sr2"]
+        toll = [ "@bridgetoll_sr2" ]
         toll_factor = 0.5714285714285714
         skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr2", "hovdist",]
         [[highway.classes.demand]]
@@ -250,7 +253,7 @@
         excluded_links = [ "is_sr",]
         value_of_time = 18.93
         operating_cost_per_mile = 17.23
-        toll = ["@valuetoll_da", "@bridgetoll_da"]
+        toll = [ "@valuetoll_da", "@bridgetoll_da" ]
         skims = [ "time", "dist", "freeflowtime", "bridgetoll_da", "valuetoll_da", "tolldist",]
         [[highway.classes.demand]]
             source = "household"
@@ -265,7 +268,7 @@
         excluded_links = [ "is_sr3",]
         value_of_time = 18.93
         operating_cost_per_mile = 17.23
-        toll = ["@valuetoll_sr2", "@bridgetoll_sr2"]
+        toll = [ "@valuetoll_sr2", "@bridgetoll_sr2" ]
         toll_factor = 0.5714285714285714
         skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr2", "valuetoll_sr2", "hovdist", "tolldist",]
         [[highway.classes.demand]]
@@ -282,7 +285,7 @@
         excluded_links = []
         value_of_time = 18.93
         operating_cost_per_mile = 17.23
-        toll = ["@valuetoll_sr3", "@bridgetoll_sr3"]
+        toll = [ "@valuetoll_sr3", "@bridgetoll_sr3" ]
         toll_factor = 0.4
         skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr3", "valuetoll_sr3", "hovdist", "tolldist",]
         [[highway.classes.demand]]
@@ -299,7 +302,7 @@
         excluded_links = [ "is_sr",]
         value_of_time = 37.87
         operating_cost_per_mile = 31.28
-        toll = ["@valuetoll_sml", "@bridgetoll_sml"]
+        toll = [ "@valuetoll_sml", "@bridgetoll_sml" ]
         skims = [ "time", "dist", "freeflowtime", "bridgetoll_vsm", "bridgetoll_sml", "bridgetoll_med", "valuetoll_vsm", "valuetoll_sml", "valuetoll_med",]
         [[highway.classes.demand]]
             source = "truck"
@@ -318,7 +321,7 @@
         value_of_time = 37.87
         operating_cost_per_mile = 31.28
         pce = 2.0
-        toll = ["@valuetoll_lrg", "@bridgetoll_lrg"]
+        toll = [ "@valuetoll_lrg", "@bridgetoll_lrg" ]
         skims = [ "time", "dist", "freeflowtime", "bridgetoll_lrg", "valuetoll_lrg",]
         [[highway.classes.demand]]
             source = "truck"
@@ -353,8 +356,8 @@
     all_day_scenario_id = 1
     project_path = "emme_project\\mtc_emme.emp"
     highway_database_path = "emme_project\\Database_highway\\emmebank"
-    active_database_paths = [ "emme_project\\Database_active_south\\emmebank", "emme_project\\Database_active_north\\emmebank" ]
-    transit_database_path = "emme_project\\Database_transit_taz\\emmebank"
+    active_database_paths = [ "emme_project\\Database_maz\\emmebank", ]
+    transit_database_path = "emme_project\\Database_transit\\emmebank"
 
 
 [[highway.capclass_lookup]]
