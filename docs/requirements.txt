@@ -1,3 +1,4 @@
+-r ../requirements.txt
 fontawesome_markdown
 mkdocs
 mkdocs-awesome-pages-plugin
@@ -5,5 +6,3 @@ mkdocs-macros-plugin
 mkdocs-material
 mkdocstrings
 mkdocs-autorefs
-pydantic
-typing_extensions
