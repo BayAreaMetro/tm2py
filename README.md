@@ -1,5 +1,11 @@
 # Travel Model 2 Python Package
 
+[![Tests](https://github.com/BayAreaMetro/tm2py/actions/workflows/test.yml/badge.svg)](https://github.com/BayAreaMetro/tm2py/actions/workflows/test.yml)
+
+[![Documentation](https://github.com/BayAreaMetro/tm2py/actions/workflows/docs.yml/badge.svg)](https://github.com/BayAreaMetro/tm2py/actions/workflows/docs.yml)
+
+[![Package Published](https://github.com/BayAreaMetro/tm2py/actions/workflows/publish.yml/badge.svg)](https://github.com/BayAreaMetro/tm2py/actions/workflows/publish.yml)
+
 ## Installation
 
 If you are managing multiple python versions, we suggest using [`virtualenv`](https://virtualenv.pypa.io/en/latest/) or [`conda`](https://conda.io/en/latest/) virtual environments.

@@ -77,6 +77,9 @@ docs/_build/
 docs/_generated/*
 docs/_autosummary/*
 
+# mkdocs documentation
+site/*
+
 # Jupyter 
 .ipynb_checkpoints
 profile_default/
