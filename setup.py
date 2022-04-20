@@ -28,7 +28,7 @@ install_requires_dev = [r.strip() for r in dev_requirements]
 # While version is in active development, install both development and base requirements.
 major_version_number = int(version.split(".")[0])
 if major_version_number < 1:
-    install_requires = install_requires + install_requires_dev + doc_requirements
+    install_requires = install_requires + install_requires_dev
 
 setup(
     name="tm2py",
