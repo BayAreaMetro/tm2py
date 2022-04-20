@@ -3,9 +3,16 @@ geographiclib
 geopandas > 0.8.0
 fiona
 folium
+fontawesome_markdown
 jsonschema
 jupyter
 lark-parser
+mkdocs
+mkdocs-autorefs
+mkdocs-awesome-pages-plugin
+mkdocs-macros-plugin
+mkdocs-material
+mkdocstrings
 openmatrix
 osmnx >= 0.12
 notebook
