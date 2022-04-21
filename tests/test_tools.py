@@ -8,7 +8,6 @@ _EXAMPLE_URL = (
 )
 
 
-@pytest.mark.menow
 def test_download_unzip():
     # If (and only if) Emme is not installed, replace INRO libraries with MagicMock
     try:
@@ -37,9 +36,11 @@ def test_download_unzip():
         assert os.path.exists(unzip_directory), "unzip failed, no directory"
         assert os.path.getsize(unzip_directory) > 0, "unzip failed, empty directory"
         files_to_check = [
-            "scenario_config.toml",
-            "model_config.toml",
+            os.path.join("inputs", "hwy", "tolls.csv"),
+            os.path.join("inputs", "nonres", "2035_fromOAK.csv"),
             os.path.join("inputs", "landuse", "maz_data.csv"),
+            os.path.join("emme_project", "mtc_emme.emp"),
+            os.path.join("emme_project", "Database_highway", "emmebank"),
         ]
         for file_name in files_to_check:
             assert os.path.exists(

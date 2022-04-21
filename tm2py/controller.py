@@ -21,6 +21,7 @@ from typing import Union, List, Tuple
 from tm2py.config import Configuration
 from tm2py.emme.manager import EmmeManager
 from tm2py.logger import Logger
+from tm2py.components.component import Component
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
 from tm2py.components.network.highway.highway_network import PrepareNetwork
 from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, SkimMAZCosts
@@ -79,6 +80,8 @@ class RunController:
         self.trace = None
         self.completed_components = []
 
+        # mapping from defined names referenced in config to Component objects
+        self._component_map = {k: v(self) for k, v in component_cls_map.items()}
         self._emme_manager = None
         self._iteration = None
         self._component = None
@@ -99,6 +102,10 @@ class RunController:
     def iter_component(self) -> Tuple[int, str]:
         """Tuple of the current iteration and component name"""
         return self._iteration, self._component_name
+
+    def component(self) -> Component:
+        """Current component of model"""
+        return self._component
 
     @property
     def emme_manager(self) -> EmmeManager:
@@ -140,19 +147,17 @@ class RunController:
 
     def _queue_components(self):
         """Add components per iteration to queue according to input Config"""
-        # mapping from defined names referenced in config to Component objects
-        component_map = {k: v(self) for k, v in component_cls_map.items()}
         self._queued_components = []
         if self.config.run.start_iteration == 0:
             self._queued_components += [
-                (0, c_name, component_map[c_name])
+                (0, c_name, self._component_map[c_name])
                 for c_name in self.config.run.initial_components
             ]
         iteration_nums = range(
             max(1, self.config.run.start_iteration), self.config.run.end_iteration + 1
         )
         iteration_components = [
-            component_map[c_name]
+            self._component_map[c_name]
             for c_name in self.config.run.global_iteration_components
         ]
         self._queued_components += list(
@@ -163,7 +168,7 @@ class RunController:
             )
         )
         self._queued_components += [
-            (self.config.run.end_iteration + 1, component_map[c_name])
+            (self.config.run.end_iteration + 1, self._component_map[c_name])
             for c_name in self.config.run.final_components
         ]
 

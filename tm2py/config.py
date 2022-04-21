@@ -298,7 +298,7 @@ class HighwayClassConfig(ConfigItem):
     Note that excluded_links, skims and toll attribute names include
     vehicle groups ("{vehicle}") which reference the list of
     highway.toll.dst_vehicle_group_names (see HighwayTollsConfig).
-    The example model config uses:
+    The default example model config uses:
     "da", "sr2", "sr3", "vsm", sml", "med", "lrg"
 
     Example single class config:

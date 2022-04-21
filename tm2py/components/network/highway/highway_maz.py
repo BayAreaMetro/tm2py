@@ -101,8 +101,8 @@ class AssignMAZSPDemand(Component):
         for group in self.config.highway.maz_to_maz.demand_county_groups:
             county_groups[group.number] = group.counties
         for time in self.time_period_names():
+            self._scenario = self.get_emme_scenario(emmebank.path, time)
             with self._setup(time):
-                self._scenario = self.get_emme_scenario(emmebank.path, time)
                 self._prepare_network()
                 for i, names in county_groups.items():
                     maz_ids = self._get_county_mazs(names)
