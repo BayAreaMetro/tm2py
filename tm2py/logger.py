@@ -3,16 +3,17 @@
 Note the general definition of logging levels as used in tm2py:
 
 TRACE: highly detailed level information which would rarely be of interest
-    except for detailed debugging
-DEBUG: diagnostic information which would generally be used by a developer
-    debugging the model code; this may also be useful to a model operator
+    except for detailed debugging by a developer
+DEBUG: diagnostic information which would generally be useful to a developer
+    debugging the model code; this may also be useful to a model operator in
+    some cases.
 DETAIL: more detail than would normally be of interest, but might be useful
     to a model operator debugging a model run / data or understanding
     model results
 INFO: detail which would normally be worth recording about the model operation
 STATUS: top-level, model is running type messages. There should be
-    relatively few of these, generally one per component, and one per time
-    period if the procedure is long
+    relatively few of these, generally one per component, or one per time
+    period if the procedure is long.
 WARN: warning messages where there is a possibility of a problem
 ERROR: problem causing operation to halt which is normal
     (or not unexpected) in scope, e.g. file does not exist
@@ -21,6 +22,7 @@ FATAL: severe problem requiring operation to stop immediately.
 """
 
 from __future__ import annotations
+from abc import abstractmethod
 from contextlib import contextmanager as _context
 from datetime import datetime
 import functools
@@ -75,18 +77,10 @@ class Logger:
 
         logger = Logger.get_logger()
 
-
     Internal properties:
-        _indentation: current indentation level, used to group
-            messages within the same context with log_start_end
-        _log_file_path: absolute path to write standard log file
-        _error_file_path: absolute path to write log on error file
-        _log_file: open log file object
-        _msg_cache: all messages which have been logged since last clear_msg_cache()
-        _display_level: input display filter log level
-        _default_print_level: input print (log to file) level
-        _iter_component_level: dictionary of (iter, component) : int level
-            overrides _default_print_level
+        _log_cache: the LogCache object
+        _log_formatters: list of objects that format text and record, either
+            to file, display (print to screen) or cache for log on error
         _use_emme_logbook: whether Emme logbook is enabled
         _slack_notifier: SlackNotifier object for sending messages to slack
     """
@@ -100,24 +94,33 @@ class Logger:
         return cls._instance
 
     def __init__(self, controller: RunController):
-        super().__init__()
         self.controller = controller
         log_config = controller.config.logging
-        self._display_indent = 0
-        self._log_indent = 0
-        self._log_file_path = os.path.join(controller.run_dir, log_config.log_file_path)
-        self._log_file = None
-        self._error_file_path = os.path.join(
-            controller.run_dir, log_config.error_file_path
-        )
-
-        self._msg_cache = []
-        self._display_level = levels[log_config.log_display_level]
-        self._default_print_level = levels[log_config.log_file_level]
         iter_component_level = log_config.iter_component_level or []
-        self._iter_component_level = dict(
+        iter_component_level = dict(
             ((i, c), levels[l]) for i, c, l in iter_component_level
         )
+        display_logger = LogDisplay(levels[log_config.display_level])
+        run_log_formatter = LogFile(
+            levels[log_config.run_file_level],
+            os.path.join(controller.run_dir, log_config.run_file_path),
+        )
+        standard_log_formatter = LogFileLevelOverride(
+            levels[log_config.log_file_level],
+            os.path.join(controller.run_dir, log_config.log_file_path),
+            iter_component_level,
+            controller,
+        )
+        self._log_cache = LogCache(
+            os.path.join(controller.run_dir, log_config.log_on_error_file_path)
+        )
+        self._log_formatters = [
+            display_logger,
+            run_log_formatter,
+            standard_log_formatter,
+            self._log_cache,
+        ]
+
         self._use_emme_logbook = self.controller.config.logging.use_emme_logbook
         self._slack_notifier = SlackNotifier(self)
 
@@ -144,7 +147,7 @@ class Logger:
     ):
         """Log text to file and display depending upon log level and config
 
-        Note that log will not write to file until opened with a context.
+        Note that log will not write to file until Logger is opened with a context.
 
         Args:
             text (str): text to log
@@ -152,54 +155,11 @@ class Logger:
             indent (bool): if true indent text based on the number of open contexts
             time (bool): if true include timestamp
         """
-        timestamp = datetime.now() if time else None
-        if levels[level] >= self._display_level:
-            print(self._format_text(text, indent, timestamp, True))
-        text = self._format_text(text, indent, timestamp, False)
-        if levels[level] >= self._print_level and self._log_file:
-            self._log_file.write(text)
-            if self._use_emme_logbook:
-                self.controller.emme_manager.logbook_write(text)
-        self._msg_cache.append((level, text))
-
-    def _format_text(
-        self,
-        text: str,
-        indent: bool,
-        timestamp: Union[datetime, None],
-        is_display: bool,
-    ):
-        """Format text for logging
-
-        Args:
-            text (str): text to format
-            indent (bool): if true indent text based on the number of open contexts and
-                timestamp width
-            timestamp (datetime): datetime or None for timestamp
-            is_display (bool): format for display (print) if True, else for write to file
-        """
-        if timestamp is not None:
-            timestamp = timestamp.strftime("%d-%b-%Y (%H:%M:%S): ")
-        elif indent:
-            timestamp = "                        "
-        else:
-            timestamp = ""
-        if indent:
-            num_indents = self._display_indent if is_display else self._log_indent
-            indent = "  " * max(num_indents, 0)
-        else:
-            indent = ""
-        if is_display:
-            return f"{timestamp}{indent}{text}"
-        return f"{timestamp}{indent}{text}\n"
-
-    @property
-    def _print_level(self):
-        """Current log level, includes iter_component_level config override."""
-        level = self._iter_component_level.get(self.controller.iter_component)
-        if level is not None:
-            return level
-        return self._default_print_level
+        timestamp = datetime.now().strftime("%d-%b-%Y (%H:%M:%S): ") if time else None
+        for log_formatter in self._log_formatters:
+            log_formatter.log(text, levels[level], indent, timestamp)
+        if self._use_emme_logbook:
+            self.controller.emme_manager.logbook_write(text)
 
     def log_time(self, text: str, level: LogLevel = "INFO", indent: bool = True):
         """Log message with timestamp
@@ -299,10 +259,8 @@ class Logger:
             level (str): logging level
         """
         self.log_time(f"Start {text}", level, indent=True)
-        if levels[level] >= self._display_level:
-            self._display_indent += 1
-        if levels[level] >= self._print_level:
-            self._log_indent += 1
+        for log_formatter in self._log_formatters:
+            log_formatter.increase_indent(levels[level])
 
     def _log_end(self, text: str, level: LogLevel = "INFO"):
         """Log message with timestamp and 'End'.
@@ -311,10 +269,8 @@ class Logger:
             text (str): message text
             level (str): logging level
         """
-        if levels[level] >= self._display_level:
-            self._display_indent -= 1
-        if levels[level] >= self._print_level:
-            self._log_indent -= 1
+        for log_formatter in self._log_formatters:
+            log_formatter.decrease_indent(levels[level])
         self.log_time(f"End {text}", level, indent=True)
 
     @_context
@@ -355,27 +311,27 @@ class Logger:
         self._use_emme_logbook = use_emme
 
     def __enter__(self):
-        self._log_file = open(self._log_file_path, "w", encoding="utf8")
-        if os.path.exists(self._error_file_path):
-            os.remove(self._error_file_path)
+        for log_formatter in self._log_formatters:
+            if hasattr(log_formatter, "open"):
+                log_formatter.open()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
-            self.log("Error during model run", level="ERROR")
-            with open(self._error_file_path, "w", encoding="utf8") as file:
-                for level, text in self._msg_cache:
-                    file.write(f"{level:6} {text}")
-                _traceback.print_exception(exc_type, exc_val, exc_tb, file=file)
+            self.log_time("Error during model run", level="ERROR")
+            self.log(
+                "".join(_traceback.format_exception(exc_type, exc_val, exc_tb, chain=False))
+            )
+            self._log_cache.write_cache()
             self.notify_slack(f"Error during model run in {self.controller.run_dir}.")
             self.notify_slack(f"{exc_val}")
-            _traceback.print_exception(exc_type, exc_val, exc_tb, file=self._log_file)
-        self._log_file.close()
-        self._log_file = None
+        for log_formatter in self._log_formatters:
+            if hasattr(log_formatter, "close"):
+                log_formatter.close()
 
     def clear_msg_cache(self):
         """Clear all log messages from cache."""
-        self._msg_cache = []
+        self._log_cache.clear()
 
     @property
     def debug_enabled(self) -> bool:
@@ -385,7 +341,10 @@ class Logger:
         impact.
         """
         debug = levels["DEBUG"]
-        return self._print_level <= debug or self._display_level <= debug
+        for log_formatter in self._log_formatters:
+            if log_formatter is not self._log_cache and log_formatter.level <= debug:
+                return True
+        return False
 
     @property
     def trace_enabled(self) -> bool:
@@ -395,7 +354,204 @@ class Logger:
         impact.
         """
         trace = levels["TRACE"]
-        return self._print_level <= trace or self._display_level <= trace
+        for log_formatter in self._log_formatters:
+            if log_formatter is not self._log_cache and log_formatter.level <= trace:
+                return True
+        return False
+
+
+class LogFormatter:
+    """Base class for recording text to log.
+
+    Properties:
+        indent: current indentation level for the LogFormatter
+        level: log filter level (as an int)
+    """
+
+    def __init__(self, level: int):
+        self._level = level
+        self.indent = 0
+
+    @property
+    def level(self):
+        """The current filter level for the LogFormatter"""
+        return self._level
+
+    def increase_indent(self, level: int):
+        """Increase current indent if the log level is filtered in"""
+        if level >= self.level:
+            self.indent += 1
+
+    def decrease_indent(self, level: int):
+        """Decrease current indent if the log level is filtered in"""
+        if level >= self.level:
+            self.indent -= 1
+
+    @abstractmethod
+    def log(
+        self,
+        text: str,
+        level: int,
+        indent: bool,
+        timestamp: Union[str, None],
+    ):
+        """Format and log message text.
+
+        Args:
+            text (str): text to log
+            level (int): logging level
+            indent (bool): if true indent text based on the number of open contexts
+            timestamp (str): formatted datetime as a string or None
+        """
+
+    def _format_text(
+        self,
+        text: str,
+        indent: bool,
+        timestamp: Union[str, None],
+    ):
+        """Format text for logging
+
+        Args:
+            text (str): text to format
+            indent (bool): if true indent text based on the number of open contexts and
+                timestamp width
+            timestamp (str): formatted datetime as a string or None for timestamp
+        """
+        if timestamp is None:
+            timestamp = "                        " if indent else ""
+        if indent:
+            num_indents = self.indent
+            indent = "  " * max(num_indents, 0)
+        else:
+            indent = ""
+        return f"{timestamp}{indent}{text}"
+
+
+class LogFile(LogFormatter):
+    """Format and write log text to file.
+
+    Args:
+        - level: the log level as an int
+        - file_path: the absolute file path to write to
+    """
+
+    def __init__(self, level: int, file_path: str):
+        super().__init__(level)
+        self.file_path = file_path
+        self.log_file = None
+
+    def open(self):
+        """Open the log file for writing"""
+        self.log_file = open(self.file_path, "w", encoding="utf8")
+
+    def log(
+        self, text: str, level: int, indent: bool, timestamp: Union[str, None]
+    ):
+        """Log text to file and display depending upon log level and config
+
+        Note that log will not write to file until opened with a context.
+
+        Args:
+            text (str): text to log
+            level (int): logging level
+            indent (bool): if true indent text based on the number of open contexts
+            timestamp (str): formatted datetime as a string or None for timestamp
+        """
+        if level >= self.level and self.log_file is not None:
+            text = self._format_text(text, indent, timestamp)
+            self.log_file.write(f"{text}\n")
+
+    def close(self):
+        """Close the open log file"""
+        self.log_file.close()
+        self.log_file = None
+
+
+class LogFileLevelOverride(LogFile):
+    """Format and write log text to file.
+
+    Args:
+        - level: the log level as an int
+        - file_path: the absolute file path to write to
+    """
+
+    def __init__(self, level, file_path, iter_component_level, controller):
+        super().__init__(level, file_path)
+        self.iter_component_level = iter_component_level
+        self.controller = controller
+
+    @property
+    def level(self):
+        """Current log level with iter_component_level config override."""
+        return self.iter_component_level.get(
+            self.controller.iter_component, self._level
+        )
+
+
+class LogDisplay(LogFormatter):
+    """Format and print log text to console / Notebook.
+
+    Args:
+        - level: the log level as an int
+    """
+
+    def log(
+        self, text: str, level: int, indent: bool, timestamp: Union[str, None]
+    ):
+        """Format and display text on screen (print)
+
+        Args:
+            text (str): text to log
+            level (int): logging level
+            indent (bool): if true indent text based on the number of open contexts
+            timestamp (str): formatted datetime as a string or None
+        """
+        if level >= self.level:
+            print(self._format_text(text, indent, timestamp))
+
+
+class LogCache(LogFormatter):
+    """Caches all messages for later recording in on error logfile.
+
+    Args:
+        - file_path: the absolute file path to write to
+    """
+
+    def __init__(self, file_path: str):
+        super().__init__(level=0)
+        self.file_path = file_path
+        self._msg_cache = []
+
+    def open(self):
+        """Initialize log file (remove)"""
+        if os.path.exists(self.file_path):
+            os.remove(self.file_path)
+
+    def log(
+        self, text: str, level: int, indent: bool, timestamp: Union[str, None]
+    ):
+        """Format and store text for later recording.
+
+        Args:
+            text (str): text to log
+            level (int): logging level
+            indent (bool): if true indent text based on the number of open contexts
+            timestamp (str): formatted datetime as a string or None
+        """
+        self._msg_cache.append((level, self._format_text(text, indent, timestamp)))
+
+    def write_cache(self):
+        """Write all cached messages"""
+        _levels = dict((v, k) for k, v in levels.items())
+        with open(self.file_path, "w", encoding="utf8") as file:
+            for level, text in self._msg_cache:
+                file.write(f"{_levels[level]:6} {text}\n")
+        self.clear()
+
+    def clear(self):
+        """Clear message cache"""
+        self._msg_cache = []
 
 
 # pylint: disable=too-few-public-methods

@@ -4,7 +4,9 @@ import sys
 import pytest
 
 
-_EXAMPLES_DIR = r"examples"
+_EXAMPLES_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "examples"
+)
 
 
 def test_example_download():

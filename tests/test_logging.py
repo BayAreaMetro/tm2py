@@ -1,4 +1,5 @@
 from datetime import datetime
+import os
 
 
 def test_log():
@@ -8,12 +9,14 @@ def test_log():
 
     with tempfile.TemporaryDirectory() as temp_dir:
         log_config = {
+            "display_level": "STATUS",
+            "run_file_path": "log_run.txt",
+            "run_file_level": "STATUS",
             "log_file_path": "log.txt",
-            "error_file_path": "error.txt",
+            "log_file_level": "DEBUG",
+            "log_on_error_file_path": "error.txt",
             "notify_slack": False,
             "use_emme_logbook": False,
-            "log_display_level": "STATUS",
-            "log_file_level": "DEBUG",
             "iter_component_level": None,
         }
 
@@ -58,13 +61,27 @@ def test_log():
         except TestException:
             pass
 
-        with open(logger._log_file_path, "r") as f:
+        with open(os.path.join(temp_dir, log_config["run_file_path"]), "r") as f:
             text = []
             for line in f:
                 text.append(line)
-        for line in text:
-            print(line.strip())
-        assert len(text) == 14
+        assert len(text) == 5
+        assert text[0] == "A status\n"
+        # will raise if message is not formatted correctly
+        datetime.strptime(
+            text[1], "%d-%b-%Y (%H:%M:%S): Start Running a set of steps\n"
+        )
+        datetime.strptime(
+            text[2], "%d-%b-%Y (%H:%M:%S):   Indented displayed     message with timestamp\n"
+        )
+
+        assert "Error during model run" in text[4]
+
+        with open(os.path.join(temp_dir, log_config["log_file_path"]), "r") as f:
+            text = []
+            for line in f:
+                text.append(line)
+        assert len(text) == 15
         assert text[0] == "a message\n"
         assert text[1] == "A status\n"
         assert text[2].endswith("Start Running a set of steps\n")
@@ -78,16 +95,14 @@ def test_log():
         # but not trace message
         assert "A trace message\n" not in text
         # error message recorded
-        assert text[9].startswith("Error during model run")
-        assert "Traceback" in text[10]
+        assert "Error during model run" in text[9]
+        assert text[10].startswith("Traceback")
 
-        with open(logger._error_file_path, "r") as f:
+        with open(os.path.join(temp_dir, log_config["log_on_error_file_path"]), "r") as f:
             text = []
             for line in f:
                 text.append(line)
-        for line in text:
-            print(line.strip())
-        assert len(text) == 13
+        assert len(text) == 14
         assert text[0].startswith("STATUS")
         assert text[0].endswith("Running a set of steps\n")
         # debug and trace messages appear in post error log

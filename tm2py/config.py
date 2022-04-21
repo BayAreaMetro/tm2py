@@ -129,29 +129,37 @@ class LoggingConfig(ConfigItem):
     """Logging parameters
 
     Properties:
-        log_file_path: relative path to standard log file, default is log.txt
-        error_file_path: relative path to use for fallback log message cache on error,
-            default is error_log.txt
-        notify_slack: if true notify_slack messages will be sent,
-            default is False
-        use_emme_logbook: if True log messages will also be recorded
-            in the Emme logbook, default is True
-        log_display_level: filter level for messages to show in console,
-            default is STATUS
-        log_file_level: filter level for messages recorded in the standard
-            log, default is DETAIL
-        iter_component_level: tuple of tuples of iteration, component name,
-            log level. Used to override default log levels for debugging.
+        display_level: filter level for messages to show in console, default
+            is STATUS
+        run_file_path: relative path to high-level log file for the model run,
+            default is log_run.txt
+        run_file_level: filter level for messages recorded in the run log,
+            default is INFO
+        log_file_path: relative path to general log file with more detail
+            than the run_file, default is log.txt
+        log_file_level: optional, filter level for messages recorded in the
+            standard log, default is DETAIL
+        log_on_error_file_path: relative path to use for fallback log message cache
+            on error, default is log_on_error.txt
+        notify_slack: if true notify_slack messages will be sent, default is False
+        use_emme_logbook: if True log messages recorded in the standard log file will
+            also be recorded in the Emme logbook, default is True
+        iter_component_level: tuple of tuples of iteration, component name, log level.
+            Used to override log levels (log_file_level) for debugging and recording
+            more detail in the log_file_path.
             Example: [ [2, "highway", "TRACE"] ] to record all messages
             during the highway component run at iteration 2.
     """
 
+    display_level: Optional[LogLevel] = Field(default="STATUS")
+    run_file_path: Optional[str] = Field(default="log_run.txt")
+    run_file_level: Optional[LogLevel] = Field(default="INFO")
     log_file_path: Optional[str] = Field(default="log.txt")
-    error_file_path: Optional[str] = Field(default="error_log.txt")
+    log_file_level: Optional[LogLevel] = Field(default="DETAIL")
+    log_on_error_file_path: Optional[str] = Field(default="log_on_error.txt")
+
     notify_slack: Optional[bool] = Field(default=False)
     use_emme_logbook: Optional[bool] = Field(default=True)
-    log_display_level: Optional[LogLevel] = Field(default="STATUS")
-    log_file_level: Optional[LogLevel] = Field(default="DETAIL")
     iter_component_level: Optional[
         Tuple[Tuple[int, ComponentNames, LogLevel], ...]
     ] = Field(default=None)

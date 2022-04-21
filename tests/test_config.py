@@ -36,8 +36,7 @@ def test_config_read():
     assert my_config.highway.maz_to_maz.operating_cost_per_mile == 18.93
     assert len(my_config.time_periods) == 5
     assert my_config.highway.classes[0].description == "drive alone"
-    # use default values for logging parameters
-    assert my_config.logging.log_file_path == "log.txt"
+    assert my_config.logging.log_file_path == "log_detail.txt"
     assert my_config.logging.log_display_level == "STATUS"
 
 
