@@ -62,14 +62,19 @@ class Logger:
             with logger.log_start_end("Running a set of steps"):
                 logger.log_time("Message with timestamp")
                 logger.log("A debug message", level="DEBUG")
+                # equivalently, use the .debug:
+                logger.debug("Another debug message")
                 if logger.debug_enabled:
                     # only generate this report if logging DEBUG
                     logger.log(
                         "A debug report that takes time to produce",
                         level="DEBUG")
+                logger.notify_slack("A slack message")
 
     Note that the Logger should not be used until opened with a context.
     Logger.log will not write to file.
+
+    Methods can also be decorated with LogStartEnd (see class for more).
 
     Note that the Logger should only be initialized once per model run.
     In places where the controller is not available, the last Logger
@@ -559,9 +564,14 @@ class LogCache(LogFormatter):
 
 class LogStartEnd:
     """Log the start and end time with optional message.
-    Used as a Component method decorator. If msg is not provided a default message
 
-    is generated with the object class and method name.
+    Used as a Component method decorator. If msg is not provided a default
+    message is generated with the object class and method name.
+
+    Example::
+        @LogStartEnd("Highway assignment and skims", level="STATUS")
+        def run(self):
+            pass
 
     Args:
         text (str): message text to use in the start and end record
