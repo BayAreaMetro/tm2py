@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Copies test data to examples directory or a given directory as an input argument
+# USAGE: get_test_data <optional: directory to put test data>
+
+TEST_DATA_LOCATION=https://mtcdrive.box.com/s/3entr016e9teq2wt46x1os3fjqylfoge
+TEST_DATA_NAME="UnionCity"
+DEFAULT_DIRECTORY="examples"
+
+echo "Retreiving $TEST_DATA_NAME data from $TEST_DATA_LOCATION"
+
+if [ "$#"==0 ]
+then
+    DIR=$(find . -name $DEFAULT_DIRECTORY)
+    echo "Finding directory:" $DIR
+    cd $DIR
+else
+    OUTDIR=$1
+    [ ! -d $OUTDIR ] && mkdir -p $OUTDIR
+    cd $OUTDIR
+    echo "Moved to provided directory:" $OUTDIR
+fi
+
+echo "Writing to $PWD"
+
+curl $TEST_DATA_LOCATION -L -o test_data.zip
+unzip test_data.zip -d $TEST_DATA_NAME
+rm test_data.zip /y

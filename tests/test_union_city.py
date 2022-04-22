@@ -1,20 +1,74 @@
 import os
+from unittest.mock import MagicMock
+import sys
 import pytest
 
 
-_UNION_CITY_ROOT_DIR = ""
+_EXAMPLES_DIR = r"examples"
+
+
+def test_example_download():
+    # If (and only if) Emme is not installed, replace INRO libraries with MagicMock
+    try:
+        import inro.emme.database.emmebank
+    except ModuleNotFoundError:
+        sys.modules["inro.emme.database.emmebank"] = MagicMock()
+        sys.modules["inro.emme.network"] = MagicMock()
+        sys.modules["inro.emme.database.scenario"] = MagicMock()
+        sys.modules["inro.emme.database.matrix"] = MagicMock()
+        sys.modules["inro.emme.network.node"] = MagicMock()
+        sys.modules["inro.emme.desktop.app"] = MagicMock()
+        sys.modules["inro"] = MagicMock()
+        sys.modules["inro.modeller"] = MagicMock()
+
+    import shutil
+    from tm2py.examples import get_example
+
+    name = "UnionCity"
+    example_dir = os.path.join(os.getcwd(), _EXAMPLES_DIR)
+    union_city_root = os.path.join(example_dir, name)
+    if os.path.exists(union_city_root):
+        shutil.rmtree(union_city_root)
+
+    get_example(
+        example_name="UnionCity", example_subdir=_EXAMPLES_DIR, root_dir=os.getcwd()
+    )
+    # default retrieval_url points to Union City example on box
+
+    # check that the root union city folder exists
+    assert os.path.isdir(os.path.join(example_dir, name))
+    # check some expected files exists
+    files_to_check = [
+        os.path.join("inputs", "hwy", "tolls.csv"),
+        os.path.join("inputs", "nonres", "2035_fromOAK.csv"),
+        os.path.join("inputs", "landuse", "maz_data.csv"),
+        os.path.join("emme_project", "mtc_emme.emp"),
+        os.path.join("emme_project", "Database_highway", "emmebank"),
+    ]
+    for file_name in files_to_check:
+        assert os.path.exists(
+            os.path.join(example_dir, name, file_name)
+        ), f"get_example failed, missing {file_name}"
+    # check zip file was removed
+    assert not (os.path.exists(os.path.join(example_dir, name, "test_data.zip")))
 
 
 @pytest.mark.skipci
 def test_highway():
     from tm2py.controller import RunController
+    from tm2py.examples import get_example
     import openmatrix as _omx
 
+    union_city_root = os.path.join(os.getcwd(), _EXAMPLES_DIR, "UnionCity")
+    get_example(
+        example_name="UnionCity", example_subdir=_EXAMPLES_DIR, root_dir=os.getcwd()
+    )
     controller = RunController(
         [
-            os.path.join(_UNION_CITY_ROOT_DIR, r"example_union\scenario_arch.toml"),
-            os.path.join(_UNION_CITY_ROOT_DIR, r"example_union\model.toml"),
-        ]
+            os.path.join(_EXAMPLES_DIR, r"scenario_config.toml"),
+            os.path.join(_EXAMPLES_DIR, r"model_config.toml"),
+        ],
+        run_dir=union_city_root
     )
     controller.run()
 
@@ -50,4 +104,4 @@ def test_highway():
                     count_different_lines += 1
     assert (
         count_different_lines == 0
-    ), f"HWYSKIM_MAZMAZ_DA.csv differes on {count_different_lines} lines"
+    ), f"HWYSKIM_MAZMAZ_DA.csv differs on {count_different_lines} lines"

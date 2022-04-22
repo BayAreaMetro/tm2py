@@ -14,22 +14,22 @@ class Logger:
         self._indentation = 0
 
     @staticmethod
-    def log(text: str, level: int = 1):
+    def log(text: str, level: str = "INFO"):
         """Placeholder logging method
 
         Args:
             text (str): text to log
-            level (int): logging level of the message text
+            level (str): logging level of the message text
         """
-        if level < 999:
+        if level:
             print(text)
 
-    def log_time(self, msg: str, level: int = 1, indent: bool = False):
+    def log_time(self, msg: str, level: str = "INFO", indent: bool = True):
         """Log message with timestamp
 
         Args:
             msg (str): message text
-            level (int): logging level
+            level (str): logging level
             indent (bool): if true indent any messages based on the number of open contexts
         """
         timestamp = datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
@@ -39,33 +39,33 @@ class Logger:
         else:
             self.log(f"{timestamp}: {msg}", level)
 
-    def log_start(self, msg: str, level: int = 1):
+    def log_start(self, msg: str, level: str = "INFO"):
         """Log message with timestamp and 'Start'.
 
         Args:
             msg (str): message text
-            level (int): logging level
+            level (str): logging level
         """
         self.log_time(f"Start {msg}", level, indent=True)
         self._indentation += 1
 
-    def log_end(self, msg: str, level: int = 1):
+    def log_end(self, msg: str, level: str = "INFO"):
         """Log message with timestamp and 'End'.
 
         Args:
             msg (str): message text
-            level (int): logging level
+            level (str): logging level
         """
         self._indentation -= 1
         self.log_time(f"End {msg}", level, indent=True)
 
     @_context
-    def log_start_end(self, msg: str, level: int = 1):
+    def log_start_end(self, msg: str, level: str = "INFO"):
         """Use with 'with' statement to log the start and end time with message.
 
         Args:
             msg (str): message text
-            level (int): logging level
+            level (str): logging level
         """
         self.log_start(msg, level)
         yield
@@ -83,10 +83,10 @@ class LogStartEnd:
 
     Args:
         msg (str): message text to use in the start and end record
-        level (int): logging level
+        level (str): logging level
     """
 
-    def __init__(self, msg: str = None, level: int = 1):
+    def __init__(self, msg: str = None, level: str = "INFO"):
         self.msg = msg
         self.level = level
 

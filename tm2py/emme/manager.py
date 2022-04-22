@@ -1,29 +1,34 @@
-"""Module for Emme Manager for centralized management of Emme projects"""
+"""Module for Emme Manager for centralized management of Emme projects
+
+Centralized location for Emme API imports, which are automatically replaced
+by unittest.Mock / MagicMock to support testing where Emme is not installed.
+
+Contains EmmeManager class for access to common Emme-related procedures
+(common-code / utility-type methods) and caching access to Emme project,
+and Modeller.
+"""
 
 from contextlib import contextmanager as _context
 import os
 from socket import error as _socket_error
 from typing import Any, Dict, List, Union
 
-try:
-    # skip Emme import to support testing where Emme is not installed
+# PyLint cannot build AST from compiled Emme libraries
+# so disabling relevant import module checks
+# pylint: disable=E0611, E0401, E1101
+from inro.emme.database.emmebank import Emmebank
+from inro.emme.network import Network as EmmeNetwork
+from inro.emme.database.scenario import Scenario as EmmeScenario
+from inro.emme.database.matrix import Matrix as EmmeMatrix  # pylint: disable=W0611
+from inro.emme.network.node import Node as EmmeNode  # pylint: disable=W0611
+import inro.emme.desktop.app as _app
+from inro.modeller import Modeller as EmmeModeller, logbook_write, logbook_trace
 
-    # PyLint cannot build AST from compiled Emme libraries
-    # so disabling relevant import module checks
-    # pylint: disable=E0611, E0401, E1101
-    from inro.emme.database.emmebank import Emmebank
-    from inro.emme.database.scenario import Scenario as EmmeScenario
-    import inro.emme.desktop.app as _app
-    import inro.modeller as _m
+EmmeDesktopApp = _app.App
 
-    EmmeDesktopApp = _app.App
-    EmmeModeller = _m.Modeller
-except ModuleNotFoundError:
-    # pylint: disable=C0103
-    Emmebank = None
-    EmmeScenario = None
-    EmmeDesktopApp = None
-    EmmeModeller = None
+# "Emme Manager requires Emme to be installed unless running in a test environment."
+# "Please install Emme and try again."
+
 
 # Cache running Emme projects from this process (simple singleton implementation)
 _EMME_PROJECT_REF = {}
@@ -36,6 +41,8 @@ class EmmeManager:
     """
 
     def __init__(self):
+        # mapping of Emme project path to Emme Desktop API object for reference
+        # (projects are opened only once)
         self._project_cache = _EMME_PROJECT_REF
 
     def close_all(self):
@@ -54,6 +61,9 @@ class EmmeManager:
         Args:
             project_dir: path to Emme root directory for new Emme project
             name: name for the Emme project
+
+        Returns:
+            Emme Desktop App object, see Emme API Reference, Desktop section for details.
         """
         emp_path = _app.create_project(project_dir, name)
         return self.project(emp_path)
@@ -63,6 +73,9 @@ class EmmeManager:
 
         Args:
             project_path: valid path to Emme project *.emp file
+
+        Returns:
+            Emme Desktop App object, see Emme API Reference, Desktop section for details.
         """
         project_path = os.path.normcase(os.path.realpath(project_path))
         emme_project = self._project_cache.get(project_path)
@@ -87,6 +100,8 @@ class EmmeManager:
 
         Args:
             path: valid system path pointing to an Emmebank file
+        Returns:
+            Emmebank object, see Emme API Reference, Database section for details.
         """
         if not path.endswith("emmebank"):
             path = os.path.join(path, "emmebank")
@@ -110,25 +125,6 @@ class EmmeManager:
             )
             change_dimensions(new_dims, emmebank, keep_backup=False)
 
-    def prepare_zero_matrix(self, emmebank: Union[Emmebank, str]):
-        """Create zero "demand" matrix from assignments.
-
-        Creates a new matrix named "zero" in the specified emmebank if it does
-        not already exist.
-
-        Args:
-            emmebank: the Emmebank object or path to change the dimensions
-        """
-        if not isinstance(emmebank, Emmebank):
-            emmebank = self.emmebank(emmebank)
-        zero_matrix = emmebank.matrix('ms"zero"')
-        if zero_matrix is None:
-            ident = emmebank.available_matrix_identifier("SCALAR")
-            zero_matrix = emmebank.create_matrix(ident)
-            zero_matrix.name = "zero"
-            zero_matrix.description = "zero demand matrix"
-        zero_matrix.data = 0
-
     def modeller(self, emme_project: EmmeDesktopApp = None) -> EmmeModeller:
         """Initialize and return Modeller object.
 
@@ -139,10 +135,13 @@ class EmmeManager:
 
         Args:
             emme_project: open 'Emme Desktop' application (inro.emme.desktop.app)
+
+        Returns:
+            Emme Modeller object, see Emme API Reference, Modeller section for details.
         """
         # pylint: disable=E0611, E0401, E1101
         try:
-            return _m.Modeller()
+            return EmmeModeller()
         except AssertionError as error:
             if emme_project is None:
                 if self._project_cache:
@@ -152,25 +151,15 @@ class EmmeManager:
                         "modeller not yet initialized and no cached Emme project,"
                         " emme_project arg must be provided"
                     ) from error
-            return _m.Modeller(emme_project)
+            return EmmeModeller(emme_project)
 
     def tool(self, namespace: str):
-        """Return the Modeller tool at namespace."""
-        return self.modeller().tool(namespace)
+        """Return the Modeller tool at namespace.
 
-    @staticmethod
-    def copy_attribute_values(src, dst, attributes: Dict[str, List[str]]):
-        """Copy network/scenario attribute values from src to dst.
-
-        Args:
-            src: Emme scenario object or Emme Network object
-            dst: Emme scenario object or Emme Network object
-            attributes: dictionary or Emme network domain to list of attribute names
-                NODE, LINK, TURN, TRANSIT_LINE, TRANSIT_SEGMENT
+        Returns:
+            Corresponding Tool object, see Emme Help for full details.
         """
-        for domain, attrs in attributes.items():
-            values = src.get_attribute_values(domain, attrs)
-            dst.set_attribute_values(domain, attrs, values)
+        return self.modeller().tool(namespace)
 
     @staticmethod
     @_context
@@ -230,6 +219,63 @@ class EmmeManager:
                 scenario.set_attribute_values(domain, names, values)
 
     @staticmethod
+    def copy_attr_values(
+        domain: str,
+        src: Union[EmmeScenario, EmmeNetwork],
+        dst: Union[EmmeScenario, EmmeNetwork],
+        src_names: List[str],
+        dst_names: List[str] = None,
+    ):
+        """Copy attribute values between Emme scenario (on disk) and network (in memory).
+
+        Args:
+            domain: attribute domain, one of "NODE", "LINK", "TURN", "TRANSIT_LINE",
+                "TRANSIT_SEGMENT"
+            src: source Emme scenario or network to load values from
+            dst: destination Emme scenario or network to save values to
+            src_names: names of the attributes for loading values
+            dst_names: optional, names of the attributes to save values as, defaults
+                to using the src_names if not specified
+
+        Returns:
+            Emme Modeller object, see Emme API Reference, Modeller section for details.
+        """
+        if dst_names is None:
+            dst_names = src_names
+        values = src.get_attribute_values(domain, src_names)
+        dst.set_attribute_values(domain, dst_names, values)
+
+    def get_network(
+        self, scenario: EmmeScenario, attributes: Dict[str, List[str]] = None
+    ) -> EmmeNetwork:
+        """Read partial Emme network from the scenario for the domains and attributes specified.
+
+        Optimized load of network object from scenario (disk / emmebank) for only the
+        domains specified, and only reads the attributes specified. The attributes is a
+        dictionary with keys for the required domains, and values as lists of the
+        attributes required by domain.
+
+        Wrapper for scenario.get_partial_network followed by scenario.get_attribute_values
+        and network.set_attribute_values.
+
+        Args:
+            scenario: Emme scenario object, see Emme API reference
+            attributes: dictionary of domain names to lists of attribute names
+
+        Returns:
+            Emme Network object, see Emme API Reference, Network section for details.
+        """
+        if attributes is None:
+            return scenario.get_network()
+        network = scenario.get_partial_network(
+            attributes.keys(), include_attributes=False
+        )
+        for domain, attrs in attributes.items():
+            if attrs:
+                self.copy_attr_values(domain, scenario, network, attrs)
+        return network
+
+    @staticmethod
     def logbook_write(name: str, value: str = None, attributes: Dict[str, Any] = None):
         """Write an entry to the Emme Logbook at the current nesting level.
 
@@ -244,7 +290,7 @@ class EmmeManager:
         """
         # pylint: disable=E0611, E0401, E1101
         attributes = attributes if attributes else {}
-        _m.logbook_write(name, value=value, attributes=attributes)
+        logbook_write(name, value=value, attributes=attributes)
 
     @staticmethod
     @_context
@@ -267,5 +313,5 @@ class EmmeManager:
         """
         # pylint: disable=E0611, E0401, E1101
         attributes = attributes if attributes else {}
-        with _m.logbook_trace(name, value=value, attributes=attributes):
+        with logbook_trace(name, value=value, attributes=attributes):
             yield
