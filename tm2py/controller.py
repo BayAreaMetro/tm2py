@@ -162,5 +162,7 @@ class RunController:
         already_validated_components = set()
         for _, name, component in self._queued_components:
             if name not in already_validated_components:
-                component.validate_inputs()
+                errors = component.validate_inputs()
+                if errors:
+                    raise Exception(f"{name}.validate_inputs: {errors} found")
                 already_validated_components.add(name)

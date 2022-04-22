@@ -76,6 +76,27 @@ class PrepareNetwork(Component):
                 self._calc_link_class_costs(network)
                 scenario.publish_network(network)
 
+    def validate_inputs(self):
+        """Validate inputs files are correct, return number of errors found."""
+        errors = 0
+        toll_file_path = self.get_abs_path(self.config.highway.tolls.file_path)
+        if not toll_file_path:
+            errors += 1
+            self.logger.log(f"Tolls file does not exist: {toll_file_path}", level="ERROR")
+        else:
+            src_veh_groups = self.config.highway.tolls.src_vehicle_group_names
+            columns = ["fac_index", "tollseg"]
+            for time in self.config.time_periods:
+                for vehicle in src_veh_groups:
+                    columns.append(f"toll{time.name}_{vehicle}")
+            with open(toll_file_path, "r", encoding="UTF8") as toll_file:
+                header = set(next(toll_file).split(","))
+                for column in columns:
+                    if column not in header:
+                        errors += 1
+                        self.logger.log(f"Tolls file missing column: {column}", level="ERROR")
+        return errors
+
     def _create_class_attributes(self, scenario: EmmeScenario, time_period: str):
         """Create required network attributes including per-class cost and flow attributes."""
         create_attribute = self.controller.emme_manager.tool(
@@ -135,7 +156,7 @@ class PrepareNetwork(Component):
                 if data_row is None:
                     self.logger.log(
                         f"set tolls failed index lookup {index}, link {link.id}",
-                        level="TRACE",
+                        level="DEBUG",
                     )
                     continue  # tolls will remain at zero
                 # if index is below tollbooth start index then this is a bridge
