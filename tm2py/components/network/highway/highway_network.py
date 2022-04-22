@@ -46,6 +46,7 @@ The following attributes are calculated:
     - "@cost_YY": total cost for class YY
 """
 
+import os
 
 from typing import Dict, List, Set
 
@@ -77,25 +78,32 @@ class PrepareNetwork(Component):
                 scenario.publish_network(network)
 
     def validate_inputs(self):
-        """Validate inputs files are correct, return number of errors found."""
-        errors = 0
+        """Validate inputs files are correct, raise if an error is found."""
         toll_file_path = self.get_abs_path(self.config.highway.tolls.file_path)
-        if not toll_file_path:
-            errors += 1
-            self.logger.log(f"Tolls file does not exist: {toll_file_path}", level="ERROR")
-        else:
-            src_veh_groups = self.config.highway.tolls.src_vehicle_group_names
-            columns = ["fac_index", "tollseg"]
-            for time in self.config.time_periods:
-                for vehicle in src_veh_groups:
-                    columns.append(f"toll{time.name}_{vehicle}")
-            with open(toll_file_path, "r", encoding="UTF8") as toll_file:
-                header = set(next(toll_file).split(","))
-                for column in columns:
-                    if column not in header:
-                        errors += 1
-                        self.logger.log(f"Tolls file missing column: {column}", level="ERROR")
-        return errors
+        if not os.path.exists(toll_file_path):
+            self.logger.log(
+                f"Tolls file (config.highway.tolls.file_path) does not exist: {toll_file_path}",
+                level="ERROR",
+            )
+            raise Exception(f"Tolls file does not exist: {toll_file_path}")
+        src_veh_groups = self.config.highway.tolls.src_vehicle_group_names
+        columns = ["fac_index"]
+        for time in self.config.time_periods:
+            for vehicle in src_veh_groups:
+                columns.append(f"toll{time.name.lower()}_{vehicle}")
+        with open(toll_file_path, "r", encoding="UTF8") as toll_file:
+            header = set(h.strip() for h in next(toll_file).split(","))
+            missing = []
+            for column in columns:
+                if column not in header:
+                    missing.append(column)
+                    self.logger.log(
+                        f"Tolls file missing column: {column}", level="ERROR"
+                    )
+        if missing:
+            raise Exception(
+                f"Tolls file missing {len(missing)} columns: {', '.join(missing)}"
+            )
 
     def _create_class_attributes(self, scenario: EmmeScenario, time_period: str):
         """Create required network attributes including per-class cost and flow attributes."""
@@ -179,7 +187,7 @@ class PrepareNetwork(Component):
         toll_file_path = self.get_abs_path(self.config.highway.tolls.file_path)
         tolls = {}
         with open(toll_file_path, "r", encoding="UTF8") as toll_file:
-            header = next(toll_file).split(",")
+            header = [h.strip() for h in next(toll_file).split(",")]
             for line in toll_file:
                 data = dict(zip(header, line.split(",")))
                 tolls[int(data["fac_index"])] = data

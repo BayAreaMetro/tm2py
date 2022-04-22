@@ -86,8 +86,7 @@ class Component(ABC):
         return self._trace
 
     def validate_inputs(self):
-        """Validate inputs are correct at model initiation, returns number of errors"""
-        return 0
+        """Validate inputs are correct at model initiation, raise on error"""
 
     @abstractmethod
     def run(self):

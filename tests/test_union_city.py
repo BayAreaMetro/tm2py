@@ -105,3 +105,46 @@ def test_highway():
     assert (
         count_different_lines == 0
     ), f"HWYSKIM_MAZMAZ_DA.csv differs on {count_different_lines} lines"
+
+
+@pytest.mark.xfail
+def test_validate_input_fail():
+    # If (and only if) Emme is not installed, replace INRO libraries with MagicMock
+    try:
+        import inro.emme.database.emmebank
+    except ModuleNotFoundError:
+        sys.modules["inro.emme.database.emmebank"] = MagicMock()
+        sys.modules["inro.emme.network"] = MagicMock()
+        sys.modules["inro.emme.database.scenario"] = MagicMock()
+        sys.modules["inro.emme.database.matrix"] = MagicMock()
+        sys.modules["inro.emme.network.node"] = MagicMock()
+        sys.modules["inro.emme.desktop.app"] = MagicMock()
+        sys.modules["inro"] = MagicMock()
+        sys.modules["inro.modeller"] = MagicMock()
+
+    from tm2py.controller import RunController
+    from tm2py.examples import get_example
+    import toml
+    import tempfile
+
+    model_config_path = os.path.join(_EXAMPLES_DIR, r"model_config.toml")
+    with open(model_config_path, "r") as fin:
+        model_config = toml.load(fin)
+    model_config["highway"]["tolls"]["file_path"] = "foo.csv"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        model_config_path = os.path.join(temp_dir, r"model_config.toml")
+        with open(model_config_path, 'w') as fout:
+            toml.dump(model_config, fout)
+
+    union_city_root = os.path.join(os.getcwd(), _EXAMPLES_DIR, "UnionCity")
+    get_example(
+        example_name="UnionCity", example_subdir=_EXAMPLES_DIR, root_dir=os.getcwd()
+    )
+    controller = RunController(
+        [
+            os.path.join(_EXAMPLES_DIR, r"scenario_config.toml"),
+            model_config_path,
+        ],
+        run_dir=union_city_root
+    )
+    controller.run()
