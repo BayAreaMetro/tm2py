@@ -12,7 +12,6 @@ MODEL_CONFIG = os.path.join(EXAMPLE_DIR, "model_config.toml")
 
 def test_config_read():
     """Configuration should load parameters to the correct namespaces."""
-
     # If (and only if) Emme is not installed, replace inro libraries with MagicMock
     try:
         import inro.emme.database.emmebank
@@ -20,7 +19,9 @@ def test_config_read():
         sys.modules["inro.emme.database.emmebank"] = MagicMock()
         sys.modules["inro.emme.network"] = MagicMock()
         sys.modules["inro.emme.database.scenario"] = MagicMock()
+        sys.modules["inro.emme.network.link"] = MagicMock()
         sys.modules["inro.emme.database.matrix"] = MagicMock()
+        sys.modules["inro.emme.database.mode"] = MagicMock()
         sys.modules["inro.emme.network.node"] = MagicMock()
         sys.modules["inro.emme.desktop.app"] = MagicMock()
         sys.modules["inro"] = MagicMock()

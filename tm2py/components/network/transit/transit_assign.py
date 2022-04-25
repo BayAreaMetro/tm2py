@@ -1,7 +1,7 @@
 """Transit assignment module"""
 
 from __future__ import annotations
-from typing import Union, Collection, Dict, Set, TYPE_CHECKING
+from typing import Union, List, Dict, Set, Tuple, TYPE_CHECKING
 from collections import defaultdict as _defaultdict
 import os
 
@@ -9,15 +9,13 @@ import json as _json
 
 from tm2py.components.component import Component
 from tm2py.components.demand.demand import PrepareTransitDemand
+from tm2py.emme.manager import EmmeNetwork
 from tm2py.logger import LogStartEnd
 from tm2py import tools
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
-    from tm2py.config import (
-        TransitClass as TransitClassConfig,
-        Transit as TransitConfig,
-    )
+    from tm2py.config import TransitClassConfig, TransitConfig, TransitModeConfig
 
 
 _SEGMENT_COST_FUNCTION = """
@@ -43,8 +41,9 @@ def calc_segment_cost(transit_volume, capacity, segment):
            +(min_stand_weight+(max_stand_weight-min_stand_weight)*(transit_volume/capacity)**power_stand_weight)*num_standing
            )/(transit_volume+0.01)))
 
-    # Toronto implementation limited factor between 1.0 and 10.0
-    return crowded_factor
+    # Toronto implementation limited factor between 1.0 and 10.0, 
+    # for use with Emme Capacitated assignment normalize by subtracting 1 
+    return max(crowded_factor -1, 0)
 """
 
 _HEADWAY_COST_FUNCTION = """
@@ -95,8 +94,26 @@ def calc_headway(transit_volume, transit_boardings, headway, capacity, segment):
     eawt = calc_eawt(segment, vcr, segment.line.headway)
     adj_hdwy = calc_adj_headway(transit_volume, transit_boardings, headway, capacity, segment)
     return adj_hdwy + eawt
-
 """
+
+EmmeTransitJourneyLevelSpec = List[
+    Dict[
+        str,
+        Union[
+            str, bool, List[Dict[str, Union[int, str]]], Dict[str, Union[float, str]]
+        ],
+    ]
+]
+EmmeTransitSpec = Dict[
+    str,
+    Union[
+        str,
+        Dict[str, Union[str, float, bool, Dict[str, Union[str, float]]]],
+        List[str],
+        EmmeTransitJourneyLevelSpec,
+        None,
+    ],
+]
 
 
 class TransitAssignment(Component):
@@ -112,18 +129,14 @@ class TransitAssignment(Component):
         self._scenario = None
 
     @LogStartEnd("Transit assignments")
-    def run(self, time_period: Union[Collection[str], str] = None):
-        """Run transit assignments
-
-        Args:
-            time_period: list of str names of time_periods, or name of a single time_period
-        """
+    def run(self):
+        """Run transit assignments"""
         emmebank_path = self.get_abs_path(self.config.emme.transit_database_path)
         emmebank = self.controller.emme_manager.emmebank(emmebank_path)
         use_ccr = False
         if self.controller.iteration >= 1:
             use_ccr = self.config.transit.use_ccr
-        for self._time_period in self._process_time_period(time_period):
+        for self._time_period in self.time_period_names():
             msg = f"Transit assignment for period {self._time_period}"
             with self.logger.log_start_end(msg):
                 self._scenario = self.get_emme_scenario(emmebank, self._time_period)
@@ -143,7 +156,7 @@ class TransitAssignment(Component):
                     self._export_boardings_by_line()
 
     @property
-    def _transit_classes(self):
+    def _transit_classes(self) -> List[AssignmentClass]:
         emme_manager = self.controller.emme_manager
         if self.config.transit.use_fares:
             fare_modes = _defaultdict(lambda: set([]))
@@ -176,7 +189,7 @@ class TransitAssignment(Component):
         return transit_classes
 
     @property
-    def _duration(self):
+    def _duration(self) -> float:
         duration_lookup = dict(
             (p.name, p.length_hours) for p in self.config.time_periods
         )
@@ -258,7 +271,7 @@ class TransitAssignment(Component):
                     f"{line['#src_mode']}, {line['@mode']}\n"
                 )
 
-    def _calc_connector_flows(self):
+    def _calc_connector_flows(self) -> Tuple[EmmeNetwork, Dict[str, str]]:
         emme_manager = self.controller.emme_manager
         # calculate boardings and alightings by assignment class
         network_results = emme_manager.tool(
@@ -287,7 +300,9 @@ class TransitAssignment(Component):
         emme_manager.copy_attribute_values(self._scenario, network, attributes)
         return network, class_stop_attrs
 
-    def _export_connector_flows(self, network, class_stop_attrs):
+    def _export_connector_flows(
+        self, network: EmmeNetwork, class_stop_attrs: Dict[str, str]
+    ):
         # export boardings and alightings by assignment class, stop(connector) and TAZ
         path_tmplt = self.get_abs_path(self.config.transit.output_stop_usage_path)
         os.makedirs(os.path.dirname(path_tmplt), exist_ok=True)
@@ -384,7 +399,20 @@ class TransitAssignment(Component):
 
 
 class AssignmentClass:
-    """Transit assignment class, represents data from config and conversion to Emme specs"""
+    """Transit assignment class, represents data from config and conversion to Emme specs
+
+    Internal properties:
+        _name: the class name loaded from config (not to be changed)
+        _class_config: the transit class config (TransitClassConfig)
+        _transit_config: the root transit assignment config (TransitConfig)
+        _time_period: the time period name
+        _iteration: the current iteration
+        _num_processors: the number of processors to use, loaded from config
+        _fare_modes: the mapping from the generated fare mode ID to the original
+            source mode ID
+        _spec_dir: directory to find the generated journey levels tables from
+            the apply fares step
+    """
 
     # disable too many instance attributes and arguments recommendations
     # pylint: disable=R0902, R0913
@@ -399,6 +427,19 @@ class AssignmentClass:
         fare_modes: Dict[str, Set[str]],
         spec_dir: str,
     ):
+        """
+
+        Args:
+            class_config: the transit class config (TransitClassConfig)
+            transit_config: the root transit assignment config (TransitConfig)
+            time_period: the time period name
+            iteration: the current iteration
+            num_processors: the number of processors to use, loaded from config
+            fare_modes: the mapping from the generated fare mode ID to the original
+                source mode ID
+            spec_dir: directory to find the generated journey levels tables from
+                the apply fares step
+        """
         self._name = class_config.name
         self._class_config = class_config
         self._transit_config = transit_config
@@ -409,12 +450,12 @@ class AssignmentClass:
         self._spec_dir = spec_dir
 
     @property
-    def name(self):
+    def name(self) -> str:
         """The class name"""
         return self._name
 
     @property
-    def emme_transit_spec(self):
+    def emme_transit_spec(self) -> EmmeTransitSpec:
         """Return Emme Extended transit assignment specification
 
         Converted from input config (transit.classes, with some parameters from
@@ -481,12 +522,18 @@ class AssignmentClass:
         return spec
 
     @property
-    def _demand_matrix(self):
+    def _demand_matrix(self) -> str:
         if self._iteration < 1:
             return 'ms"zero"'  # zero demand matrix
         return f'mf"TRN_{self._class_config.skim_set_id}_{self._time_period}"'
 
-    def _get_used_mode_ids(self, modes):
+    def _get_used_mode_ids(self, modes: List[TransitModeConfig]) -> List[str]:
+        """Get list of assignment Mode IDs from input list of Emme mode objects.
+
+        Accounts for fare table (mapping from input mode ID to auto-generated
+        set of mode IDs for fare transition table (fares.far input) by applyfares
+        component.
+        """
         if self._transit_config.use_fares:
             out_modes = set([])
             for mode in modes:
@@ -498,14 +545,16 @@ class AssignmentClass:
         return [mode.mode_id for mode in modes]
 
     @property
-    def _modes(self):
+    def _modes(self) -> List[str]:
+        """List of modes IDs (str) to use in assignment for this class"""
         all_modes = self._transit_config.modes
         mode_types = self._class_config.mode_types
         modes = [mode for mode in all_modes if mode.type in mode_types]
         return self._get_used_mode_ids(modes)
 
     @property
-    def _transit_modes(self):
+    def _transit_modes(self) -> List[str]:
+        """List of transit modes IDs (str) to use in assignment for this class"""
         all_modes = self._transit_config.modes
         mode_types = self._class_config.mode_types
         modes = [
@@ -516,7 +565,7 @@ class AssignmentClass:
         return self._get_used_mode_ids(modes)
 
     @property
-    def _journey_levels(self):
+    def _journey_levels(self) -> EmmeTransitJourneyLevelSpec:
         modes = self._transit_modes
         effective_headway_source = self._transit_config.effective_headway_source
         xfer_perception_factor = self._transit_config.transfer_wait_perception_factor

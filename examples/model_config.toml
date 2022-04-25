@@ -155,7 +155,7 @@
         excluded_links = [ "is_toll_da", "is_sr",]
         value_of_time = 18.93
         operating_cost_per_mile = 17.23
-        toll = ["@bridgetoll_da"]
+        toll = [ "@bridgetoll_da" ]
         skims = [ "time", "dist", "freeflowtime", "bridgetoll_da",]
         [[highway.classes.demand]]
             source = "household"
@@ -350,6 +350,50 @@
     #input_connector_access_times_path = "inputs\\trn\\estimated_taz_access_connectors.csv"
     #input_connector_egress_times_path = "inputs\\trn\\estimated_taz_egress_connectors.csv"
     #output_stop_usage_path = "inputs\\trn\\stop_usage_{period}.csv"
+    use_ccr = false
+    # max_ccr_iterations = 3
+    [[transit.classes]]
+        skim_set_id = "SET1"
+        name = "BUS"
+        description = "Local bus"
+        mode_types = ["ACCESS", "EGRESS", "WALK", "LOCAL"]
+        [[transit.classes.demand]]
+            source = "household"
+            name = "WLK_SET_{period}"
+        [[transit.classes.demand]]
+            source = "household"
+            name = "PNR_SET_{period}"
+        [[transit.classes.demand]]
+            source = "household"
+            name = "KNR_SET_{period}"
+    [[transit.classes]]
+        skim_set_id = "SET2"
+        name = "PREM"
+        description = "Premium modes"
+        mode_types = ["ACCESS", "EGRESS", "WALK", "PREMIUM"]
+        [[transit.classes.demand]]
+            source = "household"
+            name = "WLK_SET_{period}"
+        [[transit.classes.demand]]
+            source = "household"
+            name = "PNR_SET_{period}"
+        [[transit.classes.demand]]
+            source = "household"
+            name = "KNR_SET_{period}"
+    [[transit.classes]]
+        skim_set_id = "SET3"
+        name = "ALLPEN"
+        description = "All w/ xfer pen"
+        mode_types = ["ACCESS", "EGRESS", "WALK", "LOCAL", "PREMIUM"]
+        [[transit.classes.demand]]
+            source = "household"
+            name = "WLK_SET_{period}"
+        [[transit.classes.demand]]
+            source = "household"
+            name = "PNR_SET_{period}"
+        [[transit.classes.demand]]
+            source = "household"
+            name = "KNR_SET_{period}"
 
 [emme]
     num_processors = "max-1"
@@ -944,60 +988,63 @@
 [[transit.modes]]
     mode_id = "w"
     name = "walk"
+    description = "walk"
     type = "WALK"
     assign_type = "AUX_TRANSIT"
     speed_miles_per_hour = 3.0
 [[transit.modes]]
     mode_id = "a"
     name = "access"
+    description = "access"
     type = "ACCESS"
     assign_type = "AUX_TRANSIT"
     speed_miles_per_hour = 3.0
 [[transit.modes]]
     mode_id = "e"
     name = "egress"
+    description = "egress"
     type = "EGRESS"
     assign_type = "AUX_TRANSIT"
     speed_miles_per_hour = 3.0
 [[transit.modes]]
     mode_id = "b"
-    name = "local_bus"
-    short_name = "LB"
+    description = "local_bus"
+    name = "LB"
     type = "LOCAL"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
 [[transit.modes]]
     mode_id = "x"
-    name = "exp_bus"
-    short_name = "EB"
+    description = "exp_bus"
+    name = "EB"
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
 [[transit.modes]]
     mode_id = "f"
-    name = "ferry"
-    short_name = "FR"
+    description = "ferry"
+    name = "FR"
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
 [[transit.modes]]
     mode_id = "l"
-    name = "light_rail"
-    short_name = "LR"
+    description = "light_rail"
+    name = "LR"
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
 [[transit.modes]]
     mode_id = "h"
-    name = "heavy_rail"
-    short_name = "HR"
+    description = "heavy_rail"
+    name = "HR"
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
 [[transit.modes]]
     mode_id = "r"
-    name = "comm_rail"
-    short_name = "CR"
+    description = "comm_rail"
+    name = "CR"
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0

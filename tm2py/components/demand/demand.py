@@ -1,9 +1,8 @@
-<<<<<<< HEAD
 """Demand loading from OMX (generated from demand model components) to Emme database"""
 
 from __future__ import annotations
 from abc import ABC
-from typing import Dict, Union, Collection, List, TYPE_CHECKING
+from typing import Collection, Dict, Union, List, TYPE_CHECKING
 import numpy as np
 
 from tm2py.components.component import Component
@@ -22,7 +21,6 @@ class PrepareDemand(Component, ABC):
     def __init__(self, controller: RunController):
         super().__init__(controller)
         self._emmebank = None
-<<<<<<< HEAD
         self._scenario = None
         self._source_ref_key = None
 
@@ -107,7 +105,7 @@ class PrepareDemand(Component, ABC):
                 raise Exception(f"error averaging demand: matrix {name} does not exist")
             prev_demand = matrix.get_numpy_data(self._scenario.id)
             demand = prev_demand + (1.0 / msa_iteration) * (demand - prev_demand)
-        # self.logger.log(f"{name} sum: {demand.sum()}", level=3)
+        self.logger.log(f"{name} sum: {demand.sum()}", level="DEBUG")
         matrix.set_numpy_data(demand, self._scenario.id)
 
     def _create_zero_matrix(self):
@@ -132,17 +130,9 @@ class PrepareHighwayDemand(PrepareDemand):
         controller: parent RunController object
     """
 
-    def __init__(self, controller: RunController):
-        super().__init__(controller)
-        self._emmebank = None
-
     @LogStartEnd("Prepare highway demand")
-    def run(self, time_period: Union[Collection[str], str] = None):
-        """Open combined demand OMX files from demand models and prepare for assignment.
-
-        Args:
-            time_period: list of str names of time_periods, or name of a single _time_period
-        """
+    def run(self):
+        """Open combined demand OMX files from demand models and prepare for assignment."""
         self._source_ref_key = "highway_demand_file"
         emmebank_path = self.get_abs_path(self.config.emme.highway_database_path)
         self._emmebank = self.controller.emme_manager.emmebank(emmebank_path)
@@ -169,9 +159,9 @@ class PrepareHighwayDemand(PrepareDemand):
                 {"source": <name of demand model component>,
                  "name": <OMX key name>,
                  "factor": <factor to apply to demand in this file>}
-            time_period (str): the time _time_period ID (name)
+            time_period (str): the time time_period ID (name)
         """
-        self._scenario = self.get_emme_scenario(self._emmebank.path, time_period)
+        self._scenario = self.get_emme_scenario(self._emmebank, time_period)
         demand = self._read_demand(demand_config[0], {"period": time_period.upper()})
         for file_config in demand_config[1:]:
             demand = demand + self._read_demand(
@@ -183,20 +173,24 @@ class PrepareHighwayDemand(PrepareDemand):
 
 
 class PrepareTransitDemand(PrepareDemand):
-    """Import transit demand."""
+    """Import transit demand.
+
+    Demand is imported from OMX files based on reference file paths and OMX
+    matrix names in transit assignment config (transit.classes).
+    The demand is average using MSA with the current demand matrices (in the
+    Emmebank) if transit.apply_msa_demand is true if the
+    controller.iteration > 1.
+
+    """
 
     @LogStartEnd("Prepare transit demand")
-    def run(self, time_period: Union[Collection[str], str] = None):
-        """Open combined demand OMX files from demand models and prepare for assignment.
-
-        Args:
-            time_period: list of str names of time_periods, or name of a single _time_period
-        """
+    def run(self):
+        """Open combined demand OMX files from demand models and prepare for assignment"""
         self._source_ref_key = "transit_demand_file"
         emmebank_path = self.get_abs_path(self.config.emme.transit_database_path)
         self._emmebank = self.controller.emme_manager.emmebank(emmebank_path)
         self._create_zero_matrix()
-        for time in self._process_time_period(time_period):
+        for time in self.time_period_names():
             for klass in self.config.transit.classes:
                 self._prepare_demand(
                     klass.skim_set_id, klass.description, klass.demand, time

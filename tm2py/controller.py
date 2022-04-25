@@ -35,6 +35,18 @@ component_cls_map = {
     "highway_maz_skim": SkimMAZCosts,
 }
 
+# mapping from names referenced in config.run to imported classes
+# NOTE: component names also listed as literal in tm2py.config for validation
+component_cls_map = {
+    "prepare_network_highway": PrepareNetwork,
+    "highway": HighwayAssignment,
+    "highway_maz_assign": AssignMAZSPDemand,
+    "highway_maz_skim": SkimMAZCosts,
+    "prepare_network_transit": PrepareTransitNetwork,
+    "transit_assign": TransitAssignment,
+    "transit_skim": TransitSkim,
+}
+
 # pylint: disable=too-many-instance-attributes
 
 

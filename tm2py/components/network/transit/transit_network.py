@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 from collections import defaultdict as _defaultdict
-from typing import Union, Collection  # , TYPE_CHECKING
+from typing import Literal
 
 from tm2py.components.component import Component
+from tm2py.emme.manager import EmmeScenario, EmmeNetwork, EmmeLink
 from tm2py.logger import LogStartEnd
-
-# from tm2py import tools
-
-# if TYPE_CHECKING:
-#     from tm2py.controller import RunController
 
 
 class PrepareTransitNetwork(Component):
@@ -19,16 +15,13 @@ class PrepareTransitNetwork(Component):
     @LogStartEnd(
         "Prepare transit network attributes and update times from auto network"
     )
-    def run(self, time_period: Union[Collection[str], str] = None):
+    def run(self):
         """Prepare transit network for assignment by updating link travel times from auto
         network and (if using TAZ-connectors for assignment) update connector walk times.
-
-        Args:
-            time_period: list of str names of time_periods, or name of a single _time_period
         """
         emmebank_path = self.get_abs_path(self.config.emme.transit_database_path)
         emmebank = self.controller.emme_manager.emmebank(emmebank_path)
-        for time in self._process_time_period(time_period):
+        for time in self.time_period_names():
             scenario = self.get_emme_scenario(emmebank.path, time)
             network = scenario.get_partial_network(
                 ["TRANSIT_SEGMENT"], include_attributes=False
@@ -37,7 +30,16 @@ class PrepareTransitNetwork(Component):
             if self.config.transit.get("override_connector_times", False):
                 self._update_connector_times(scenario, network, time)
 
-    def _update_auto_times(self, scenario, transit_network, period):
+    def _update_auto_times(
+        self, scenario: EmmeScenario, transit_network: EmmeNetwork, period: str
+    ):
+        """Update the auto travel times from the last auto assignment to the transit scenario.
+
+        Args:
+            scenario:
+            transit_network:
+            period:
+        """
         emme_manager = self.controller.emme_manager
         attributes = {
             "LINK": ["#link_id", "@trantime"],
@@ -76,7 +78,18 @@ class PrepareTransitNetwork(Component):
         }
         emme_manager.copy_attribute_values(transit_network, scenario, attributes)
 
-    def _update_connector_times(self, scenario, network, period):
+    def _update_connector_times(
+        self, scenario: EmmeScenario, network: EmmeNetwork, period: str
+    ):
+        """Set the connector times from the source connector times files.
+
+        See also _process_connector_file
+
+        Args:
+            scenario:
+            network:
+            period:
+        """
         # walk time attributes per skim set
         emme_manager = self.controller.emme_manager
         attributes = {"NODE": ["@taz_id", "#node_id"]}
@@ -106,7 +119,21 @@ class PrepareTransitNetwork(Component):
             network, scenario, {"LINK": class_attr_map.values()}
         )
 
-    def _process_connector_file(self, direction, connectors, class_attr_map, period):
+    def _process_connector_file(
+        self,
+        direction: Literal["access", "egress"],
+        connectors: Dict[int, Dict[int, EmmeLink]],
+        class_attr_map,
+        period,
+    ):
+        """Process the input connector times files and set the times on the connector links.
+
+        Args:
+            direction:
+            connectors:
+            class_attr_map:
+            period:
+        """
         period_name = period.lower()
         if direction == "access":
             from_name = "from_taz"

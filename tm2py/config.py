@@ -59,7 +59,9 @@ ComponentNames = Literal[
     "highway_maz_assign",
     "highway",
     "highway_maz_skim",
-    "transit",
+    "prepare_network_transit",
+    "transit_assign",
+    "transit_skim",
     "household",
     "visitor",
     "internal_external",
@@ -204,15 +206,16 @@ class HighwayCapClassConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
-class HighwayClassDemandConfig(ConfigItem):
-    """Highway class input source for demand.
+class ClassDemandConfig(ConfigItem):
+    """Input source for demand for highway or transit assignment class.
 
     Used to specify where to find related demand file for this
-    highway class. Multiple
+    highway or transit class.
 
     Properties:
         source: reference name of the component section for the
-                source "highway_demand_file" location, one of:
+                source "highway_demand_file" (for a highway class)
+                or "transit_demand_file" (for a transit class), one of:
                 "household", "air_passenger", "internal_external", "truck"
         name: name of matrix in the OMX file, can include "{period}"
                 placeholder
@@ -266,7 +269,7 @@ class HighwayClassConfig(ConfigItem):
         value_of_time: value of time for this class in $ / hr
         operating_cost_per_mile: vehicle operating cost in cents / mile
         demand: list of OMX file and matrix keyname references,
-            see HighwayClassDemandConfig
+            see ClassDemandConfig
         excluded_links: list of keywords to identify links to exclude from
             this class' available subnetwork (generate link.modes)
             Options are:
@@ -304,7 +307,7 @@ class HighwayClassConfig(ConfigItem):
     skims: Tuple[str, ...] = Field()
     toll: Tuple[str, ...] = Field()
     toll_factor: Optional[float] = Field(default=None, gt=0)
-    demand: Tuple[HighwayClassDemandConfig, ...] = Field()
+    demand: Tuple[ClassDemandConfig, ...] = Field()
 
 
 @dataclass(frozen=True)
@@ -534,6 +537,7 @@ class TransitModeConfig(ConfigItem):
     assign_type: Literal["TRANSIT", "AUX_TRANSIT"]
     mode_id: str = Field(min_length=1, max_length=1)
     name: str = Field(max_length=10)
+    description: Optional[str] = ""
     in_vehicle_perception_factor: Optional[float] = Field(default=None, ge=0)
     speed_miles_per_hour: Optional[float] = Field(default=None, gt=0)
 
@@ -553,6 +557,13 @@ class TransitModeConfig(ConfigItem):
             assert value is not None, "must be specified when assign_type==AUX_TRANSIT"
         return value
 
+    @classmethod
+    @validator("speed_miles_per_hour")
+    def mode_id_valid(cls, value):
+        """Validate mode_id"""
+        assert len(value) == 1, "mode_id must be one character"
+        return value
+
 
 @dataclass(frozen=True)
 class TransitVehicleConfig(ConfigItem):
@@ -567,12 +578,23 @@ class TransitVehicleConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class TransitClassConfig(ConfigItem):
+    """Transit demand class definition"""
+
+    skim_set_id: str
+    name: str
+    description: str
+    mode_types: Tuple[str, ...]
+    demand: Tuple[ClassDemandConfig, ...]
+
+
+@dataclass(frozen=True)
 class TransitConfig(ConfigItem):
     """Transit assignment parameters"""
 
     modes: Tuple[TransitModeConfig, ...]
     vehicles: Tuple[TransitVehicleConfig, ...]
-
+    classes: Tuple[TransitClassConfig, ...]
     apply_msa_demand: bool
     value_of_time: float
     effective_headway_source: str

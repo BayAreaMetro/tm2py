@@ -58,15 +58,31 @@ def test_highway():
     from tm2py.controller import RunController
     from tm2py.examples import get_example
     import openmatrix as _omx
+    import toml
 
     union_city_root = os.path.join(os.getcwd(), _EXAMPLES_DIR, "UnionCity")
     get_example(
         example_name="UnionCity", example_subdir=_EXAMPLES_DIR, root_dir=os.getcwd()
     )
+    scen_config_path = os.path.join(union_city_root, r"scenario_config.toml")
+    with open(scen_config_path, "r") as fin:
+        scen_config = toml.load(fin)
+    scen_config["run"]["initial_components"] = [
+        "prepare_network_highway",
+        "highway",
+        "highway_maz_skim",
+    ]
+    scen_config["run"]["start_iteration"] = 0
+    scen_config["run"]["end_iteration"] = 1
+    with open(scen_config_path, "w") as fout:
+        toml.dump(scen_config, fout)
+    get_example(
+        example_name="UnionCity", example_subdir=_EXAMPLES_DIR, root_dir=os.getcwd()
+    )
     controller = RunController(
         [
-            os.path.join(_EXAMPLES_DIR, r"scenario_config.toml"),
-            os.path.join(_EXAMPLES_DIR, r"model_config.toml"),
+            scen_config_path,
+            os.path.join(union_city_root, r"model_config.toml"),
         ],
         run_dir=union_city_root
     )
@@ -105,3 +121,35 @@ def test_highway():
     assert (
         count_different_lines == 0
     ), f"HWYSKIM_MAZMAZ_DA.csv differs on {count_different_lines} lines"
+
+
+@pytest.mark.skipci
+def test_transit():
+    from tm2py.controller import RunController
+    from tm2py.examples import get_example
+    import toml
+
+    union_city_root = os.path.join(os.getcwd(), _EXAMPLES_DIR, "UnionCity")
+    get_example(
+        example_name="UnionCity", example_subdir=_EXAMPLES_DIR, root_dir=os.getcwd()
+    )
+    scen_config_path = os.path.join(union_city_root, r"scenario_config.toml")
+    with open(scen_config_path, "r") as fin:
+        scen_config = toml.load(fin)
+    scen_config["run"]["initial_components"] = [
+        "prepare_network_transit",
+        "transit_assign",
+        "transit_skim",
+    ]
+    scen_config["run"]["start_iteration"] = 0
+    scen_config["run"]["end_iteration"] = 1
+    with open(scen_config_path, "w") as fout:
+        toml.dump(scen_config, fout)
+    controller = RunController(
+        [
+            scen_config_path,
+            os.path.join(union_city_root, r"model_config.toml"),
+        ],
+        run_dir=union_city_root
+    )
+    controller.run()

@@ -8,6 +8,7 @@ _EXAMPLE_URL = (
 )
 
 
+@pytest.mark.menow
 def test_download_unzip():
     # If (and only if) Emme is not installed, replace INRO libraries with MagicMock
     try:
@@ -17,6 +18,8 @@ def test_download_unzip():
         sys.modules["inro.emme.network"] = MagicMock()
         sys.modules["inro.emme.database.scenario"] = MagicMock()
         sys.modules["inro.emme.database.matrix"] = MagicMock()
+        sys.modules["inro.emme.network.link"] = MagicMock()
+        sys.modules["inro.emme.database.mode"] = MagicMock()
         sys.modules["inro.emme.network.node"] = MagicMock()
         sys.modules["inro.emme.desktop.app"] = MagicMock()
         sys.modules["inro"] = MagicMock()
