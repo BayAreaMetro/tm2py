@@ -3,11 +3,11 @@ import sys
 from unittest.mock import MagicMock
 import pytest
 
-EXAMPLE_DIR = os.path.join(
+EXAMPLES_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "examples"
 )
-TEST_CONFIG = os.path.join(EXAMPLE_DIR, "scenario_config.toml")
-MODEL_CONFIG = os.path.join(EXAMPLE_DIR, "model_config.toml")
+TEST_CONFIG = os.path.join(EXAMPLES_DIR, "scenario_config.toml")
+MODEL_CONFIG = os.path.join(EXAMPLES_DIR, "model_config.toml")
 
 
 def test_config_read():
@@ -31,7 +31,7 @@ def test_config_read():
     my_config = Configuration.load_toml([TEST_CONFIG, MODEL_CONFIG])
 
     assert my_config.run.start_iteration == 0
-    assert my_config.run.end_iteration == 1
+    assert my_config.run.end_iteration == 2
     assert my_config.scenario.year == 2015
     assert my_config.time_periods[1].name == "am"
     assert my_config.highway.maz_to_maz.operating_cost_per_mile == 18.93

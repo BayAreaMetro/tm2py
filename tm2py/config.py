@@ -595,7 +595,6 @@ class TransitConfig(ConfigItem):
     modes: Tuple[TransitModeConfig, ...]
     vehicles: Tuple[TransitVehicleConfig, ...]
     classes: Tuple[TransitClassConfig, ...]
-    apply_msa_demand: bool
     value_of_time: float
     effective_headway_source: str
     initial_wait_perception_factor: float
@@ -609,10 +608,15 @@ class TransitConfig(ConfigItem):
     fare_matrix_path: str
     fare_max_transfer_distance_miles: float
     use_fares: bool
+    use_ccr: bool
     override_connector_times: bool
+    apply_msa_demand: bool
+    max_ccr_iterations: float = None
+    split_connectors_to_prevent_walk: bool = True
     input_connector_access_times_path: Optional[str] = Field(default=None)
     input_connector_egress_times_path: Optional[str] = Field(default=None)
     output_stop_usage_path: Optional[str] = Field(default=None)
+    output_transit_boardings_path: Optional[str] = Field(default=None)
 
 
 @dataclass(frozen=True)

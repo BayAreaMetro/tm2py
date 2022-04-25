@@ -138,7 +138,7 @@ class TransitAssignment(Component):
             use_ccr = self.config.transit.use_ccr
             self.demand.run()
         else:
-            self.demand.create_zero_matrix()
+            self.demand.create_zero_matrix(emmebank)
         for self._time_period in self.time_period_names():
             msg = f"Transit assignment for period {self._time_period}"
             with self.logger.log_start_end(msg):
@@ -247,6 +247,7 @@ class TransitAssignment(Component):
             add_volumes = True
 
     def _export_boardings_by_line(self):
+        """Export total boardings by line to config.transit.output_transit_boardings_file"""
         scenario = self._scenario
         emme_manager = self.controller.emme_manager
         output_transit_boardings_file = self.get_abs_path(
@@ -271,8 +272,8 @@ class TransitAssignment(Component):
                 )
 
     def _calc_connector_flows(self) -> Tuple[EmmeNetwork, Dict[str, str]]:
+        """Calculate boardings and alightings by assignment class"""
         emme_manager = self.controller.emme_manager
-        # calculate boardings and alightings by assignment class
         network_results = emme_manager.tool(
             "inro.emme.transit_assignment.extended.network_results"
         )
@@ -302,7 +303,7 @@ class TransitAssignment(Component):
     def _export_connector_flows(
         self, network: EmmeNetwork, class_stop_attrs: Dict[str, str]
     ):
-        # export boardings and alightings by assignment class, stop(connector) and TAZ
+        """Export boardings and alightings by assignment class, stop(connector) and TAZ"""
         path_tmplt = self.get_abs_path(self.config.transit.output_stop_usage_path)
         os.makedirs(os.path.dirname(path_tmplt), exist_ok=True)
         with open(
