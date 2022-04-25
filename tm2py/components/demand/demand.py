@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 from abc import ABC
-from typing import Collection, Dict, Union, List, TYPE_CHECKING
+from typing import Dict, Union, List, TYPE_CHECKING
 import numpy as np
 
 from tm2py.components.component import Component
 from tm2py.logger import LogStartEnd
+from tm2py.emme.manager import Emmebank
 from tm2py.emme.matrix import OMXManager
 
 if TYPE_CHECKING:
@@ -70,9 +71,6 @@ class PrepareDemand(Component, ABC):
             )
         return demand
 
-    # Disable too many arguments recommendation
-    # pylint: disable=R0913
-
     def _save_demand(
         self,
         name: str,
@@ -108,11 +106,14 @@ class PrepareDemand(Component, ABC):
         self.logger.log(f"{name} sum: {demand.sum()}", level="DEBUG")
         matrix.set_numpy_data(demand, self._scenario.id)
 
-    def _create_zero_matrix(self):
-        zero_matrix = self._emmebank.matrix('ms"zero"')
+    def create_zero_matrix(self, emmebank: Emmebank = None):
+        """Create ms"zero" matrix for zero-demand assignments."""
+        if emmebank is None:
+            emmebank = self._emmebank
+        zero_matrix = emmebank.matrix('ms"zero"')
         if zero_matrix is None:
-            ident = self._emmebank.available_matrix_identifier("SCALAR")
-            zero_matrix = self._emmebank.create_matrix(ident)
+            ident = emmebank.available_matrix_identifier("SCALAR")
+            zero_matrix = emmebank.create_matrix(ident)
             zero_matrix.name = "zero"
             zero_matrix.description = "zero demand matrix"
         zero_matrix.data = 0
@@ -136,7 +137,7 @@ class PrepareHighwayDemand(PrepareDemand):
         self._source_ref_key = "highway_demand_file"
         emmebank_path = self.get_abs_path(self.config.emme.highway_database_path)
         self._emmebank = self.controller.emme_manager.emmebank(emmebank_path)
-        self._create_zero_matrix()
+        self.create_zero_matrix()
         for time in self.time_period_names():
             for klass in self.config.highway.classes:
                 self._prepare_demand(klass.name, klass.description, klass.demand, time)
@@ -189,7 +190,7 @@ class PrepareTransitDemand(PrepareDemand):
         self._source_ref_key = "transit_demand_file"
         emmebank_path = self.get_abs_path(self.config.emme.transit_database_path)
         self._emmebank = self.controller.emme_manager.emmebank(emmebank_path)
-        self._create_zero_matrix()
+        self.create_zero_matrix()
         for time in self.time_period_names():
             for klass in self.config.transit.classes:
                 self._prepare_demand(

@@ -4,11 +4,9 @@ from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 
-from typing import TYPE_CHECKING, List
+from typing import List, Union, TYPE_CHECKING
 
 from tm2py.emme.manager import EmmeScenario, Emmebank
-
-from tm2py.emme.manager import EmmeScenario
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController

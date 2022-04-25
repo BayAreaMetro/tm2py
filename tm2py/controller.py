@@ -25,15 +25,9 @@ from tm2py.components.component import Component
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
 from tm2py.components.network.highway.highway_network import PrepareNetwork
 from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, SkimMAZCosts
-
-# mapping from names referenced in config.run to imported classes
-# NOTE: component names also listed as literal in tm2py.config for validation
-component_cls_map = {
-    "prepare_network_highway": PrepareNetwork,
-    "highway": HighwayAssignment,
-    "highway_maz_assign": AssignMAZSPDemand,
-    "highway_maz_skim": SkimMAZCosts,
-}
+from tm2py.components.network.transit.transit_assign import TransitAssignment
+from tm2py.components.network.transit.transit_network import PrepareTransitNetwork
+from tm2py.components.network.transit.transit_skim import TransitSkim
 
 # mapping from names referenced in config.run to imported classes
 # NOTE: component names also listed as literal in tm2py.config for validation

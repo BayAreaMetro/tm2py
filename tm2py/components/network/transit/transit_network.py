@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 from collections import defaultdict as _defaultdict
-from typing import Literal
+from typing import Dict
+from typing_extensions import Literal
 
 from tm2py.components.component import Component
 from tm2py.emme.manager import EmmeScenario, EmmeNetwork, EmmeLink

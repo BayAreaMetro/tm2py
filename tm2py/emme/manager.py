@@ -11,11 +11,13 @@ and Modeller.
 from contextlib import contextmanager as _context
 import os
 from socket import error as _socket_error
-from typing import Any, Dict, List, Union, Optional
+from typing import Any, Dict, List, Optional
 
 # PyLint cannot build AST from compiled Emme libraries
 # so disabling relevant import module checks
 # pylint: disable=E0611, E0401, E1101
+# Importing several Emme object types which are unused here, but so that
+# the Emme API import are centralized within tm2py
 from inro.emme.database.emmebank import Emmebank
 from inro.emme.network import Network as EmmeNetwork
 from inro.emme.database.scenario import Scenario as EmmeScenario

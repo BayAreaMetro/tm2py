@@ -43,7 +43,7 @@ def calc_segment_cost(transit_volume, capacity, segment):
 
     # Toronto implementation limited factor between 1.0 and 10.0, 
     # for use with Emme Capacitated assignment normalize by subtracting 1 
-    return max(crowded_factor -1, 0)
+    return max(crowded_factor - 1, 0)
 """
 
 _HEADWAY_COST_FUNCTION = """
@@ -136,14 +136,13 @@ class TransitAssignment(Component):
         use_ccr = False
         if self.controller.iteration >= 1:
             use_ccr = self.config.transit.use_ccr
+            self.demand.run()
+        else:
+            self.demand.create_zero_matrix()
         for self._time_period in self.time_period_names():
             msg = f"Transit assignment for period {self._time_period}"
             with self.logger.log_start_end(msg):
                 self._scenario = self.get_emme_scenario(emmebank, self._time_period)
-                if self.controller.iteration >= 1:
-                    self.demand.run(self._time_period)
-                else:
-                    self.controller.emme_manager.prepare_zero_matrix(emmebank)
                 if use_ccr:
                     self._run_ccr_assign()
                     self._calc_segment_ccr_penalties()

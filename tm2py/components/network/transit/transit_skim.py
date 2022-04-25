@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import defaultdict as _defaultdict
 from contextlib import contextmanager as _context
 import os
-from typing import Union, Collection, TYPE_CHECKING
+from typing import Dict, List, Tuple, TYPE_CHECKING
 
 import numpy as np
 
@@ -22,15 +22,15 @@ class TransitSkim(Component):
 
     def __init__(self, controller: RunController):
         super().__init__(controller)
-        self._num_processors = tools.parse_num_processors(
-            self.config.emme.num_processors
-        )
+        self._scenario = None
+        self._network = None
         self._matrix_cache = None
         self._skim_matrices = []
         self._time_period = None
-        self._scenario = None
-        self._network = None
         self._assign_class = None
+        self._num_processors = tools.parse_num_processors(
+            self.config.emme.num_processors
+        )
 
     @LogStartEnd("Transit skims")
     def run(self):
@@ -146,7 +146,11 @@ class TransitSkim(Component):
                 self._ccr_skims()
 
     def _skim_walk_wait_fares(self):
-        """Skim the First and total wait time, number of boardings, fares, total walk time, in-vehicle time"""
+        """Skim basic results of wait, walk, board, and fares.
+
+        Skim the first and total wait time, number of boardings, (transfers + 1)
+        fares, total walk time, total in-vehicle time.
+        """
         name = f"{self._time_period}_{self._assign_class.name}"
         all_modes = [
             m.id for m in self._network.modes() if m.type in ["TRANSIT", "AUX_TRANSIT"]
@@ -227,7 +231,7 @@ class TransitSkim(Component):
         )
 
     def _invehicle_time_by_mode(self):
-        """"""
+        """Skim in-vehicle by mode (used in this assignment class)."""
         network = self._network
         matrix_calc = self.controller.emme_manager.tool(
             "inro.emme.matrix_calculation.matrix_calculator"
@@ -278,8 +282,16 @@ class TransitSkim(Component):
         }
         matrix_calc(spec, scenario=self._scenario, num_processors=self._num_processors)
 
-    def _get_emme_mode_ids(self):
-        """"""
+    def _get_emme_mode_ids(self) -> List[Tuple[str, List[str]]]:
+        """Get the Emme mode IDs used in the assignment.
+
+        Returns:
+            List of tuples of two items, the original mode name (from config)
+            to a list of mode IDs used in the Emme assignment. This list
+            will be one item if fares are not used, but will contain the fare
+            modes used in the journey levels mode-to-mode transfer table
+            generated from Apply fares.
+        """
         self.controller.emme_manager.copy_attribute_values(
             self._scenario, self._network, {"TRANSIT_LINE": ["#src_mode"]}
         )
@@ -305,7 +317,7 @@ class TransitSkim(Component):
         return emme_mode_ids
 
     def _ccr_skims(self):
-        """"""
+        """Generate skim results for CCR assignment."""
         name = f"{self._time_period}_{self._assign_class.name}"
         # # Link unreliability
         # self._run_strategy_analysis({"in_vehicle": "@ul1"}, f'mf"{name}_LINKREL"')
@@ -319,7 +331,7 @@ class TransitSkim(Component):
         )
 
     def _run_matrix_results(self, spec):
-        """"""
+        """Run Emme Matrix results tool"""
         matrix_results = self.controller.emme_manager.tool(
             "inro.emme.transit_assignment.extended.matrix_results"
         )
@@ -330,7 +342,7 @@ class TransitSkim(Component):
             num_processors=self._num_processors,
         )
 
-    def _run_strategy_analysis(self, components, matrix_name):
+    def _run_strategy_analysis(self, components: Dict[str, str], matrix_name: str):
         """
 
         Args:
