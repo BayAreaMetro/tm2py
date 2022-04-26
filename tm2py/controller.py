@@ -62,7 +62,9 @@ class RunController:
         if not isinstance(config_file, list):
             config_file = [config_file]
         if run_dir is None:
-            run_dir = os.path.abspath(os.path.dirname(config_file[0]))
+            run_dir = os.path.dirname(config_file[0])
+        if not os.path.isabs(run_dir):
+            run_dir = os.path.abspath(run_dir)
         self._run_dir = run_dir
 
         self.config = Configuration.load_toml(config_file)
