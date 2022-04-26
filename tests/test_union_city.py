@@ -17,9 +17,11 @@ def test_example_download():
         import inro.emme.database.emmebank
     except ModuleNotFoundError:
         sys.modules["inro.emme.database.emmebank"] = MagicMock()
-        sys.modules["inro.emme.network"] = MagicMock()
         sys.modules["inro.emme.database.scenario"] = MagicMock()
         sys.modules["inro.emme.database.matrix"] = MagicMock()
+        sys.modules["inro.emme.network"] = MagicMock()
+        sys.modules["inro.emme.network.link"] = MagicMock()
+        sys.modules["inro.emme.network.mode"] = MagicMock()
         sys.modules["inro.emme.network.node"] = MagicMock()
         sys.modules["inro.emme.desktop.app"] = MagicMock()
         sys.modules["inro"] = MagicMock()

@@ -17,15 +17,16 @@ def test_config_read():
         import inro.emme.database.emmebank
     except ModuleNotFoundError:
         sys.modules["inro.emme.database.emmebank"] = MagicMock()
-        sys.modules["inro.emme.network"] = MagicMock()
         sys.modules["inro.emme.database.scenario"] = MagicMock()
-        sys.modules["inro.emme.network.link"] = MagicMock()
         sys.modules["inro.emme.database.matrix"] = MagicMock()
-        sys.modules["inro.emme.database.mode"] = MagicMock()
+        sys.modules["inro.emme.network"] = MagicMock()
+        sys.modules["inro.emme.network.link"] = MagicMock()
+        sys.modules["inro.emme.network.mode"] = MagicMock()
         sys.modules["inro.emme.network.node"] = MagicMock()
         sys.modules["inro.emme.desktop.app"] = MagicMock()
         sys.modules["inro"] = MagicMock()
         sys.modules["inro.modeller"] = MagicMock()
+
     from tm2py.config import Configuration
 
     my_config = Configuration.load_toml([TEST_CONFIG, MODEL_CONFIG])
