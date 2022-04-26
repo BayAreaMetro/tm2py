@@ -14,8 +14,8 @@
         #"active_modes", 
         #"air_passenger", 
         "prepare_network_highway", 
-        "highway", 
-        "highway_maz_skim", 
+        "highway",
+        "highway_maz_skim",
         #"prepare_network_transit",
         #"transit_assign",
         #"transit_skim"

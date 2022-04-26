@@ -5,6 +5,12 @@ import pytest
 
 
 _EXAMPLES_DIR = r"examples"
+NOTEBOOKS_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "notebooks"
+)
+BIN_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bin"
+)
 
 
 def test_example_download():
@@ -105,3 +111,37 @@ def test_highway():
     assert (
         count_different_lines == 0
     ), f"HWYSKIM_MAZMAZ_DA.csv differs on {count_different_lines} lines"
+
+
+@pytest.mark.skipci
+def test_bin_tm2py_on_union():
+    """Test that that bin entry point runs"""
+
+    from tm2py.examples import get_example
+    union_city_root = get_example(
+        example_name="UnionCity", example_subdir=_EXAMPLES_DIR, root_dir=os.getcwd()
+    )
+    scen_config = os.path.abspath(os.path.join(_EXAMPLES_DIR, r"scenario_config.toml"))
+    model_config = os.path.abspath(os.path.join(_EXAMPLES_DIR, r"model_config.toml"))
+    bin_tm2py = os.path.join(BIN_DIR, "tm2py")
+    os.popen(f"{bin_tm2py} -s {scen_config} -m {model_config} -r {union_city_root}")
+
+
+@pytest.mark.skipci
+def test_notebook_tm2py_on_union():
+    """Test that that notebook example entry point runs"""
+    cwd = os.getcwd()
+    import json
+    with open(os.path.join(NOTEBOOKS_DIR, "Run model.ipynb"), 'r') as notebook:
+        notebook_data = json.load(notebook)
+    code = []
+    for cell in notebook_data["cells"]:
+        if cell["cell_type"] == "code":
+            code.extend(cell["source"])
+            code.append("\n")
+    print(code)
+    try:
+        os.chdir(NOTEBOOKS_DIR)
+        exec("".join(code))
+    finally:
+        os.chdir(cwd)

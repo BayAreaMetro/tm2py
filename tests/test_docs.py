@@ -1,6 +1,7 @@
 import pytest
 
 
+@pytest.mark.mkdocs
 def test_docs_build():
     """
     Test that the documentation build is successful.
