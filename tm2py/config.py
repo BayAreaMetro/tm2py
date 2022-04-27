@@ -594,7 +594,6 @@ class TransitConfig(ConfigItem):
     output_stop_usage_path: Optional[pathlib.Path] = Field(default=None)
 
 
-
 @dataclass(frozen=True)
 class EmmeConfig(ConfigItem):
     """Emme-specific parameters.
@@ -611,17 +610,19 @@ class EmmeConfig(ConfigItem):
             using MAX-1 (on desktop systems) or MAX-2 (on servers with many
             logical processors) to leave capacity for background / other tasks.
     """
+
     all_day_scenario_id: int
     project_path: pathlib.Path
     highway_database_path: pathlib.Path
     active_database_paths: Tuple[pathlib.Path, ...]
     transit_database_path: pathlib.Path
     num_processors: str = Field(regex=r"^MAX$|^MAX-\d+$|^\d+$")
-    
+
 
 @dataclass(frozen=True)
 class Configuration(ConfigItem):
     """Configuration: root of the model configuration"""
+
     scenario: ScenarioConfig
     run: RunConfig
     time_periods: Tuple[TimePeriodConfig, ...]
@@ -636,7 +637,7 @@ class Configuration(ConfigItem):
 
     @classmethod
     def load_toml(
-        cls, 
+        cls,
         toml_path: Union[Collection[Union[str, pathlib.Path]], str, pathlib.Path],
     ) -> "Configuration":
         """Load configuration from .toml files(s)
@@ -700,4 +701,3 @@ def _merge_dicts(right, left, path=None):
                 raise Exception(f"duplicate keys in source .toml files: {path}")
         else:
             right[key] = left[key]
-

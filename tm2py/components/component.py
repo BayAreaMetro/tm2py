@@ -44,7 +44,7 @@ class Component(ABC):
         """Parent controller"""
         return self._controller
 
-    def get_abs_path(self, path: Union[Path,str]) -> str:
+    def get_abs_path(self, path: Union[Path, str]) -> str:
         return self.controller.get_abs_path(path)
 
     def get_emme_scenario(self, emmebank_path: str, time_period: str) -> EmmeScenario:

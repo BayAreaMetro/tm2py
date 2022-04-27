@@ -34,9 +34,11 @@ class PrepareDemand(Component, ABC):
                 demand, ((0, num_zones - _shape[0]), (0, num_zones - _shape[1]))
             )
         elif _shape > (num_zones, num_zones):
-            ValueError(f"Provided demand matrix is larger ({_shape}) than the \
-                specified number of zones: {num_zones}")
-        
+            ValueError(
+                f"Provided demand matrix is larger ({_shape}) than the \
+                specified number of zones: {num_zones}"
+            )
+
         return demand
 
     # Disable too many arguments recommendation

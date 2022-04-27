@@ -123,7 +123,7 @@ class RunController:
         # Initialize Modeller to use Emme assignment tools and other APIs
         self._emme_manager.modeller(project)
 
-    def get_abs_path(self, rel_path: Union[Path,str]) -> Path:
+    def get_abs_path(self, rel_path: Union[Path, str]) -> Path:
         """Get the absolute path from the root run directory given a relative path."""
         if not isinstance(rel_path, Path):
             rel_path = Path(rel_path)
