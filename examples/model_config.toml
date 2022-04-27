@@ -29,12 +29,12 @@
     emme_scenario_id = 15
 
 [household]
-    highway_demand_file = "demand_matrices\\highway\\household\\TAZ_Demand_{period}.omx"
-    transit_demand_file = "demand_matrices\\transit\\TAP_Demand_{set}_{period}.omx"
+    highway_demand_file = "demand_matrices/highway/household/TAZ_Demand_{period}.omx"
+    transit_demand_file = "demand_matrices/transit/TAP_Demand_{set}_{period}.omx"
 
 [air_passenger]
-    highway_demand_file = "demand_matrices\\highway\\air_passenger\\tripsAirPax{period}.omx"
-    input_demand_folder = "inputs\\nonres"
+    highway_demand_file = "demand_matrices/highway/air_passenger/tripsAirPax{period}.omx"
+    input_demand_folder = "inputs/nonres"
     reference_start_year = "2007"
     reference_end_year = "2035"
     [[air_passenger.demand_aggregation]]
@@ -51,8 +51,8 @@
         access_modes = [ "ES", "PK", "RN", "TX", "LI", "VN", "HT", "CH",]
 
 [internal_external]
-    highway_demand_file = "demand_matrices\\highway\\internal_external\\tripsIx{period}.omx"
-    input_demand_file = "inputs\\nonres\\IXDaily2006x4.may2208.new.omx"
+    highway_demand_file = "demand_matrices/highway/internal_external/tripsIx{period}.omx"
+    input_demand_file = "inputs/nonres/IXDaily2006x4.may2208.new.omx"
     reference_year = 2005
     toll_choice_time_coefficient = -0.088
     value_of_time = 18.93
@@ -61,9 +61,9 @@
     operating_cost_per_mile = 17.23
 
 [truck]
-    highway_demand_file = "demand_matrices\\highway\\commercial\\tripstrk{period}.omx"
-    k_factors_file = "inputs\\nonres\\truck_kfactors_taz.csv"
-    friction_factors_file = "inputs\\nonres\\truckFF.dat"
+    highway_demand_file = "demand_matrices/highway/commercial/tripstrk{period}.omx"
+    k_factors_file = "inputs/nonres/truck_kfactors_taz.csv"
+    friction_factors_file = "inputs/nonres/truckFF.dat"
     value_of_time = 37.87
     operating_cost_per_mile = 31.28
     toll_choice_time_coefficient = -0.088
@@ -77,39 +77,39 @@
         roots = "MAZ"
         leaves = "MAZ"
         max_dist_miles = 3
-        output = "skim_matrices\\non_motorized\\ped_distance_maz_maz.txt"
+        output = "skim_matrices/non_motorized/ped_distance_maz_maz.txt"
     [[active_modes.shortest_path_skims]]
         mode = "walk"
         roots = "MAZ"
         leaves = "TAP"
         max_dist_miles = 0.5
-        output = "skim_matrices\\non_motorized\\ped_distance_maz_tap.txt"
+        output = "skim_matrices/non_motorized/ped_distance_maz_tap.txt"
     [[active_modes.shortest_path_skims]]
         mode = "bike"
         roots = "MAZ"
         leaves = "MAZ"
         max_dist_miles = 3
-        output = "skim_matrices\\non_motorized\\bike_distance_maz_maz.txt"
+        output = "skim_matrices/non_motorized/bike_distance_maz_maz.txt"
     [[active_modes.shortest_path_skims]]
         mode = "bike"
         roots = "MAZ"
         leaves = "TAP"
         max_dist_miles = 3
-        output = "skim_matrices\\non_motorized\\bike_distance_maz_tap.txt"
+        output = "skim_matrices/non_motorized/bike_distance_maz_tap.txt"
     [[active_modes.shortest_path_skims]]
         mode = "bike"
         roots = "TAZ"
         leaves = "TAZ"
-        output = "skim_matrices\\non_motorized\\bike_distance_taz_taz.txt"
+        output = "skim_matrices/non_motorized/bike_distance_taz_taz.txt"
     [[active_modes.shortest_path_skims]]
         mode = "walk"
         roots = "TAP"
         leaves = "TAP"
         max_dist_miles = 0.5
-        output = "skim_matrices\\non_motorized\\ped_distance_tap_tap.txt"
+        output = "skim_matrices/non_motorized/ped_distance_tap_tap.txt"
 
 [highway]
-    output_skim_path = "skim_matrices\\highway\\HWYSKM{period}_taz.omx"
+    output_skim_path = "skim_matrices/highway/HWYSKM{period}_taz.omx"
     relative_gap = 0.0005
     max_iterations = 100
     # labels entire highway network (any of the classes) + MAZ connectors
@@ -117,7 +117,7 @@
     # include other MAZs to estimate density (pop+jobs*2.5)/acres for each MAZ
     area_type_buffer_dist_miles = 0.5
     [highway.tolls]
-        file_path = "inputs\\hwy\\tolls.csv"
+        file_path = "inputs/hwy/tolls.csv"
         src_vehicle_group_names = ["da", "s2",  "s3",  "vsm", "sml", "med", "lrg"]
         # the dst_vehicle_group_names is used in the class group suffix for the
         # highway.classes toll attribute name and the skims name, "bridgetoll_{}"
@@ -131,13 +131,13 @@
         excluded_links = [ "is_toll_da", "is_sr",]
         operating_cost_per_mile = 18.93
         value_of_time = 17.23
-        output_skim_file = "skim_matrices\\highway\\HWYSKIM_MAZMAZ_DA.csv"
+        output_skim_file = "skim_matrices/highway/HWYSKIM_MAZMAZ_DA.csv"
         skim_period = "md"
         max_skim_cost = 11.0
             # based on ~= 5 miles @ 40 mph = 11
             #           = time + (0.6 / vot) * (dist * opcost)
             #           = 5 / 40 * 60 + (0.6 / 17.23) * (5 * 18.93)
-        demand_file = "demand_matrices\\highway\\maz_demand\\auto_{period}_MAZ_AUTO_{number}_{period}.omx"
+        demand_file = "demand_matrices/highway/maz_demand/auto_{period}_MAZ_AUTO_{number}_{period}.omx"
         [[highway.maz_to_maz.demand_county_groups]]
             number = 1
             counties = ["San Francisco", "San Mateo", "Santa Clara"]
@@ -339,25 +339,25 @@
     initial_boarding_penalty = 10
     transfer_boarding_penalty = 10
     max_transfers = 3
-    output_skim_path = "skim_matrices\\transit\\transit_skims_{period}.omx"
-    fares_path = "inputs\\trn\\fares.far"
-    fare_matrix_path = "inputs\\trn\\fareMatrix.txt"
+    output_skim_path = "skim_matrices/transit/transit_skims_{period}.omx"
+    fares_path = "inputs/trn/fares.far"
+    fare_matrix_path = "inputs/trn/fareMatrix.txt"
     # max expected transfer distance for mode-to-mode transfer fare table generation
     fare_max_transfer_distance_miles = 3.0
     use_fares = false
     # for TAZ instead of TAPs
     override_connector_times = false
-    #input_connector_access_times_path = "inputs\\trn\\estimated_taz_access_connectors.csv"
-    #input_connector_egress_times_path = "inputs\\trn\\estimated_taz_egress_connectors.csv"
-    #output_stop_usage_path = "inputs\\trn\\stop_usage_{period}.csv"
+    #input_connector_access_times_path = "inputs/trn/estimated_taz_access_connectors.csv"
+    #input_connector_egress_times_path = "inputs/trn/estimated_taz_egress_connectors.csv"
+    #output_stop_usage_path = "inputs/trn/stop_usage_{period}.csv"
 
 [emme]
-    num_processors = "max-1"
+    num_processors = "MAX-1"
     all_day_scenario_id = 1
-    project_path = "emme_project\\mtc_emme.emp"
-    highway_database_path = "emme_project\\Database_highway\\emmebank"
-    active_database_paths = [ "emme_project\\Database_maz\\emmebank", ]
-    transit_database_path = "emme_project\\Database_transit\\emmebank"
+    project_path = "emme_project/mtc_emme.emp"
+    highway_database_path = "emme_project/Database_highway/emmebank"
+    active_database_paths = [ "emme_project/Database_maz/emmebank", ]
+    transit_database_path = "emme_project/Database_transit/emmebank"
 
 
 [[highway.capclass_lookup]]

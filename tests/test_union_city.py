@@ -69,11 +69,14 @@ def test_highway():
             os.path.join(_EXAMPLES_DIR, r"model_config.toml"),
         ],
         run_dir=union_city_root
+        run_dir=union_city_root,
     )
     controller.run()
 
     root = os.path.join(controller.run_dir, r"skim_matrices\highway")
     ref_root = os.path.join(controller.run_dir, r"ref_skim_matrices\highway")
+    root = os.path.join(controller.run_dir, "skim_matrices", "highway")
+    ref_root = os.path.join(controller.run_dir, "ref_skim_matrices", "highway")
     open_files = []
     file_names = [name for name in os.listdir(root) if name.endswith(".omx")]
     different_skims = []

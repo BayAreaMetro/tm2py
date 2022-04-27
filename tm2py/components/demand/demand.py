@@ -1,5 +1,4 @@
 """Demand loading from OMX to Emme database"""
-
 from __future__ import annotations
 from abc import ABC
 from typing import Dict, Union, List, TYPE_CHECKING
@@ -30,10 +29,14 @@ class PrepareDemand(Component, ABC):
     @staticmethod
     def _redim_demand(demand, num_zones):
         _shape = demand.shape
-        if _shape != (num_zones, num_zones):
+        if _shape < (num_zones, num_zones):
             demand = np.pad(
                 demand, ((0, num_zones - _shape[0]), (0, num_zones - _shape[1]))
             )
+        elif _shape > (num_zones, num_zones):
+            ValueError(f"Provided demand matrix is larger ({_shape}) than the \
+                specified number of zones: {num_zones}")
+        
         return demand
 
     # Disable too many arguments recommendation
@@ -85,6 +88,7 @@ class PrepareHighwayDemand(PrepareDemand):
     def run(self):
         """Open combined demand OMX files from demand models and prepare for assignment."""
         self._emmebank_path = self.get_abs_path(self.config.emme.highway_database_path)
+
         self._emmebank = self.controller.emme_manager.emmebank(self._emmebank_path)
         self._create_zero_matrix()
         for time in self.time_period_names():

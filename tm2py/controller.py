@@ -6,17 +6,18 @@ files in .toml format (by convention a scenario.toml and a model.toml)
   Typical usage example:
   from tm2py.controller import RunController
   controller = RunController(
-    [r"example_union\\scenario.toml", r"example_union\\model.toml"])
+    [r"example_union/scenario.toml", r"example_union/model.toml"])
   controller.run()
 
   Or from the command-line:
-  python <path>\\tm2py\\tm2py\\controller.py –s scenario.toml –m model.toml
+  python <path>/tm2py/tm2py/controller.py –s scenario.toml –m model.toml
 
 """
 
 import itertools
 import os
-from typing import Union, List
+from pathlib import Path
+from typing import Collection, Union
 
 from tm2py.config import Configuration
 from tm2py.emme.manager import EmmeManager
@@ -58,14 +59,26 @@ class RunController:
             (iteration, name, Component object)
     """
 
-    def __init__(self, config_file: Union[List[str], str] = None, run_dir: str = None):
-        if not isinstance(config_file, list):
-            config_file = [config_file]
+    def __init__(
+        self,
+        config_file: Union[Collection[Union[str, Path]], str, Path] = None,
+        run_dir: Union[Path, str] = None,
+    ):
+        """Constructor for RunController class.
+
+        Args:
+            config_file: Single or list of config file locations as strings or Path objects.
+                Defaults to None.
+            run_dir: Model run directory as a Path object or string. If not provided, defaults
+                to the directory of the first config_file.
+        """
         if run_dir is None:
-            run_dir = os.path.abspath(os.path.dirname(config_file[0]))
-        self._run_dir = run_dir
+            run_dir = Path(os.path.abspath(os.path.dirname(config_file[0])))
+
+        self._run_dir = Path(run_dir)
 
         self.config = Configuration.load_toml(config_file)
+
         self.logger = Logger(self)
         self.top_sheet = None
         self.trace = None
@@ -80,7 +93,7 @@ class RunController:
         self._queue_components()
 
     @property
-    def run_dir(self) -> str:
+    def run_dir(self) -> Path:
         """The root run directory of the model run"""
         return self._run_dir
 
@@ -109,6 +122,12 @@ class RunController:
         )
         # Initialize Modeller to use Emme assignment tools and other APIs
         self._emme_manager.modeller(project)
+
+    def get_abs_path(self, rel_path: Union[Path,str]) -> Path:
+        """Get the absolute path from the root run directory given a relative path."""
+        if not isinstance(rel_path, Path):
+            rel_path = Path(rel_path)
+        return os.path.join(self.run_dir, rel_path)
 
     def run(self):
         """Main interface to run model"""

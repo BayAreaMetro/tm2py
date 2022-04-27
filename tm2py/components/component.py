@@ -2,8 +2,9 @@
 """
 from __future__ import annotations
 import os
-from abc import ABC, abstractmethod
 
+from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import TYPE_CHECKING, List
 
 from tm2py.emme.manager import EmmeScenario
@@ -43,9 +44,8 @@ class Component(ABC):
         """Parent controller"""
         return self._controller
 
-    def get_abs_path(self, rel_path: str):
-        """Get the absolute path from the root run directory given a relative path."""
-        return os.path.join(self.controller.run_dir, rel_path)
+    def get_abs_path(self, path: Union[Path,str]) -> str:
+        return self.controller.get_abs_path(path)
 
     def get_emme_scenario(self, emmebank_path: str, time_period: str) -> EmmeScenario:
         """Get the Emme scenario object from the Emmebank at emmebank_path for the time_period ID.
