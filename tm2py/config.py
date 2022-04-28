@@ -167,6 +167,23 @@ class AirPassengerConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class GateFactorConfig(ConfigItem):
+    """Mapping of gateway (zone ordering ID) to factor value"""
+
+    zone_index: int
+    factor: float
+
+
+@dataclass(frozen=True)
+class TimeOfDaySplitConfig(ConfigItem):
+    """Time of day demand split for productions and attractions"""
+
+    time_period: str
+    production: float
+    attraction: float
+
+
+@dataclass(frozen=True)
 class InternalExternalConfig(ConfigItem):
     """Internal <-> External model parameters"""
 
@@ -178,6 +195,11 @@ class InternalExternalConfig(ConfigItem):
     shared_ride_2_toll_factor: float
     shared_ride_3_toll_factor: float
     operating_cost_per_mile: float
+    time_of_day_split: List[TimeOfDaySplitConfig]
+    annual_growth_rate: List[GateFactorConfig]
+    special_factor_adjust: Optional[List[GateFactorConfig]] = Field(
+        default_factory=list
+    )
 
 
 @dataclass(frozen=True)

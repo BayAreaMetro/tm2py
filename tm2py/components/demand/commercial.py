@@ -8,12 +8,14 @@ import numpy as np
 import pandas as pd
 
 from tm2py.components.component import Component
-from tm2py.emme.matrix import OMXManager
+from tm2py.emme.matrix import OMXManager, TollChoiceCalculator
 from tm2py.logger import LogStartEnd
 from tm2py.tools import parse_num_processors
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
+
+NumpyArray = np.array
 
 
 # employment category mappings, grouping into larger categories
@@ -195,7 +197,7 @@ class CommercialVehicleModel(Component):
             self.get_abs_path(self.config.emme.highway_database_path)
         )
         # use first valid scenario for reference Zone IDs
-        ref_scenario_id = self.config.periods[0].emme_scenario_id
+        ref_scenario_id = self.config.time_periods[0].emme_scenario_id
         self._scenario = emmebank.scenario(ref_scenario_id)
         # matrix names, internal to this class and Emme database
         # (used in _matrix_balancing method)
@@ -248,8 +250,10 @@ class CommercialVehicleModel(Component):
         """
         maz_data_file = self.get_abs_path(self.config.scenario.maz_landuse_file)
         maz_input_data = pd.read_csv(maz_data_file)
+        zones = self._scenario.zone_numbers
+        maz_input_data = maz_input_data[maz_input_data["TAZ_ORIGINAL"].isin(zones)]
         taz_input_data = maz_input_data.groupby(["TAZ_ORIGINAL"]).sum()
-        taz_input_data = taz_input_data.sort_values(by="TAZ")
+        taz_input_data = taz_input_data.sort_values(by="TAZ_ORIGINAL")
         # combine categories
         taz_landuse = pd.DataFrame()
         for total_column, sub_categories in _land_use_aggregation.items():
@@ -346,12 +350,12 @@ class CommercialVehicleModel(Component):
             }
         )
         trip_ends.round(decimals=7)
-        for name, value in trip_ends:
+        for name, value in trip_ends.items():
             self.logger.log(f"{name}: {value.sum()}", level="DEBUG")
         return trip_ends
 
     @LogStartEnd(level="DEBUG")
-    def _distribution(self, trip_ends: pd.DataFrame) -> Dict[str, np.array]:
+    def _distribution(self, trip_ends: pd.DataFrame) -> Dict[str, NumpyArray]:
         """Run trip distribution model for 4 truck types using Emme matrix balancing.
 
         Notes on distribution steps:
@@ -394,8 +398,8 @@ class CommercialVehicleModel(Component):
             # run matrix balancing
             prod_attr_matrix = self._matrix_balancing(
                 friction_matrix,
-                trip_ends[f"{name}_prod"],
-                trip_ends[f"{name}_attr"],
+                trip_ends[f"{name}_prod"].to_numpy(),
+                trip_ends[f"{name}_attr"].to_numpy(),
                 name,
             )
             daily_demand[name] = (
@@ -408,7 +412,7 @@ class CommercialVehicleModel(Component):
             )
         return daily_demand
 
-    def _get_blended_time(self, name: str) -> np.array:
+    def _get_blended_time(self, name: str) -> NumpyArray:
         """Blend AM and MD truck times for distribution calculations.
 
         Uses 1/3 * AM + 2/3 * MD, sources skims from generated OMX files
@@ -431,8 +435,8 @@ class CommercialVehicleModel(Component):
 
     @LogStartEnd(level="DEBUG")
     def _time_of_day(
-        self, daily_demand: Dict[str, Dict[str, np.array]]
-    ) -> Dict[str, np.array]:
+        self, daily_demand: Dict[str, Dict[str, NumpyArray]]
+    ) -> Dict[str, NumpyArray]:
         """Apply period factors to convert daily demand totals to per-period demands.
 
         Args:
@@ -444,7 +448,7 @@ class CommercialVehicleModel(Component):
              of per period demand.
         """
         period_demand = {}
-        for period in [p.name for p in self.config.periods]:
+        for period in self.time_period_names():
             factor_map = _time_of_day_split[period]
             demand = {}
             for name, factor in factor_map.items():
@@ -454,8 +458,8 @@ class CommercialVehicleModel(Component):
 
     @LogStartEnd(level="DEBUG")
     def _toll_choice(
-        self, period_demand: Dict[str, Dict[str, np.array]]
-    ) -> Dict[str, Dict[str, np.array]]:
+        self, period_demand: Dict[str, Dict[str, NumpyArray]]
+    ) -> Dict[str, Dict[str, NumpyArray]]:
         """Split per-period truck demands into nontoll and toll classes.
 
         Args:
@@ -470,35 +474,35 @@ class CommercialVehicleModel(Component):
         # skims: skims\COM_HWYSKIM@token_period@_taz.tpp -> traffic_skims_{period}.omx
         #        NOTE matrix name changes in Emme version, using {period}_{class}_{skim}
         #        format
-
+        calculator = TollChoiceCalculator(
+            value_of_time=self.config.truck.value_of_time,
+            coeff_time=self.config.truck.toll_choice_time_coefficient,
+            operating_cost_per_mile=self.config.truck.operating_cost_per_mile,
+        )
         class_demand = {}
         for period, demands in period_demand.items():
             skim_path_tmplt = self.get_abs_path(self.config.highway.output_skim_path)
             with OMXManager(skim_path_tmplt.format(period=period)) as skims:
+                calculator.set_omx_manager(skims)
                 split_demand = {}
                 for name, total_trips in demands.items():
                     cls_name = "trk" if name != "lrgtrk" else "lrgtrk"
-                    grp_name = name[:3]
-
-                    e_util_nontoll = self._get_exp_util(
-                        skims,
+                    e_util_nontoll = calculator.calc_exp_util(
                         f"{period}_{cls_name}_time",
                         f"{period}_{cls_name}_dist",
-                        [f"{period}_{cls_name}_bridgetoll{grp_name}"],
+                        [f"{period}_{cls_name}_bridgetoll{name[:3]}"],
                     )
-                    e_util_toll = self._get_exp_util(
-                        skims,
+                    e_util_toll = calculator.calc_exp_util(
                         f"{period}_{cls_name}toll_time",
                         f"{period}_{cls_name}toll_dist",
                         [
-                            f"{period}_{cls_name}toll_bridgetoll{grp_name}",
-                            f"{period}_{cls_name}toll_valuetoll{grp_name}",
+                            f"{period}_{cls_name}toll_bridgetoll{name[:3]}",
+                            f"{period}_{cls_name}toll_valuetoll{name[:3]}",
                         ],
                     )
                     prob_nontoll = e_util_nontoll / (e_util_toll + e_util_nontoll)
-                    self._mask_non_available(
-                        skims,
-                        f"{period}_{cls_name}toll_valuetoll{grp_name}",
+                    calculator.mask_non_available(
+                        f"{period}_{cls_name}toll_valuetoll{name[:3]}",
                         f"{period}_{cls_name}_time",
                         prob_nontoll,
                     )
@@ -507,34 +511,6 @@ class CommercialVehicleModel(Component):
 
                 class_demand[period] = split_demand
         return class_demand
-
-    def _get_exp_util(
-        self, skims: OMXManager, time_name: str, dist_name: str, cost_names: List[str]
-    ):
-        """Calculate the exp(utils) for the truck times, distance and costs skims."""
-        truck_vot = self.config.truck.value_of_time
-        k_ivtt = self.config.truck.toll_choice_time_coefficient
-        op_cost = self.config.truck.operating_cost_per_mile
-        k_cost = (k_ivtt / truck_vot) * 0.6
-        time = skims.read(time_name)
-        dist = skims.read(dist_name)
-        cost = skims.read(cost_names[0])
-        for name in cost_names[1:]:
-            cost += skims.read(name)
-        e_util = np.exp(k_ivtt * time + k_cost * (op_cost * dist + cost))
-        return e_util
-
-    @staticmethod
-    def _mask_non_available(
-        skims: OMXManager,
-        toll_cost_name: str,
-        nontoll_time: str,
-        prob_nontoll: np.array,
-    ):
-        toll_tollcost = skims.read(toll_cost_name)
-        nontoll_time = skims.read(nontoll_time)
-        prob_nontoll[(toll_tollcost == 0) | (toll_tollcost > 999999)] = 1.0
-        prob_nontoll[(nontoll_time == 0) | (nontoll_time > 999999)] = 0.0
 
     @LogStartEnd(level="DEBUG")
     def _export_results(self, class_demand):
@@ -548,11 +524,11 @@ class CommercialVehicleModel(Component):
 
     def _matrix_balancing(
         self,
-        friction_matrix: np.array,
-        orig_totals: np.array,
-        dest_totals: np.array,
+        friction_matrix: NumpyArray,
+        orig_totals: NumpyArray,
+        dest_totals: NumpyArray,
         name: str,
-    ) -> np.array:
+    ) -> NumpyArray:
         """Run Emme matrix balancing tool using input arrays."""
         matrix_balancing = self.controller.emme_manager.tool(
             "inro.emme.matrix_calculation.matrix_balancing"
@@ -593,12 +569,12 @@ class CommercialVehicleModel(Component):
         matrix = self._scenario.emmebank.matrix(result_name)
         return matrix.get_numpy_data(self._scenario.id)
 
-    def _save_to_emme_matrix(self, name: str, data: np.array):
+    def _save_to_emme_matrix(self, name: str, data: NumpyArray):
         """Save numpy data to Emme matrix (in Emmebank) with specified name."""
         num_zones = len(self._scenario.zone_numbers)
         # reshape (e.g. pad externals) with zeros
         shape = data.shape
-        if shape != [num_zones] * data.ndim:
+        if shape[0] < num_zones:
             padding = [(0, num_zones - dim_shape) for dim_shape in shape]
             data = np.pad(data, padding)
         matrix = self._scenario.emmebank.matrix(name)
@@ -617,7 +593,7 @@ class CommercialVehicleModel(Component):
                     factors[key].append(float(token))
         return factors
 
-    def _load_k_factors(self) -> np.array:
+    def _load_k_factors(self) -> NumpyArray:
         """Load k-factors table from CSV file [config.truck.k_factors_file]."""
         # NOTE: loading from this text format to numpy is pretty slow (~10 seconds)
         #       would be better to use a different format
@@ -629,6 +605,7 @@ class CommercialVehicleModel(Component):
         k_factors = np.zeros((num_data_zones, num_data_zones))
         k_factors[row_index, col_index] = data["truck_k"]
         num_zones = len(self._scenario.zone_numbers)
-        padding = ((0, num_zones - num_data_zones), (0, num_zones - num_data_zones))
-        k_factors = np.pad(k_factors, padding)
+        if num_data_zones < num_zones:
+            padding = ((0, num_zones - num_data_zones), (0, num_zones - num_data_zones))
+            k_factors = np.pad(k_factors, padding)
         return k_factors

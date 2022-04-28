@@ -1,10 +1,14 @@
 import os
 from unittest.mock import MagicMock
 import sys
+import tempfile
 import pytest
 
 
-_EXAMPLES_DIR = r"examples"
+EXAMPLES_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "examples"
+)
+RUN_EXAMPLES_DIR = "examples"
 
 
 def test_example_download():
@@ -13,9 +17,11 @@ def test_example_download():
         import inro.emme.database.emmebank
     except ModuleNotFoundError:
         sys.modules["inro.emme.database.emmebank"] = MagicMock()
-        sys.modules["inro.emme.network"] = MagicMock()
         sys.modules["inro.emme.database.scenario"] = MagicMock()
         sys.modules["inro.emme.database.matrix"] = MagicMock()
+        sys.modules["inro.emme.network"] = MagicMock()
+        sys.modules["inro.emme.network.link"] = MagicMock()
+        sys.modules["inro.emme.network.mode"] = MagicMock()
         sys.modules["inro.emme.network.node"] = MagicMock()
         sys.modules["inro.emme.desktop.app"] = MagicMock()
         sys.modules["inro"] = MagicMock()
@@ -25,30 +31,31 @@ def test_example_download():
     from tm2py.examples import get_example
 
     name = "UnionCity"
-    example_dir = os.path.join(os.getcwd(), _EXAMPLES_DIR)
-    union_city_root = os.path.join(example_dir, name)
+    union_city_root = os.path.join(RUN_EXAMPLES_DIR, name)
     if os.path.exists(union_city_root):
         shutil.rmtree(union_city_root)
 
     get_example(
-        example_name="UnionCity", example_subdir=_EXAMPLES_DIR, root_dir=os.getcwd()
+        example_name="UnionCity", example_subdir=RUN_EXAMPLES_DIR, root_dir=os.getcwd()
     )
     # default retrieval_url points to Union City example on box
 
     # check that the root union city folder exists
-    assert os.path.isdir(os.path.join(example_dir, name))
+    assert os.path.isdir(os.path.join(RUN_EXAMPLES_DIR, name))
     # check some expected files exists
     files_to_check = [
-        "scenario_config.toml",
-        "model_config.toml",
+        os.path.join("inputs", "hwy", "tolls.csv"),
+        os.path.join("inputs", "nonres", "2035_fromOAK.csv"),
         os.path.join("inputs", "landuse", "maz_data.csv"),
+        os.path.join("emme_project", "mtc_emme.emp"),
+        os.path.join("emme_project", "Database_highway", "emmebank"),
     ]
     for file_name in files_to_check:
         assert os.path.exists(
-            os.path.join(example_dir, name, file_name)
+            os.path.join(RUN_EXAMPLES_DIR, name, file_name)
         ), f"get_example failed, missing {file_name}"
     # check zip file was removed
-    assert not (os.path.exists(os.path.join(example_dir, name, "test_data.zip")))
+    assert not (os.path.exists(os.path.join(RUN_EXAMPLES_DIR, name, "test_data.zip")))
 
 
 @pytest.mark.skipci
@@ -56,18 +63,34 @@ def test_highway():
     from tm2py.controller import RunController
     from tm2py.examples import get_example
     import openmatrix as _omx
+    import toml
 
-    union_city_root = os.path.join(os.getcwd(), _EXAMPLES_DIR, "UnionCity")
-    get_example(
-        example_name="UnionCity", example_subdir=_EXAMPLES_DIR, root_dir=os.getcwd()
+    union_city_root = get_example(
+        example_name="UnionCity", example_subdir=RUN_EXAMPLES_DIR, root_dir=os.getcwd()
     )
-    controller = RunController(
-        [
-            os.path.join(union_city_root, r"scenario_config.toml"),
-            os.path.join(union_city_root, r"model_config.toml"),
-        ]
-    )
-    controller.run()
+    scen_config_path = os.path.join(EXAMPLES_DIR, r"scenario_config.toml")
+    with open(scen_config_path, "r") as fin:
+        scen_config = toml.load(fin)
+    scen_config["run"]["initial_components"] = [
+        "prepare_network_highway",
+        "highway",
+        "highway_maz_skim",
+    ]
+    scen_config["run"]["global_iteration_components"] = []
+    scen_config["run"]["start_iteration"] = 0
+    scen_config["run"]["end_iteration"] = 1
+    with tempfile.TemporaryDirectory() as temp_dir:
+        scen_config_path = os.path.join(temp_dir, "scenario_config.toml")
+        with open(scen_config_path, "w") as fout:
+            toml.dump(scen_config, fout)
+        controller = RunController(
+            [
+                scen_config_path,
+                os.path.join(EXAMPLES_DIR, r"model_config.toml"),
+            ],
+            run_dir=union_city_root
+        )
+        controller.run()
 
     root = os.path.join(controller.run_dir, r"skim_matrices\highway")
     ref_root = os.path.join(controller.run_dir, r"ref_skim_matrices\highway")
@@ -102,3 +125,54 @@ def test_highway():
     assert (
         count_different_lines == 0
     ), f"HWYSKIM_MAZMAZ_DA.csv differs on {count_different_lines} lines"
+
+
+@pytest.mark.skipci
+def test_model_run():
+    from tm2py.controller import RunController
+    from tm2py.examples import get_example
+    import toml
+
+    union_city_root = get_example(
+        example_name="UnionCity", example_subdir=RUN_EXAMPLES_DIR, root_dir=os.getcwd()
+    )
+    scen_config_path = os.path.join(EXAMPLES_DIR, r"scenario_config.toml")
+    with open(scen_config_path, "r") as fin:
+        scen_config = toml.load(fin)
+    scen_config["run"]["initial_components"] = [
+        # "create_tod_scenarios",
+        # "active_modes",
+        "air_passenger",
+        "prepare_network_highway",
+        "highway",
+        "highway_maz_skim",
+        # "prepare_network_transit",
+        # "transit_assign",
+        # "transit_skim",
+    ]
+    scen_config["run"]["global_iteration_components"] = [
+        # "household",
+        "internal_external",
+        "truck",
+        "prepare_network_highway",
+        "highway_maz_assign",
+        "highway",
+        # "prepare_network_transit",
+        # "transit_assign",
+        # "transit_skim",
+    ]
+    scen_config["run"]["start_iteration"] = 0
+    scen_config["run"]["end_iteration"] = 1
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        scen_config_path = os.path.join(temp_dir, "scenario_config.toml")
+        with open(scen_config_path, "w") as fout:
+            toml.dump(scen_config, fout)
+        controller = RunController(
+            [
+                scen_config_path,
+                os.path.join(EXAMPLES_DIR, r"model_config.toml"),
+            ],
+            run_dir=union_city_root
+        )
+        controller.run()

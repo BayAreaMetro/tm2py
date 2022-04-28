@@ -12,7 +12,7 @@ import zipfile
 
 from typing import Union, List
 
-from tm2py.logger import Logger
+# from tm2py.logger import Logger
 
 
 def parse_num_processors(value: Union[str, int, float]):

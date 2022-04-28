@@ -55,11 +55,116 @@
     highway_demand_file = "demand_matrices\\highway\\internal_external\\tripsIx{period}.omx"
     input_demand_file = "inputs\\nonres\\IXDaily2006x4.may2208.new.omx"
     reference_year = 2005
+    # The in-vehicle time coefficient is taken from the work trip mode choice model.
+    # coefficient for in-vehicle time = -0.0220/0.25 = -0.088
     toll_choice_time_coefficient = -0.088
     value_of_time = 18.93
     shared_ride_2_toll_factor = 0.5714285714285714
     shared_ride_3_toll_factor = 0.4
     operating_cost_per_mile = 17.23
+    # Union city compatible test with 43 zones
+    [[internal_external.annual_growth_rate]]
+        zone_index = 41
+        factor = 1.05
+    [[internal_external.annual_growth_rate]]
+        zone_index = 42
+        factor = 1.05
+    # Uncomment for full model gateways
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4688
+    #     factor = 1.005
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4689
+    #     factor = 1.005
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4690
+    #     factor = 1.005
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4691
+    #     factor = 1.005
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4692
+    #     factor = 1.005
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4693
+    #     factor = 1.010
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4694
+    #     factor = 1.010
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4695
+    #     factor = 1.010
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4696
+    #     factor = 1.010
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4697
+    #     factor = 0
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4698
+    #     factor = 1.010
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4699
+    #     factor = 1.010
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4700
+    #     factor = 1.015
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4701
+    #     factor = 1.010
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4702
+    #     factor = 1.010
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4703
+    #     factor = 1.010
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4704
+    #     factor = 1.005
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4705
+    #     factor = 1.005
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4706
+    #     factor = 1.005
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4707
+    #     factor = 1.005
+    # [[internal_external.annual_growth_rate]]
+    #     zone_index = 4708
+    #     factor = 1.005
+    # [[internal_external.special_gateway_adjust]]
+    #     zone_index = 4693
+    #     factor = 1.020228
+    # [[internal_external.special_gateway_adjust]]
+    #     zone_index = 4695
+    #     factor = 1.242555
+    # [[internal_external.special_gateway_adjust]]
+    #     zone_index = 4696
+    #     factor = 0.848518
+    # [[internal_external.special_gateway_adjust]]
+    #     zone_index = 4698
+    #     factor = 1.673817
+    [[internal_external.time_of_day_split]]
+        time_period = "ea"
+        production = 0.15329
+        attraction = 0.06440
+    [[internal_external.time_of_day_split]]
+        time_period = "am"
+        production = 0.26441
+        attraction = 0.17540
+    [[internal_external.time_of_day_split]]
+        time_period = "md"
+        production = 0.25720
+        attraction = 0.26950
+    [[internal_external.time_of_day_split]]
+        time_period = "pm"
+        production = 0.21490
+        attraction = 0.29824
+    [[internal_external.time_of_day_split]]
+        time_period = "ev"
+        production = 0.11020
+        attraction = 0.19246
 
 [truck]
     highway_demand_file = "demand_matrices\\highway\\commercial\\tripstrk{period}.omx"

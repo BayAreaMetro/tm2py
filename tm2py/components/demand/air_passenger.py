@@ -1,4 +1,4 @@
-"""Module contining the AirPassenger class which builds the airport trip matrices."""
+"""Module containing the AirPassenger class which builds the airport trip matrices."""
 
 
 from __future__ import annotations
@@ -96,7 +96,6 @@ class AirPassenger(Component):
                (3) shared ride 3+ (SR3)
 
     Internal properties:
-        _periods
         _start_year
         _end_year
         _mode_groups:
@@ -110,7 +109,7 @@ class AirPassenger(Component):
             controller: parent Controller object
         """
         super().__init__(controller)
-        self._periods = [p["name"].upper() for p in self.config.periods]
+        self._periods = [p.upper() for p in self.time_period_names()]
         self._start_year = None
         self._end_year = None
         self._mode_groups = {}
@@ -119,7 +118,6 @@ class AirPassenger(Component):
     @LogStartEnd()
     def run(self):
         """Build the airport trip matrices"""
-        self._periods = [p["name"].upper() for p in self.config.periods]
         self._start_year = self.config.air_passenger.reference_start_year
         self._end_year = self.config.air_passenger.reference_end_year
         self._mode_groups = {}

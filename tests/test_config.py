@@ -33,13 +33,13 @@ def test_config_read():
     assert my_config.run.end_iteration == 2
     assert my_config.scenario.year == 2015
     assert my_config.run.initial_components == (
-        "create_tod_scenarios",
-        "active_modes",
+        # "create_tod_scenarios",
+        # "active_modes",
         "air_passenger",
         "prepare_network_highway",
         "highway",
         "highway_maz_skim",
-        "transit",
+        # "transit",
     )
     assert len(my_config.time_periods) == 5
     assert my_config.highway.classes[0].description == "drive alone"
