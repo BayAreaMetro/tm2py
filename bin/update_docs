@@ -5,7 +5,7 @@ import os
 import tm2py
 
 # High-level settings
-MODULE_CLASS_DOC_LIST = [ 
+MODULE_CLASS_DOC_LIST = [
     ("classes_components.md",[("## Components", tm2py.components, 1)]),
     ("classes_basic.md", [("## Basic", tm2py, 1)]),
     ("classes_config.md", [("## Config", tm2py.config, 1)]),

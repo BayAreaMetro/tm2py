@@ -1,1 +1,1 @@
-"""Demand components module"""
+"""Demand components module."""
