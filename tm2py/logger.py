@@ -8,7 +8,7 @@ from datetime import datetime
 class Logger:
     """Logger class."""
 
-    def __init__(self, controller: "Controller"):
+    def __init__(self, controller):
         """Logger constructor.
 
         Args:
