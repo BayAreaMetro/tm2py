@@ -134,7 +134,7 @@ be failing. **When this is complete, all tests should pass.**
 
 !!! tip
 
-    You can (and should) push your changes throughout your work so that others can see what you 
+    You can (and should) push your changes throughout your work so that others can see what you
     are working on, contribute advice, and sometimes work on the issue with you.
 
 **Update relevant documentation:** See the [Docmentation on Documentation](./documentation.md)
@@ -151,8 +151,8 @@ pre-commit run --all-files
 
 !!! tip
 
-    Often pre-commit checks will "fail" on the first run when they are fixing the issues.  When 
-    you run it again, hopefully it will be successful. 
+    Often pre-commit checks will "fail" on the first run when they are fixing the issues.  When
+    you run it again, hopefully it will be successful.
 
 **Pull-Request:** Create the pull-request which clearly defines what the pull request contains
 and link it to the issues it addresses in the description via closing keywords (if applicable) or
