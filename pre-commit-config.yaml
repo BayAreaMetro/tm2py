@@ -1,13 +1,19 @@
+stages: [push]
 repos:
   - repo: https://github.com/psf/black
-    rev: 19.10b0
+    rev: 22.3.0
     hooks:
       - id: black
         language_version: python3.7
+      - id: black-jupyter
+  - repo: github.com/PyCQA/pydocstyle
+    hooks:
+      - id: pydocstyle
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v3.4.0
     hooks:
       - id: flake8
+        args: ["--ignore=E501,W503,F403,F405"]
         types:
           - python
       - id: trailing-whitespace
@@ -18,7 +24,19 @@ repos:
       - id: check-json
       - id: requirements-txt-fixer
       - id: mixed-line-ending
+      - id: check-toml
+      - id: requirements-txt-fixer
+      - id: check-executables-have-shebangs
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.27.1
     hooks:
       - id: markdownlint
+  - repo: https://github.com/pycqa/isort
+    rev: 5.10.1
+    hooks:
+    - id: isort
+      args: ["--profile", "black"] 
+  - repo: github.com/python-jsonschema/check-jsonschema
+    hooks:
+    - id: check-github-workflows
+    - id: check-github-actions
