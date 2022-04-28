@@ -4,13 +4,11 @@ import functools
 from contextlib import contextmanager as _context
 from datetime import datetime
 
-from tm2py.controller import Controller
-
 
 class Logger:
     """Logger class."""
 
-    def __init__(self, controller: Controller):
+    def __init__(self, controller: "Controller"):
         """Logger constructor.
 
         Args:
