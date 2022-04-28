@@ -11,9 +11,6 @@ from tm2py.logger import LogStartEnd
 class HouseholdModel(Component):
     """Run household resident model"""
 
-    def __init__(self, controller):
-        super().__init__(controller)
-
     @LogStartEnd()
     def run(self):
         self._start_household_manager()
@@ -50,9 +47,7 @@ class HouseholdModel(Component):
             "CALL CTRAMP\\runtime\\CTRampEnv.bat",
             "set PATH=%CD%\\CTRAMP\runtime;C:\\Windows\\System32;%JAVA_PATH%\bin;"
             "%TPP_PATH%;%PYTHON_PATH%;%PYTHON_PATH%\\condabin;%PYTHON_PATH%\\envs",
-            'CALL CTRAMP\runtime\runMTCTM2ABM.cmd {sample_rate} {iteration} "%JAVA_PATH%"'.format(
-                sample_rate=sample_rate, iteration=iteration
-            ),
+            f'CALL CTRAMP\runtime\runMTCTM2ABM.cmd {sample_rate} {iteration} "%JAVA_PATH%"'
         ]
         run_process(commands, name="run_resident_model")
 
