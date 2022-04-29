@@ -68,7 +68,6 @@ def test_highway():
             os.path.join(_EXAMPLES_DIR, r"scenario_config.toml"),
             os.path.join(_EXAMPLES_DIR, r"model_config.toml"),
         ],
-        run_dir=union_city_root
         run_dir=union_city_root,
     )
     controller.run()
