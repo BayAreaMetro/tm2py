@@ -5,7 +5,7 @@ import os
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Union
 
 from tm2py.emme.manager import EmmeScenario
 
