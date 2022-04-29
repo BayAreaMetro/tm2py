@@ -21,13 +21,11 @@ from inro.emme.network import Network as EmmeNetwork
 from inro.emme.database.scenario import Scenario as EmmeScenario
 from inro.emme.database.matrix import Matrix as EmmeMatrix  # pylint: disable=W0611
 from inro.emme.network.node import Node as EmmeNode  # pylint: disable=W0611
+from inro.emme.network.link import Link as EmmeLink  # pylint: disable=W0611
 import inro.emme.desktop.app as _app
-from inro.modeller import Modeller as EmmeModeller, logbook_write, logbook_trace
+from inro.modeller import Modeller as EmmeModeller, logbook_write, logbook_trace, PageBuilder  # pylint: disable=W0611
 
 EmmeDesktopApp = _app.App
-
-# "Emme Manager requires Emme to be installed unless running in a test environment."
-# "Please install Emme and try again."
 
 
 # Cache running Emme projects from this process (simple singleton implementation)

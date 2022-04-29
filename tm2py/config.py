@@ -52,7 +52,8 @@ class ScenarioConfig(ConfigItem):
 
 
 ComponentNames = Literal[
-    "create_tod_scenarios",
+    "create_highway_scenarios",
+    "create_transit_scenarios",
     "active_modes",
     "air_passenger",
     "prepare_network_highway",
