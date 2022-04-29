@@ -88,6 +88,7 @@ def diff_omx(ref_omx: str, run_omx: str) -> Collection[Collection[str]]:
 @pytest.fixture(scope="module")
 @pytest.mark.skipci
 def union_city():
+    """Union City model run testing fixture."""
     from tm2py.controller import RunController
     from tm2py.examples import get_example
 
@@ -107,6 +108,7 @@ def union_city():
 
 @pytest.mark.skipci
 def test_highway_skims(union_city):
+    """Test that the OMX highway skims match the reference."""
     run_dir = union_city.controller.run_dir
 
     ref_dir_hwy_skims = os.path.join(run_dir, "ref_skim_matrices", "highway")
@@ -137,6 +139,15 @@ def test_highway_skims(union_city):
 
 
 def assert_csv_equal(ref_csv: str, run_csv: str):
+    """Compare two csv files, return results of pd.testing.assert_frame_equal().
+
+    Args:
+        ref_csv (str): Reference CSV location
+        run_csv (str): Model run CSV location
+
+    Returns:
+        Results of pd.testing.assert_frame_equal()
+    """
     ref_df = pd.read_csv(ref_csv)
     run_df = pd.read_csv(run_csv)
     return pd.testing.assert_frame_equal(ref_df, run_df)
@@ -144,6 +155,7 @@ def assert_csv_equal(ref_csv: str, run_csv: str):
 
 @pytest.mark.skipci
 def test_maz_da_skims(union_city):
+    """Test that the DA MAZ skims match the reference."""
     run_dir = union_city.controller.run_dir
 
     ref_dir_hwy_skims = os.path.join(run_dir, "ref_skim_matrices", "highway")
