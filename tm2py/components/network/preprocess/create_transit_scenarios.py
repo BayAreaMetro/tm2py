@@ -8,6 +8,7 @@ from typing import List, Union, Dict, Tuple, Set
 import pandas as pd
 
 from tm2py.components.component import Component as _Component
+from tm2py.components.network.preprocess.apply_fares import ApplyFares
 from tm2py.emme.manager import (
     EmmeNode,
     EmmeLink,
@@ -385,11 +386,11 @@ class CreateTransitScenarios(_Component):
 
     def apply_fares(self, scenario: EmmeScenario, network: EmmeNetwork, period):
         """Process input fare data."""
-        # apply_fares = ApplyFares(self.controller)
-        # apply_fares.scenario = scenario
-        # apply_fares.network = network
-        # apply_fares.period = period
-        # apply_fares.run()
+        apply_fares = ApplyFares(self.controller)
+        apply_fares.scenario = scenario
+        apply_fares.network = network
+        apply_fares.period = period
+        apply_fares.run()
 
     def apply_station_attributes(self, input_dir: str, network: EmmeNetwork):
         """Apply station attributes"""
