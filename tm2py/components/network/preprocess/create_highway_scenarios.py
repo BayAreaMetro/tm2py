@@ -1,4 +1,4 @@
-"""Module for creating the time-of-day scenario.
+"""Module for creating the time-of-day scenario for highway assignments and skims.
 """
 from __future__ import annotations
 

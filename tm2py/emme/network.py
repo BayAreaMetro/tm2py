@@ -115,7 +115,7 @@ def copy_tod_scenario(
     time_period_name: str,
     scenario_id: int,
     all_period_names: List[str],
-):
+) -> EmmeScenario:
     """Copy the reference scenario setting the named per-period attributes.
 
     The network data is duplicated from the base ref_scenario, and the
@@ -153,6 +153,7 @@ def copy_tod_scenario(
         for name in all_period_names:
             if attr.name.endswith(name):
                 scenario.delete_extra_attribute(attr)
+    return scenario
 
 
 _CRS_WKT = """PROJCS["NAD83(HARN) / California zone 6 (ftUS)",GEOGCS["NAD83(HARN)",

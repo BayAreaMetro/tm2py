@@ -17,11 +17,13 @@ from typing import Any, Dict, List, Union
 # so disabling relevant import module checks
 # pylint: disable=E0611, E0401, E1101
 from inro.emme.database.emmebank import Emmebank
-from inro.emme.network import Network as EmmeNetwork
 from inro.emme.database.scenario import Scenario as EmmeScenario
 from inro.emme.database.matrix import Matrix as EmmeMatrix  # pylint: disable=W0611
+from inro.emme.network import Network as EmmeNetwork
+from inro.emme.network.mode import Mode as EmmeMode  # pylint: disable=W0611
 from inro.emme.network.node import Node as EmmeNode  # pylint: disable=W0611
 from inro.emme.network.link import Link as EmmeLink  # pylint: disable=W0611
+from inro.emme.network.transitline import TransitLine as EmmeTransitLine  # pylint: disable=W0611
 import inro.emme.desktop.app as _app
 from inro.modeller import Modeller as EmmeModeller, logbook_write, logbook_trace, PageBuilder  # pylint: disable=W0611
 
