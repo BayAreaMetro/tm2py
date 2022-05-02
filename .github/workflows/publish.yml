@@ -4,12 +4,11 @@
 name: Upload Python Package
 
 on:
-  release:
-    types: [created]
+  release
 
 jobs:
   
-  deploy:
+  build-publish:
 
     runs-on: ubuntu-latest
 
