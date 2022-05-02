@@ -67,10 +67,10 @@ def diff_omx(ref_omx: str, run_omx: str) -> Collection[Collection[str]]:
         ref_omx: reference OMX file
         run_omx: run OMX file
     """
-    _ref_f = open(ref_omx, "r")
-    _run_f = open(run_omx, "r")
-    _ref_matrix_names = _ref_f.list_matrices().sort()
-    _run_matrix_names = _run_f.list_matrices().sort()
+    _ref_f = omx.open_file(ref_omx, "r")
+    _run_f = omx.open_file(run_omx, "r")
+    _ref_matrix_names = _ref_f.list_matrices()
+    _run_matrix_names = _run_f.list_matrices()
 
     missing_matrices = [f for f in _ref_matrix_names if f not in _run_matrix_names]
     different_matrices = []
@@ -104,22 +104,23 @@ def union_city():
         run_dir=union_city_root,
     )
     controller.run()
+    return controller
 
 
 @pytest.mark.skipci
 def test_highway_skims(union_city):
     """Test that the OMX highway skims match the reference."""
-    run_dir = union_city.controller.run_dir
+    run_dir = union_city.run_dir
 
     ref_dir_hwy_skims = os.path.join(run_dir, "ref_skim_matrices", "highway")
-    ref_skim_files = glob.glob(ref_dir_hwy_skims, "*.omx").sort()
+    ref_skim_files = glob.glob(os.path.join(ref_dir_hwy_skims, "*.omx"))
 
     run_dir_hwy_skims = os.path.join(run_dir, "skim_matrices", "highway")
-    run_skim_files = glob.glob(run_dir_hwy_skims, "*.omx").sort()
+    run_skim_files = glob.glob(os.path.join(run_dir_hwy_skims, "*.omx"))
 
     # check that the expected files are all there
-    ref_skim_names = [os.path.filename(f) for f in ref_skim_files]
-    run_skim_names = [os.path.filename(f) for f in run_skim_files]
+    ref_skim_names = [os.path.basename(f) for f in ref_skim_files]
+    run_skim_names = [os.path.basename(f) for f in run_skim_files]
 
     assert set(ref_skim_names) == set(
         run_skim_names
@@ -156,7 +157,7 @@ def assert_csv_equal(ref_csv: str, run_csv: str):
 @pytest.mark.skipci
 def test_maz_da_skims(union_city):
     """Test that the DA MAZ skims match the reference."""
-    run_dir = union_city.controller.run_dir
+    run_dir = union_city.run_dir
 
     ref_dir_hwy_skims = os.path.join(run_dir, "ref_skim_matrices", "highway")
     run_dir_hwy_skims = os.path.join(run_dir, "skim_matrices", "highway")
