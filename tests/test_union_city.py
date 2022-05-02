@@ -1,9 +1,14 @@
 import os
 from unittest.mock import MagicMock
 import sys
+import tempfile
 import pytest
 
 
+EXAMPLES_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "examples"
+)
+RUN_EXAMPLES_DIR = "examples"
 _EXAMPLES_DIR = r"examples"
 
 
@@ -102,3 +107,37 @@ def test_highway():
     assert (
         count_different_lines == 0
     ), f"HWYSKIM_MAZMAZ_DA.csv differs on {count_different_lines} lines"
+
+
+@pytest.mark.foo
+@pytest.mark.skipci
+def test_active_modes():
+    from tm2py.controller import RunController
+    from tm2py.examples import get_example
+    import toml
+
+    union_city_root = get_example(
+        example_name="UnionCity", example_subdir=RUN_EXAMPLES_DIR, root_dir=os.getcwd()
+    )
+    scen_config_path = os.path.join(EXAMPLES_DIR, r"scenario_config.toml")
+    with open(scen_config_path, "r") as fin:
+        scen_config = toml.load(fin)
+    scen_config["run"]["initial_components"] = [
+        "active_modes",
+    ]
+    scen_config["run"]["global_iteration_components"] = []
+    scen_config["run"]["start_iteration"] = 0
+    scen_config["run"]["end_iteration"] = 1
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        scen_config_path = os.path.join(temp_dir, "scenario_config.toml")
+        with open(scen_config_path, "w") as fout:
+            toml.dump(scen_config, fout)
+        controller = RunController(
+            [
+                scen_config_path,
+                os.path.join(EXAMPLES_DIR, r"model_config.toml"),
+            ],
+            run_dir=union_city_root
+        )
+        controller.run()

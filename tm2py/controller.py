@@ -22,6 +22,7 @@ from tm2py.config import Configuration
 from tm2py.emme.manager import EmmeManager
 from tm2py.logger import Logger
 from tm2py.components.component import Component
+from tm2py.components.network.active.active_modes import ActiveModesSkim
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
 from tm2py.components.network.highway.highway_network import PrepareNetwork
 from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, SkimMAZCosts
@@ -29,6 +30,7 @@ from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, Skim
 # mapping from names referenced in config.run to imported classes
 # NOTE: component names also listed as literal in tm2py.config for validation
 component_cls_map = {
+    "active_modes": ActiveModesSkim,
     "prepare_network_highway": PrepareNetwork,
     "highway": HighwayAssignment,
     "highway_maz_assign": AssignMAZSPDemand,

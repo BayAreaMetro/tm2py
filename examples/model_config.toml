@@ -353,7 +353,7 @@
     all_day_scenario_id = 1
     project_path = "emme_project\\mtc_emme.emp"
     highway_database_path = "emme_project\\Database_highway\\emmebank"
-    active_database_paths = [ "emme_project\\Database_active_south\\emmebank", "emme_project\\Database_active_north\\emmebank" ]
+    active_database_paths = [ "emme_project\\Database_active_maz\\emmebank" ]
     transit_database_path = "emme_project\\Database_transit_taz\\emmebank"
 
 
