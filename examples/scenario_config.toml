@@ -10,13 +10,14 @@
 [run]
     start_component = ""
     initial_components = [
-        "create_tod_scenarios", 
+        "create_highway_scenarios", 
+        "create_transit_scenarios",
         "active_modes", 
         "air_passenger", 
         "prepare_network_highway", 
         "highway", 
         "highway_maz_skim", 
-        "transit"
+        #"transit"
     ]
     global_iteration_components = [
         "household", 
@@ -24,7 +25,7 @@
         "truck", 
         "highway_maz_assign", 
         "highway", 
-        "transit"
+    #    "transit"
     ]
     final_components = []
     start_iteration = 0
