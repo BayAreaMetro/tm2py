@@ -1,0 +1,19 @@
+name: Test, Build Docs + Publish a Release
+
+on:
+  pull_request: 
+    types: [opened, edited, synchronize, reopened ]
+  release:
+    types: [created]
+
+jobs:
+  build-package:
+    uses: BayAreaMetro/tm2py/.github/workflows/build.yml
+  flake:
+    uses: BayAreaMetro/tm2py/.github/workflows/flake.yml
+  test:
+    uses: BayAreaMetro/tm2py/.github/workflows/test.yml
+  create-docs:
+    uses: BayAreaMetro/tm2py/.github/workflows/create-docs.yml
+
+ 

@@ -1,0 +1,21 @@
+name: Clean Docs for Deleted Branches
+on: 
+  delete:
+  pull_request: 
+    types: [closed]
+
+env:
+  PYTHON_VERSION: 3.8
+
+jobs:
+  clean-docs:
+    name: Unpublish Defunct Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: "$PYTHON_VERSION.${{ github.head_ref }}.${{ github.sha }}"
+      - name: Deploy MkDoc with mike 🚀
+        run: |
+          echo "Deleting ${{ github.event.ref }} version from docs"
+          mike deploy --push ${{ github.event.ref }}
