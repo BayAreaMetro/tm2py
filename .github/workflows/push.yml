@@ -1,4 +1,4 @@
-name: Python package
+name: Push Workflow
 
 on: [push]
 
@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8]
+        python-version: [3.7]
 
     steps:
     - uses: actions/checkout@v2
@@ -21,7 +21,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r dev-requirements.txt
-    - name: Lint with flake8
+    - name: Lint
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
@@ -33,3 +33,10 @@ jobs:
     - name: Test with pytest
       run: |
         pytest -s -m "not skipci"
+    - name: Configure Git user
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+    - name: Build docs
+      run: |
+        mike deploy --push ${{ github.event.ref_name }} 
