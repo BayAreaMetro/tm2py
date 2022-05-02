@@ -5,6 +5,7 @@ channels:
 dependencies:
   - affine=2.3.0=py_0
   - appnope=0.1.2=py37hf985489_2
+  - argh=0.26.2=pyh9f0ad1d_1002
   - argon2-cffi=21.3.0=pyhd8ed1ab_0
   - argon2-cffi-bindings=21.2.0=py37h271585c_1
   - attrs=21.4.0=pyhd8ed1ab_0
@@ -21,7 +22,7 @@ dependencies:
   - c-ares=1.18.1=h0d85af4_0
   - ca-certificates=2021.10.8=h033912b_0
   - cairo=1.16.0=he43a7df_1008
-  - certifi=2021.10.8=py37hf985489_1
+  - certifi=2021.10.8=py37hf985489_2
   - cffi=1.15.0=py37h446072c_0
   - cfitsio=3.470=h01dc385_7
   - chardet=4.0.0=py37hf985489_2
@@ -40,7 +41,7 @@ dependencies:
   - fiona=1.8.20=py37h687fd47_1
   - flit-core=3.7.1=pyhd8ed1ab_0
   - folium=0.12.0=pyhd8ed1ab_1
-  - fontconfig=2.13.96=h676cef8_1
+  - fontconfig=2.13.94=h10f422b_0
   - fonttools=4.30.0=py37h69ee0a8_0
   - freetype=2.10.4=h4cff582_1
   - freexl=1.0.6=h0d85af4_0
@@ -52,11 +53,13 @@ dependencies:
   - geos=3.9.1=he49afe7_2
   - geotiff=1.6.0=h26421ea_6
   - gettext=0.19.8.1=hd1a6beb_1008
+  - ghp-import=2.0.2=pyhd8ed1ab_0
   - giflib=5.2.1=hbcb3906_2
   - hdf4=4.2.15=hefd3b78_3
   - hdf5=1.12.1=nompi_ha60fbc9_104
   - icu=68.2=he49afe7_0
   - idna=3.3=pyhd8ed1ab_0
+  - importlib-metadata=4.11.3=py37hf985489_1
   - ipykernel=6.9.1=py37h4c52d7d_0
   - ipython=7.32.0=py37hf985489_0
   - ipython_genutils=0.2.0=py_1
@@ -131,6 +134,8 @@ dependencies:
   - markupsafe=2.1.0=py37h69ee0a8_1
   - matplotlib-base=3.5.1=py37h3147e9e_0
   - matplotlib-inline=0.1.3=pyhd8ed1ab_0
+  - mergedeep=1.3.4=pyhd8ed1ab_0
+  - mike=1.1.2=pyhd8ed1ab_0
   - mistune=0.8.4=py37h271585c_1005
   - munch=2.5.0=py_0
   - munkres=1.1.4=pyh9f0ad1d_0
@@ -168,6 +173,7 @@ dependencies:
   - prompt_toolkit=3.0.27=hd8ed1ab_0
   - pthread-stubs=0.4=hc929b4f_1001
   - ptyprocess=0.7.0=pyhd3deb0d_0
+  - pyaml=21.10.1=pyhd8ed1ab_0
   - pycparser=2.21=pyhd8ed1ab_0
   - pydantic=1.9.0=py37h271585c_0
   - pygments=2.11.2=pyhd8ed1ab_0
@@ -186,6 +192,7 @@ dependencies:
   - python_abi=3.7=2_cp37m
   - pytz=2021.1=pyhd8ed1ab_0
   - pyyaml=5.4.1=py37h271585c_1
+  - pyyaml-env-tag=0.1=pyhd8ed1ab_0
   - pyzmq=22.3.0=py37h8f778e5_1
   - qt=5.12.9=h126340a_4
   - qtconsole=5.2.2=pyhd8ed1ab_1
@@ -216,6 +223,7 @@ dependencies:
   - tzdata=2021e=he74cb21_0
   - unicodedata2=14.0.0=py37h271585c_0
   - urllib3=1.26.8=pyhd8ed1ab_1
+  - verspec=0.1.0=pyhd8ed1ab_0
   - wcwidth=0.2.5=pyh9f0ad1d_2
   - webencodings=0.5.1=py_1
   - wheel=0.37.1=pyhd8ed1ab_0
@@ -246,15 +254,12 @@ dependencies:
     - filelock==3.6.0
     - flake8==4.0.1
     - fontawesome-markdown==0.2.6
-    - ghp-import==2.0.2
     - identify==2.4.11
     - imagesize==1.3.0
-    - importlib-metadata==4.2.0
     - iniconfig==1.1.1
     - jsbeautifier==1.14.0
     - markdown==3.3.4
     - mccabe==0.6.1
-    - mergedeep==1.3.4
     - mkdocs==1.2.3
     - mkdocs-autorefs==0.4.1
     - mkdocs-awesome-pages-plugin==2.7.0
@@ -279,8 +284,8 @@ dependencies:
     - pyflakes==2.4.0
     - pymdown-extensions==9.2
     - pytest==7.0.1
+    - pytest-mock==3.7.0
     - pytkdocs==0.16.1
-    - pyyaml-env-tag==0.1
     - recommonmark==0.7.1
     - snowballstemmer==2.2.0
     - soupsieve==2.3.1

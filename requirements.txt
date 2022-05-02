@@ -17,6 +17,7 @@ pydantic
 typing_extensions
 openmatrix
 osmnx >= 0.12
+mike
 notebook
 numpy
 pandas > 1.0
