@@ -47,7 +47,7 @@ class HouseholdModel(Component):
             "CALL CTRAMP\\runtime\\CTRampEnv.bat",
             "set PATH=%CD%\\CTRAMP\runtime;C:\\Windows\\System32;%JAVA_PATH%\bin;"
             "%TPP_PATH%;%PYTHON_PATH%;%PYTHON_PATH%\\condabin;%PYTHON_PATH%\\envs",
-            f'CALL CTRAMP\runtime\runMTCTM2ABM.cmd {sample_rate} {iteration} "%JAVA_PATH%"'
+            f'CALL CTRAMP\runtime\runMTCTM2ABM.cmd {sample_rate} {iteration} "%JAVA_PATH%"',
         ]
         run_process(commands, name="run_resident_model")
 

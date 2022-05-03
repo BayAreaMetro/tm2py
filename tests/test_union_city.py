@@ -13,7 +13,7 @@ import pytest
 _EXAMPLES_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "examples"
 )
-_UNION_CITY_DIR= os.path.join(_EXAMPLES_DIR, "UnionCity")
+_UNION_CITY_DIR = os.path.join(_EXAMPLES_DIR, "UnionCity")
 
 
 def test_example_download():
@@ -41,7 +41,9 @@ def test_example_download():
         shutil.rmtree(_UNION_CITY_DIR)
 
     get_example(
-        example_name=EXAMPLE_NAME, example_subdir=_UNION_CITY_DIR, root_dir=_EXAMPLES_DIR
+        example_name=EXAMPLE_NAME,
+        example_subdir=_UNION_CITY_DIR,
+        root_dir=_EXAMPLES_DIR,
     )
     # default retrieval_url points to Union City example on box
 
@@ -60,7 +62,9 @@ def test_example_download():
             os.path.join(_UNION_CITY_DIR, file_name)
         ), f"get_example failed, missing {file_name}"
     # check zip file was removed
-    assert not (os.path.exists(os.path.join(_EXAMPLES_DIR, name, "test_data.zip")))
+    assert not (
+        os.path.exists(os.path.join(_EXAMPLES_DIR, EXAMPLE_NAME, "test_data.zip"))
+    )
 
 
 def diff_omx(ref_omx: str, run_omx: str) -> Collection[Collection[str]]:
@@ -110,6 +114,7 @@ def union_city():
     controller.run()
     return controller
 
+
 @pytest.mark.skipci
 def test_highway_skims(union_city):
     """Test that the OMX highway skims match the reference."""
@@ -140,6 +145,7 @@ def test_highway_skims(union_city):
 
     assert len(missing_skims) == 0, f"Missing skims: {missing_skims}"
     assert len(different_skims) == 0, f"Different skims: {different_skims}"
+
 
 def assert_csv_equal(ref_csv: str, run_csv: str):
     """Compare two csv files, return results of pd.testing.assert_frame_equal().
