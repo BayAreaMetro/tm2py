@@ -41,8 +41,15 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 *.log
+
 # except logs in the example
 !examples/**/*.log
+
+# dowloaded example files
+examples/UnionCity/demand_matrices/
+examples/UnionCity/emme_project/
+examples/UnionCity/ref_skim_matrices/
+examples/UnionCity/skim_matrices
 
 #temp files
 tests/scratch/*
