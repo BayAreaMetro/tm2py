@@ -1,5 +1,5 @@
 name: Clean Docs for Deleted References
-on: 
+on:
   delete:
 
 env:
@@ -11,7 +11,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        fetch-depth: 0 
+        fetch-depth: 0
     - name: Set up Python $PYTHON_VERSION
       uses: actions/setup-python@v2
       with:

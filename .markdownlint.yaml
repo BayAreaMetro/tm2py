@@ -5,5 +5,5 @@ default: true
 MD007:
   indent: 4
 
-# Remove line length limit 
+# Remove line length limit
 MD013: false

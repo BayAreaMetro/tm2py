@@ -14,11 +14,11 @@ Install along with all development requirements (recommended):
 ```sh
 pip install -r dev-requirements.txt
 ```
-Install using PIP: 
+Install using PIP:
 ```sh
 pip install pytest
 ```
-Install using Conda: 
+Install using Conda:
 ```sh
 conda install pytest
 ```
@@ -27,7 +27,7 @@ conda install pytest
 
 1. Run all tests
 ```sh
-pytest 
+pytest
 ```
 
 2. Run tests in `test_basic.py`

@@ -35,7 +35,7 @@ plugins:
           setup_commands:
            - import sys
            - from unittest.mock import MagicMock as mock
-           - sys.path.append('../')  
+           - sys.path.append('../')
            - sys.modules["inro"] = mock()
            - sys.modules["inro.emme"] = mock()
            - sys.modules["inro.emme.database"] = mock()
@@ -89,4 +89,3 @@ markdown_extensions:
   - toc:
       # insert a blank space before the character
       permalink: " ¶"
-  
