@@ -5,12 +5,15 @@ Documentation is developed using the Python package [mkdocs](https://www.mkdocs.
 ## Installing
 
 Using pip:
+
 ```sh
 pip install -r requirements.txt
 ```
+
 ## Building Locally
 
 Mkdocs documentation webpages can be built using the following shell command from the `docs` folder:
+
 ```sh
 mkdocs build
 mkdocs serve

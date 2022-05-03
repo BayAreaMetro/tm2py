@@ -1,4 +1,4 @@
-"""Download and unzip examples for tm2py, used in tests"""
+"""Download and unzip examples for tm2py, used in tests."""
 
 
 import os

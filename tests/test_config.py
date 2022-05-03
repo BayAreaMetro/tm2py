@@ -1,3 +1,5 @@
+"""Testing module for the run configuration data classes."""
+
 import os
 import sys
 from unittest.mock import MagicMock

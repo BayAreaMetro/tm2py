@@ -1,12 +1,12 @@
+"""Testing module for documentation."""
+
 import pytest
 
 
 def test_docs_build():
-    """
-    Test that the documentation build is successful.
-    """
-    import subprocess
+    """Test that the documentation build is successful."""
     import os
+    import subprocess
 
     # Get the path to the base directory
     base_dir = os.path.join(os.path.dirname(__file__), "..")

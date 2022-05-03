@@ -1,3 +1,6 @@
+
+"""Testing module for UnionCity subarea 'real' model runs."""
+
 import glob
 import os
 import sys
@@ -9,11 +12,11 @@ import openmatrix as omx
 import pandas as pd
 import pytest
 
-
 _EXAMPLES_DIR = r"examples"
 
 
 def test_example_download():
+    """Tests that example data can be downloaded."""
     # If (and only if) Emme is not installed, replace INRO libraries with MagicMock
     try:
         import inro.emme.database.emmebank
@@ -28,6 +31,7 @@ def test_example_download():
         sys.modules["inro.modeller"] = MagicMock()
 
     import shutil
+
     from tm2py.examples import get_example
 
     name = "UnionCity"

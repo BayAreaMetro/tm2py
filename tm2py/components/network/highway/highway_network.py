@@ -50,16 +50,16 @@ The following attributes are calculated:
 from typing import Dict, List, Set
 
 from tm2py.components.component import Component
+from tm2py.emme.manager import EmmeNetwork, EmmeScenario
 from tm2py.logger import LogStartEnd
-from tm2py.emme.manager import EmmeScenario, EmmeNetwork
 
 
 class PrepareNetwork(Component):
-    """Highway network preparation"""
+    """Highway network preparation."""
 
     @LogStartEnd("prepare network attributes and modes")
     def run(self):
-        """Run network preparation step"""
+        """Run network preparation step."""
         for time in self.time_period_names():
             with self.controller.emme_manager.logbook_trace(
                 f"prepare for highway assignment {time}"
@@ -165,7 +165,7 @@ class PrepareNetwork(Component):
         return tolls
 
     def _set_vdf_attributes(self, network: EmmeNetwork, time_period: str):
-        """Set capacity, VDF and critical speed on links"""
+        """Set capacity, VDF and critical speed on links."""
         capacity_map = {}
         critical_speed_map = {}
         for row in self.config.highway.capclass_lookup:

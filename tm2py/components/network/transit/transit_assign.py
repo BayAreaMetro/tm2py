@@ -1,4 +1,4 @@
-"""Transit assignment module"""
+"""Transit assignment module."""
 
 from ...component import Component
 

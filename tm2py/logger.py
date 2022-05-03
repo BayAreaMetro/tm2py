@@ -1,21 +1,26 @@
-"""Logging module
-"""
+"""Logging module."""
+
+import functools
 from contextlib import contextmanager as _context
 from datetime import datetime
-import functools
 
 
 class Logger:
-    """Logger"""
+    """Logger class."""
 
     def __init__(self, controller):
+        """Logger constructor.
+
+        Args:
+            controller (Controller): Link to model run controller.
+        """
         super().__init__()
         self._controller = controller
         self._indentation = 0
 
     @staticmethod
     def log(text: str, level: str = "INFO"):
-        """Placeholder logging method
+        """Placeholder logging method.
 
         Args:
             text (str): text to log
@@ -25,7 +30,7 @@ class Logger:
             print(text)
 
     def log_time(self, msg: str, level: str = "INFO", indent: bool = True):
-        """Log message with timestamp
+        """Log message with timestamp.
 
         Args:
             msg (str): message text
@@ -80,17 +85,29 @@ class LogStartEnd:
 
     Used as a Component method decorator. If msg is not provided a default message
     is generated with the object class and method name.
-
-    Args:
-        msg (str): message text to use in the start and end record
-        level (str): logging level
     """
 
     def __init__(self, msg: str = None, level: str = "INFO"):
+        """Contructor for Logger.
+
+        Args:
+            msg (str, optional):  Message text to use in the start and end record.
+                Defaults to None.
+            level (str, optional): logging level. Defaults to "INFO".
+        """
         self.msg = msg
         self.level = level
 
     def __call__(self, func):
+        """Ability to call logger.
+
+        Args:
+            func (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+
         @functools.wraps(func)
         def wrapper(obj, *args, **kwargs):
             msg = self.msg or obj.__class__.__name__ + " " + func.__name__

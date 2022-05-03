@@ -1,6 +1,7 @@
 # Architecture
 
 ## Abstract Component
+
 ``` mermaid
 classDiagram
     class Component{
@@ -13,7 +14,9 @@ classDiagram
         +write_top_sheet()
     }
 ```
+
 ## Controllers
+
 ``` mermaid
 classDiagram
     Controller <|-- ModelController
@@ -51,6 +54,7 @@ classDiagram
         +log()
     }
 ```
+
 ## Configs
 
 ```mermaid
@@ -106,6 +110,7 @@ classDiagram
     }
 
 ```
+
 ## Demand
 
 ``` mermaid
