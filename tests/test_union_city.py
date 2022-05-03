@@ -1,12 +1,10 @@
-
 """Testing module for UnionCity subarea 'real' model runs."""
 
 import glob
 import os
 import sys
-
-from unittest.mock import MagicMock
 from typing import Collection, Union
+from unittest.mock import MagicMock
 
 import openmatrix as omx
 import pandas as pd
