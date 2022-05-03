@@ -176,12 +176,12 @@ class DriveAccessSkims(Component):
         scenario = emmebank.scenario(period.emme_scenario_id)
         zone_numbers = scenario.zone_numbers
         network = self.controller.emme_manager.get_network(
-            scenario, {"NODE": ["#county", "@taz_id"]}
+            scenario, {"NODE": ["#node_county", "@taz_id"]}
         )
         externals = [
             n["@maz_id"]
             for n in network.nodes()
-            if n["@maz_id"] > 0 and n["#county"] == "External"
+            if n["@maz_id"] > 0 and n["#node_county"] == "External"
         ]
         root_ids = np.repeat(zone_numbers, len(zone_numbers))
         leaf_ids = zone_numbers * len(zone_numbers)
