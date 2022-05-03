@@ -1,0 +1,1 @@
+I am branch `test-deleting-ref`
