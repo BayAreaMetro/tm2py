@@ -4,8 +4,8 @@
 
 *Demonstrate the code is solid by discussing how results are verified and covered by tests*
 
- - [ ] Code for this PR is covered in tests
- - [ ] Code passes all existing tests
+- [ ] Code for this PR is covered in tests
+- [ ] Code passes all existing tests
 
 ## Code formatting
 
