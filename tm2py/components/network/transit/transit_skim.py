@@ -285,6 +285,9 @@ class TransitSkim(Component):
     def _get_emme_mode_ids(self) -> List[Tuple[str, List[str]]]:
         """Get the Emme mode IDs used in the assignment.
 
+        Loads the #src_mode attribute on lines if fares are used, and the
+        @base_timtr on segments if ccr is used.
+
         Returns:
             List of tuples of two items, the original mode name (from config)
             to a list of mode IDs used in the Emme assignment. This list
@@ -292,12 +295,14 @@ class TransitSkim(Component):
             modes used in the journey levels mode-to-mode transfer table
             generated from Apply fares.
         """
-        self.controller.emme_manager.copy_attribute_values(
-            self._scenario, self._network, {"TRANSIT_LINE": ["#src_mode"]}
-        )
-        self.controller.emme_manager.copy_attribute_values(
-            self._scenario, self._network, {"TRANSIT_SEGMENT": ["@base_timtr"]}
-        )
+        if self.config.transit.use_fares:
+            self.controller.emme_manager.copy_attribute_values(
+                self._scenario, self._network, {"TRANSIT_LINE": ["#src_mode"]}
+            )
+        if self.config.transit.use_ccr:
+            self.controller.emme_manager.copy_attribute_values(
+                self._scenario, self._network, {"TRANSIT_SEGMENT": ["@base_timtr"]}
+            )
         valid_modes = [
             mode
             for mode in self.config.transit.modes
