@@ -7,3 +7,12 @@ MD007:
 
 # Remove line length limit
 MD013: false
+
+# Allow us to skip levels of headings
+MD001: false
+
+# Allow us to use emphasis on whole lines.
+MD036: false
+
+# Allow us to use lower-level headings to start files
+MD041: false

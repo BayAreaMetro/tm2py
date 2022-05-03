@@ -18,6 +18,7 @@ pip install tm2py
 ```
 
 #### Bleeding Edge
+
 If you want to install a more up-to-date or development version, you can do so by installing it from the `develop` branch as follows:
 
 ```bash
@@ -27,8 +28,8 @@ pip install git+https://github.com/bayareametro/tm2py@develop
 ```
 
 #### Developers (from clone)
-If you are going to be working on Lasso locally, you might want to clone it to your local machine and install it from the clone.  The -e will install it in [editable mode](https://pip.pypa.io/en/stable/reference/pip_install/?highlight=editable#editable-installs).
 
+If you are going to be working on Lasso locally, you might want to clone it to your local machine and install it from the clone.  The -e will install it in [editable mode](https://pip.pypa.io/en/stable/reference/pip_install/?highlight=editable#editable-installs).
 
 ```bash
 conda env create -f environment.yml
@@ -46,16 +47,14 @@ Notes:
 4. If you want to make use of frequent developer updates for network wrangler as well, you can also install it from clone by copying the instructions for cloning and installing Lasso for Network Wrangler
 
 If you are going to be doing development, we also recommend:
- -  a good IDE such as [VS Code](https://code.visualstudio.com/), Sublime Text, etc.
+
+- a good IDE such as [VS Code](https://code.visualstudio.com/), Sublime Text, etc.
  with Python syntax highlighting turned on.
- - [GitHub Desktop](https://desktop.github.com/) to locally update your clones
+- [GitHub Desktop](https://desktop.github.com/) to locally update your clones
 
 ## Brief Intro
 
-
 ### Typical Workflow
-
-
 
 ## Running Quickstart Jupyter Notebooks
 

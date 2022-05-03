@@ -1,18 +1,18 @@
 """Tools module for common resources / shared code and "utilities" in the tm2py package."""
-from contextlib import contextmanager as _context
 import multiprocessing
 import os
 import re
-import urllib.request
 import urllib.error
 import urllib.parse
+import urllib.request
 import zipfile
-
+from contextlib import contextmanager as _context
 from typing import Union
 
 
 def parse_num_processors(value: Union[str, int, float]):
     """Convert input value (parse if string) to number of processors.
+
     Args:
         value: an int, float or string; string value can be "X" or "MAX-X"
     Returns:
@@ -73,7 +73,7 @@ def _urlopen(url):
 
 
 def _download(url: str, target_destination: str):
-    """Download file with redirects (i.e. box)
+    """Download file with redirects (i.e. box).
 
     Args:
         url (str): source URL to download data from
@@ -98,7 +98,7 @@ def _unzip(target_zip: str, target_dir: str):
 def download_unzip(
     url: str, out_base_dir: str, target_dir: str, zip_filename: str = "test_data.zip"
 ) -> None:
-    """Downloads and unzips a file from a URL. The zip file is removed after extraction.
+    """Download and unzips a file from a URL. The zip file is removed after extraction.
 
     Args:
         url (str): Full URL do download from.

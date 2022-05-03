@@ -11,41 +11,47 @@ Tests are run with the [pyTest](pytest.org)/
 Pytest can be installed using one of the following options.
 
 Install along with all development requirements (recommended):
+
+=== pip
+
 ```sh
 pip install -r dev-requirements.txt
 ```
+
 Install using PIP:
+
 ```sh
 pip install pytest
 ```
+
 Install using Conda:
+
 ```sh
 conda install pytest
 ```
 
 ## Running tests
 
-1. Run all tests
+=== All tests
+
 ```sh
 pytest
 ```
 
-2. Run tests in `test_basic.py`
+=== Tests in a specific file
+
 ```sh
 pytest tests/test_basic.py
 ```
 
-3. Run tests decorated with @pytest.mark.favorites decorator
+=== Tests with a specific decorator
+
 ```sh
 pytest -m favorites
 ```
 
-4. Run all tests and print out stdout
-```sh
-pytest -s
-```
+=== Continuous Integration Tests
 
-5. Run all tests which are run on the CI server
 ```sh
 pytest -v -m "not skipci"
 ```

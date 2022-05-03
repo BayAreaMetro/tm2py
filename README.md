@@ -24,6 +24,7 @@ pip install tm2py
 ```
 
 #### Bleeding Edge
+
 If you want to install a more up-to-date or development version, you can do so by installing it from the `develop` branch as follows:
 
 ```bash
@@ -33,8 +34,8 @@ pip install git+https://github.com/bayareametro/tm2py@develop
 ```
 
 #### Developers (from clone)
-If you are going to be working on Lasso locally, you might want to clone it to your local machine and install it from the clone.  The -e will install it in [editable mode](https://pip.pypa.io/en/stable/reference/pip_install/?highlight=editable#editable-installs).
 
+If you are going to be working on Lasso locally, you might want to clone it to your local machine and install it from the clone.  The -e will install it in [editable mode](https://pip.pypa.io/en/stable/reference/pip_install/?highlight=editable#editable-installs).
 
 ```bash
 conda env create -f environment.yml
@@ -48,6 +49,7 @@ Note that you'll also need to install Emme's python packages into this conda env
 Following these instructions from an INRO community forum post: In the Emme Desktop application, open Tools->Application Options->Modeller, change your Python path as desired and click the "Install Modeller Package" button.
 
 If this is successful, the following packages will be visible in your environment when you type `pip list`:
+
 * inro-dynameq
 * inro-emme
 * inro-emme-agent

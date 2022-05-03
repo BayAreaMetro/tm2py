@@ -1,4 +1,4 @@
-"""Transit skims module"""
+"""Transit skims module."""
 
 from ...component import Component
 
@@ -6,4 +6,4 @@ from ...component import Component
 
 
 class TransitSkim(Component):
-    """Run transit skims"""
+    """Run transit skims."""

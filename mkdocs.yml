@@ -79,11 +79,7 @@ markdown_extensions:
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tabbed
-  - pymdownx.superfences:
-      custom_fences:
-        - name: mermaid
-          class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_div_format
+  - pymdownx.superfences
   - pymdownx.smartsymbols
   - smarty
   - toc:
