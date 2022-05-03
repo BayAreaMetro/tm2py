@@ -51,7 +51,7 @@ jobs:
     - name: Build docs
       if: ${{DEPLOY_TARGET}}
       run: |
-        mike deploy --push ${{ github.ref_name }}
+        mike deploy --push ${{ github.ref_name }} latest
     - name: Install deployment dependencies
       if: ${{DEPLOY_TARGET}}
       run: |
