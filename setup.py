@@ -31,10 +31,6 @@ if os.path.exists(os.path.join("docs", "requirements.txt")):
 else:
     install_requires_doc = []
 
-with open(os.path.join("docs", "requirements.txt")) as f:
-    doc_requirements = f.readlines()
-install_requires_doc = [r.strip() for r in doc_requirements]
-
 # While version is in active development, install both development and base requirements.
 major_version_number = int(version.split(".")[0])
 if major_version_number < 1:

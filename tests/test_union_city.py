@@ -10,11 +10,10 @@ import openmatrix as omx
 import pandas as pd
 import pytest
 
-_EXAMPLES_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "examples"
-)
+_ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_EXAMPLES_DIR = os.path.join(_ROOT_DIR, "examples")
 _UNION_CITY_DIR = os.path.join(_EXAMPLES_DIR, "UnionCity")
-
+_EXAMPLE_NAME = "UnionCity"
 
 def test_example_download():
     # If (and only if) Emme is not installed, replace INRO libraries with MagicMock
@@ -35,15 +34,12 @@ def test_example_download():
     import shutil
     from tm2py.examples import get_example
 
-    EXAMPLE_NAME = "UnionCity"
-
     if os.path.exists(_UNION_CITY_DIR):
         shutil.rmtree(_UNION_CITY_DIR)
 
     get_example(
-        example_name=EXAMPLE_NAME,
-        example_subdir=_UNION_CITY_DIR,
-        root_dir=_EXAMPLES_DIR,
+        example_name=_EXAMPLE_NAME,
+        root_dir=_ROOT_DIR,
     )
     # default retrieval_url points to Union City example on box
 
@@ -63,7 +59,7 @@ def test_example_download():
         ), f"get_example failed, missing {file_name}"
     # check zip file was removed
     assert not (
-        os.path.exists(os.path.join(_EXAMPLES_DIR, EXAMPLE_NAME, "test_data.zip"))
+        os.path.exists(os.path.join(_UNION_CITY_DIR, "test_data.zip"))
     )
 
 
@@ -100,16 +96,14 @@ def union_city():
     from tm2py.controller import RunController
     from tm2py.examples import get_example
 
-    union_city_root = os.path.join(os.getcwd(), _EXAMPLES_DIR, "UnionCity")
-    get_example(
-        example_name="UnionCity", example_subdir=_EXAMPLES_DIR, root_dir=os.getcwd()
-    )
+    get_example(example_name=_EXAMPLE_NAME, root_dir=_ROOT_DIR)
+    
     controller = RunController(
         [
             os.path.join(_EXAMPLES_DIR, "scenario_config.toml"),
             os.path.join(_EXAMPLES_DIR, "model_config.toml"),
         ],
-        run_dir=union_city_root,
+        run_dir=_UNION_CITY_DIR,
     )
     controller.run()
     return controller
