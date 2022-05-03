@@ -5,16 +5,25 @@ on:
     types: [published]
 
 jobs:
-  
-  test:
+  build-test-deploy:
+
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: [3.7, 3.8]
-        os: [ubuntu-latest, windows-latest,macos-latest]
-    runs-on: ${{ matrix.os }}
+    env:
+      DEPLOY_TARGET: ${{ matrix.python-version == '3.8' }}
+
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Document python/os version
+      run: |
+        echo "Python V ${{ matrix.python-version }}"
+        echo "Targeted Deployment Combo? $DEPLOY_TARGET"
+    - name: Git branch name
+      id: git-branch-name
+      uses: EthanSK/git-branch-name-action@v1
+    - name: Set up Python 
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
@@ -35,37 +44,22 @@ jobs:
     - name: Test with pytest
       run: |
         pytest -s -m "not skipci"
-  deploy:
-    runs-on: ubuntu-latest
-    env:
-      PYTHON_VERSION: 3.8
-    steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v2
-    - name: Set up Python $PYTHON_VERSION
-      uses: actions/setup-python@v2
-      with:
-        python-version: $PYTHON_VERSION
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r dev-requirements.txt
-    - name: Install package
-      run: |
-        pip install -e .
     - name: Configure Git user
+      if: ${{DEPLOY_TARGET}}
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
     - name: Build docs
+      if: ${{DEPLOY_TARGET}}
       run: |
-        mike deploy --push ${{ github.event.ref_name }} 
+        mike deploy --push ${GIT_BRANCH_NAME}
     - name: Install deployment dependencies
+      if: ${{DEPLOY_TARGET}}
       run: |
         python -m pip install --upgrade pip
         pip install setuptools wheel twine
     - name: Publish to PyPI
+      if: ${{DEPLOY_TARGET}}
       env:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
