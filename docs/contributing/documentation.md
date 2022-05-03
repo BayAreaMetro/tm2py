@@ -6,7 +6,7 @@ Documentation is developed using the Python package [mkdocs](https://www.mkdocs.
 
 Using pip:
 ```sh
-pip install -r docs/requirements.txt
+pip install -r requirements.txt
 ```
 ## Building Locally
 

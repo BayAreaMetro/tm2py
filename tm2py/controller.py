@@ -21,11 +21,9 @@ from tm2py.config import Configuration
 from tm2py.emme.manager import EmmeManager
 from tm2py.logger import Logger
 from tm2py.components.component import Component
-
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
 from tm2py.components.network.highway.highway_network import PrepareNetwork
 from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, SkimMAZCosts
-
 from tm2py.components.demand.air_passenger import AirPassenger
 from tm2py.components.demand.internal_external import InternalExternal
 from tm2py.components.demand.commercial import CommercialVehicleModel
@@ -134,19 +132,23 @@ class RunController:
     def _queue_components(self):
         """Add components per iteration to queue according to input Config"""
         self._queued_components = []
+
+        # add initial components run once to the queue
         if self.config.run.start_iteration == 0:
-            self._queued_components = [
+            self._queued_components += [
                 (0, c_name, self._component_map[c_name])
                 for c_name in self.config.run.initial_components
             ]
         iteration_nums = range(
             max(1, self.config.run.start_iteration), self.config.run.end_iteration + 1
         )
+        # add components run for each global iteration to queue
         for iteration in iteration_nums:
             for c_name in self.config.run.global_iteration_components:
                 self._queued_components.append(
                     (iteration, c_name, self._component_map[c_name])
                 )
+        # add components run once at the end to the queue
         self._queued_components += [
             (self.config.run.end_iteration + 1, self._component_map[c_name])
             for c_name in self.config.run.final_components

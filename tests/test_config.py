@@ -41,6 +41,8 @@ def test_config_read():
         "highway_maz_skim",
         # "transit",
     )
+    assert my_config.time_periods[1].name == "am"
+    assert my_config.highway.maz_to_maz.operating_cost_per_mile == 18.93
     assert len(my_config.time_periods) == 5
     assert my_config.highway.classes[0].description == "drive alone"
 

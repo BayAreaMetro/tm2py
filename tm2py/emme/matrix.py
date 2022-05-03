@@ -158,7 +158,7 @@ class OMXManager:
             for matrix in matrices:
                 self.write_matrix(matrix)
 
-    def write_matrix(self, matrix: [str, EmmeMatrix], name=None):
+    def write_matrix(self, matrix: Union[str, EmmeMatrix], name=None):
         """Write Emme matrix (as name or ID or Emme matrix object).
 
         Args:
