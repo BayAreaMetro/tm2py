@@ -26,6 +26,7 @@ theme:
 plugins:
   - autorefs
   - awesome-pages
+  - mike
   - mkdocstrings:
       default_handler: python
       enable_inventory: true
@@ -56,6 +57,11 @@ plugins:
       watch:
         - tm2py
   - search
+
+extra:
+  version:
+    provider: mike
+    default: latest
 
 extra_javascript:
   - https://unpkg.com/mermaid@8.5.0/dist/mermaid.min.js

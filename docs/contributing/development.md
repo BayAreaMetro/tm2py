@@ -1,6 +1,5 @@
 # Development
 
-
 ## Preparation
 
 ### Install Git

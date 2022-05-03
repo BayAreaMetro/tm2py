@@ -18,7 +18,13 @@ Install along with all development requirements (recommended):
 pip install -r dev-requirements.txt
 ```
 
-=== Conda
+Install using PIP:
+
+```sh
+pip install pytest
+```
+
+Install using Conda:
 
 ```sh
 conda install pytest
