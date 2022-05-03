@@ -5,36 +5,39 @@ import os
 def test_log():
     """Test basic log operation outside model operation"""
     from tm2py.config import LoggingConfig
+    from tm2py.logger import Logger
     import tempfile
 
+    # use a stand-in minimal Controller and Config class to operate Logger
+    log_config = {
+        "display_level": "STATUS",
+        "run_file_path": "log_run.txt",
+        "run_file_level": "STATUS",
+        "log_file_path": "log.txt",
+        "log_file_level": "DEBUG",
+        "log_on_error_file_path": "error.txt",
+        "notify_slack": False,
+        "use_emme_logbook": False,
+        "iter_component_level": None,
+    }
+
+    class Config:
+        logging = LoggingConfig(**log_config)
+
+    class Controller:
+        config = Config()
+        run_dir = ""
+        iter_component = None
+
+    class TestException(Exception):
+        pass
+
+    # Test that the expected log messages are recorded and formatted
     with tempfile.TemporaryDirectory() as temp_dir:
-        log_config = {
-            "display_level": "STATUS",
-            "run_file_path": "log_run.txt",
-            "run_file_level": "STATUS",
-            "log_file_path": "log.txt",
-            "log_file_level": "DEBUG",
-            "log_on_error_file_path": "error.txt",
-            "notify_slack": False,
-            "use_emme_logbook": False,
-            "iter_component_level": None,
-        }
-
-        class Config:
-            logging = LoggingConfig(**log_config)
-
-        class Controller:
-            config = Config()
-            run_dir = temp_dir
-            iter_component = None
-
-        class TestException(Exception):
-            pass
-
         controller = Controller()
-
-        from tm2py.logger import Logger
-
+        controller.run_dir = temp_dir
+        # Use an error to test the recording of error messages
+        # as well as the generation of the "log_on_error" file
         try:
             with Logger(controller) as logger:
                 logger.log("a message")
@@ -57,10 +60,13 @@ def test_log():
                         logger.log(
                             "A debug report that takes time to produce", level="DEBUG"
                         )
+                # raising error to test recording of error message in log
                 raise TestException("an error")
         except TestException:
+            # catching the error to continue testing the content of the logs
             pass
 
+        # Check the run_file recorded the high-level "STATUS" messages and above
         with open(os.path.join(temp_dir, log_config["run_file_path"]), "r") as f:
             text = []
             for line in f:
@@ -72,11 +78,11 @@ def test_log():
             text[1], "%d-%b-%Y (%H:%M:%S): Start Running a set of steps\n"
         )
         datetime.strptime(
-            text[2], "%d-%b-%Y (%H:%M:%S):   Indented displayed     message with timestamp\n"
+            text[2], "%d-%b-%Y (%H:%M:%S):   Indented displayed message with timestamp\n"
         )
-
         assert "Error during model run" in text[4]
 
+        # Check the main log file containing all messages at DEBUG and above
         with open(os.path.join(temp_dir, log_config["log_file_path"]), "r") as f:
             text = []
             for line in f:
@@ -98,6 +104,7 @@ def test_log():
         assert "Error during model run" in text[9]
         assert text[10].startswith("Traceback")
 
+        # Check that the log_on_error is generated and has all messages
         with open(os.path.join(temp_dir, log_config["log_on_error_file_path"]), "r") as f:
             text = []
             for line in f:
