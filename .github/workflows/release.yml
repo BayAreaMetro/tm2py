@@ -16,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0 
     - name: Document python/os version
       run: |
         echo "Python V ${{ matrix.python-version }}"

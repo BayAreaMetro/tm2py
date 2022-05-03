@@ -12,6 +12,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0 
     - name: Document branch
       run: echo ${{ github.ref_name }}
     - name: Set up Python ${{ matrix.python-version }}
