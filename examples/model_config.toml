@@ -110,6 +110,7 @@
 
 [highway]
     output_skim_path = "skim_matrices\\highway\\HWYSKM{period}_taz.omx"
+    drive_access_output_skim_path = "skim_matrices\\transit\\drive_access\\drive_maz_taz_tap.csv"
     relative_gap = 0.0005
     max_iterations = 100
     # labels entire highway network (any of the classes) + MAZ connectors

@@ -25,6 +25,7 @@ from tm2py.components.component import Component
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
 from tm2py.components.network.highway.highway_network import PrepareNetwork
 from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, SkimMAZCosts
+from tm2py.components.network.highway.drive_access_skims import DriveAccessSkims
 
 # mapping from names referenced in config.run to imported classes
 # NOTE: component names also listed as literal in tm2py.config for validation
@@ -33,6 +34,7 @@ component_cls_map = {
     "highway": HighwayAssignment,
     "highway_maz_assign": AssignMAZSPDemand,
     "highway_maz_skim": SkimMAZCosts,
+    "drive_access_skims": DriveAccessSkims,
 }
 
 # pylint: disable=too-many-instance-attributes

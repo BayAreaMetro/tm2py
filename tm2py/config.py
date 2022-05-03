@@ -59,6 +59,7 @@ ComponentNames = Literal[
     "highway_maz_assign",
     "highway",
     "highway_maz_skim",
+    "drive_access_skims",
     "transit",
     "household",
     "visitor",
@@ -429,6 +430,7 @@ class HighwayConfig(ConfigItem):
             The area type is determined based on the average density of nearby
             (within this buffer distance) MAZs, using (pop+jobs*2.5)/acres
         output_skim_path: relative path template for output skims in OMX format
+        drive_access_output_skim_path: relative path for drive access to transit skims
         tolls: input toll specification, see HighwayTollsConfig
         maz_to_maz: maz-to-maz shortest path assignment and skim specification,
             see HighwayMazToMazConfig
@@ -443,6 +445,7 @@ class HighwayConfig(ConfigItem):
     max_iterations: int = Field(ge=0)
     area_type_buffer_dist_miles: float = Field(gt=0)
     output_skim_path: str = Field()
+    drive_access_output_skim_path: Optional[str] = Field(default=None)
     tolls: HighwayTollsConfig = Field()
     maz_to_maz: HighwayMazToMazConfig = Field()
     classes: Tuple[HighwayClassConfig, ...] = Field()
