@@ -20,9 +20,8 @@ jobs:
       run: |
         echo "Python V ${{ matrix.python-version }}"
         echo "Targeted Deployment Combo? $DEPLOY_TARGET"
-    - name: Git branch name
-      id: git-branch-name
-      uses: EthanSK/git-branch-name-action@v1
+    - name: Document branch
+      run: echo ${{ github.ref_name }}
     - name: Set up Python 
       uses: actions/setup-python@v2
       with:
@@ -52,7 +51,7 @@ jobs:
     - name: Build docs
       if: ${{DEPLOY_TARGET}}
       run: |
-        mike deploy --push ${GIT_BRANCH_NAME}
+        mike deploy --push ${{ github.ref_name }}
     - name: Install deployment dependencies
       if: ${{DEPLOY_TARGET}}
       run: |
