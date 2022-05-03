@@ -14,9 +14,11 @@ def test_docs_build():
 
     # Build the docs
     try:
-        subprocess.run(["mkdocs", "build"], check=True, cwd=base_dir,capture_output=True)
+        subprocess.run(
+            ["mkdocs", "build"], check=True, cwd=base_dir, capture_output=True
+        )
     except subprocess.CalledProcessError as e:
-        msg = e.stderr.decode('utf-8')
+        msg = e.stderr.decode("utf-8")
         pytest.fail(f"Documentation Failed to Build.\n {msg}")
 
     # Check that the docs were built successfully
