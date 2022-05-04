@@ -2,7 +2,7 @@
 #       MODEL CONFIGURATION        #
 ####################################
 
-version = 0.0.0
+version = '0.0.0'
 
 [dir]
 skims = "skims"
@@ -70,14 +70,14 @@ type = "SOLA_TRAFFIC_ASSIGNMENT"
 
 [highway.assignment.stopping_criteria]
 relative_gap = 0.0005
-best_relative_gap: 0.0,
+best_relative_gap = 0.0
 max_iterations = 30
-"normalized_gap": 0.0,
+"normalized_gap" = 0.0
 
 [highway.assignment.background_traffic]
-"link_component": "ul1",
-"turn_component": None,
-"add_transit_vehicles": False,
+"link_component" = "ul1"
+"turn_component" = "" # Null is not valid in TOML
+"add_transit_vehicles" = false
 
 # TODO document what this is
 tollbooth_start_index = 11
@@ -208,42 +208,42 @@ average_occupancy = 1.0
 name = "shared ride 2 general purpose lanes"
 file = ["household","TAZ_Demand_{time_period}.omx"]
 matrix = "SR2_GP_{time_period}"
-highway_class =
+highway_class = "" # Empty values not allowed
 average_occupancy = 1.75
 
 [[highway.demand]]
 name = "shared ride 2 HOV lanes"
 file = ["household","TAZ_Demand_{time_period}.omx"]
 matrix = "SR2_HOV_{time_period}"
-highway_class =
+highway_class = "" # Empty values not allowed
 average_occupancy = 1.75
 
 [[highway.demand]]
 name = "shared ride 2 Toll Paying"
 file = ["household","TAZ_Demand_{time_period}.omx"]
 matrix = "SR2_PAY_{period}"
-highway_class =
+highway_class = "" # Empty values not allowed
 average_occupancy = 1.75
 
 [[highway.demand]]
 name = "shared ride 3 general HOV lanes"
 file = ["household","TAZ_Demand_{time_period}.omx"]
 matrix = "SR3_HOV_{period}"
-highway_class =
+highway_class = "" # Empty values not allowed
 average_occupancy = 2.5
 
 [[highway.demand]]
 name = "shared ride 3 general purpose lanes"
 file = ["household","TAZ_Demand_{time_period}.omx"]
 matrix = "SR3_GP_{period}"
-highway_class =
+highway_class = "" # Empty values not allowed
 average_occupancy = 2.5
 
 [[highway.demand]]
 name = "shared ride 3 toll-paying"
 file = ["household","TAZ_Demand_{time_period}.omx"]
 matrix = "SR3_PAY_{period}"
-highway_class =
+highway_class = "" # Empty values not allowed
 average_occupancy = 2.5
 
 ###### AIR PAX ######
@@ -259,29 +259,29 @@ average_occupancy = 1.0
 name = "air passenger shared ride 2"
 file = ["air_passenger","tripsAirPax{period}.omx"]
 matrix = "SR2"
-highway_class = 
-average_occupancy = 1.75 
+highway_class = "" # Empty values not allowed
+average_occupancy = 1.75
 
 [[highway.demand]]
 name = "air passenger shared ride 2 toll-paying"
 file = ["air_passenger","tripsAirPax{period}.omx"]
 matrix = "SR2TOLL"
-highway_class = 
+highway_class = "" # Empty values not allowed
 average_occupancy = 1.75
 
 [[highway.demand]]
 name = "air passenger shared ride 3+"
 file = ["air_passenger","tripsAirPax{period}.omx"]
 matrix = "SR3"
-highway_class = 
+highway_class = "" # Empty values not allowed
 average_occupancy = 2.5
 
 [[highway.demand]]
-name = name = "air passenger shared ride 3+ toll-paying"
+name = "air passenger shared ride 3+ toll-paying"
 file = ["air_passenger","tripsAirPax{period}.omx"]
 mattrix = "SR3TOLL"
-highway_class = 
-average_occupancy = 2.5 
+highway_class = "" # Empty values not allowed
+average_occupancy = 2.5
 
 
 ###### INTERNAL EXTERNAL ######
@@ -298,28 +298,28 @@ name = "internal external shared ride 2"
 file = ["internal_external","tripsIx{time_period}.omx"]
 matrix = "SR2"
 highway_class = "shared ride 2"
-average_occupancy = 
+average_occupancy = "" # Empty values not allowed
 
 [[emme.highway.classes.demand]]
 name = "internal external shared ride 2 toll-paying"
 file = ["internal_external","tripsIx{time_period}.omx"]
 matrix = "SR2TOLL"
-highway_class =
-average_occupancy = 
+highway_class = "" # Empty values not allowed
+average_occupancy = "" # Empty values not allowed
 
 [[highway.demand]]
 name = "internal external shared ride 3+"
 file = ["internal_external","tripsIx{time_period}.omx"]
 matrix = "SR3"
 highway_class = "shared ride 3+"
-average_occupancy = 
+average_occupancy = "" # Empty values not allowed
 
 [[highway.demand]]
 name = "internal external shared ride 3+ toll-paying"
 file = ["internal_external","tripsIx{time_period}.omx"]
 matrix = "SR3TOLL"
-highway_class = 
-average_occupancy = 
+highway_class = "" # Empty values not allowed
+average_occupancy = "" # Empty values not allowed
 
 ###### COMMERCIAL VEHICLES ######
 
@@ -327,64 +327,64 @@ average_occupancy =
 name = "commercial vehicles"
 file = ["commercial","tripstrk{time_period}.omx"]
 matrix = "CTRUCK"
-highway_class = 
-average_occupancy = 
+highway_class = "" # Empty values not allowed
+average_occupancy = "" # Empty values not allowed
 pce = 2.0
 
 [[highway.demand]]
 name = "commercial vehicles toll-paying"
 file = ["commercial","tripstrk{time_period}.omx"]
 matrix = "CTRUCKTOLL"
-highway_class = 
-average_occupancy = 
+highway_class = "" # Empty values not allowed
+average_occupancy = "" # Empty values not allowed
 pce = 2.0
 
 [[highway.demand]]
 name = "very small trucks"
 file = ["commercial","tripstrk{time_period}.omx"]
 matrix = "VSTRUCK"
-highway_class = 
-average_occupancy = 
+highway_class = "" # Empty values not allowed
+average_occupancy = "" # Empty values not allowed
 pce = 2.0
 
 [[highway.demand]]
 name = "very small trucks toll-paying"
 file = ["commercial","tripstrk{time_period}.omx"]
 matrix = "VSTRUCKTOLL"
-highway_class = 
-average_occupancy = 
+highway_class = "" # Empty values not allowed
+average_occupancy = "" # Empty values not allowed
 pce = 2.0
 
 [[highway.demand]]
 name = "small trucks"
 file = ["commercial","tripstrk{time_period}.omx"]
 matrix = "STRUCK"
-highway_class = 
-average_occupancy = 
+highway_class = "" # Empty values not allowed
+average_occupancy = "" # Empty values not allowed
 pce = 2.0
 
 [[highway.demand]]
 name = "small trucks toll-paying"
 file = ["commercial","tripstrk{time_period}.omx"]
-name = "STRUCKTOLL"
-highway_class = 
-average_occupancy = 
+matrix = "STRUCKTOLL"
+highway_class = "" # Empty values not allowed
+average_occupancy = "" # Empty values not allowed
 pce = 2.0
 
 [[highway.demand]]
 name = "medium trucks"
 file = ["commercial","tripstrk{time_period}.omx"]
 matrix = "MTRUCK"
-highway_class = 
-average_occupancy = 
+highway_class = "" # Empty values not allowed
+average_occupancy = "" # Empty values not allowed
 pce = 2.0
 
 [[highway.demand]]
 name = "medium trucks toll-paying"
 file = ["commercial","tripstrk{time_period}.omx"]
 matrix = "MTRUCKTOLL"
-highway_class = 
-average_occupancy = 
+highway_class = "" # Empty values not allowed
+average_occupancy = "" # Empty values not allowed
 pce = 2.0
 
 
@@ -446,5 +446,3 @@ type = "walk"
 [[aux_mode]]
 code = "e"
 type = "walk"
-
-

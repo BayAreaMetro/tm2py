@@ -1,4 +1,7 @@
+"""Installation script for tm2py package."""
+
 import os
+
 from setuptools import setup
 
 version = "0.0.1"

@@ -26,6 +26,7 @@ theme:
 plugins:
   - autorefs
   - awesome-pages
+  - mike
   - mkdocstrings:
       default_handler: python
       enable_inventory: true
@@ -34,7 +35,7 @@ plugins:
           setup_commands:
            - import sys
            - from unittest.mock import MagicMock as mock
-           - sys.path.append('../')  
+           - sys.path.append('../')
            - sys.modules["inro"] = mock()
            - sys.modules["inro.emme"] = mock()
            - sys.modules["inro.emme.database"] = mock()
@@ -57,6 +58,11 @@ plugins:
         - tm2py
   - search
 
+extra:
+  version:
+    provider: mike
+    default: latest
+
 extra_javascript:
   - https://unpkg.com/mermaid@8.5.0/dist/mermaid.min.js
 
@@ -73,14 +79,9 @@ markdown_extensions:
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tabbed
-  - pymdownx.superfences:
-      custom_fences:
-        - name: mermaid
-          class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_div_format
+  - pymdownx.superfences
   - pymdownx.smartsymbols
   - smarty
   - toc:
       # insert a blank space before the character
       permalink: " ¶"
-  

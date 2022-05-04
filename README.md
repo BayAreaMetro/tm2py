@@ -24,6 +24,7 @@ pip install tm2py
 ```
 
 #### Bleeding Edge
+
 If you want to install a more up-to-date or development version, you can do so by installing it from the `develop` branch as follows:
 
 ```bash
@@ -33,8 +34,8 @@ pip install git+https://github.com/bayareametro/tm2py@develop
 ```
 
 #### Developers (from clone)
-If you are going to be working on Lasso locally, you might want to clone it to your local machine and install it from the clone.  The -e will install it in [editable mode](https://pip.pypa.io/en/stable/reference/pip_install/?highlight=editable#editable-installs).
 
+If you are going to be working on Lasso locally, you might want to clone it to your local machine and install it from the clone.  The -e will install it in [editable mode](https://pip.pypa.io/en/stable/reference/pip_install/?highlight=editable#editable-installs).
 
 ```bash
 conda env create -f environment.yml
@@ -54,6 +55,7 @@ copy %EMMEPATH%\emme.pth Lib\site-packages\
 ```
 
 If this is successful, the following packages will be visible in your environment when you type `pip list`:
+
 * inro-dynameq
 * inro-emme
 * inro-emme-agent
