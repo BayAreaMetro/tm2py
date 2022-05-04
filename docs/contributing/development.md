@@ -28,7 +28,7 @@ If you don't have it installed already, you will need to [install Git](https://g
 
 !!! tip
 
-    Also nstall [GitHub Desktop](https://desktop.github.com/) to make your life easier.
+    Also install [GitHub Desktop](https://desktop.github.com/) to make your life easier.
 
 ### Download `tm2py` Repository
 
@@ -144,7 +144,7 @@ with specifications (i.e. for markdown files, which aren't tested in `pytest`), 
 
 ```sh
 
-pre-commit run --all-files
+pre-commit run --all-files -all
 
 ```
 

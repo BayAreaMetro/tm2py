@@ -78,12 +78,12 @@ conda activate tm2py
         The -e installs it in editable mode which captures changes in the repository as you switch branches.
 
 !!! tip "Developer Tip"
-    If you are going to be doing development, we recommend following the installations instructions in the [contributing](contributing.md/development.md) section. 
+    If you are going to be doing development, we recommend following the installations instructions in the [contributing](contributing.md/development.md) section.
 
 ### Example Data
 
 !!! warning "Before you run the model"
-    
+
     Due to size limitations, the bulk of the input data is not stored with the `tm2py` library, but can be accessed following the directions below.
 
 | Example | Location        |
@@ -114,7 +114,7 @@ The following is the typical usage to run the model.  Other than the run directo
     ```python
     import tm2py
     controller = RunController(
-        ["scenario_config.toml", "model_config.toml"], 
+        ["scenario_config.toml", "model_config.toml"],
         run_dir="UnionCity",
     )
     controller.run()
