@@ -106,7 +106,8 @@ class HighwayAssignment(Component):
     def run(self):
         """Run highway assignment."""
         demand = PrepareHighwayDemand(self.controller)
-        demand.run()
+        if self.controller.iteration > 0:
+            demand.run()
         for time in self.time_period_names():
             scenario = self.get_emme_scenario(
                 self.config.emme.highway_database_path, time

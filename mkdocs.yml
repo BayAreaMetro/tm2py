@@ -1,12 +1,14 @@
 site_name: "Travel Model Two Python Package: tm2py"
 site_url: https://bayareametro.github.io/tm2py
 repo_url: https://github.com/bayareametro/tm2py
-edit_uri: edit/main/docs
 
 theme:
   name: material
   features:
     - navigation.tabs
+    - content.code.annotate
+    - content.tabs.link
+    - navigation.indexes
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -27,6 +29,8 @@ plugins:
   - autorefs
   - awesome-pages
   - mike
+  - mkdocs-jupyter:
+      include_source: True
   - mkdocstrings:
       default_handler: python
       enable_inventory: true
@@ -78,8 +82,13 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.tasklist:
       custom_checkbox: true
-  - pymdownx.tabbed
-  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_div_format
   - pymdownx.smartsymbols
   - smarty
   - toc:

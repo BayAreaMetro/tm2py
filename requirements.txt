@@ -11,6 +11,7 @@ mike
 mkdocs
 mkdocs-autorefs
 mkdocs-awesome-pages-plugin
+mkdocs-jupyter
 mkdocs-macros-plugin
 mkdocs-material
 mkdocstrings

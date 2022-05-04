@@ -11,6 +11,12 @@ import pandas as pd
 import pytest
 
 _EXAMPLES_DIR = r"examples"
+NOTEBOOKS_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "notebooks"
+)
+BIN_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bin"
+)
 
 
 def test_example_download():
