@@ -27,6 +27,8 @@ plugins:
   - autorefs
   - awesome-pages
   - mike
+  - mkdocs-jupyter:
+      include_source: True
   - mkdocstrings:
       default_handler: python
       enable_inventory: true
