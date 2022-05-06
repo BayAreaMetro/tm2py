@@ -89,9 +89,8 @@ class RunConfig(ConfigItem):
     end_iteration: int = Field(gt=0)
     start_component: Optional[Union[ComponentNames, EmptyString]] = Field(default="")
 
-    @classmethod
     @validator("end_iteration")
-    def end_iteration_gt_start(cls, value, values):
+    def end_iteration_gt_start(value, values):
         """Validate end_iteration greater than start_iteration."""
         if "start_iteration" in values:
             assert (
@@ -193,7 +192,7 @@ class HighwayCapClassConfig(ConfigItem):
         capclass: cross index for link @capclass lookup
         capacity: value for link capacity, PCE / hour
         free_flow_speed: value for link free flow speed, miles / hour
-        critical_speed: value for cirtical speed (Ja) used in Akcelik
+        critical_speed: value for critical speed (Ja) used in Akcelik
             type functions
     """
 
@@ -333,9 +332,8 @@ class HighwayTollsConfig(ConfigItem):
     src_vehicle_group_names: Tuple[str, ...] = Field()
     dst_vehicle_group_names: Tuple[str, ...] = Field()
 
-    @classmethod
     @validator("dst_vehicle_group_names", always=True)
-    def dst_vehicle_group_names_length(cls, value, values):
+    def dst_vehicle_group_names_length(value, values):
         """Validate dst_vehicle_group_names has same length as src_vehicle_group_names."""
         if "src_vehicle_group_names" in values:
             assert len(value) == len(
@@ -407,9 +405,8 @@ class HighwayMazToMazConfig(ConfigItem):
     skim_period: str = Field()
     output_skim_file: str = Field()
 
-    @classmethod
     @validator("demand_county_groups")
-    def unique_group_numbers(cls, value):
+    def unique_group_numbers(value):
         """Validate list of demand_county_groups has unique .number values."""
         group_ids = [group.number for group in value]
         assert len(group_ids) == len(set(group_ids)), "-> number value must be unique"
@@ -448,27 +445,24 @@ class HighwayConfig(ConfigItem):
     classes: Tuple[HighwayClassConfig, ...] = Field()
     capclass_lookup: Tuple[HighwayCapClassConfig, ...] = Field()
 
-    @classmethod
     @validator("capclass_lookup")
-    def unique_capclass_numbers(cls, value):
+    def unique_capclass_numbers(value):
         """Validate list of capclass_lookup has unique .capclass values."""
         capclass_ids = [i.capclass for i in value]
         error_msg = "-> capclass value must be unique in list"
         assert len(capclass_ids) == len(set(capclass_ids)), error_msg
         return value
 
-    @classmethod
     @validator("classes", pre=True)
-    def unique_class_names(cls, value):
+    def unique_class_names(value):
         """Validate list of classes has unique .name values."""
         class_names = [highway_class["name"] for highway_class in value]
         error_msg = "-> name value must be unique in list"
         assert len(class_names) == len(set(class_names)), error_msg
         return value
 
-    @classmethod
     @validator("classes")
-    def validate_class_mode_excluded_links(cls, value, values):
+    def validate_class_mode_excluded_links(value, values):
         """Validate list of classes has unique .mode_code or .excluded_links match."""
         # validate if any mode IDs are used twice, that they have the same excluded links sets
         mode_excluded_links = {values["generic_highway_mode_code"]: set([])}
@@ -490,9 +484,8 @@ class HighwayConfig(ConfigItem):
             mode_excluded_links[highway_class.mode_code] = highway_class.excluded_links
         return value
 
-    @classmethod
     @validator("classes")
-    def validate_class_keyword_lists(cls, value, values):
+    def validate_class_keyword_lists(value, values):
         """Validate classes .skims, .toll, and .excluded_links values."""
         if "tolls" not in values:
             return value
@@ -537,17 +530,15 @@ class TransitModeConfig(ConfigItem):
     in_vehicle_perception_factor: Optional[float] = Field(default=None, ge=0)
     speed_miles_per_hour: Optional[float] = Field(default=None, gt=0)
 
-    @classmethod
     @validator("in_vehicle_perception_factor", always=True)
-    def in_vehicle_perception_factor_valid(cls, value, values):
+    def in_vehicle_perception_factor_valid(value, values):
         """Validate in_vehicle_perception_factor exists if assign_type is TRANSIT."""
         if "assign_type" in values and values["assign_type"] == "TRANSIT":
             assert value is not None, "must be specified when assign_type==TRANSIT"
         return value
 
-    @classmethod
     @validator("speed_miles_per_hour", always=True)
-    def speed_miles_per_hour_valid(cls, value, values):
+    def speed_miles_per_hour_valid(value, values):
         """Validate speed_miles_per_hour exists if assign_type is AUX_TRANSIT."""
         if "assign_type" in values and values["assign_type"] == "AUX_TRANSIT":
             assert value is not None, "must be specified when assign_type==AUX_TRANSIT"
@@ -654,9 +645,8 @@ class Configuration(ConfigItem):
             _merge_dicts(data, _load_toml(path_item))
         return cls(**data)
 
-    @classmethod
     @validator("highway")
-    def maz_skim_period_exists(cls, value, values):
+    def maz_skim_period_exists(value, values):
         """Validate highway.maz_to_maz.skim_period refers to a valid period."""
         if "time_periods" in values:
             time_period_names = set(time.name for time in values["time_periods"])
