@@ -41,8 +41,8 @@ def calc_segment_cost(transit_volume, capacity, segment):
            +(min_stand_weight+(max_stand_weight-min_stand_weight)*(transit_volume/capacity)**power_stand_weight)*num_standing
            )/(transit_volume+0.01)))
 
-    # Toronto implementation limited factor between 1.0 and 10.0, 
-    # for use with Emme Capacitated assignment normalize by subtracting 1 
+    # Toronto implementation limited factor between 1.0 and 10.0,
+    # for use with Emme Capacitated assignment normalize by subtracting 1
     return max(crowded_factor - 1, 0)
 """
 
@@ -52,8 +52,10 @@ max_hdwy = 999.98
 
 
 def calc_eawt(segment, vcr, headway):
-    # EAWT_AM = 0. 259625 + 1. 612019*(1/Headway) + 0.005274*(Arriving V/C) + 0. 591765*(Total Offs Share)
-    # EAWT_MD = 0. 24223 + 3.40621* (1/Headway) + 0.02709*(Arriving V/C) + 0. 82747 *(Total Offs Share)
+    # EAWT_AM = 0. 259625 + 1. 612019*(1/Headway) + 0.005274*(Arriving V/C) + \
+    # 0. 591765*(Total Offs Share)
+    # EAWT_MD = 0. 24223 + 3.40621* (1/Headway) + 0.02709*(Arriving V/C) + \
+    # 0. 82747 *(Total Offs Share)
     line = segment.line
     prev_segment = line.segment(segment.number - 1)
     alightings = 0
@@ -120,6 +122,11 @@ class TransitAssignment(Component):
     """Run transit assignment."""
 
     def __init__(self, controller: RunController):
+        """Constructor for TransitAssignment.
+
+        Args:
+            controller: RunController object.
+        """
         super().__init__(controller)
         self.demand = PrepareTransitDemand(self.controller)
         self._num_processors = tools.parse_num_processors(
@@ -130,7 +137,7 @@ class TransitAssignment(Component):
 
     @LogStartEnd("Transit assignments")
     def run(self):
-        """Run transit assignments"""
+        """Run transit assignments."""
         emmebank_path = self.get_abs_path(self.config.emme.transit_database_path)
         emmebank = self.controller.emme_manager.emmebank(emmebank_path)
         use_ccr = False
@@ -247,7 +254,7 @@ class TransitAssignment(Component):
             add_volumes = True
 
     def _export_boardings_by_line(self):
-        """Export total boardings by line to config.transit.output_transit_boardings_file"""
+        """Export total boardings by line to config.transit.output_transit_boardings_file."""
         scenario = self._scenario
         emme_manager = self.controller.emme_manager
         output_transit_boardings_file = self.get_abs_path(
@@ -272,7 +279,7 @@ class TransitAssignment(Component):
                 )
 
     def _calc_connector_flows(self) -> Tuple[EmmeNetwork, Dict[str, str]]:
-        """Calculate boardings and alightings by assignment class"""
+        """Calculate boardings and alightings by assignment class."""
         emme_manager = self.controller.emme_manager
         network_results = emme_manager.tool(
             "inro.emme.transit_assignment.extended.network_results"
@@ -303,7 +310,7 @@ class TransitAssignment(Component):
     def _export_connector_flows(
         self, network: EmmeNetwork, class_stop_attrs: Dict[str, str]
     ):
-        """Export boardings and alightings by assignment class, stop(connector) and TAZ"""
+        """Export boardings and alightings by assignment class, stop(connector) and TAZ."""
         path_tmplt = self.get_abs_path(self.config.transit.output_stop_usage_path)
         os.makedirs(os.path.dirname(path_tmplt), exist_ok=True)
         with open(
@@ -399,7 +406,7 @@ class TransitAssignment(Component):
 
 
 class AssignmentClass:
-    """Transit assignment class, represents data from config and conversion to Emme specs
+    """Transit assignment class, represents data from config and conversion to Emme specs.
 
     Internal properties:
         _name: the class name loaded from config (not to be changed)
@@ -427,7 +434,7 @@ class AssignmentClass:
         fare_modes: Dict[str, Set[str]],
         spec_dir: str,
     ):
-        """
+        """Assignment class constructor.
 
         Args:
             class_config: the transit class config (TransitClassConfig)
@@ -451,12 +458,12 @@ class AssignmentClass:
 
     @property
     def name(self) -> str:
-        """The class name"""
+        """The class name."""
         return self._name
 
     @property
     def emme_transit_spec(self) -> EmmeTransitSpec:
-        """Return Emme Extended transit assignment specification
+        """Return Emme Extended transit assignment specification.
 
         Converted from input config (transit.classes, with some parameters from
         transit table), see also Emme Help for
@@ -546,7 +553,7 @@ class AssignmentClass:
 
     @property
     def _modes(self) -> List[str]:
-        """List of modes IDs (str) to use in assignment for this class"""
+        """List of modes IDs (str) to use in assignment for this class."""
         all_modes = self._transit_config.modes
         mode_types = self._class_config.mode_types
         modes = [mode for mode in all_modes if mode.type in mode_types]
@@ -554,7 +561,7 @@ class AssignmentClass:
 
     @property
     def _transit_modes(self) -> List[str]:
-        """List of transit modes IDs (str) to use in assignment for this class"""
+        """List of transit modes IDs (str) to use in assignment for this class."""
         all_modes = self._transit_config.modes
         mode_types = self._class_config.mode_types
         modes = [

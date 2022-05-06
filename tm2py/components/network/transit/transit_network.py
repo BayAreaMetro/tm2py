@@ -1,4 +1,4 @@
-"""Transit network preparation module"""
+"""Transit network preparation module."""
 
 from __future__ import annotations
 from collections import defaultdict as _defaultdict
@@ -11,14 +11,16 @@ from tm2py.logger import LogStartEnd
 
 
 class PrepareTransitNetwork(Component):
-    """Transit assignment and skim-related network preparation"""
+    """Transit assignment and skim-related network preparation."""
 
     @LogStartEnd(
-        "Prepare transit network attributes and update times from auto network"
+        "Prepare transit network attributes and update times from auto network."
     )
     def run(self):
-        """Prepare transit network for assignment by updating link travel times from auto
-        network and (if using TAZ-connectors for assignment) update connector walk times.
+        """Prepare transit network for assignment.
+
+        Updates link travel times from auto network and
+        (if using TAZ-connectors for assignment) update connector walk times.
         """
         emmebank_path = self.get_abs_path(self.config.emme.transit_database_path)
         emmebank = self.controller.emme_manager.emmebank(emmebank_path)
@@ -37,9 +39,9 @@ class PrepareTransitNetwork(Component):
         """Update the auto travel times from the last auto assignment to the transit scenario.
 
         Args:
-            scenario:
-            transit_network:
-            period:
+            scenario: TODO.
+            transit_network: TODO.
+            period: TODO.
         """
         emme_manager = self.controller.emme_manager
         attributes = {
@@ -64,7 +66,7 @@ class PrepareTransitNetwork(Component):
                 auto_link = link_lookup.get(tran_link["#link_id"])
                 if not auto_link:
                     continue
-                # NOTE: may need to remove "reliability" factor in future versions of VDF definition
+                # NOTE: may need to remove "reliability" factor in future versions of VDF def
                 auto_time = auto_link.auto_time
                 if auto_time >= 0:
                     tran_link["@trantime"] = auto_time
@@ -87,9 +89,9 @@ class PrepareTransitNetwork(Component):
         See also _process_connector_file
 
         Args:
-            scenario:
-            network:
-            period:
+            scenario: TODO.
+            network: TODO.
+            period: TODO.
         """
         # walk time attributes per skim set
         emme_manager = self.controller.emme_manager
@@ -125,15 +127,15 @@ class PrepareTransitNetwork(Component):
         direction: Literal["access", "egress"],
         connectors: Dict[int, Dict[int, EmmeLink]],
         class_attr_map,
-        period,
+        period: str,
     ):
         """Process the input connector times files and set the times on the connector links.
 
         Args:
-            direction:
-            connectors:
-            class_attr_map:
-            period:
+            direction: One of "access" or "egress". Determines the direction of the connectors.
+            connectors: TODO.
+            class_attr_map: TODO.
+            period: time period name.
         """
         period_name = period.lower()
         if direction == "access":

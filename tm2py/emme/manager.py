@@ -11,9 +11,12 @@ and Modeller.
 import os
 from contextlib import contextmanager as _context
 from socket import error as _socket_error
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 import inro.emme.desktop.app as _app
+
+if TYPE_CHECKING:
+    from tm2py.emme.manager import EmmeScenario, EmmeNetwork
 
 # PyLint cannot build AST from compiled Emme libraries
 # so disabling relevant import module checks

@@ -18,9 +18,14 @@ if TYPE_CHECKING:
 
 
 class TransitSkim(Component):
-    """Run transit skims"""
+    """Transit skim calculation methods."""
 
     def __init__(self, controller: RunController):
+        """Constructor for TransitSkim class.
+
+        Args:
+            controller: The RunController instance.
+        """
         super().__init__(controller)
         self._scenario = None
         self._network = None
@@ -34,6 +39,7 @@ class TransitSkim(Component):
 
     @LogStartEnd("Transit skims")
     def run(self):
+        """Run transit skims."""
         for self._time_period in self.time_period_names():
             with self._setup():
                 self._create_skim_matrices()
@@ -70,10 +76,10 @@ class TransitSkim(Component):
                     self._matrix_cache = None
 
     def _tmplt_skim_matrices(self, names_only: bool = False):
-        """
+        """TODO.
 
         Args:
-            names_only:
+            names_only: TODO.
         """
         tmplt_matrices = [
             ("FIRSTWAIT", "first wait time"),
@@ -108,7 +114,7 @@ class TransitSkim(Component):
         return tmplt_matrices
 
     def _create_skim_matrices(self):
-        """Create required skim matrices in Emmebank"""
+        """Create required skim matrices in Emmebank."""
         time = self._time_period
         scenario = self._scenario
         create_matrix = self.controller.emme_manager.tool(
@@ -130,7 +136,7 @@ class TransitSkim(Component):
                     self._skim_matrices.append(matrix)
 
     def _run_skims(self):
-        """Run the skim calculations, matrix result extraction and strategy analysis"""
+        """Run the skim calculations, matrix result extraction and strategy analysis."""
         use_ccr = False
         if self.controller.iteration >= 1:
             use_ccr = self.config.transit.use_ccr
@@ -336,7 +342,7 @@ class TransitSkim(Component):
         )
 
     def _run_matrix_results(self, spec):
-        """Run Emme Matrix results tool"""
+        """Run Emme Matrix results tool."""
         matrix_results = self.controller.emme_manager.tool(
             "inro.emme.transit_assignment.extended.matrix_results"
         )
@@ -348,11 +354,11 @@ class TransitSkim(Component):
         )
 
     def _run_strategy_analysis(self, components: Dict[str, str], matrix_name: str):
-        """
+        """TODO.
 
         Args:
-            components:
-            matrix_name:
+            components: TODO.
+            matrix_name: TODO.
         """
         strategy_analysis = self.controller.emme_manager.tool(
             "inro.emme.transit_assignment.extended.strategy_based_analysis"
@@ -378,7 +384,7 @@ class TransitSkim(Component):
         )
 
     def _mask_allpen(self):
-        """Reset skims to 0 if not both local and premium"""
+        """Reset skims to 0 if not both local and premium."""
         localivt_skim = self._matrix_cache.get_data(
             f'mf"{self._time_period}_ALLPEN_LBIVTT"'
         )
@@ -393,7 +399,7 @@ class TransitSkim(Component):
             self._matrix_cache.set_data(mat_name, data * has_both)
 
     def _mask_transfers(self):
-        """Reset skims to 0 if number of transfers is greater than max_transfers"""
+        """Reset skims to 0 if number of transfers is greater than max_transfers."""
         max_transfers = self.config.transit.max_transfers
         for klass in self.config.transit.classes:
             xfers = self._matrix_cache.get_data(

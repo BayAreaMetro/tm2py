@@ -33,8 +33,9 @@ class PrepareDemand(Component, ABC):
         self._source_ref_key = None
 
     def _read_demand(self, file_config, str_format) -> NumpyArray:
-        """Load demand from cross-referenced source file,
-        the named demand model component under the key self._source_ref_key
+        """Load demand from cross-referenced source file.
+
+        The named demand model component under the key self._source_ref_key
         ("highway_demand_file" or "transit_demand_file")
 
         Args:
@@ -202,7 +203,7 @@ class PrepareTransitDemand(PrepareDemand):
 
     @LogStartEnd("Prepare transit demand")
     def run(self):
-        """Open combined demand OMX files from demand models and prepare for assignment"""
+        """Open combined demand OMX files from demand models and prepare for assignment."""
         self._source_ref_key = "transit_demand_file"
         emmebank_path = self.get_abs_path(self.config.emme.transit_database_path)
         self._emmebank = self.controller.emme_manager.emmebank(emmebank_path)

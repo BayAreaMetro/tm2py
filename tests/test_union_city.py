@@ -146,8 +146,10 @@ def test_highway_skims(union_city):
     assert len(missing_skims) == 0, f"Missing skims: {missing_skims}"
     assert len(different_skims) == 0, f"Different skims: {different_skims}"
 
+
 @pytest.mark.skipci
 def test_transit():
+    """Test transit skims."""
     from tm2py.controller import RunController
     from tm2py.examples import get_example
     import toml

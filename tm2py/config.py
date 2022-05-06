@@ -560,7 +560,7 @@ class TransitModeConfig(ConfigItem):
     @classmethod
     @validator("speed_miles_per_hour")
     def mode_id_valid(cls, value):
-        """Validate mode_id"""
+        """Validate mode_id."""
         assert len(value) == 1, "mode_id must be one character"
         return value
 
@@ -579,7 +579,7 @@ class TransitVehicleConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class TransitClassConfig(ConfigItem):
-    """Transit demand class definition"""
+    """Transit demand class definition."""
 
     skim_set_id: str
     name: str
