@@ -20,3 +20,28 @@ repos:
       - id: mixed-line-ending
       - id: check-added-large-files
       - id: check-json
+      - id: check-toml
+      - id: check-yaml
+        args: [--unsafe]
+      - id: requirements-txt-fixer
+      - id: check-executables-have-shebangs
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.27.1
+    hooks:
+      - id: markdownlint
+        stages: [manual]
+  - repo: https://github.com/pycqa/isort
+    rev: 5.10.1
+    hooks:
+    - id: isort
+      args: ["--profile", "black"]
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.14.3
+    hooks:
+    - id: check-github-workflows
+    - id: check-github-actions
+  - repo: http://github.com/pycqa/flake8
+    rev: 4.0.1
+    hooks:
+    - id: flake8
+      stages: [manual]

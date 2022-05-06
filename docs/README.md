@@ -4,7 +4,6 @@ A python package to run the San Francisco Bay Area's Travel Model.
 
 ## Starting Out
 
-
 ### Prepare Virtual Environment
 
 If you are managing multiple python versions, we suggest using [`virtualenv`](https://virtualenv.pypa.io/en/latest/) or [`conda`](https://conda.io/en/latest/) virtual environments.

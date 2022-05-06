@@ -144,7 +144,8 @@ with specifications (i.e. for markdown files, which aren't tested in `pytest`), 
 
 ```sh
 
-pre-commit run --all-files -all
+pre-commit run --all-files
+pre-commit run --hook-stage manual --all-files
 
 ```
 

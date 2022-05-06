@@ -20,6 +20,7 @@ Documentation should be linted before deployment:
 
 ```sh
 pre-commit run --all-files
+pre-commit run --hook-stage manual --all-files
 ```
 
 ## Deploying documentation

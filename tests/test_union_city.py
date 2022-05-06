@@ -68,8 +68,7 @@ def test_example_download():
 
 
 def diff_omx(ref_omx: str, run_omx: str) -> Collection[Collection[str]]:
-    """
-    Compare two OMX files, return missing and different matrices from reference.
+    """Compare two OMX files, return missing and different matrices from reference.
 
     Args:
         ref_omx: reference OMX file

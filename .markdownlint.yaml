@@ -16,3 +16,6 @@ MD036: false
 
 # Allow us to use lower-level headings to start files
 MD041: false
+
+# Fenced code blocks in tabbed views will flag
+MD046: false
