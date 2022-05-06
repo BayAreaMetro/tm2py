@@ -1,12 +1,14 @@
 site_name: "Travel Model Two Python Package: tm2py"
 site_url: https://bayareametro.github.io/tm2py
 repo_url: https://github.com/bayareametro/tm2py
-edit_uri: edit/main/docs
 
 theme:
   name: material
   features:
     - navigation.tabs
+    - content.code.annotate
+    - content.tabs.link
+    - navigation.indexes
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -26,6 +28,9 @@ theme:
 plugins:
   - autorefs
   - awesome-pages
+  - mike
+  - mkdocs-jupyter:
+      include_source: True
   - mkdocstrings:
       default_handler: python
       enable_inventory: true
@@ -34,7 +39,7 @@ plugins:
           setup_commands:
            - import sys
            - from unittest.mock import MagicMock as mock
-           - sys.path.append('../')  
+           - sys.path.append('../')
            - sys.modules["inro"] = mock()
            - sys.modules["inro.emme"] = mock()
            - sys.modules["inro.emme.database"] = mock()
@@ -58,6 +63,11 @@ plugins:
         - tm2py
   - search
 
+extra:
+  version:
+    provider: mike
+    default: latest
+
 extra_javascript:
   - https://unpkg.com/mermaid@8.5.0/dist/mermaid.min.js
 
@@ -73,7 +83,8 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.tasklist:
       custom_checkbox: true
-  - pymdownx.tabbed
+  - pymdownx.tabbed:
+      alternate_style: true
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
@@ -84,4 +95,3 @@ markdown_extensions:
   - toc:
       # insert a blank space before the character
       permalink: " ¶"
-  

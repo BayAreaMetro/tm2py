@@ -1,4 +1,4 @@
-"""Transit skims module"""
+"""Transit skims module."""
 
 from __future__ import annotations
 from collections import defaultdict as _defaultdict

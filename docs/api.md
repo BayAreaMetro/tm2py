@@ -4,6 +4,8 @@
 
 ::: tm2py.controller
 
+## Configuration
+
 ## Components
 
 ### Base Component

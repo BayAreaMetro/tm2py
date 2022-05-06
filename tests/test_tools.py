@@ -1,6 +1,9 @@
-from unittest.mock import MagicMock
-import sys
+"""Testing for the tools module."""
+
 import os
+import sys
+from unittest.mock import MagicMock
+
 import pytest
 
 _EXAMPLE_URL = (
@@ -10,7 +13,7 @@ _EXAMPLE_URL = (
 
 @pytest.mark.menow
 def test_download_unzip():
-    # If (and only if) Emme is not installed, replace INRO libraries with MagicMock
+    """If (and only if) Emme is not installed, replace INRO libraries with MagicMock."""
     try:
         import inro.emme.database.emmebank
     except ModuleNotFoundError:
@@ -25,9 +28,9 @@ def test_download_unzip():
         sys.modules["inro"] = MagicMock()
         sys.modules["inro.modeller"] = MagicMock()
 
-    from tm2py.tools import _download, _unzip
-
     import tempfile
+
+    from tm2py.tools import _download, _unzip
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_file = os.path.join(temp_dir, "test_download.zip")
