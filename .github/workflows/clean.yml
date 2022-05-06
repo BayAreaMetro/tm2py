@@ -27,4 +27,4 @@ jobs:
     - name: Delete defunct docs versions
       run: |
         echo "Deleting ${{ github.event.ref_name }} version from docs"
-        mike delete ${{ github.event.ref_name }}
+        mike delete --rebase --push ${{ github.event.ref_name }}

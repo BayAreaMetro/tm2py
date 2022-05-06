@@ -1,37 +1,11 @@
-### For testing feature
+A python package to run the San Francisco Bay Area's Travel Model.
 
-The purpose
+**Owner:** Metropolitan Transportation Commission (MTC)
 
 ## Starting Out
 
-!!! Tip
 
-    The `tm2py` library works on top of [Inro's Emme Software](https://www.inrosoftware.com/en/products/emme/).  (Almost) all of the functionality of this library requires a valid Emme installation and license.
-
-Note that you'll also need to install Emme's python packages into this conda environment.
-Following these instructions from an INRO community forum post: In the Emme Desktop application, open Tools->Application Options->Modeller, change your Python path as desired and click the "Install Modeller Package" button.
-Alternatively, you can copy the emme.pth from the Emme install to the site packages. This looks like:
-
-```bash
-cd tm2py
-REM ... or from the root of the venv / conda environment
-copy %EMMEPATH%\emme.pth Lib\site-packages\
-```
-
-If this is successful, the following packages will be visible in your environment when you type `pip list`:
-
-* inro-dynameq
-* inro-emme
-* inro-emme-agent
-* inro-emme-engine
-* inro-modeller
-
-Note that doing the emme package install will also install the package *pywin32*; if *pywin32* gets installed by other means (like
-conda or pip), then I got DLL load errors when trying to import the emme packages, so I recommend uninstalling *pywin32* before
-installing the emme packages.
-
-
-### Installation
+### Prepare Virtual Environment
 
 If you are managing multiple python versions, we suggest using [`virtualenv`](https://virtualenv.pypa.io/en/latest/) or [`conda`](https://conda.io/en/latest/) virtual environments.
 
@@ -41,6 +15,79 @@ The following instructions create and activate a conda environment (recommended)
 conda env create -f environment.yml
 conda activate tm2py
 ```
+
+!!! Tip "pywin32 must be installed by Emme"
+
+    Installing the Emme package will also install the `pywin32` python package.
+    If `pywin32` gets installed by other means (like conda or pip), then you will get DLL load errors when trying to import the emme packages. To remedy, we recommend checking for `pywin32` before hand and uninstalling `pywin32` before installing the emme packages.
+
+To see if `pywin32` is installed in your environment, run:
+
+```sh
+conda list
+```
+
+=== "`pywin32` is listed as being intalled by conda"
+
+    Run:
+
+    ```sh
+    conda uninstall pywin32
+    ```
+
+=== "`pywin32` is listed as bieng installed by pip"
+
+    Run:
+
+    ```sh
+    pip uninstall pywin32
+    ```
+
+### Install Emme
+
+You will need to install Emme's python packages into this conda environment **first**.
+
+!!! Tip
+
+    The `tm2py` library works on top of [Inro's Emme Software](https://www.inrosoftware.com/en/products/emme/).  (Almost) all of the functionality of this library requires a valid Emme installation and license.
+
+=== "Using GUI"
+
+    From an INRO community forum post:
+
+    1. In the Emme Desktop application, open Tools->Application Options->Modeller  
+    2. Change your Python path as desired  
+    3. Click the "Install Modeller Package" button  
+
+=== "Terminal"
+
+    Alternatively, you can copy the `emme.pth` from the Emme install to the site packages:
+
+    ```bash
+    cd tm2py
+    REM ... or from the root of the venv / conda environment
+    copy %EMMEPATH%\\emme.pth Lib\\site-packages\
+    ```
+
+Installation is successful if the command:
+
+```sh
+conda list
+```
+
+Returns a list containing:
+
+```sh
+inro-dynameq
+inro-emme
+inro-emme-agent
+inro-emme-engine
+inro-modeller
+```
+
+### Install TM2PY
+
+After successfully installing the Emme environment, you are ready to install tm2py.
 
 === "Basic Install"
 
@@ -86,8 +133,8 @@ conda activate tm2py
 
     Due to size limitations, the bulk of the input data is not stored with the `tm2py` library, but can be accessed following the directions below.
 
-| Example | Location        |
-| ======= | ===================== |
+| **Example** | **Location**        |  
+| ---- | ----- |  
 | Union City | [example_union_test_highway.zip](https://mtcdrive.box.com/s/3entr016e9teq2wt46x1os3fjqylfoge) |
 
 Additionally, `tm2py` has a helper function to download the data using the following syntax:
@@ -119,7 +166,7 @@ The following is the typical usage to run the model.  Other than the run directo
     )
     controller.run()
     ```
-    - `run_dir` specifies specific run directory. Otherwise will use location of first `config.toml` file.
+    - `run_dir` specifies specific run directory. If not specified, it will use location of first `config.toml` file.
 
 === "terminal"
 
