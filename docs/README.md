@@ -180,22 +180,22 @@ Example model run configuraiton file with components in the order they are to be
 [run]
     start_component = ""
     initial_components = [
-        "create_tod_scenarios", 
-        "active_modes", 
-        "air_passenger", 
-        "prepare_network_highway", 
-        "highway", 
-        "highway_maz_skim", 
+        "create_tod_scenarios",
+        "active_modes",
+        "air_passenger",
+        "prepare_network_highway",
+        "highway",
+        "highway_maz_skim",
         "prepare_network_transit",
         "transit_assign",
         "transit_skim"
     ]
     global_iteration_components = [
-        "household", 
-        "internal_external", 
-        "truck", 
-        "highway_maz_assign", 
-        "highway", 
+        "household",
+        "internal_external",
+        "truck",
+        "highway_maz_assign",
+        "highway",
         "prepare_network_transit",
         "transit_assign",
         "transit_skim"
@@ -217,6 +217,6 @@ flowchart TD
     controller_run[["controller.run()"]]
     validate_inputs("controller.validate_inputs()")
     component_run[["For each item in controller._queued_components\ncomponent.run()"]]
-    
+
     validate_inputs-->component_run
 ```
