@@ -47,7 +47,6 @@ The following attributes are calculated:
 """
 
 import os
-
 from typing import Dict, List, Set
 
 from tm2py.components.component import Component
