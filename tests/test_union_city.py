@@ -93,6 +93,7 @@ def union_city(examples_dir, root_dir):
     controller.run()
     return controller
 
+
 @pytest.mark.menow
 def test_validate_input_fail(examples_dir, inro_context, temp_dir):
 
@@ -121,6 +122,7 @@ def test_validate_input_fail(examples_dir, inro_context, temp_dir):
             run_dir=union_city_root,
         )
         assert e_info.type is FileNotFoundError
+
 
 @pytest.mark.skipci
 def test_highway_skims(union_city):
