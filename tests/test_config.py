@@ -7,23 +7,11 @@ from unittest.mock import MagicMock
 import pytest
 
 
-def test_config_read(examples_dir):
+def test_config_read(examples_dir, inro_context):
     """Configuration should load parameters to the correct namespaces."""
     SCENARIO_CONFIG = "scenario_config.toml"
     MODEL_CONFIG = "model_config.toml"
 
-    # If (and only if) Emme is not installed, replace inro libraries with MagicMock
-    try:
-        import inro.emme.database.emmebank
-    except ModuleNotFoundError:
-        sys.modules["inro.emme.database.emmebank"] = MagicMock()
-        sys.modules["inro.emme.network"] = MagicMock()
-        sys.modules["inro.emme.database.scenario"] = MagicMock()
-        sys.modules["inro.emme.database.matrix"] = MagicMock()
-        sys.modules["inro.emme.network.node"] = MagicMock()
-        sys.modules["inro.emme.desktop.app"] = MagicMock()
-        sys.modules["inro"] = MagicMock()
-        sys.modules["inro.modeller"] = MagicMock()
     from tm2py.config import Configuration
 
     _scenario_config = os.path.join(examples_dir, SCENARIO_CONFIG)

@@ -11,21 +11,9 @@ import pandas as pd
 import pytest
 
 
-def test_example_download(examples_dir, root_dir):
+def test_example_download(examples_dir, root_dir, inro_context):
     """Tests that example data can be downloaded."""
     EXAMPLE = "UnionCity"
-    # If (and only if) Emme is not installed, replace INRO libraries with MagicMock
-    try:
-        import inro.emme.database.emmebank
-    except ModuleNotFoundError:
-        sys.modules["inro.emme.database.emmebank"] = MagicMock()
-        sys.modules["inro.emme.network"] = MagicMock()
-        sys.modules["inro.emme.database.scenario"] = MagicMock()
-        sys.modules["inro.emme.database.matrix"] = MagicMock()
-        sys.modules["inro.emme.network.node"] = MagicMock()
-        sys.modules["inro.emme.desktop.app"] = MagicMock()
-        sys.modules["inro"] = MagicMock()
-        sys.modules["inro.modeller"] = MagicMock()
 
     import shutil
 
