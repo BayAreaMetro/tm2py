@@ -12,6 +12,15 @@ if TYPE_CHECKING:
     from tm2py.controller import RunController
 
 
+class FileFormatError(Exception):
+    def __init__(self, f, *args):
+        super().__init__(args)
+        self.f = f
+
+    def __str__(self):
+        return f"The {self.f} is not a valid format."
+
+
 class Component(ABC):
     """Base component class for tm2py top-level inheritance.
 

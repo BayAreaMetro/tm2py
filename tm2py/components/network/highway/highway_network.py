@@ -49,7 +49,7 @@ The following attributes are calculated:
 import os
 from typing import Dict, List, Set
 
-from tm2py.components.component import Component
+from tm2py.components.component import Component, FileFormatError
 from tm2py.emme.manager import EmmeNetwork, EmmeScenario
 from tm2py.logger import LogStartEnd
 
@@ -84,7 +84,7 @@ class PrepareNetwork(Component):
                 f"Tolls file (config.highway.tolls.file_path) does not exist: {toll_file_path}",
                 level="ERROR",
             )
-            raise Exception(f"Tolls file does not exist: {toll_file_path}")
+            raise FileNotFoundError(f"Tolls file does not exist: {toll_file_path}")
         src_veh_groups = self.config.highway.tolls.src_vehicle_group_names
         columns = ["fac_index"]
         for time in self.config.time_periods:
@@ -100,7 +100,7 @@ class PrepareNetwork(Component):
                         f"Tolls file missing column: {column}", level="ERROR"
                     )
         if missing:
-            raise Exception(
+            raise FileFormatError(
                 f"Tolls file missing {len(missing)} columns: {', '.join(missing)}"
             )
 

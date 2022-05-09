@@ -28,9 +28,12 @@ def test_config_read(examples_dir, inro_context):
     assert my_config.highway.classes[0].description == "drive alone"
 
 
-@pytest.mark.xfail
 def test_config_read_badfile():
     """Should have good behavior when file isn't there."""
     from tm2py.config import Configuration
 
-    Configuration.load_toml("this_is_not_a_valid_file.toml")
+    try:
+        Configuration.load_toml("this_is_not_a_valid_file.toml")
+        raise AssertionError("Should have thrown an exception.")
+    except FileNotFoundError:
+        pass

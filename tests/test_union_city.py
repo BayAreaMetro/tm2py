@@ -94,8 +94,6 @@ def union_city(examples_dir, root_dir):
     return controller
 
 
-@pytest.mark.menow
-@pytest.mark.xfail
 def test_validate_input_fail(examples_dir, inro_context, temp_dir):
 
     import toml
@@ -121,8 +119,11 @@ def test_validate_input_fail(examples_dir, inro_context, temp_dir):
         ],
         run_dir=union_city_root,
     )
-
-    controller.run()
+    try:
+        controller.run()
+        raise AssertionError("Expected model to fail with a FileNotFoundError")
+    except FileNotFoundError:
+        pass
 
 
 @pytest.mark.skipci
