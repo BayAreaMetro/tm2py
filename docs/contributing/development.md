@@ -140,7 +140,7 @@ be satisfied**
 General notes about code style:
 
 - Use PEP8 general style and Google-style docstrings
-- Add logging statements throutout using the logging module
+- Add logging statements throutout using the [logging module](#Logging)
 - Clarity over concision  
 - Expicit over implicit
 - Add comments for non-obvious code where it would take a user a while to figure out
@@ -194,3 +194,121 @@ Pull request author should be responsive to reviewer questions and comments, add
 Merge approved pull-request to `develop` using the `squash all changes` functionality
 so that it appears as a single commit on the `develop` branch. Resolve any merge conflicts and
 closing any issues which were fully addressed.
+
+## Logging
+
+The Logging module has the following levels:
+
+- *display*  
+- *file*  
+- *fallback*  
+
+In addition, there are:
+
+- *override* logging level filter by component name and iteration, and  
+- notify slack component (untested at this time)
+
+### Logging Levels
+
+Here are the log levels as defined in `TM2PY`:
+
+| **Level** | **Description** |
+| --------- | --------------- |
+|TRACE| Highly detailed information which would rarely be of interest except for detailed debugging by a developer.|
+|DEBUG| diagnostic information which would generally be useful to a developer debugging the model code; this may also be useful to a model operator in some cases.|
+|DETAIL| more detail than would normally be of interest, but might be useful to a model operator debugging a model run / data or understanding model results.|
+|INFO| messages which would normally be worth recording about the model operation.|
+|STATUS| top-level, model is running type messages. There should be relatively few of these, generally one per component, or one per time period if the procedure is long.|
+|WARN| warning messages where there is a possibility of a problem.|
+|ERROR| problem causing operation to halt which is normal (or not unexpected) in scope, e.g. file does not exist. Includes general Python exceptions.|
+|FATAL| severe problem requiring operation to stop immediately.
+
+!!! Note
+
+    In practice there may not be a large distinction between ERROR and FATAL in tm2py context.
+
+### Adding log statements in code
+
+Messages can be recorded using:
+
+```python
+logger.log(level="INFO")
+
+#or equivalently
+
+logger.info()
+```
+
+Additional arguments:
+
+- Add a timestamp: `time=True`
+- Indent the message: `indent=True`
+
+Just log the time – useful for doing performance baselineing: `logger.log_time(, level=)`
+
+Group log messages together: 
+
+- Using a context: `logger.log_start_end()` 
+- Using a decorator: 
+
+```python
+@LogStartEnd("Highway assignment and skims", level="STATUS")
+def run(self):
+```
+
+### Viewing logging
+
+Log messages can be shown in the console / notebook (using the logging.display_level)
+
+```python
+import logging
+logging.display_level = "INFO" # or DEBUG, etc.
+```
+
+Log files with written log messages are split into:
+
+=== "**Run Log**"
+    For model overview.
+
+    | **Settings** |                          |
+    | ----------- | ------------------------ |
+    | *Location:* | `logging.run_file_path`  |
+    | *Level:*    | `logging.run_file_level` |
+
+=== "**Debug Log**"
+    A more detailed log.
+
+    | **Settings** |                          |
+    | ----------- | ------------------------ |
+    | *Location:* | `logging.log_file_path`  |
+    | *Level:*    | `logging.log_file_level` |
+
+=== "**Catch-all Log**"
+    Will output all log messages recorded.
+
+    | **Settings** |                          |
+    | ----------- | ------------------------ |
+    | *Location:* | `logging.log_on_error_file_path`  |
+    | *Level:*    | All... |
+
+!!! Note
+
+    Some logging can be conditional to only run if the log level is filtered in.
+    
+    e.g. if it takes a long time to generate the report. There is an example of this in the highway assignment which generates a report of the matrix results statistics only if DEBUG is filtered in for at least one of the log_levels.
+
+### Additional Settings
+
+#### Locally override logging level for debugging
+
+The `logging.iter_component_level` can be used to locally override the logging level filter for debug purposes. This is specified as one or more tuples of (iteration, component_name, log_level).
+
+!!! Example
+
+    Record **all** messages during the highway component run at iteration 2:
+
+    ```
+    logging.iter_component_level: [ [2, "highway", "TRACE"] ]
+    ```
+ 
+    
