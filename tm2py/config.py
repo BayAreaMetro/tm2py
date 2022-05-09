@@ -104,6 +104,11 @@ class RunConfig(ConfigItem):
     @validator("start_component")
     def start_component_used(value, values):
         """Validate start_component is listed in *_components."""
+        if "start_component" not in values:
+            return value
+        if not value:
+            return value
+
         if "start_iteration" in values:
             if values["start_iteration"] == 0:
                 if "initial_components" in values:
