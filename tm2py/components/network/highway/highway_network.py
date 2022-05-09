@@ -46,10 +46,10 @@ The following attributes are calculated:
     - "@cost_YY": total cost for class YY
 """
 
-
+import os
 from typing import Dict, List, Set
 
-from tm2py.components.component import Component
+from tm2py.components.component import Component, FileFormatError
 from tm2py.emme.manager import EmmeNetwork, EmmeScenario
 from tm2py.logger import LogStartEnd
 
@@ -75,6 +75,34 @@ class PrepareNetwork(Component):
                 self._calc_link_skim_lengths(network)
                 self._calc_link_class_costs(network)
                 scenario.publish_network(network)
+
+    def validate_inputs(self):
+        """Validate inputs files are correct, raise if an error is found."""
+        toll_file_path = self.get_abs_path(self.config.highway.tolls.file_path)
+        if not os.path.exists(toll_file_path):
+            self.logger.log(
+                f"Tolls file (config.highway.tolls.file_path) does not exist: {toll_file_path}",
+                level="ERROR",
+            )
+            raise FileNotFoundError(f"Tolls file does not exist: {toll_file_path}")
+        src_veh_groups = self.config.highway.tolls.src_vehicle_group_names
+        columns = ["fac_index"]
+        for time in self.config.time_periods:
+            for vehicle in src_veh_groups:
+                columns.append(f"toll{time.name.lower()}_{vehicle}")
+        with open(toll_file_path, "r", encoding="UTF8") as toll_file:
+            header = set(h.strip() for h in next(toll_file).split(","))
+            missing = []
+            for column in columns:
+                if column not in header:
+                    missing.append(column)
+                    self.logger.log(
+                        f"Tolls file missing column: {column}", level="ERROR"
+                    )
+        if missing:
+            raise FileFormatError(
+                f"Tolls file missing {len(missing)} columns: {', '.join(missing)}"
+            )
 
     def _create_class_attributes(self, scenario: EmmeScenario, time_period: str):
         """Create required network attributes including per-class cost and flow attributes."""
@@ -135,7 +163,7 @@ class PrepareNetwork(Component):
                 if data_row is None:
                     self.logger.log(
                         f"set tolls failed index lookup {index}, link {link.id}",
-                        level="TRACE",
+                        level="DEBUG",
                     )
                     continue  # tolls will remain at zero
                 # if index is below tollbooth start index then this is a bridge
@@ -158,7 +186,7 @@ class PrepareNetwork(Component):
         toll_file_path = self.get_abs_path(self.config.highway.tolls.file_path)
         tolls = {}
         with open(toll_file_path, "r", encoding="UTF8") as toll_file:
-            header = next(toll_file).split(",")
+            header = [h.strip() for h in next(toll_file).split(",")]
             for line in toll_file:
                 data = dict(zip(header, line.split(",")))
                 tolls[int(data["fac_index"])] = data
