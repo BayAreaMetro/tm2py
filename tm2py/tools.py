@@ -1,18 +1,18 @@
 """Tools module for common resources / shared code and "utilities" in the tm2py package."""
-from contextlib import contextmanager as _context
 import multiprocessing
 import os
 import re
-import urllib.request
 import urllib.error
 import urllib.parse
+import urllib.request
 import zipfile
-
+from contextlib import contextmanager as _context
 from typing import Union
 
 
 def parse_num_processors(value: Union[str, int, float]):
     """Convert input value (parse if string) to number of processors.
+
     Args:
         value: an int, float or string; string value can be "X" or "MAX-X"
     Returns:
@@ -60,26 +60,31 @@ def _urlopen(url):
     request = urllib.request.Request(url)
     # Handle Redirects using solution shown by user: metatoaster on StackOverflow
     # https://stackoverflow.com/questions/62384020/python-3-7-urllib-request-doesnt-follow-redirect-url
+    print(f"Opening URL: {url}")
     try:
         with urllib.request.urlopen(request) as response:
+            print(f"No redirects found.")
             yield response
     except urllib.error.HTTPError as error:
-        print("redirect error")
+        print("Redirect Error")
         if error.status != 307:
             raise ValueError(f"HTTP Error {error.status}") from error
         redirected_url = urllib.parse.urljoin(url, error.headers["Location"])
+        print(f"Redirected to: {redirected_url}")
         with urllib.request.urlopen(redirected_url) as response:
             yield response
 
 
 def _download(url: str, target_destination: str):
-    """Download file with redirects (i.e. box)
+    """Download file with redirects (i.e. box).
 
     Args:
         url (str): source URL to download data from
         target_destination (str): destination file path to save download
     """
     with _urlopen(url) as response:
+        total_length = int(response.headers.get("content-length"))
+        print(f"Total Download Size: {total_length}")
         with open(target_destination, "wb") as out_file:
             out_file.write(response.read())
 
@@ -98,7 +103,7 @@ def _unzip(target_zip: str, target_dir: str):
 def download_unzip(
     url: str, out_base_dir: str, target_dir: str, zip_filename: str = "test_data.zip"
 ) -> None:
-    """Downloads and unzips a file from a URL. The zip file is removed after extraction.
+    """Download and unzips a file from a URL. The zip file is removed after extraction.
 
     Args:
         url (str): Full URL do download from.

@@ -1,5 +1,5 @@
 # docker build -t mypackage .
-# docker run --rm -v "$PWD":/home/jovyan/work mypackage /bin/bash 
+# docker run --rm -v "$PWD":/home/jovyan/work mypackage /bin/bash
 FROM jupyter/minimal-notebook
 
 COPY ../requirements.txt /tmp/requirements.txt
