@@ -93,7 +93,7 @@ def union_city(examples_dir, root_dir):
     controller.run()
     return controller
 
-
+@pytest.mark.menow
 def test_validate_input_fail(examples_dir, inro_context, temp_dir):
 
     import toml
@@ -106,25 +106,21 @@ def test_validate_input_fail(examples_dir, inro_context, temp_dir):
         bad_model_config = toml.load(fin)
     bad_model_config["highway"]["tolls"]["file_path"] = "foo.csv"
 
-    bad_model_config_path = os.path.join(temp_dir, r"model_config.toml")
+    bad_model_config_path = os.path.join(temp_dir, r"bad_model_config.toml")
     with open(bad_model_config_path, "w") as fout:
         toml.dump(bad_model_config, fout)
 
     union_city_root = os.path.join(examples_dir, "UnionCity")
 
-    controller = RunController(
-        [
-            os.path.join(examples_dir, r"scenario_config.toml"),
-            bad_model_config_path,
-        ],
-        run_dir=union_city_root,
-    )
-    try:
-        controller.run()
-        raise AssertionError("Expected model to fail with a FileNotFoundError")
-    except FileNotFoundError:
-        pass
-
+    with pytest.raises(Exception) as e_info:
+        controller = RunController(
+            [
+                os.path.join(examples_dir, r"scenario_config.toml"),
+                bad_model_config_path,
+            ],
+            run_dir=union_city_root,
+        )
+        assert e_info.type is FileNotFoundError
 
 @pytest.mark.skipci
 def test_highway_skims(union_city):
