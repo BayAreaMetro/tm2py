@@ -246,10 +246,10 @@ Additional arguments:
 
 Just log the time – useful for doing performance baselineing: `logger.log_time(, level=)`
 
-Group log messages together: 
+Group log messages together:
 
-- Using a context: `logger.log_start_end()` 
-- Using a decorator: 
+- Using a context: `logger.log_start_end()`
+- Using a decorator:
 
 ```python
 @LogStartEnd("Highway assignment and skims", level="STATUS")
@@ -294,7 +294,7 @@ Log files with written log messages are split into:
 !!! Note
 
     Some logging can be conditional to only run if the log level is filtered in.
-    
+
     e.g. if it takes a long time to generate the report. There is an example of this in the highway assignment which generates a report of the matrix results statistics only if DEBUG is filtered in for at least one of the log_levels.
 
 ### Additional Settings
@@ -310,5 +310,3 @@ The `logging.iter_component_level` can be used to locally override the logging l
     ```
     logging.iter_component_level: [ [2, "highway", "TRACE"] ]
     ```
- 
-    
