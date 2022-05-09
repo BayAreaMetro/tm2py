@@ -93,6 +93,7 @@ def union_city(examples_dir, root_dir):
     controller.run()
     return controller
 
+@pytest.mark.menow
 @pytest.mark.xfail
 def test_validate_input_fail(examples_dir, inro_context, temp_dir):
 
@@ -110,9 +111,7 @@ def test_validate_input_fail(examples_dir, inro_context, temp_dir):
     with open(bad_model_config_path, 'w') as fout:
         toml.dump(bad_model_config, fout)
 
-    union_city_root = get_example(
-        example_name="UnionCity", root_dir=examples_dir,
-    )
+    union_city_root = os.path.join(examples_dir, "UnionCity")
     
     controller = RunController(
         [
