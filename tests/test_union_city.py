@@ -1,42 +1,35 @@
+"""Testing module for UnionCity subarea 'real' model runs."""
+
+import glob
 import os
-from unittest.mock import MagicMock
 import sys
+from typing import Collection, Union
+from unittest.mock import MagicMock
+
+import openmatrix as omx
+import pandas as pd
 import pytest
 
 
-_EXAMPLES_DIR = r"examples"
-
-
-def test_example_download():
-    # If (and only if) Emme is not installed, replace INRO libraries with MagicMock
-    try:
-        import inro.emme.database.emmebank
-    except ModuleNotFoundError:
-        sys.modules["inro.emme.database.emmebank"] = MagicMock()
-        sys.modules["inro.emme.network"] = MagicMock()
-        sys.modules["inro.emme.database.scenario"] = MagicMock()
-        sys.modules["inro.emme.database.matrix"] = MagicMock()
-        sys.modules["inro.emme.network.node"] = MagicMock()
-        sys.modules["inro.emme.desktop.app"] = MagicMock()
-        sys.modules["inro"] = MagicMock()
-        sys.modules["inro.modeller"] = MagicMock()
+def test_example_download(examples_dir, root_dir, inro_context):
+    """Tests that example data can be downloaded."""
+    EXAMPLE = "UnionCity"
 
     import shutil
+
     from tm2py.examples import get_example
 
-    name = "UnionCity"
-    example_dir = os.path.join(os.getcwd(), _EXAMPLES_DIR)
-    union_city_root = os.path.join(example_dir, name)
-    if os.path.exists(union_city_root):
-        shutil.rmtree(union_city_root)
+    example_root = os.path.join(examples_dir, EXAMPLE)
+    if os.path.exists(example_root):
+        shutil.rmtree(example_root)
 
-    get_example(
-        example_name="UnionCity", example_subdir=_EXAMPLES_DIR, root_dir=os.getcwd()
-    )
     # default retrieval_url points to Union City example on box
+    _ex_dir = get_example(example_name="UnionCity", root_dir=root_dir)
 
     # check that the root union city folder exists
-    assert os.path.isdir(os.path.join(example_dir, name))
+    assert _ex_dir == example_root
+    assert os.path.isdir(example_root)
+
     # check some expected files exists
     files_to_check = [
         os.path.join("inputs", "hwy", "tolls.csv"),
@@ -47,104 +40,148 @@ def test_example_download():
     ]
     for file_name in files_to_check:
         assert os.path.exists(
-            os.path.join(example_dir, name, file_name)
+            os.path.join(example_root, file_name)
         ), f"get_example failed, missing {file_name}"
+
     # check zip file was removed
-    assert not (os.path.exists(os.path.join(example_dir, name, "test_data.zip")))
+    assert not (os.path.exists(os.path.join(example_root, "test_data.zip")))
+
+
+def diff_omx(ref_omx: str, run_omx: str) -> Collection[Collection[str]]:
+    """Compare two OMX files, return missing and different matrices from reference.
+
+    Args:
+        ref_omx: reference OMX file
+        run_omx: run OMX file
+    """
+    _ref_f = omx.open_file(ref_omx, "r")
+    _run_f = omx.open_file(run_omx, "r")
+    _ref_matrix_names = _ref_f.list_matrices()
+    _run_matrix_names = _run_f.list_matrices()
+
+    missing_matrices = [f for f in _ref_matrix_names if f not in _run_matrix_names]
+    different_matrices = []
+    for m_key in _ref_matrix_names:
+        _ref_matrix = _ref_f[m_key].read()
+        _run_matrix = _run_f[m_key].read()
+        if not (_ref_matrix == _run_matrix).all():
+            different_matrices.append(m_key)
+
+    _ref_f.close()
+    _run_f.close()
+    return missing_matrices, different_matrices
+
+
+@pytest.fixture(scope="module")
+@pytest.mark.skipci
+def union_city(examples_dir, root_dir):
+    """Union City model run testing fixture."""
+    from tm2py.controller import RunController
+    from tm2py.examples import get_example
+
+    EXAMPLE = "UnionCity"
+    _example_root = os.path.join(examples_dir, EXAMPLE)
+
+    get_example(example_name="UnionCity", root_dir=root_dir)
+    controller = RunController(
+        [
+            os.path.join(examples_dir, "scenario_config.toml"),
+            os.path.join(examples_dir, "model_config.toml"),
+        ],
+        run_dir=_example_root,
+    )
+    controller.run()
+    return controller
+
+@pytest.mark.xfail
+def test_validate_input_fail(examples_dir, inro_context, temp_dir):
+
+    import toml
+
+    from tm2py.controller import RunController
+    from tm2py.examples import get_example
+
+    model_config_path = os.path.join(examples_dir, r"model_config.toml")
+    with open(model_config_path, "r") as fin:
+        bad_model_config = toml.load(fin)
+    bad_model_config["highway"]["tolls"]["file_path"] = "foo.csv"
+
+    bad_model_config_path = os.path.join(temp_dir, r"model_config.toml")
+    with open(bad_model_config_path, 'w') as fout:
+        toml.dump(bad_model_config, fout)
+
+    union_city_root = get_example(
+        example_name="UnionCity", root_dir=examples_dir,
+    )
+    
+    controller = RunController(
+        [
+            os.path.join(examples_dir, r"scenario_config.toml"),
+            bad_model_config_path,
+        ],
+        run_dir = union_city_root
+    )
+
+    controller.run()
 
 
 @pytest.mark.skipci
-def test_highway():
-    from tm2py.controller import RunController
-    from tm2py.examples import get_example
-    import openmatrix as _omx
+def test_highway_skims(union_city):
+    """Test that the OMX highway skims match the reference."""
+    run_dir = union_city.run_dir
 
-    union_city_root = os.path.join(os.getcwd(), _EXAMPLES_DIR, "UnionCity")
-    get_example(
-        example_name="UnionCity", example_subdir=_EXAMPLES_DIR, root_dir=os.getcwd()
-    )
-    controller = RunController(
-        [
-            os.path.join(_EXAMPLES_DIR, r"scenario_config.toml"),
-            os.path.join(_EXAMPLES_DIR, r"model_config.toml"),
-        ],
-        run_dir=union_city_root
-    )
-    controller.run()
+    ref_dir_hwy_skims = os.path.join(run_dir, "ref_skim_matrices", "highway")
+    ref_skim_files = glob.glob(os.path.join(ref_dir_hwy_skims, "*.omx"))
 
-    root = os.path.join(controller.run_dir, r"skim_matrices\highway")
-    ref_root = os.path.join(controller.run_dir, r"ref_skim_matrices\highway")
-    open_files = []
-    file_names = [name for name in os.listdir(root) if name.endswith(".omx")]
+    run_dir_hwy_skims = os.path.join(run_dir, "skim_matrices", "highway")
+    run_skim_files = glob.glob(os.path.join(run_dir_hwy_skims, "*.omx"))
+
+    # check that the expected files are all there
+    ref_skim_names = [os.path.basename(f) for f in ref_skim_files]
+    run_skim_names = [os.path.basename(f) for f in run_skim_files]
+
+    assert set(ref_skim_names) == set(
+        run_skim_names
+    ), f"Skim matrix names do not match expected\
+        reference. \n Expected: {ref_skim_names}\n Actual: {run_skim_names}"
+
+    missing_skims = []
     different_skims = []
-    try:
-        for name in file_names:
-            skims = _omx.open_file(os.path.join(root, name))
-            open_files.append(skims)
-            ref_skims = _omx.open_file(os.path.join(ref_root, name))
-            open_files.append(ref_skims)
-            for key in skims.list_matrices():
-                data = skims[key].read()
-                ref_data = ref_skims[key].read()
-                if not (data == ref_data).all():
-                    different_skims.append(key)
-    finally:
-        for f in open_files:
-            f.close()
-    assert (
-        len(different_skims) == 0
-    ), f"there are {len(different_skims)} different skims: {','.join(different_skims)}"
 
-    count_different_lines = 0
-    with open(os.path.join(root, "HWYSKIM_MAZMAZ_DA.csv")) as data:
-        with open(os.path.join(ref_root, "HWYSKIM_MAZMAZ_DA.csv")) as ref_data:
-            for line in data:
-                ref_line = next(ref_data)
-                if ref_line != line:
-                    count_different_lines += 1
-    assert (
-        count_different_lines == 0
-    ), f"HWYSKIM_MAZMAZ_DA.csv differs on {count_different_lines} lines"
+    for ref_skim_f, run_skim_f in zip(ref_skim_files, run_skim_files):
+        _missing_ms, _diff_ms = diff_omx(ref_skim_f, run_skim_f)
+        missing_skims.extend([ref_skim_f + _m for _m in _missing_ms])
+        different_skims.extend(ref_skim_f + _m for _m in _diff_ms)
+
+    assert len(missing_skims) == 0, f"Missing skims: {missing_skims}"
+    assert len(different_skims) == 0, f"Different skims: {different_skims}"
 
 
-@pytest.mark.xfail
-def test_validate_input_fail():
-    # If (and only if) Emme is not installed, replace INRO libraries with MagicMock
-    try:
-        import inro.emme.database.emmebank
-    except ModuleNotFoundError:
-        sys.modules["inro.emme.database.emmebank"] = MagicMock()
-        sys.modules["inro.emme.network"] = MagicMock()
-        sys.modules["inro.emme.database.scenario"] = MagicMock()
-        sys.modules["inro.emme.database.matrix"] = MagicMock()
-        sys.modules["inro.emme.network.node"] = MagicMock()
-        sys.modules["inro.emme.desktop.app"] = MagicMock()
-        sys.modules["inro"] = MagicMock()
-        sys.modules["inro.modeller"] = MagicMock()
+def assert_csv_equal(ref_csv: str, run_csv: str):
+    """Compare two csv files, return results of pd.testing.assert_frame_equal().
 
-    from tm2py.controller import RunController
-    from tm2py.examples import get_example
-    import toml
-    import tempfile
+    Args:
+        ref_csv (str): Reference CSV location
+        run_csv (str): Model run CSV location
 
-    model_config_path = os.path.join(_EXAMPLES_DIR, r"model_config.toml")
-    with open(model_config_path, "r") as fin:
-        model_config = toml.load(fin)
-    model_config["highway"]["tolls"]["file_path"] = "foo.csv"
-    with tempfile.TemporaryDirectory() as temp_dir:
-        model_config_path = os.path.join(temp_dir, r"model_config.toml")
-        with open(model_config_path, 'w') as fout:
-            toml.dump(model_config, fout)
+    Returns:
+        Results of pd.testing.assert_frame_equal()
+    """
+    ref_df = pd.read_csv(ref_csv)
+    run_df = pd.read_csv(run_csv)
+    return pd.testing.assert_frame_equal(ref_df, run_df)
 
-    union_city_root = os.path.join(os.getcwd(), _EXAMPLES_DIR, "UnionCity")
-    get_example(
-        example_name="UnionCity", example_subdir=_EXAMPLES_DIR, root_dir=os.getcwd()
-    )
-    controller = RunController(
-        [
-            os.path.join(_EXAMPLES_DIR, r"scenario_config.toml"),
-            model_config_path,
-        ],
-        run_dir=union_city_root
-    )
-    controller.run()
+
+@pytest.mark.skipci
+def test_maz_da_skims(union_city):
+    """Test that the DA MAZ skims match the reference."""
+    run_dir = union_city.run_dir
+
+    ref_dir_hwy_skims = os.path.join(run_dir, "ref_skim_matrices", "highway")
+    run_dir_hwy_skims = os.path.join(run_dir, "skim_matrices", "highway")
+
+    ref_csv = os.path.join(ref_dir_hwy_skims, "HWYSKIM_MAZMAZ_DA.csv")
+    run_csv = os.path.join(run_dir_hwy_skims, "HWYSKIM_MAZMAZ_DA.csv")
+
+    return assert_csv_equal(ref_csv, run_csv)
+

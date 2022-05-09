@@ -1,9 +1,10 @@
 """Module for Emme network calculations.
 
 Contains NetworkCalculator class to generate Emme format specifications for
-the Network calculator."""
+the Network calculator.
+"""
 
-from typing import Union, Dict, List
+from typing import Dict, List, Union
 
 import tm2py.emme.manager as _manager
 
@@ -12,7 +13,7 @@ EmmeNetworkCalcSpecification = Dict[str, Union[str, Dict[str, str]]]
 
 
 class NetworkCalculator:
-    """Simple wrapper interface to the Emme Network calculator
+    """Simple wrapper interface to the Emme Network calculator.
 
     Used to generate the standard network calculator specification (dictionary)
     from argument inputs. Useful when NOT (commonly) using selection or
@@ -23,6 +24,11 @@ class NetworkCalculator:
     """
 
     def __init__(self, scenario: EmmeScenario):
+        """Constructor for NetworkCalculator class.
+
+        Args:
+            scenario (EmmeScenario): Reference EmmeScenario object
+        """
         self._scenario = scenario
         emme_manager = _manager.EmmeManager()
         modeller = emme_manager.modeller()
@@ -79,7 +85,7 @@ class NetworkCalculator:
     def run(self) -> List[Dict[str, float]]:
         """Run accumulated network calculations all at once.
 
-        Returns:
+        Returns
             A list of dictionary reports with min, max, average and sum of the
             calculation expression. See Emme help 'Network calculator' for more.
         """

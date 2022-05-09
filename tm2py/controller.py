@@ -6,25 +6,25 @@ files in .toml format (by convention a scenario.toml and a model.toml)
   Typical usage example:
   from tm2py.controller import RunController
   controller = RunController(
-    [r"example_union\\scenario.toml", r"example_union\\model.toml"])
+    ["scenario.toml", "model.toml"])
   controller.run()
 
   Or from the command-line:
-  python <path>\\tm2py\\tm2py\\controller.py –s scenario.toml –m model.toml
+  `python <path>/tm2py/tm2py/controller.py –s scenario.toml –m model.toml`
 
 """
 
 import itertools
 import os
-from typing import Union, List
+from typing import List, Union
 
+from tm2py.components.component import Component
+from tm2py.components.network.highway.highway_assign import HighwayAssignment
+from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, SkimMAZCosts
+from tm2py.components.network.highway.highway_network import PrepareNetwork
 from tm2py.config import Configuration
 from tm2py.emme.manager import EmmeManager
 from tm2py.logger import Logger
-from tm2py.components.component import Component
-from tm2py.components.network.highway.highway_assign import HighwayAssignment
-from tm2py.components.network.highway.highway_network import PrepareNetwork
-from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, SkimMAZCosts
 
 # mapping from names referenced in config.run to imported classes
 # NOTE: component names also listed as literal in tm2py.config for validation
@@ -59,10 +59,20 @@ class RunController:
     """
 
     def __init__(self, config_file: Union[List[str], str] = None, run_dir: str = None):
+        """Constructor for the RunController.
+
+        Args:
+            config_file (Union[List[str], str], optional): Configuration TOML filenames or list
+                of files. Defaults to None.
+            run_dir (str, optional): Model run base directory. Defaults to where first listed
+                config file is located.
+        """
         if not isinstance(config_file, list):
             config_file = [config_file]
         if run_dir is None:
-            run_dir = os.path.abspath(os.path.dirname(config_file[0]))
+            run_dir = os.path.dirname(config_file[0])
+        if not os.path.isabs(run_dir):
+            run_dir = os.path.abspath(run_dir)
         self._run_dir = run_dir
 
         self.config = Configuration.load_toml(config_file)
@@ -81,28 +91,28 @@ class RunController:
 
     @property
     def run_dir(self) -> str:
-        """The root run directory of the model run"""
+        """The root run directory of the model run."""
         return self._run_dir
 
     @property
     def iteration(self) -> int:
-        """Current iteration of model"""
+        """Current iteration of model."""
         return self._iteration
 
     @property
     def component(self) -> Component:
-        """Current component of model"""
+        """Current component of model."""
         return self._component
 
     @property
     def emme_manager(self) -> EmmeManager:
-        """Cached Emme Manager object"""
+        """Cached Emme Manager object."""
         if self._emme_manager is None:
             self._init_emme_manager()
         return self._emme_manager
 
     def _init_emme_manager(self):
-        """Initialize Emme manager, start Emme desktop App, and initialize Modeller"""
+        """Initialize Emme manager, start Emme desktop App, and initialize Modeller."""
         self._emme_manager = EmmeManager()
         project = self._emme_manager.project(
             os.path.join(self.run_dir, self.config.emme.project_path)
@@ -111,7 +121,7 @@ class RunController:
         self._emme_manager.modeller(project)
 
     def run(self):
-        """Main interface to run model"""
+        """Main interface to run model."""
         self._iteration = None
         self.validate_inputs()
         for iteration, name, component in self._queued_components:
@@ -123,7 +133,7 @@ class RunController:
             self.completed_components.append((iteration, name, component))
 
     def _queue_components(self):
-        """Add components per iteration to queue according to input Config"""
+        """Add components per iteration to queue according to input Config."""
         self._queued_components = []
         if self.config.run.start_iteration == 0:
             self._queued_components += [
@@ -158,7 +168,7 @@ class RunController:
             self._queued_components = self._queued_components[start_index:]
 
     def validate_inputs(self):
-        """Validate input state prior to run"""
+        """Validate input state prior to run."""
         already_validated_components = set()
         for _, name, component in self._queued_components:
             if name not in already_validated_components:
