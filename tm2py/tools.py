@@ -60,14 +60,17 @@ def _urlopen(url):
     request = urllib.request.Request(url)
     # Handle Redirects using solution shown by user: metatoaster on StackOverflow
     # https://stackoverflow.com/questions/62384020/python-3-7-urllib-request-doesnt-follow-redirect-url
+    print(f"Opening URL: {url}")
     try:
         with urllib.request.urlopen(request) as response:
+            print(f"No redirects found.")
             yield response
     except urllib.error.HTTPError as error:
-        print("redirect error")
+        print("Redirect Error")
         if error.status != 307:
             raise ValueError(f"HTTP Error {error.status}") from error
         redirected_url = urllib.parse.urljoin(url, error.headers["Location"])
+        print(f"Redirected to: {redirected_url}")
         with urllib.request.urlopen(redirected_url) as response:
             yield response
 
@@ -80,6 +83,8 @@ def _download(url: str, target_destination: str):
         target_destination (str): destination file path to save download
     """
     with _urlopen(url) as response:
+        total_length = int(response.headers.get("content-length"))
+        print(f"Total Download Size: {total_length}")
         with open(target_destination, "wb") as out_file:
             out_file.write(response.read())
 
