@@ -1,30 +1,32 @@
-geojson
-geographiclib
-geopandas > 0.8.0
 fiona
 folium
 fontawesome_markdown
+geographiclib
+geojson
+geopandas > 0.8.0
 jsonschema
 jupyter
 lark-parser
+mike
 mkdocs
 mkdocs-autorefs
 mkdocs-awesome-pages-plugin
+mkdocs-jupyter
 mkdocs-macros-plugin
 mkdocs-material
 mkdocstrings
-pydantic
-typing_extensions
-openmatrix
-osmnx >= 0.12
 notebook
 numpy
+openmatrix
+osmnx >= 0.12
 pandas > 1.0
 pydantic
-pyproj > 2.2.0 
-pyyaml
+pydantic
+pyproj > 2.2.0
 pywin32==224 ; sys_platform == 'win32'
+pyyaml
 rtree
 shapely
 tables
 toml
+typing_extensions

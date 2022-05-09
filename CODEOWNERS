@@ -1,7 +1,7 @@
 # Helps auto-assign code reviews for pull requests
 # The last match will 'win'
 
-# Global owners 
+# Global owners
 *                               @lmz    @FlaviaTsang
 
 # DevOps / Quality Assurance
@@ -11,24 +11,24 @@ pre-commit-config.yaml          @e-lo    @lmz
 .markdownlint.yaml              @e-lo    @lmz
 
 # Documentation Setup
-/docs/                         @e-lo    @lmz  
+/docs/                         @e-lo    @lmz
 mkdocs.yml                     @e-lo    @lmz
 
 # Documentation Content
 *.md                            @lmz     @FlaviaTsang
 
 # Tests should be reviewed by dev team
-pytest.ini                      @e-lo   @inrokevin  @lmz 
-/tests/                         @e-lo   @inrokevin  @lmz 
+pytest.ini                      @e-lo   @inrokevin  @lmz
+/tests/                         @e-lo   @inrokevin  @lmz
 
 # EMME related things should be reviewed by INRO
-/tm2py/emme/                    @inrokevin 
+/tm2py/emme/                    @inrokevin
 
 # Packaging
-setup.py                         @e-lo          @lmz 
-*requirements*.txt               @inrokevin     @lmz    
-manifest.in                      @e-lo          @lmz 
-environment.yml                  @inrokevin     @lmz 
+setup.py                         @e-lo          @lmz
+*requirements*.txt               @inrokevin     @lmz
+manifest.in                      @e-lo          @lmz
+environment.yml                  @inrokevin     @lmz
 Dockerfile                       @inrokevin     @lmz
 /bin/                            @inrokevin     @lmz         @e-lo
 

@@ -1,14 +1,13 @@
-"""Config implementation and schema.
-"""
+"""Config implementation and schema."""
 # pylint: disable=too-many-instance-attributes
 
 from abc import ABC
-from typing import List, Tuple, Union, Optional
-from typing_extensions import Literal
+from typing import List, Optional, Tuple, Union
 
+import toml
 from pydantic import Field, validator
 from pydantic.dataclasses import dataclass
-import toml
+from typing_extensions import Literal
 
 
 class ConfigItem(ABC):
@@ -22,10 +21,11 @@ class ConfigItem(ABC):
     """
 
     def __getitem__(self, key):
+        """Get item for config. D[key] -> D[key] if key in D, else raise KeyError."""
         return getattr(self, key)
 
     def items(self):
-        """D.items() -> a set-like object providing a view on D's items"""
+        """The sub-config objects in config."""
         return self.__dict__.items()
 
     def get(self, key, default=None):
@@ -35,7 +35,7 @@ class ConfigItem(ABC):
 
 @dataclass(frozen=True)
 class ScenarioConfig(ConfigItem):
-    """Scenario related parameters
+    """Scenario related parameters.
 
     Properties:
         verify: optional, default False if specified as True components will run
@@ -70,7 +70,7 @@ EmptyString = Literal[""]
 
 @dataclass(frozen=True)
 class RunConfig(ConfigItem):
-    """Model run parameters
+    """Model run parameters.
 
     Note that the components will be executed in the order listed.
 
@@ -92,10 +92,9 @@ class RunConfig(ConfigItem):
     end_iteration: int = Field(gt=0)
     start_component: Optional[Union[ComponentNames, EmptyString]] = Field(default="")
 
-    @classmethod
     @validator("end_iteration")
-    def end_iteration_gt_start(cls, value, values):
-        """Validate end_iteration greater than start_iteration"""
+    def end_iteration_gt_start(value, values):
+        """Validate end_iteration greater than start_iteration."""
         if "start_iteration" in values:
             assert (
                 value > values["start_iteration"]
@@ -167,7 +166,7 @@ class LoggingConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class TimePeriodConfig(ConfigItem):
-    """Time time period entry
+    """Time time period entry.
 
     Properties:
         name: name of the time period, up to four characters
@@ -186,7 +185,7 @@ class TimePeriodConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class HouseholdConfig(ConfigItem):
-    """Household (residents) model parameters"""
+    """Household (residents) model parameters."""
 
     highway_demand_file: str
     transit_demand_file: str
@@ -194,7 +193,7 @@ class HouseholdConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class AirPassengerDemandAggregationConfig(ConfigItem):
-    """Air passenger demand aggregation input parameters"""
+    """Air passenger demand aggregation input parameters."""
 
     result_class_name: str
     src_group_name: str
@@ -203,7 +202,7 @@ class AirPassengerDemandAggregationConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class AirPassengerConfig(ConfigItem):
-    """Air passenger model parameters"""
+    """Air passenger model parameters."""
 
     highway_demand_file: str
     input_demand_folder: str
@@ -214,7 +213,7 @@ class AirPassengerConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class InternalExternalConfig(ConfigItem):
-    """Internal <-> External model parameters"""
+    """Internal <-> External model parameters."""
 
     highway_demand_file: str
     input_demand_file: str
@@ -228,7 +227,7 @@ class InternalExternalConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class TruckConfig(ConfigItem):
-    """Truck model parameters"""
+    """Truck model parameters."""
 
     highway_demand_file: str
     k_factors_file: str
@@ -242,7 +241,7 @@ class TruckConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class ActiveModeShortestPathSkimConfig(ConfigItem):
-    """Active mode skim entry"""
+    """Active mode skim entry."""
 
     mode: str
     roots: str
@@ -253,7 +252,7 @@ class ActiveModeShortestPathSkimConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class ActiveModesConfig(ConfigItem):
-    """Active Mode skim parameters"""
+    """Active Mode skim parameters."""
 
     emme_scenario_id: int
     shortest_path_skims: Tuple[ActiveModeShortestPathSkimConfig, ...]
@@ -261,7 +260,7 @@ class ActiveModesConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class HighwayCapClassConfig(ConfigItem):
-    """Highway link capacity and speed ('capclass') index entry
+    """Highway link capacity and speed ('capclass') index entry.
 
     Properties:
         capclass: cross index for link @capclass lookup
@@ -408,10 +407,9 @@ class HighwayTollsConfig(ConfigItem):
     src_vehicle_group_names: Tuple[str, ...] = Field()
     dst_vehicle_group_names: Tuple[str, ...] = Field()
 
-    @classmethod
     @validator("dst_vehicle_group_names", always=True)
-    def dst_vehicle_group_names_list_length(cls, value, values):
-        """Validate dst_vehicle_group_names has same length as src_vehicle_group_names"""
+    def dst_vehicle_group_names_length(value, values):
+        """Validate dst_vehicle_group_names has same length as src_vehicle_group_names."""
         if "src_vehicle_group_names" in values:
             assert len(value) == len(
                 values["src_vehicle_group_names"]
@@ -441,7 +439,7 @@ COUNTY_NAMES = Literal[
 
 @dataclass(frozen=True)
 class DemandCountyGroupConfig(ConfigItem):
-    """Grouping of counties for assignment and demand files
+    """Grouping of counties for assignment and demand files.
 
     Properties:
         number: id number for this group, must be unique
@@ -454,7 +452,7 @@ class DemandCountyGroupConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class HighwayMazToMazConfig(ConfigItem):
-    """Highway MAZ to MAZ shortest path assignment and skim parameters
+    """Highway MAZ to MAZ shortest path assignment and skim parameters.
 
     Properties:
         mode_code: single character mode, used to generate link.modes to
@@ -489,10 +487,9 @@ class HighwayMazToMazConfig(ConfigItem):
     skim_period: str = Field()
     output_skim_file: str = Field()
 
-    @classmethod
     @validator("demand_county_groups")
-    def unique_group_numbers(cls, value):
-        """Validate list of demand_county_groups has unique .number values"""
+    def unique_group_numbers(value):
+        """Validate list of demand_county_groups has unique .number values."""
         group_ids = [group.number for group in value]
         assert len(group_ids) == len(set(group_ids)), "-> number value must be unique"
         return value
@@ -500,7 +497,7 @@ class HighwayMazToMazConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class HighwayConfig(ConfigItem):
-    """Highway assignment and skims parameters
+    """Highway assignment and skims parameters.
 
     Properties:
         generic_highway_mode_code: single character unique mode ID for entire
@@ -530,28 +527,25 @@ class HighwayConfig(ConfigItem):
     classes: Tuple[HighwayClassConfig, ...] = Field()
     capclass_lookup: Tuple[HighwayCapClassConfig, ...] = Field()
 
-    @classmethod
     @validator("capclass_lookup")
-    def unique_capclass_numbers(cls, value):
-        """Validate list of capclass_lookup has unique .capclass values"""
+    def unique_capclass_numbers(value):
+        """Validate list of capclass_lookup has unique .capclass values."""
         capclass_ids = [i.capclass for i in value]
         error_msg = "-> capclass value must be unique in list"
         assert len(capclass_ids) == len(set(capclass_ids)), error_msg
         return value
 
-    @classmethod
     @validator("classes", pre=True)
-    def unique_class_names(cls, value):
-        """Validate list of classes has unique .name values"""
+    def unique_class_names(value):
+        """Validate list of classes has unique .name values."""
         class_names = [highway_class["name"] for highway_class in value]
         error_msg = "-> name value must be unique in list"
         assert len(class_names) == len(set(class_names)), error_msg
         return value
 
-    @classmethod
     @validator("classes")
-    def validate_class_mode_excluded_links(cls, value, values):
-        """Validate list of classes has unique .mode_code or .excluded_links match"""
+    def validate_class_mode_excluded_links(value, values):
+        """Validate list of classes has unique .mode_code or .excluded_links match."""
         # validate if any mode IDs are used twice, that they have the same excluded links sets
         mode_excluded_links = {values["generic_highway_mode_code"]: set([])}
         for i, highway_class in enumerate(value):
@@ -572,10 +566,9 @@ class HighwayConfig(ConfigItem):
             mode_excluded_links[highway_class.mode_code] = highway_class.excluded_links
         return value
 
-    @classmethod
     @validator("classes")
-    def validate_class_keyword_lists(cls, value, values):
-        """Validate classes .skims, .toll, and .excluded_links values"""
+    def validate_class_keyword_lists(value, values):
+        """Validate classes .skims, .toll, and .excluded_links values."""
         if "tolls" not in values:
             return value
         avail_skims = ["time", "dist", "hovdist", "tolldist", "freeflowtime"]
@@ -610,7 +603,7 @@ class HighwayConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class TransitModeConfig(ConfigItem):
-    """Transit mode definition (see also mode in the Emme API)"""
+    """Transit mode definition (see also mode in the Emme API)."""
 
     type: Literal["WALK", "ACCESS", "EGRESS", "LOCAL", "PREMIUM"]
     assign_type: Literal["TRANSIT", "AUX_TRANSIT"]
@@ -619,18 +612,16 @@ class TransitModeConfig(ConfigItem):
     in_vehicle_perception_factor: Optional[float] = Field(default=None, ge=0)
     speed_miles_per_hour: Optional[float] = Field(default=None, gt=0)
 
-    @classmethod
     @validator("in_vehicle_perception_factor", always=True)
-    def in_vehicle_perception_factor_valid(cls, value, values):
-        """Validate in_vehicle_perception_factor exists if assign_type is TRANSIT"""
+    def in_vehicle_perception_factor_valid(value, values):
+        """Validate in_vehicle_perception_factor exists if assign_type is TRANSIT."""
         if "assign_type" in values and values["assign_type"] == "TRANSIT":
             assert value is not None, "must be specified when assign_type==TRANSIT"
         return value
 
-    @classmethod
     @validator("speed_miles_per_hour", always=True)
-    def speed_miles_per_hour_valid(cls, value, values):
-        """Validate speed_miles_per_hour exists if assign_type is AUX_TRANSIT"""
+    def speed_miles_per_hour_valid(value, values):
+        """Validate speed_miles_per_hour exists if assign_type is AUX_TRANSIT."""
         if "assign_type" in values and values["assign_type"] == "AUX_TRANSIT":
             assert value is not None, "must be specified when assign_type==AUX_TRANSIT"
         return value
@@ -638,7 +629,7 @@ class TransitModeConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class TransitVehicleConfig(ConfigItem):
-    """Transit vehicle definition (see also transit vehicle in the Emme API)"""
+    """Transit vehicle definition (see also transit vehicle in the Emme API)."""
 
     vehicle_id: int
     mode: str
@@ -650,7 +641,7 @@ class TransitVehicleConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class TransitConfig(ConfigItem):
-    """Transit assignment parameters"""
+    """Transit assignment parameters."""
 
     modes: Tuple[TransitModeConfig, ...]
     vehicles: Tuple[TransitVehicleConfig, ...]
@@ -702,7 +693,7 @@ class EmmeConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class Configuration(ConfigItem):
-    """Configuration: root of the model configuration"""
+    """Configuration: root of the model configuration."""
 
     scenario: ScenarioConfig
     run: RunConfig
@@ -719,7 +710,7 @@ class Configuration(ConfigItem):
 
     @classmethod
     def load_toml(cls, path: Union[str, List[str]]):
-        """Load configuration from .toml files(s)
+        """Load configuration from .toml files(s).
 
         Normally the config is split into a scenario_config.toml file and a
         model_config.toml file.
@@ -737,10 +728,9 @@ class Configuration(ConfigItem):
             _merge_dicts(data, _load_toml(path_item))
         return cls(**data)
 
-    @classmethod
     @validator("highway")
-    def maz_skim_period_exists(cls, value, values):
-        """Validate highway.maz_to_maz.skim_period refers to a valid period"""
+    def maz_skim_period_exists(value, values):
+        """Validate highway.maz_to_maz.skim_period refers to a valid period."""
         if "time_periods" in values:
             time_period_names = set(time.name for time in values["time_periods"])
             assert (
@@ -750,7 +740,7 @@ class Configuration(ConfigItem):
 
 
 def _load_toml(path: str) -> dict:
-    """Load config from toml file at path"""
+    """Load config from toml file at path."""
     with open(path, "r", encoding="utf-8") as toml_file:
         data = toml.load(toml_file)
     return data
@@ -760,6 +750,7 @@ def _merge_dicts(right, left, path=None):
     """Merges the contents of nested dict left into nested dict right.
 
     Raises errors in case of namespace conflicts.
+
     Args:
         right: dict, modified in place
         left: dict to be merged into right

@@ -1,5 +1,9 @@
 # Travel Model 2 Python Package
 
+A python package to run the San Francisco Bay Area's Travel Model.
+
+**Owner:** Metropolitan Transportation Commission (MTC)
+
 [![Tests](https://github.com/BayAreaMetro/tm2py/actions/workflows/test.yml/badge.svg?branch=develop)](https://github.com/BayAreaMetro/tm2py/actions/workflows/test.yml)
 
 [![Documentation](https://github.com/BayAreaMetro/tm2py/actions/workflows/docs.yml/badge.svg?branch=develop)](https://github.com/BayAreaMetro/tm2py/actions/workflows/docs.yml)
@@ -8,23 +12,15 @@
 
 ## Installation
 
-If you are managing multiple python versions, we suggest using [`virtualenv`](https://virtualenv.pypa.io/en/latest/) or [`conda`](https://conda.io/en/latest/) virtual environments.
+Recommended install in a virtual environment.
 
-The following instructions create and activate a conda environment (recommended) in which you can install:
-
-```bash
-conda env create -f environment.yml
-conda activate tm2py
-```
-
-Basic installation instructions are as follows:
+Stable (to come - use bleeding edge for now):
 
 ```bash
 pip install tm2py
 ```
 
-#### Bleeding Edge
-If you want to install a more up-to-date or development version, you can do so by installing it from the `develop` branch as follows:
+Bleeding edge:
 
 ```bash
 conda env create -f environment.yml
@@ -32,42 +28,47 @@ conda activate tm2py
 pip install git+https://github.com/bayareametro/tm2py@develop
 ```
 
-#### Developers (from clone)
-If you are going to be working on Lasso locally, you might want to clone it to your local machine and install it from the clone.  The -e will install it in [editable mode](https://pip.pypa.io/en/stable/reference/pip_install/?highlight=editable#editable-installs).
+See [starting out](http://bayareametro.github.com/tm2py) section of documentation for more details.
 
+### Example Data
+
+This respository doesn't come with example data due to its size. However, it does provide helper functions to access it from an online bucket:
 
 ```bash
-conda env create -f environment.yml
-conda activate tm2py
-git clone https://github.com/bayareametro/tm2py
-cd tm2py
-pip install -e .
+get_test_data location/for/test/data
 ```
 
-Note that you'll also need to install Emme's python packages into this conda environment.
-Following these instructions from an INRO community forum post: In the Emme Desktop application, open Tools->Application Options->Modeller, change your Python path as desired and click the "Install Modeller Package" button.
+Alternatively, you can access it from [example_union_test_highway.zip](https://mtcdrive.box.com/s/3entr016e9teq2wt46x1os3fjqylfoge)
 
-If this is successful, the following packages will be visible in your environment when you type `pip list`:
-* inro-dynameq
-* inro-emme
-* inro-emme-agent
-* inro-emme-engine
-* inro-modeller
+See [starting out](http://bayareametro.github.com/tm2py) section of documentation for more details.
 
-Note that doing the emme package install will also install the package *pywin32*; if *pywin32* gets installed by other means (like
-conda or pip), then I got DLL load errors when tryring to import the emme packages, so I recommend uninstalling *pywin32* before
-installing the emme packages.
+### Usage
 
-## Basic Usage
+#### Python
 
-Copy and unzip [example_union_test_highway.zip](https://mtcdrive.box.com/s/3entr016e9teq2wt46x1os3fjqylfoge) to a local
-drive and from within that directory run:
+```python
+import tm2py
+controller = RunController(
+    ["scenario_config.toml", "model_config.toml"],
+    run_dir="UnionCity",
+)
+controller.run()
+```
+
+- `run_dir` specifies specific run directory. Otherwise will use location of first `config.toml` file.
+
+#### Terminal
 
 ```sh
-get_test_data <location>
-tm2py -s scenario.toml -m model.toml
+<path to tm2py>\bin\tm2py -s examples\scenario_config.toml -m examples\model.toml [-r <location>]
 ```
+
+- `-s scenario.toml` file location with scenario-specific parameters
+- `-m model.toml` file location with general model parameters
+- `-r run_dir` specifies specific run directory. Otherwise will use location of first `config.toml` file.
+
+Additional functionality for various use cases can be found in [Examples](examples).
 
 ## Contributing
 
-Details can be found in [CONTRIBUTING]
+Details about contributing can be found on our documentation website: [](https://bayareametro.github.io/tm2py/contributing)

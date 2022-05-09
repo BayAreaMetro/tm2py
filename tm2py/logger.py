@@ -583,6 +583,15 @@ class LogStartEnd:
         self.level = level
 
     def __call__(self, func):
+        """Ability to call logger.
+
+        Args:
+            func (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+
         @functools.wraps(func)
         def wrapper(obj, *args, **kwargs):
             text = self.text or obj.__class__.__name__ + " " + func.__name__

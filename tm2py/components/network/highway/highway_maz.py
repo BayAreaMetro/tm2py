@@ -28,16 +28,14 @@ used as background traffic in the equilibrium Highway assignment.
 from __future__ import annotations
 
 import array as _array
+import os
 from collections import defaultdict as _defaultdict
 from contextlib import contextmanager as _context
 from math import sqrt as _sqrt
-import os
-from typing import Dict, List, Union, BinaryIO, TYPE_CHECKING
+from typing import TYPE_CHECKING, BinaryIO, Dict, List, Union
 
 import numpy as np
 import pandas as pd
-
-# from tables import NoSuchNodeError
 
 from tm2py.components.component import Component
 from tm2py.emme.manager import EmmeNode
@@ -45,6 +43,9 @@ from tm2py.emme.matrix import OMXManager
 from tm2py.emme.network import NetworkCalculator
 from tm2py.logger import LogStartEnd
 from tm2py.tools import parse_num_processors
+
+# from tables import NoSuchNodeError
+
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
@@ -283,8 +284,8 @@ class AssignMAZSPDemand(Component):
     def _group_demand(
         self,
     ) -> List[Dict[str, Union[float, List[Dict[str, Union[float, EmmeNode]]]]]]:
-        """Process the demand loaded from files and create groups based on the
-        origin to the furthest destination with demand.
+        """Process the demand loaded from files \
+            and create groups based on the origin to the furthest destination with demand.
 
         Returns:
             List of dictionaries, containing the demand in the format
@@ -608,10 +609,11 @@ class AssignMAZSPDemand(Component):
 
 
 class SkimMAZCosts(Component):
-    """MAZ-to-MAZ shortest-path skim of time, distance and toll"""
+    """MAZ-to-MAZ shortest-path skim of time, distance and toll."""
 
     def __init__(self, controller: RunController):
-        """MAZ-to-MAZ shortest-path skim of time, distance and toll
+        """MAZ-to-MAZ shortest-path skim of time, distance and toll.
+
         Args:
             controller: parent RunController object
         """
@@ -692,7 +694,7 @@ class SkimMAZCosts(Component):
 
     @LogStartEnd(level="DEBUG")
     def _prepare_network(self):
-        """Calculates the link cost in @link_cost and loads the network to self._network"""
+        """Calculates the link cost in @link_cost and loads the network to self._network."""
         net_calc = NetworkCalculator(self._scenario)
         if self._scenario.has_traffic_results:
             time_attr = "(@free_flow_time.max.timau)"
