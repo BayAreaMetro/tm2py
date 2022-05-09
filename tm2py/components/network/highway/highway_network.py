@@ -57,7 +57,7 @@ from tm2py.logger import LogStartEnd
 class PrepareNetwork(Component):
     """Highway network preparation."""
 
-    @LogStartEnd("prepare network attributes and modes")
+    @LogStartEnd("Prepare network attributes and modes")
     def run(self):
         """Run network preparation step."""
         for time in self.time_period_names():
@@ -161,9 +161,9 @@ class PrepareNetwork(Component):
                 )
                 data_row = toll_index.get(index)
                 if data_row is None:
-                    self.logger.log(
+                    self.logger.warn(
                         f"set tolls failed index lookup {index}, link {link.id}",
-                        level="DEBUG",
+                        indent=True,
                     )
                     continue  # tolls will remain at zero
                 # if index is below tollbooth start index then this is a bridge
@@ -184,6 +184,7 @@ class PrepareNetwork(Component):
     def _get_toll_indices(self) -> Dict[int, Dict[str, str]]:
         """Get the mapping of toll lookup table from the toll reference file."""
         toll_file_path = self.get_abs_path(self.config.highway.tolls.file_path)
+        self.logger.debug(f"toll_file_path {toll_file_path}", indent=True)
         tolls = {}
         with open(toll_file_path, "r", encoding="UTF8") as toll_file:
             header = [h.strip() for h in next(toll_file).split(",")]

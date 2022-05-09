@@ -72,13 +72,16 @@ EmptyString = Literal[""]
 class RunConfig(ConfigItem):
     """Model run parameters.
 
+    Note that the components will be executed in the order listed.
+
     Properties:
         start_iteration: start iteration number, 0 to include initial_components
         end_iteration: final iteration number
         start_component: name of component to start with, will skip components
             list prior to this component
-        initial_components: list of components to run as initial (0) iteration
-        global_iteration_components: list of component to run at every iteration, in order
+        initial_components: list of components to run as initial (0) iteration, in order
+        global_iteration_components: list of component to run at every subsequent
+            iteration (max(1, start_iteration) to end_iteration), in order.
         final_components: list of components to run after final iteration, in order
     """
 
@@ -98,12 +101,87 @@ class RunConfig(ConfigItem):
             ), "must be greater than start_iteration"
         return value
 
+    @validator("start_component")
+    def start_component_used(value, values):
+        """Validate start_component is listed in *_components."""
+        if "start_component" not in values:
+            return value
+        if not value:
+            return value
+
+        if "start_iteration" in values:
+            if values["start_iteration"] == 0:
+                if "initial_components" in values:
+                    assert (
+                        value in values["initial_components"]
+                    ), "must be one of the components listed in initial_components"
+            elif "global_iteration_components" in values:
+                assert (
+                    value in values["global_iteration_components"]
+                ), "must be one of the components listed in global_iteration_components"
+        return value
+
+
+LogLevel = Literal[
+    "TRACE", "DEBUG", "DETAIL", "INFO", "STATUS", "WARN", "ERROR", "FATAL"
+]
+
+
+@dataclass(frozen=True)
+class LoggingConfig(ConfigItem):
+    """Logging parameters. TODO.
+
+    Properties:
+        display_level: filter level for messages to show in console, default
+            is STATUS
+        run_file_path: relative path to high-level log file for the model run,
+            default is log_run.txt
+        run_file_level: filter level for messages recorded in the run log,
+            default is INFO
+        log_file_path: relative path to general log file with more detail
+            than the run_file, default is log.txt
+        log_file_level: optional, filter level for messages recorded in the
+            standard log, default is DETAIL
+        log_on_error_file_path: relative path to use for fallback log message cache
+            on error, default is log_on_error.txt
+        notify_slack: if true notify_slack messages will be sent, default is False
+        use_emme_logbook: if True log messages recorded in the standard log file will
+            also be recorded in the Emme logbook, default is True
+        iter_component_level: tuple of tuples of iteration, component name, log level.
+            Used to override log levels (log_file_level) for debugging and recording
+            more detail in the log_file_path.
+            Example: [ [2, "highway", "TRACE"] ] to record all messages
+            during the highway component run at iteration 2.
+    """
+
+    display_level: Optional[LogLevel] = Field(default="STATUS")
+    run_file_path: Optional[str] = Field(default="log_run.txt")
+    run_file_level: Optional[LogLevel] = Field(default="INFO")
+    log_file_path: Optional[str] = Field(default="log.txt")
+    log_file_level: Optional[LogLevel] = Field(default="DETAIL")
+    log_on_error_file_path: Optional[str] = Field(default="log_on_error.txt")
+
+    notify_slack: Optional[bool] = Field(default=False)
+    use_emme_logbook: Optional[bool] = Field(default=True)
+    iter_component_level: Optional[
+        Tuple[Tuple[int, ComponentNames, LogLevel], ...]
+    ] = Field(default=None)
+
 
 @dataclass(frozen=True)
 class TimePeriodConfig(ConfigItem):
-    """Time time period entry."""
+    """Time time period entry.
 
-    name: str
+    Properties:
+        name: name of the time period, up to four characters
+        length_hours: length of the time period in hours
+        highway_capacity_factor: factor to use to multiple the per-hour
+            capacites in the highway network
+        emme_scenario_id: scenario ID to use for Emme per-period
+            assignment (highway and transit) scenarios
+    """
+
+    name: str = Field(max_length=4)
     length_hours: float = Field(gt=0)
     highway_capacity_factor: float = Field(gt=0)
     emme_scenario_id: int = Field(ge=1)
@@ -292,7 +370,7 @@ class HighwayClassConfig(ConfigItem):
     """
 
     name: str = Field(min_length=1, max_length=10)
-    description: str = Field(default="")
+    description: Optional[str] = Field(default="")
     mode_code: str = Field(min_length=1, max_length=1)
     value_of_time: float = Field(gt=0)
     operating_cost_per_mile: float = Field(ge=0)
@@ -321,7 +399,8 @@ class HighwayTollsConfig(ConfigItem):
         dst_vehicle_group_names: list of names used in destination network
             for the corresponding vehicle group. Length of list must be the same
             as src_vehicle_group_names. Used for toll related attributes and
-            resulting skim matrices. Cross-referenced in list of highway.classes[]:
+            resulting skim matrices. Cross-referenced in list of highway.classes[],
+            valid keywords for:
                 excluded_links: "is_toll_{vehicle}"
                 tolls: "@bridgetoll_{vehicle}", "@valuetoll_{vehicle}"
                 skims: "bridgetoll_{vehicle}", "valuetoll_{vehicle}"
@@ -338,7 +417,10 @@ class HighwayTollsConfig(ConfigItem):
         if "src_vehicle_group_names" in values:
             assert len(value) == len(
                 values["src_vehicle_group_names"]
-            ), "must be same length as src_vehicle_group_names"
+            ), "dst_vehicle_group_names must be same length as src_vehicle_group_names"
+            assert all(
+                [len(v) <= 4 for v in value]
+            ), "dst_vehicle_group_names must be 4 characters or less"
         return value
 
 
@@ -624,6 +706,7 @@ class Configuration(ConfigItem):
     highway: HighwayConfig
     transit: TransitConfig
     emme: EmmeConfig
+    logging: Optional[LoggingConfig] = Field(default_factory=LoggingConfig)
 
     @classmethod
     def load_toml(cls, path: Union[str, List[str]]):
