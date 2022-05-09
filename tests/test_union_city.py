@@ -96,7 +96,7 @@ def union_city(examples_dir, root_dir):
 
 @pytest.mark.menow
 def test_validate_input_fail(examples_dir, inro_context, temp_dir):
-
+    """Test that validate_input fails when required inputs are missing."""
     import toml
 
     from tm2py.controller import RunController
@@ -114,7 +114,7 @@ def test_validate_input_fail(examples_dir, inro_context, temp_dir):
     union_city_root = os.path.join(examples_dir, "UnionCity")
 
     with pytest.raises(Exception) as e_info:
-        controller = RunController(
+        RunController(
             [
                 os.path.join(examples_dir, r"scenario_config.toml"),
                 bad_model_config_path,

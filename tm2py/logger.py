@@ -1,4 +1,4 @@
-"""Logging module
+"""Logging module.
 
 Note the general definition of logging levels as used in tm2py:
 
@@ -22,18 +22,19 @@ FATAL: severe problem requiring operation to stop immediately.
 """
 
 from __future__ import annotations
+
+import functools
+import os
+import socket
+import traceback as _traceback
 from abc import abstractmethod
 from contextlib import contextmanager as _context
 from datetime import datetime
-import functools
-import os
 from pprint import pformat
-import socket
-import traceback as _traceback
 from typing import TYPE_CHECKING, Union
-from typing_extensions import Literal, get_args
 
 import requests
+from typing_extensions import Literal, get_args
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
@@ -94,11 +95,21 @@ class Logger:
     _instance = None
 
     def __new__(cls, controller: RunController):
+        """Logger __new__ method override. TODO.
+
+        Args:
+            controller (RunController): TODO.
+        """
         # pylint: disable=unused-argument
         cls._instance = super(Logger, cls).__new__(cls)
         return cls._instance
 
     def __init__(self, controller: RunController):
+        """Constructor for Logger object.
+
+        Args:
+            controller (RunController): Associated RunController instance.
+        """
         self.controller = controller
         log_config = controller.config.logging
         iter_component_level = log_config.iter_component_level or []
@@ -131,11 +142,11 @@ class Logger:
 
     @classmethod
     def get_logger(cls):
-        """Return the last initialized logger object"""
+        """Return the last initialized logger object."""
         return cls._instance
 
     def notify_slack(self, text: str):
-        """Send message to slack if enabled by config
+        """Send message to slack if enabled by config.
 
         Args:
             text (str): text to send to slack
@@ -150,7 +161,7 @@ class Logger:
         indent: bool = False,
         time: bool = False,
     ):
-        """Log text to file and display depending upon log level and config
+        """Log text to file and display depending upon log level and config.
 
         Note that log will not write to file until Logger is opened with a context.
 
@@ -167,7 +178,7 @@ class Logger:
             self.controller.emme_manager.logbook_write(text)
 
     def log_time(self, text: str, level: LogLevel = "INFO", indent: bool = True):
-        """Log message with timestamp
+        """Log message with timestamp.
 
         Args:
             text (str): text to log
@@ -177,7 +188,7 @@ class Logger:
         self.log(text, level, indent, time=True)
 
     def trace(self, text: str, indent: bool = False, time: bool = False):
-        """Log text with level=TRACE
+        """Log text with level=TRACE.
 
         Args:
             text (str): text to log
@@ -187,7 +198,7 @@ class Logger:
         self.log(text, "TRACE", indent, time)
 
     def debug(self, text: str, indent: bool = False, time: bool = False):
-        """Log text with level=DEBUG
+        """Log text with level=DEBUG.
 
         Args:
             text (str): text to log
@@ -197,7 +208,7 @@ class Logger:
         self.log(text, "DEBUG", indent, time)
 
     def detail(self, text: str, indent: bool = False, time: bool = False):
-        """Log text with level=DETAIL
+        """Log text with level=DETAIL.
 
         Args:
             text (str): text to log
@@ -207,7 +218,7 @@ class Logger:
         self.log(text, "DETAIL", indent, time)
 
     def info(self, text: str, indent: bool = False, time: bool = False):
-        """Log text with level=INFO
+        """Log text with level=INFO.
 
         Args:
             text (str): text to log
@@ -217,7 +228,7 @@ class Logger:
         self.log(text, "INFO", indent, time)
 
     def status(self, text: str, indent: bool = False, time: bool = False):
-        """Log text with level=STATUS
+        """Log text with level=STATUS.
 
         Args:
             text (str): text to log
@@ -227,7 +238,7 @@ class Logger:
         self.log(text, "STATUS", indent, time)
 
     def warn(self, text: str, indent: bool = False, time: bool = False):
-        """Log text with level=WARN
+        """Log text with level=WARN.
 
         Args:
             text (str): text to log
@@ -237,7 +248,7 @@ class Logger:
         self.log(text, "WARN", indent, time)
 
     def error(self, text: str, indent: bool = False, time: bool = False):
-        """Log text with level=ERROR
+        """Log text with level=ERROR.
 
         Args:
             text (str): text to log
@@ -247,7 +258,7 @@ class Logger:
         self.log(text, "ERROR", indent, time)
 
     def fatal(self, text: str, indent: bool = False, time: bool = False):
-        """Log text with level=FATAL
+        """Log text with level=FATAL.
 
         Args:
             text (str): text to log
@@ -300,12 +311,12 @@ class Logger:
             self._log_end(text, level)
 
     def log_dict(self, mapping: dict, level: LogLevel = "DEBUG"):
-        """Format dictionary to string and log as text"""
+        """Format dictionary to string and log as text."""
         self.log(pformat(mapping, indent=1, width=120), level)
 
     @_context
     def _skip_emme_logging(self):
-        """Temporary disable Emme logging (if enabled) and restore on exit
+        """Temporary disable Emme logging (if enabled) and restore on exit.
 
         Intended use is with the log_start_end context and LogStartEnd decorator
         to allow use of the Emme context without double logging of the
@@ -316,16 +327,30 @@ class Logger:
         self._use_emme_logbook = use_emme
 
     def __enter__(self):
+        """Enter context.
+
+        Returns:
+            _type_: TODO
+        """
         for log_formatter in self._log_formatters:
             if hasattr(log_formatter, "open"):
                 log_formatter.open()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context exit override.
+
+        Args:
+            exc_type (_type_): TODO
+            exc_val (_type_): TODO
+            exc_tb (_type_): TODO
+        """
         if exc_type is not None:
             self.log_time("Error during model run", level="ERROR")
             self.log(
-                "".join(_traceback.format_exception(exc_type, exc_val, exc_tb, chain=False))
+                "".join(
+                    _traceback.format_exception(exc_type, exc_val, exc_tb, chain=False)
+                )
             )
             self._log_cache.write_cache()
             self.notify_slack(f"Error during model run in {self.controller.run_dir}.")
@@ -374,21 +399,26 @@ class LogFormatter:
     """
 
     def __init__(self, level: int):
+        """Constructor for LogFormatter.
+
+        Args:
+            level (int): log filter level (as an int)
+        """
         self._level = level
         self.indent = 0
 
     @property
     def level(self):
-        """The current filter level for the LogFormatter"""
+        """The current filter level for the LogFormatter."""
         return self._level
 
     def increase_indent(self, level: int):
-        """Increase current indent if the log level is filtered in"""
+        """Increase current indent if the log level is filtered in."""
         if level >= self.level:
             self.indent += 1
 
     def decrease_indent(self, level: int):
-        """Decrease current indent if the log level is filtered in"""
+        """Decrease current indent if the log level is filtered in."""
         if level >= self.level:
             self.indent -= 1
 
@@ -415,7 +445,7 @@ class LogFormatter:
         indent: bool,
         timestamp: Union[str, None],
     ):
-        """Format text for logging
+        """Format text for logging.
 
         Args:
             text (str): text to format
@@ -436,24 +466,28 @@ class LogFormatter:
 class LogFile(LogFormatter):
     """Format and write log text to file.
 
-    Args:
+    Properties:
         - level: the log level as an int
         - file_path: the absolute file path to write to
     """
 
     def __init__(self, level: int, file_path: str):
+        """Constructor for LogFile object.
+
+        Args:
+            level (int): the log level as an int.
+            file_path (str): the absolute file path to write to.
+        """
         super().__init__(level)
         self.file_path = file_path
         self.log_file = None
 
     def open(self):
-        """Open the log file for writing"""
+        """Open the log file for writing."""
         self.log_file = open(self.file_path, "w", encoding="utf8")
 
-    def log(
-        self, text: str, level: int, indent: bool, timestamp: Union[str, None]
-    ):
-        """Log text to file and display depending upon log level and config
+    def log(self, text: str, level: int, indent: bool, timestamp: Union[str, None]):
+        """Log text to file and display depending upon log level and config.
 
         Note that log will not write to file until opened with a context.
 
@@ -468,7 +502,7 @@ class LogFile(LogFormatter):
             self.log_file.write(f"{text}\n")
 
     def close(self):
-        """Close the open log file"""
+        """Close the open log file."""
         self.log_file.close()
         self.log_file = None
 
@@ -476,12 +510,22 @@ class LogFile(LogFormatter):
 class LogFileLevelOverride(LogFile):
     """Format and write log text to file.
 
-    Args:
+    Properties:
         - level: the log level as an int
         - file_path: the absolute file path to write to
+        - iter_component_level: TODO
+        - controller: TODO
     """
 
     def __init__(self, level, file_path, iter_component_level, controller):
+        """Constructor for LogFileLevelOverride object.
+
+        Args:
+            level (_type_): TODO
+            file_path (_type_): TODO
+            iter_component_level (_type_): TODO
+            controller (_type_): TODO
+        """
         super().__init__(level, file_path)
         self.iter_component_level = iter_component_level
         self.controller = controller
@@ -497,14 +541,12 @@ class LogFileLevelOverride(LogFile):
 class LogDisplay(LogFormatter):
     """Format and print log text to console / Notebook.
 
-    Args:
+    Properties:
         - level: the log level as an int
     """
 
-    def log(
-        self, text: str, level: int, indent: bool, timestamp: Union[str, None]
-    ):
-        """Format and display text on screen (print)
+    def log(self, text: str, level: int, indent: bool, timestamp: Union[str, None]):
+        """Format and display text on screen (print).
 
         Args:
             text (str): text to log
@@ -519,23 +561,26 @@ class LogDisplay(LogFormatter):
 class LogCache(LogFormatter):
     """Caches all messages for later recording in on error logfile.
 
-    Args:
+    Properties:
         - file_path: the absolute file path to write to
     """
 
     def __init__(self, file_path: str):
+        """Constructor for LogCache object.
+
+        Args:
+            file_path (str): the absolute file path to write to.
+        """
         super().__init__(level=0)
         self.file_path = file_path
         self._msg_cache = []
 
     def open(self):
-        """Initialize log file (remove)"""
+        """Initialize log file (remove)."""
         if os.path.exists(self.file_path):
             os.remove(self.file_path)
 
-    def log(
-        self, text: str, level: int, indent: bool, timestamp: Union[str, None]
-    ):
+    def log(self, text: str, level: int, indent: bool, timestamp: Union[str, None]):
         """Format and store text for later recording.
 
         Args:
@@ -547,7 +592,7 @@ class LogCache(LogFormatter):
         self._msg_cache.append((level, self._format_text(text, indent, timestamp)))
 
     def write_cache(self):
-        """Write all cached messages"""
+        """Write all cached messages."""
         _levels = dict((v, k) for k, v in levels.items())
         with open(self.file_path, "w", encoding="utf8") as file:
             for level, text in self._msg_cache:
@@ -555,7 +600,7 @@ class LogCache(LogFormatter):
         self.clear()
 
     def clear(self):
-        """Clear message cache"""
+        """Clear message cache."""
         self._msg_cache = []
 
 
@@ -573,12 +618,19 @@ class LogStartEnd:
         def run(self):
             pass
 
-    Args:
-        text (str): message text to use in the start and end record
-        level (str): logging level
+    Properties:
+        text (str): message text to use in the start and end record.
+        level (str): logging level as a string.
     """
 
     def __init__(self, text: str = None, level: str = "INFO"):
+        """Constructor for LogStartEnd object.
+
+        Args:
+            text (str, optional): message text to use in the start and end record.
+                Defaults to None.
+            level (str, optional): logging level as a string. Defaults to "INFO".
+        """
         self.text = text
         self.level = level
 
@@ -603,18 +655,26 @@ class LogStartEnd:
 
 
 class SlackNotifier:
-    """Notify slack of model run status.
+    r"""Notify slack of model run status.
 
     The slack channel can be input directly, or is configured via text file found at
-    "M:\\Software\\Slack\\TravelModel_SlackWebhook.txt" (if on MTC server)
-    "C:\\Software\\Slack\\TravelModel_SlackWebhook.txt" (if local)
+    "M:\Software\Slack\TravelModel_SlackWebhook.txt" (if on MTC server)
+    rr"C:\Software\Slack\TravelModel_SlackWebhook.txt" (if local)
 
-        Args:
-            - logger (Logger): object for logging of trace messages
-            - slack_webhook_url (str): optional, url to use for sending the message to slack
+    Properties:
+        - logger (Logger): object for logging of trace messages
+        - slack_webhook_url (str): optional, url to use for sending the message to slack
     """
 
     def __init__(self, logger: Logger, slack_webhook_url: str = None):
+        r"""Constructor for SlackNotifier object.
+
+        Args:
+            logger (Logger): logger instance.
+            slack_webhook_url (str, optional): . Defaults to None, which is replaced by either:
+                - r"M:\Software\Slack\TravelModel_SlackWebhook.txt" (if on MTC server)
+                - r"C:\Software\Slack\TravelModel_SlackWebhook.txt" (otherwise)
+        """
         self.logger = logger
         if not logger.controller.config.logging.notify_slack:
             self._slack_webhook_url = None
@@ -650,9 +710,7 @@ class SlackNotifier:
         )
 
     def post_message(self, text):
-        """
-        Posts the given message to the slack channel via the webhook
-        if slack_webhook_url is found.
+        """Posts text to the slack channel via the webhook if slack_webhook_url is found.
 
         Args:
             - text: text message to send to slack

@@ -1,12 +1,14 @@
-from datetime import datetime
+"""Test module for Logging."""
 import os
+from datetime import datetime
 
 
 def test_log():
-    """Test basic log operation outside model operation"""
+    """Test basic log operation outside model operation."""
+    import tempfile
+
     from tm2py.config import LoggingConfig
     from tm2py.logger import Logger
-    import tempfile
 
     # use a stand-in minimal Controller and Config class to operate Logger
     log_config = {
@@ -78,7 +80,8 @@ def test_log():
             text[1], "%d-%b-%Y (%H:%M:%S): Start Running a set of steps\n"
         )
         datetime.strptime(
-            text[2], "%d-%b-%Y (%H:%M:%S):   Indented displayed message with timestamp\n"
+            text[2],
+            "%d-%b-%Y (%H:%M:%S):   Indented displayed message with timestamp\n",
         )
         assert "Error during model run" in text[4]
 
@@ -105,7 +108,9 @@ def test_log():
         assert text[10].startswith("Traceback")
 
         # Check that the log_on_error is generated and has all messages
-        with open(os.path.join(temp_dir, log_config["log_on_error_file_path"]), "r") as f:
+        with open(
+            os.path.join(temp_dir, log_config["log_on_error_file_path"]), "r"
+        ) as f:
             text = []
             for line in f:
                 text.append(line)

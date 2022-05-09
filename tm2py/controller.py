@@ -16,7 +16,7 @@ files in .toml format (by convention a scenario.toml and a model.toml)
 
 import itertools
 import os
-from typing import Union, List, Tuple
+from typing import List, Tuple, Union
 
 from tm2py.components.component import Component
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
@@ -107,7 +107,6 @@ class RunController:
     @property
     def run_iterations(self) -> List[int]:
         """List of iterations for this model run."""
-
         return range(
             max(1, self.config.run.start_iteration), self.config.run.end_iteration + 1
         )
@@ -119,7 +118,7 @@ class RunController:
 
     @property
     def iter_component(self) -> Tuple[int, str]:
-        """Tuple of the current iteration and component name"""
+        """Tuple of the current iteration and component name."""
         return self._iteration, self._component_name
 
     def component(self) -> Component:
@@ -156,7 +155,6 @@ class RunController:
 
     def _queue_components(self):
         """Add components per iteration to queue according to input Config."""
-
         try:
             assert not self._queued_components
         except AssertionError:

@@ -104,7 +104,7 @@ class RunConfig(ConfigItem):
     @classmethod
     @validator("start_component")
     def start_component_used(cls, value, values):
-        """Validate start_component is listed in *_components"""
+        """Validate start_component is listed in *_components."""
         if "start_iteration" in values:
             if values["start_iteration"] == 0:
                 if "initial_components" in values:
@@ -125,7 +125,7 @@ LogLevel = Literal[
 
 @dataclass(frozen=True)
 class LoggingConfig(ConfigItem):
-    """Logging parameters
+    """Logging parameters. TODO.
 
     Properties:
         display_level: filter level for messages to show in console, default
@@ -413,14 +413,10 @@ class HighwayTollsConfig(ConfigItem):
         if "src_vehicle_group_names" in values:
             assert len(value) == len(
                 values["src_vehicle_group_names"]
-            ), "must be same length as src_vehicle_group_names"
-        return value
-
-    @classmethod
-    @validator("dst_vehicle_group_names", each_item=True)
-    def dst_vehicle_group_names_length(cls, value):
-        """Validate dst_vehicle_group_names items are 4 characters or less"""
-        assert len(value) <= 4, "must be 4 characters or less"
+            ), "dst_vehicle_group_names must be same length as src_vehicle_group_names"
+            assert all(
+                [len(v) <= 4 for v in value]
+            ), "dst_vehicle_group_names must be 4 characters or less"
         return value
 
 
