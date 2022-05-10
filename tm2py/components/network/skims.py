@@ -1,4 +1,4 @@
-"""Tools for the highway network component."""
+"""General skim-related tools."""
 
 from typing import Mapping
 
@@ -34,7 +34,7 @@ def get_blended_skim(
             - keys should be subset of _config.time_periods.names
     """
     _config = controller.config
-    _skim_path_tmplt = self.controller.get_abs_path(_config.highway.output_skim_path)
+    _skim_path_tmplt = controller.get_abs_path(_config.highway.output_skim_path)
 
     try:
         assert set(blend.keys()).issubset(_tp.name.upper() for _tp in _config.time_periods)
@@ -60,3 +60,33 @@ def get_blended_skim(
     # to access EmmeBank then can stay.
 
     _blended_time = sum(_scaled_times)
+
+def _availability_mask(
+    controller: Controller, 
+    mode: str = None, 
+    timeperiod: str = None,
+    mask = [("cost", ">", 9999), ("time", "<=", 0)],
+):
+    """TODO.
+
+    TODO, masking is currently in emme.matrix.mask_non_available but needs to be more generitc
+
+    Args:
+        controller (Controller): _description_
+        mode (str, optional): _description_. Defaults to None.
+        timeperiod (str, optional): _description_. Defaults to None.
+        mask (list, optional): _description_. Defaults to [("cost", ">", 9999), ("time", "<=", 0)].
+
+    Returns:
+        _type_: _description_
+    """
+    _config = controller.config
+    _skim_path_tmplt = controller.get_abs_path(_config.highway.output_skim_path)
+    _masks = []
+    with OMXManager(_skim_path_tmplt.format(period=timeperiod.upper()), "r") as _f:
+        for _prop, _op, _val in mask:
+            _skim = _f.read(f"{timeperiod.lower()}_{mode}_{_prop}")
+            _mask = _skim.__getattribute__(_op)(_val)
+
+    mask = any(_masks)
+    return mask
