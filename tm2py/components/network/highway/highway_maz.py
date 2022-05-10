@@ -28,16 +28,14 @@ used as background traffic in the equilibrium Highway assignment.
 from __future__ import annotations
 
 import array as _array
+import os
 from collections import defaultdict as _defaultdict
 from contextlib import contextmanager as _context
 from math import sqrt as _sqrt
-import os
-from typing import Dict, List, Union, BinaryIO, TYPE_CHECKING
+from typing import TYPE_CHECKING, BinaryIO, Dict, List, Union
 
 import numpy as np
 import pandas as pd
-
-# from tables import NoSuchNodeError
 
 from tm2py.components.component import Component
 from tm2py.emme.manager import EmmeNode
@@ -45,6 +43,9 @@ from tm2py.emme.matrix import OMXManager
 from tm2py.emme.network import NetworkCalculator
 from tm2py.logger import LogStartEnd
 from tm2py.tools import parse_num_processors
+
+# from tables import NoSuchNodeError
+
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
@@ -101,24 +102,23 @@ class AssignMAZSPDemand(Component):
         for group in self.config.highway.maz_to_maz.demand_county_groups:
             county_groups[group.number] = group.counties
         for time in self.time_period_names():
-            with self.logger.log_start_end(f"period {time}"):
-                self._scenario = self.get_emme_scenario(emmebank.path, time)
-                with self._setup(time):
-                    self._prepare_network()
-                    for i, names in county_groups.items():
-                        maz_ids = self._get_county_mazs(names)
-                        if len(maz_ids) == 0:
-                            self.logger.log(
-                                f"warning: no mazs for counties {', '.join(names)}"
-                            )
-                            continue
-                        self._process_demand(time, i, maz_ids)
-                    demand_bins = self._group_demand()
-                    for i, demand_group in enumerate(demand_bins):
-                        self._find_roots_and_leaves(demand_group["demand"])
-                        self._set_link_cost_maz()
-                        self._run_shortest_path(time, i, demand_group["dist"])
-                        self._assign_flow(time, i, demand_group["demand"])
+            self._scenario = self.get_emme_scenario(emmebank.path, time)
+            with self._setup(time):
+                self._prepare_network()
+                for i, names in county_groups.items():
+                    maz_ids = self._get_county_mazs(names)
+                    if len(maz_ids) == 0:
+                        self.logger.log(
+                            f"warning: no mazs for counties {', '.join(names)}"
+                        )
+                        continue
+                    self._process_demand(time, i, maz_ids)
+                demand_bins = self._group_demand()
+                for i, demand_group in enumerate(demand_bins):
+                    self._find_roots_and_leaves(demand_group["demand"])
+                    self._set_link_cost_maz()
+                    self._run_shortest_path(time, i, demand_group["dist"])
+                    self._assign_flow(time, i, demand_group["demand"])
 
     @_context
     def _setup(self, time: str):
@@ -139,11 +139,16 @@ class AssignMAZSPDemand(Component):
             ("NODE", "@maz_root", "Flag for MAZs which are roots"),
             ("NODE", "@maz_leaf", "Flag for MAZs which are leaves"),
         ]
+        for domain, name, desc in attributes:
+            self.logger.log(f"Create temp {domain} attr: {name}, {desc}", level="TRACE")
         with self.controller.emme_manager.temp_attributes_and_restore(
             self._scenario, attributes
         ):
             try:
-                yield
+                with self.logger.log_start_end(
+                    f"MAZ assign for period {time} scenario {self._scenario}"
+                ):
+                    yield
             finally:
                 if not self._debug:
                     self._mazs = None
@@ -174,7 +179,11 @@ class AssignMAZSPDemand(Component):
         vot = self.config.highway.maz_to_maz.value_of_time
         op_cost = self.config.highway.maz_to_maz.operating_cost_per_mile
         net_calc = NetworkCalculator(self._scenario)
-        net_calc("@link_cost", f"{time_attr} + 0.6 / {vot} * (length * {op_cost})")
+        report = net_calc(
+            "@link_cost", f"{time_attr} + 0.6 / {vot} * (length * {op_cost})"
+        )
+        self.logger.log_time("Link cost calculation report", level="TRACE")
+        self.logger.log_dict(report, level="TRACE")
         self._network = self.controller.emme_manager.get_network(
             self._scenario, {"NODE": ["@maz_id", "x", "y", "#node_county"], "LINK": []}
         )
@@ -193,6 +202,9 @@ class AssignMAZSPDemand(Component):
         Returns:
             List of MAZ nodes (Emme Node) which are in these counties.
         """
+        self.logger.log_time(
+            f"Processing county MAZs for {', '.join(counties)}", level="DETAIL"
+        )
         network = self._network
         # NOTE: every maz must have a valid #node_county
         if self._mazs is None:
@@ -203,6 +215,7 @@ class AssignMAZSPDemand(Component):
         mazs = []
         for county in counties:
             mazs.extend(self._mazs[county])
+        self.logger.log(f"Num MAZs {len(mazs)}", level="DEBUG")
         return sorted(mazs, key=lambda n: n["@maz_id"])
 
     def _process_demand(self, time: str, index: int, maz_ids: List[EmmeNode]):
@@ -218,8 +231,16 @@ class AssignMAZSPDemand(Component):
             maz_ids: indexed list of MAZ ID nodes for the county group
                 (active counties for this demand file)
         """
+        self.logger.log_time(
+            f"Process demand for time period {time} index {index}", level="DETAIL"
+        )
         data = self._read_demand_array(time, index)
         origins, destinations = data.nonzero()
+        self.logger.log(
+            f"non-zero origins {len(origins)} destinations {len(destinations)}",
+            level="DEBUG",
+        )
+        total_demand = 0
         for orig, dest in zip(origins, destinations):
             # skip intra-maz demand
             if orig == dest:
@@ -231,14 +252,18 @@ class AssignMAZSPDemand(Component):
             )
             if dist > self._max_dist:
                 self._max_dist = dist
+            demand = data[orig][dest]
+            total_demand += demand
             self._demand[orig_node].append(
                 {
                     "orig": orig_node,
                     "dest": dest_node,
-                    "dem": data[orig][dest],
+                    "dem": demand,
                     "dist": dist,
                 }
             )
+        self.logger.log(f"Max distance found {self._max_dist}", level="DEBUG")
+        self.logger.log(f"Total inter-zonal demand {total_demand}", level="DEBUG")
 
     def _read_demand_array(self, time: str, index: int) -> NumpyArray:
         """Load the demand from file with the specified time and index name.
@@ -251,6 +276,7 @@ class AssignMAZSPDemand(Component):
         omx_file_path = self.get_abs_path(
             file_path_tmplt.format(period=time, number=index)
         )
+        self.logger.log(f"Reading demand from {omx_file_path}", level="DEBUG")
         with OMXManager(omx_file_path, "r") as omx_file:
             demand_array = omx_file.read("M0")
         return demand_array
@@ -258,14 +284,15 @@ class AssignMAZSPDemand(Component):
     def _group_demand(
         self,
     ) -> List[Dict[str, Union[float, List[Dict[str, Union[float, EmmeNode]]]]]]:
-        """Process the demand loaded from files and create groups based on the
-        origin to the furthest destination with demand.
+        """Process the demand loaded from files \
+            and create groups based on the origin to the furthest destination with demand.
 
         Returns:
             List of dictionaries, containing the demand in the format
                 {"orig": EmmeNode, "dest": EmmeNode, "dem": float (demand value)}
 
         """
+        self.logger.log_time("Grouping demand in distance buckets", level="DETAIL")
         # group demand from same origin into distance bins by furthest
         # distance destination to limit shortest path search radius
         bin_edges = self._bin_edges[:]
@@ -282,7 +309,7 @@ class AssignMAZSPDemand(Component):
                     group["demand"].extend(data)
                     break
         for group in demand_groups:
-            self.logger.log_time(
+            self.logger.log(
                 f"bin dist {group['dist']}, size {len(group['demand'])}", level="DEBUG"
             )
         # Filter out groups without any demand
@@ -334,6 +361,7 @@ class AssignMAZSPDemand(Component):
         net_calc.add_calc("@link_cost_maz", "1e20", "@maz_leafj=0 and !@maz_idj=0")
         net_calc.run()
 
+    @LogStartEnd(level="DETAIL")
     def _run_shortest_path(self, time: str, bin_no: int, max_radius: float):
         """Run the shortest path tool to generate paths between the marked nodes.
 
@@ -571,7 +599,7 @@ class AssignMAZSPDemand(Component):
         # load sequence of Node IDs which define the path (L=32-bit unsigned integers)
         path = _array.array("L")
         path.fromfile(paths_file, end - start)
-        # proccess path to sequence of links and add flow
+        # process path to sequence of links and add flow
         path_iter = iter(path)
         i_node = next(path_iter)
         for j_node in path_iter:
@@ -581,10 +609,11 @@ class AssignMAZSPDemand(Component):
 
 
 class SkimMAZCosts(Component):
-    """MAZ-to-MAZ shortest-path skim of time, distance and toll"""
+    """MAZ-to-MAZ shortest-path skim of time, distance and toll."""
 
     def __init__(self, controller: RunController):
-        """MAZ-to-MAZ shortest-path skim of time, distance and toll
+        """MAZ-to-MAZ shortest-path skim of time, distance and toll.
+
         Args:
             controller: parent RunController object
         """
@@ -617,8 +646,6 @@ class SkimMAZCosts(Component):
             mode_code:
 
         config.emme.num_processors
-
-
         """
         ref_period = None
         ref_period_name = self.config.highway.maz_to_maz.skim_period
@@ -665,14 +692,15 @@ class SkimMAZCosts(Component):
             finally:
                 self._network = None  # clear network obj ref to free memory
 
-    @LogStartEnd()
+    @LogStartEnd(level="DEBUG")
     def _prepare_network(self):
-        """Calculates the link cost in @link_cost and loads the network to self._network"""
+        """Calculates the link cost in @link_cost and loads the network to self._network."""
         net_calc = NetworkCalculator(self._scenario)
         if self._scenario.has_traffic_results:
             time_attr = "(@free_flow_time.max.timau)"
         else:
             time_attr = "@free_flow_time"
+        self.logger.log(f"Time attribute {time_attr}", level="DEBUG")
         vot = self.config.highway.maz_to_maz.value_of_time
         op_cost = self.config.highway.maz_to_maz.operating_cost_per_mile
         net_calc("@link_cost", f"{time_attr} + 0.6 / {vot} * (length * {op_cost})")
@@ -693,6 +721,7 @@ class SkimMAZCosts(Component):
         self._scenario.set_attribute_values("NODE", ["@maz_root"], values)
         return count_roots
 
+    @LogStartEnd(level="DETAIL")
     def _run_shortest_path(self) -> Dict[str, NumpyArray]:
         """Run shortest paths tool and return dictionary of skim results name, numpy arrays.
 

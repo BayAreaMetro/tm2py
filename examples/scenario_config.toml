@@ -15,7 +15,10 @@
         "air_passenger", 
         "prepare_network_highway", 
         "highway", 
-        "highway_maz_skim"
+        "highway_maz_skim",
+        #"prepare_network_transit",
+        #"transit_assign",
+        #"transit_skim"
     ]
     global_iteration_components = [
         "household", 
@@ -23,6 +26,9 @@
         "truck", 
         "highway_maz_assign", 
         "highway", 
+        #"prepare_network_transit",
+        #"transit_assign",
+        #"transit_skim"
     ]
     final_components = []
     start_iteration = 0

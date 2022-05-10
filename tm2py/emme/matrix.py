@@ -10,22 +10,26 @@ the MatrixCache to support easy write from Emmebank without re-reading data
 from disk.
 """
 
-from typing import List, Union, Dict
+from typing import Dict, List, Union
 
 from numpy import array as NumpyArray, resize, exp
 import openmatrix as _omx
+from numpy import array as NumpyArray
+from numpy import resize
 
-from tm2py.emme.manager import EmmeScenario, EmmeMatrix
+from tm2py.emme.manager import EmmeMatrix, EmmeScenario
 
 
 class MatrixCache:
-    """Write through cache of Emme matrix data via Numpy arrays
-
-    Args:
-        scenario: reference scenario for the active Emmebank and matrix zone system
-    """
+    """Write through cache of Emme matrix data via Numpy arrays."""
 
     def __init__(self, scenario: EmmeScenario):
+        """Contructor for MatrixCache class.
+
+        Args:
+            scenario (EmmeScenario): EmmeScenario reference scenario for the active Emmebank
+                and matrix zone system
+        """
         self._scenario = scenario
         self._emmebank = scenario.emmebank
         # mapping from matrix object to last read/write timestamp for cache invalidation
@@ -76,19 +80,7 @@ class OMXManager:
     """Wrapper for the OMX interface to write from Emme matrices and numpy arrays.
 
     Write from Emmebank or Matrix Cache to OMX file, or read from OMX to Numpy.
-    Also supports with statement.
-
-    Args:
-        file_path: path of OMX file
-        mode: "r", "w" or "a"
-        scenario: Emme scenario object for zone system and reference
-            Emmebank
-        omx_key: "ID_NAME", "NAME", "ID", format for generating
-            OMX key from Emme matrix data
-        matrix_cache: optional, Matrix Cache to support write data
-            from cache (instead of always reading from Emmmebank)
-        mask_max_value: optional, max value above which to write
-            zero instead ("big to zero" behavior)
+    Supports "with" statement.
     """
 
     def __init__(
@@ -100,6 +92,19 @@ class OMXManager:
         matrix_cache: MatrixCache = None,
         mask_max_value: float = None,
     ):  # pylint: disable=R0913
+        """The OMXManager constructor.
+
+        Args:
+            file_path (str): path of OMX file
+            mode (str, optional): "r", "w" or "a". Defaults to "r".
+            scenario (EmmeScenario, optional): _description_. Defaults to None.
+            omx_key (str, optional): "ID_NAME", "NAME", "ID", format for generating
+            OMX key from Emme matrix data. Defaults to "NAME".
+            matrix_cache (MatrixCache, optional): Matrix Cache to support write data
+            from cache (instead of always reading from Emmmebank). Defaults to None.
+            mask_max_value (float, optional): max value above which to write
+            zero instead ("big to zero" behavior). Defaults to None.
+        """
         self._file_path = file_path
         self._mode = mode
         self._scenario = scenario
@@ -130,6 +135,7 @@ class OMXManager:
         self._read_cache = {}
 
     def __enter__(self):
+        """Allows for context-based usage using 'with' statement."""
         self.open()
         if self._mode in ["a", "w"] and self._scenario is not None:
             try:
@@ -141,6 +147,7 @@ class OMXManager:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Allows for context-based usage using 'with' statement."""
         self.close()
 
     def write_matrices(self, matrices: List[Union[EmmeMatrix, str]]):

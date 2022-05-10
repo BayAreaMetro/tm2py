@@ -1,8 +1,10 @@
-"""Demand loading from OMX to Emme database"""
+"""Demand loading from OMX to Emme database."""
 
 from __future__ import annotations
+
 from abc import ABC
-from typing import Dict, Union, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Union
+
 import numpy as np
 
 from tm2py.components.component import Component
@@ -16,6 +18,11 @@ class PrepareDemand(Component, ABC):
     """Abstract base class to import and average demand."""
 
     def __init__(self, controller: RunController):
+        """Constructor for PrepareDemand class.
+
+        Args:
+            controller (RunController): Run controller for the current run.
+        """
         super().__init__(controller)
         self._emmebank = None
 
@@ -78,6 +85,11 @@ class PrepareHighwayDemand(PrepareDemand):
     """
 
     def __init__(self, controller: RunController):
+        """Constructor for PrepareHighwayDemand.
+
+        Args:
+            controller (RunController): Reference to run controller object.
+        """
         super().__init__(controller)
         self._emmebank_path = None
 

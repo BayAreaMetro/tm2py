@@ -1,4 +1,4 @@
-"""Module for Emme Manager for centralized management of Emme projects
+"""Module for Emme Manager for centralized management of Emme projects.
 
 Centralized location for Emme API imports, which are automatically replaced
 by unittest.Mock / MagicMock to support testing where Emme is not installed.
@@ -8,21 +8,23 @@ Contains EmmeManager class for access to common Emme-related procedures
 and Modeller.
 """
 
-from contextlib import contextmanager as _context
 import os
+from contextlib import contextmanager as _context
 from socket import error as _socket_error
 from typing import Any, Dict, List, Union
+
+import inro.emme.desktop.app as _app
 
 # PyLint cannot build AST from compiled Emme libraries
 # so disabling relevant import module checks
 # pylint: disable=E0611, E0401, E1101
 from inro.emme.database.emmebank import Emmebank
-from inro.emme.network import Network as EmmeNetwork
-from inro.emme.database.scenario import Scenario as EmmeScenario
 from inro.emme.database.matrix import Matrix as EmmeMatrix  # pylint: disable=W0611
+from inro.emme.database.scenario import Scenario as EmmeScenario
+from inro.emme.network import Network as EmmeNetwork
 from inro.emme.network.node import Node as EmmeNode  # pylint: disable=W0611
-import inro.emme.desktop.app as _app
-from inro.modeller import Modeller as EmmeModeller, logbook_write, logbook_trace
+from inro.modeller import Modeller as EmmeModeller
+from inro.modeller import logbook_trace, logbook_write
 
 EmmeDesktopApp = _app.App
 
@@ -41,13 +43,15 @@ class EmmeManager:
     """
 
     def __init__(self):
-        # mapping of Emme project path to Emme Desktop API object for reference
-        # (projects are opened only once)
+        """The EmmeManager constructor.
+
+        Maps an Emme project path to Emme Desktop API object for reference
+        (projects are opened only once).
+        """
         self._project_cache = _EMME_PROJECT_REF
 
     def close_all(self):
-        """
-        Close all open cached Emme project(s).
+        """Close all open cached Emme project(s).
 
         Should be called at the end of the model process / Emme assignments.
         """
@@ -56,7 +60,7 @@ class EmmeManager:
             app.close()
 
     def create_project(self, project_dir: str, name: str) -> EmmeDesktopApp:
-        """Create, open and return Emme project
+        """Create, open and return Emme project.
 
         Args:
             project_dir: path to Emme root directory for new Emme project

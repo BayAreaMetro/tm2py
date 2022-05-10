@@ -1,50 +1,35 @@
+"""Testing module for UnionCity subarea 'real' model runs."""
+
 import glob
 import os
 import sys
-import tempfile
-
-from unittest.mock import MagicMock
 from typing import Collection, Union
+from unittest.mock import MagicMock
 
 import openmatrix as omx
 import pandas as pd
 import pytest
 
-_ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_EXAMPLES_DIR = os.path.join(_ROOT_DIR, "examples")
-_UNION_CITY_DIR = os.path.join(_EXAMPLES_DIR, "UnionCity")
-_EXAMPLE_NAME = "UnionCity"
 
-def test_example_download():
-    # If (and only if) Emme is not installed, replace INRO libraries with MagicMock
-    try:
-        import inro.emme.database.emmebank
-    except ModuleNotFoundError:
-        sys.modules["inro.emme.database.emmebank"] = MagicMock()
-        sys.modules["inro.emme.database.scenario"] = MagicMock()
-        sys.modules["inro.emme.database.matrix"] = MagicMock()
-        sys.modules["inro.emme.network"] = MagicMock()
-        sys.modules["inro.emme.network.link"] = MagicMock()
-        sys.modules["inro.emme.network.mode"] = MagicMock()
-        sys.modules["inro.emme.network.node"] = MagicMock()
-        sys.modules["inro.emme.desktop.app"] = MagicMock()
-        sys.modules["inro"] = MagicMock()
-        sys.modules["inro.modeller"] = MagicMock()
+def test_example_download(examples_dir, root_dir, inro_context):
+    """Tests that example data can be downloaded."""
+    EXAMPLE = "UnionCity"
 
     import shutil
+
     from tm2py.examples import get_example
 
-    if os.path.exists(_UNION_CITY_DIR):
-        shutil.rmtree(_UNION_CITY_DIR)
+    example_root = os.path.join(examples_dir, EXAMPLE)
+    if os.path.exists(example_root):
+        shutil.rmtree(example_root)
 
-    get_example(
-        example_name=_EXAMPLE_NAME,
-        root_dir=_ROOT_DIR,
-    )
     # default retrieval_url points to Union City example on box
+    _ex_dir = get_example(example_name="UnionCity", root_dir=root_dir)
 
     # check that the root union city folder exists
-    assert os.path.isdir(_UNION_CITY_DIR)
+    assert _ex_dir == example_root
+    assert os.path.isdir(example_root)
+
     # check some expected files exists
     files_to_check = [
         os.path.join("inputs", "hwy", "tolls.csv"),
@@ -55,17 +40,15 @@ def test_example_download():
     ]
     for file_name in files_to_check:
         assert os.path.exists(
-            os.path.join(_UNION_CITY_DIR, file_name)
+            os.path.join(example_root, file_name)
         ), f"get_example failed, missing {file_name}"
+
     # check zip file was removed
-    assert not (
-        os.path.exists(os.path.join(_UNION_CITY_DIR, "test_data.zip"))
-    )
+    assert not (os.path.exists(os.path.join(example_root, "test_data.zip")))
 
 
 def diff_omx(ref_omx: str, run_omx: str) -> Collection[Collection[str]]:
-    """
-    Compare two OMX files, return missing and different matrices from reference.
+    """Compare two OMX files, return missing and different matrices from reference.
 
     Args:
         ref_omx: reference OMX file
@@ -91,22 +74,54 @@ def diff_omx(ref_omx: str, run_omx: str) -> Collection[Collection[str]]:
 
 @pytest.fixture(scope="module")
 @pytest.mark.skipci
-def union_city():
+def union_city(examples_dir, root_dir):
     """Union City model run testing fixture."""
     from tm2py.controller import RunController
     from tm2py.examples import get_example
 
-    get_example(example_name=_EXAMPLE_NAME, root_dir=_ROOT_DIR)
-    
+    EXAMPLE = "UnionCity"
+    _example_root = os.path.join(examples_dir, EXAMPLE)
+
+    get_example(example_name="UnionCity", root_dir=root_dir)
     controller = RunController(
         [
-            os.path.join(_EXAMPLES_DIR, "scenario_config.toml"),
-            os.path.join(_EXAMPLES_DIR, "model_config.toml"),
+            os.path.join(examples_dir, "scenario_config.toml"),
+            os.path.join(examples_dir, "model_config.toml"),
         ],
-        run_dir=_UNION_CITY_DIR,
+        run_dir=_example_root,
     )
     controller.run()
     return controller
+
+
+@pytest.mark.menow
+def test_validate_input_fail(examples_dir, inro_context, temp_dir):
+    """Test that validate_input fails when required inputs are missing."""
+    import toml
+
+    from tm2py.controller import RunController
+    from tm2py.examples import get_example
+
+    model_config_path = os.path.join(examples_dir, r"model_config.toml")
+    with open(model_config_path, "r") as fin:
+        bad_model_config = toml.load(fin)
+    bad_model_config["highway"]["tolls"]["file_path"] = "foo.csv"
+
+    bad_model_config_path = os.path.join(temp_dir, r"bad_model_config.toml")
+    with open(bad_model_config_path, "w") as fout:
+        toml.dump(bad_model_config, fout)
+
+    union_city_root = os.path.join(examples_dir, "UnionCity")
+
+    with pytest.raises(Exception) as e_info:
+        RunController(
+            [
+                os.path.join(examples_dir, r"scenario_config.toml"),
+                bad_model_config_path,
+            ],
+            run_dir=union_city_root,
+        )
+        assert e_info.type is FileNotFoundError
 
 
 @pytest.mark.skipci
