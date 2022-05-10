@@ -2,6 +2,7 @@
 
 
 from __future__ import annotations
+import itertools
 import os
 from typing import TYPE_CHECKING
 
@@ -11,6 +12,7 @@ import pandas as pd
 
 from tm2py.components.component import Component
 from tm2py.logger import LogStartEnd
+from tm2py.tools import interpolate_dfs
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
@@ -22,8 +24,7 @@ class AirPassenger(Component):
     input: nonres/{year}_{tofrom}{airport}.csv
     output: five time-of-day-specific OMX files with matrices DA, SR2, SR3
 
-    NOTES:
-
+    Notes:
     These are independent of level-of-service.
 
     Note that the reference names, years, file paths and other key details
@@ -117,7 +118,14 @@ class AirPassenger(Component):
 
     @LogStartEnd()
     def run(self):
-        """Build the airport trip matrices"""
+        """Run the Air Passenger Demand model to generate the demand matrices.
+
+        Steps:
+            1. Load the demand data from the CSV files.
+            2. Aggregate the demand data into the assignable classes.
+            3. Create the demand matrices be interpolating the demand data.
+            4. Write the demand matrices to OMX files.
+        """
         self._start_year = self.config.air_passenger.reference_start_year
         self._end_year = self.config.air_passenger.reference_end_year
         self._mode_groups = {}
@@ -126,81 +134,97 @@ class AirPassenger(Component):
             self._mode_groups[group["src_group_name"]] = group["access_modes"]
             self._out_names[group["src_group_name"]] = group["result_class_name"]
 
-        input_demand = self._load_demand()
+        input_demand = self._load_air_pax_demand()
         aggr_demand = self._aggregate_demand(input_demand)
-        demand = self._interpolate(aggr_demand)
+        #for period in self._periods:
+        #for group in self._mode_groups:
+        #    name = f"{period}_{group}"
+        demand = interpolate_dfs(
+            aggr_demand, 
+            int(self._start_year), 
+            int(self._end_year),
+            int(self.config.scenario.year)
+        )
         self._export_result(demand)
 
-    def _load_demand(self) -> pd.DataFrame:
-        """Loads demand from the CSV files into pandas dataframe."""
+    def _load_air_pax_demand(self) -> pd.DataFrame:
+        """Loads demand from the CSV files into pandas dataframe.
+        
+        Uses the following configs to determine the input file names and paths:
+        - self.config.air_passenger.input_demand_folder
+        - self.config.air_passenger.airport_names
+        - self.config.air_passenger.reference_start_year
+        - self.config.air_passenger.reference_end_year
 
-        def rename_columns(name):
+        Using the pattern: f"{year}_{direction}{airport}.csv"
+
+        Returns: pandas dataframe with the following columns:
+            (1) airport
+            (2) time_of_day
+            (3) access_mode
+            (4) demand
+        """
+
+        def _rename_columns(name):
             if name in ["ORIG", "DEST"]:
                 return name
             return f"{name}_{year}"
 
         input_data_folder = self.config.air_passenger.input_demand_folder
-        input_demand = []
-        for year in [self._start_year, self._end_year]:
-            input_dataframes = []
-            for airport in self.config.air_passenger.airport_names:
-                for direction in ["to", "from"]:
-                    file_name = f"{year}_{direction}{airport}.csv"
-                    file_path = os.path.join(
-                        self.controller.run_dir, input_data_folder, file_name
-                    )
-                    input_df = pd.read_csv(file_path)
-                    input_df.rename(columns=rename_columns, inplace=True)
-                    input_dataframes.append(input_df)
-            data = pd.concat(input_dataframes)
-            input_demand.append(data)
-        demand = pd.merge(
-            input_demand[0], input_demand[1], how="outer", on=["ORIG", "DEST"]
+        
+        _airport_direction = itertools.product(
+            self.config.air_passenger.airport_names,
+            ["to", "from"],
         )
-        grouped = demand.groupby(["ORIG", "DEST"]).sum()
-        return grouped
+
+        _input_demand_df_list = []
+        for year in [self._start_year, self._end_year]:
+            _input_df_year_list= []
+            for airport, direction  in _airport_direction:
+                _file_name = f"{year}_{direction}{airport}.csv"
+                _file_path = os.path.join(
+                    self.controller.run_dir, input_data_folder, _file_name
+                )
+                _input_df = pd.read_csv(_file_path)
+                _input_df.rename(columns=_rename_columns, inplace=True)
+                _input_df_year_list.append(_input_df)
+            _input_year_df = pd.concat(_input_df_year_list)
+            _input_demand_df_list.append(_input_year_df)
+
+        _air_pax_demand_df = pd.merge(
+            _input_demand_df_list[0], 
+            _input_demand_df_list[1], 
+            how="outer", 
+            on=["ORIG", "DEST"]
+        )
+
+        _grouped_air_pax_demand_df =  _air_pax_demand_df.groupby(["ORIG", "DEST"]).sum()
+        return _grouped_air_pax_demand_df
 
     def _aggregate_demand(self, input_demand: pd.DataFrame) -> pd.DataFrame:
-        """Aggregate demand into the assignable classes for each year."""
+        """Aggregate demand into the assignable classes for each year.
+        
+        Args:
+            input_demand: pandas dataframe with the following columns: TODO
+        """
         aggr_demand = pd.DataFrame()
-        for year in [self._start_year, self._end_year]:
-            for period in self._periods:
-                for group, access_modes in self._mode_groups.items():
-                    data = input_demand[
-                        [f"{period}_{access}_{group}_{year}" for access in access_modes]
-                    ]
-                    aggr_demand[f"{period}_{group}_{year}"] = data.sum(axis=1)
+
+        _year_tp_group_accessmode = itertools.product(
+            [self._start_year, self._end_year],
+            self._periods,
+            *self._mode_groups.items(),
+        )
+
+        # TODO This should be done entirely in pandas using group-by
+        for _year, _period, _group, _access_modes in _year_tp_group_accessmode:
+            data = input_demand[
+                [f"{_period}_{_access}_{_group}_{_year}" for _access in _access_modes]
+            ]
+            aggr_demand[f"{_period}_{_group}_{_year}"] = data.sum(axis=1)
+
         return aggr_demand
 
-    def _interpolate(self, aggr_demand: pd.DataFrame) -> pd.DataFrame:
-        """Interpolate for the model year assuming linear growth between the reference years."""
-        start_year = int(self._start_year)
-        end_year = int(self._end_year)
-        year = str(self.config.scenario.year)
-        if year in [start_year, end_year]:
-            # no interpolation is needed
-            columns = [c for c in aggr_demand.columns if c.endswith(year)]
-            demand = aggr_demand[columns].copy()
-
-            def rename_columns(name):
-                return name.replace(f"_{year}", "")
-
-            demand.rename(columns=rename_columns, inplace=True)
-            return demand
-
-        # In the cube .job script, the formula is:
-        # token_scale = (%MODEL_YEAR% - 2007)/(2035 - %MODEL_YEAR%)
-        # and it should be: token_scale = (%MODEL_YEAR% - 2007)/(2035 - 2007)
-        # scale = float((int(year) - 2007)) / (2035 - int(year))
-        scale = float(int(year) - start_year) / (end_year - start_year)
-        demand = pd.DataFrame()
-        for period in self._periods:
-            for group in self._mode_groups:
-                name = f"{period}_{group}"
-                demand[name] = (1 - scale) * aggr_demand[
-                    f"{name}_{start_year}"
-                ] + scale * aggr_demand[f"{name}_{end_year}"]
-        return demand
+    
 
     def _export_result(self, demand: pd.DataFrame):
         """Export resulting model year demand to OMX files by period."""

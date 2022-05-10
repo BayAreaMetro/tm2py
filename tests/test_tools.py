@@ -36,3 +36,45 @@ def test_download_unzip(temp_dir, inro_context):
         assert os.path.exists(
             os.path.join(unzip_directory, file_name)
         ), f"unzip failed, missing {file_name}"
+
+@pytest.mark.menow
+def test_interpolate(inro_context):
+    """Test interpolation."""
+    from tm2py.tools import interpolate_dfs
+    import pandas as pd
+    from pandas.testing import assert_frame_equal
+
+    _input_df = pd.DataFrame({
+        'prop1_2020': [20, 200, 2000], 
+        'prop2_2020': [40, 55, 60],
+        'prop1_2030': [30, 300, 3000], 
+        'prop2_2030': [40, 55, 70],
+        }
+    )
+
+    _2025_output_df = interpolate_dfs(_input_df, [2020,2030], 2025)
+
+    _2025_expected_output_df = pd.DataFrame({
+        'prop1':[25.,250.,2500.],
+        'prop2':[40.,55.,65.],
+    })
+
+    _2020_output_df = interpolate_dfs(_input_df, [2020,2030], 2020)
+
+    _2020_expected_output_df = pd.DataFrame({
+        'prop1':[20., 200., 2000.],
+        'prop2': [40., 55., 60.],
+    })
+
+    _2030_output_df = interpolate_dfs(_input_df, [2020,2030], 2030)
+
+    _2030_expected_output_df = pd.DataFrame({
+        'prop1': [30., 300., 3000.],
+        'prop2': [40., 55., 70.],
+    })
+
+    assert_frame_equal(_2025_output_df, _2025_expected_output_df)
+
+    assert_frame_equal(_2020_output_df, _2020_expected_output_df)
+
+    assert_frame_equal(_2030_output_df, _2030_expected_output_df)
