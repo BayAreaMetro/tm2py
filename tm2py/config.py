@@ -257,7 +257,7 @@ class TimeOfDaySplitConfig(ConfigItem):
 
     time_period: str
     production: float
-    attraction: float
+    attraction: Optional[float]
 
 
 @dataclass(frozen=True)
@@ -278,7 +278,37 @@ class InternalExternalConfig(ConfigItem):
         default_factory=list
     )
 
+@dataclass(frozen=True)
+class LandUseRateConfig(ConfigItem):
+    """LandUseRateConfig - multiplier for land use file columns."""
+    property: str
+    rate: float
+@dataclass(frozen=True)
+class TripGenerationFormulaConfig(ConfigItem):
+    """TripProductionConfig.
+    
+    Trip productions for a zone are the constant plus the sum of the rates * values in land use
+    file for that zone. 
+    """
+    land_use_rates: List[LandUseRateConfig]
+    constant: Field(type=float, default=0.0)
+    multiplier: Field(type=float, default=1.0)
+    
+@dataclass(frozen=True)
+class TripGenerationConfig(ConfigItem):
+    """Trip Generation parameters."""
+    name: str
+    production_formula: TripGenerationFormulaConfig
+    attraction_formula: TripGenerationFormulaConfig
+    balance_to: Optional[str] = Field(default="production")
 
+@dataclass(frozen=True)
+class TruckClassConfig(ConfigItem):
+    """Truck class parameters."""
+    name: str
+    time_of_day_split: List[TimeOfDaySplitConfig]
+    trip_type_config: List[TripGenerationConfig]
+    
 @dataclass(frozen=True)
 class TruckConfig(ConfigItem):
     """Truck model parameters."""
@@ -291,8 +321,9 @@ class TruckConfig(ConfigItem):
     toll_choice_time_coefficient: float
     max_balance_iterations: int
     max_balance_relative_error: float
+    classes: List[TruckClassConfig]
 
-
+    
 @dataclass(frozen=True)
 class ActiveModeShortestPathSkimConfig(ConfigItem):
     """Active mode skim entry."""
@@ -387,7 +418,7 @@ class HighwayClassConfig(ConfigItem):
         description: longer text used in attribute and matrix descriptions
         mode_code: single character mode, used to generate link.modes to
             identify subnetwork, generated from "excluded_links" keywords.
-            Should be unique in list of classes, unless multiple classes
+            Should be unique in list of :es, unless multiple classes
             have identical excluded_links specification. Cannot be the
             same as used for highway.maz_to_maz.mode_code.
         value_of_time: value of time for this class in $ / hr

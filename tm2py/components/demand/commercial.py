@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import os
 from typing import TYPE_CHECKING, Dict, List
 
@@ -49,14 +50,6 @@ _land_use_aggregation = {
     "TOTEMP": ["emp_total"],
     "TOTHH": ["HH"],
 }
-_time_of_day_split = {
-    "ea": {"vsmtrk": 0.0235, "smltrk": 0.0765, "medtrk": 0.0665, "lrgtrk": 0.1430},
-    "am": {"vsmtrk": 0.0700, "smltrk": 0.2440, "medtrk": 0.2930, "lrgtrk": 0.2320},
-    "md": {"vsmtrk": 0.6360, "smltrk": 0.3710, "medtrk": 0.3935, "lrgtrk": 0.3315},
-    "pm": {"vsmtrk": 0.1000, "smltrk": 0.2180, "medtrk": 0.1730, "lrgtrk": 0.1750},
-    "ev": {"vsmtrk": 0.1705, "smltrk": 0.0905, "medtrk": 0.0740, "lrgtrk": 0.1185},
-}
-
 
 class CommercialVehicleModel(Component):
     """Commercial vehicle (truck) demand model for 4 sizes of truck, toll choice, and time of day.
@@ -245,6 +238,7 @@ class CommercialVehicleModel(Component):
     @LogStartEnd(level="DEBUG")
     def _aggregate_landuse(self) -> pd.DataFrame:
         """Aggregates landuse data from input CSV by MAZ to TAZ and employment groups.
+
         TOTEMP, total employment (same regardless of classification system)
         RETEMPN, retail trade employment per the NAICS classification system
         FPSEMPN, financial and professional services employment per NAICS
@@ -268,7 +262,7 @@ class CommercialVehicleModel(Component):
         return taz_landuse
 
     @LogStartEnd(level="DEBUG")
-    def _generation(self, landuse: pd.DataFrame) -> pd.DataFrame:
+    def _generation(self, landuse_df: pd.DataFrame) -> pd.DataFrame:
         """Run truck trip generation on input landuse dataframe.
 
         This step applies simple generation models, balances attractions
@@ -281,84 +275,92 @@ class CommercialVehicleModel(Component):
         Returned columns are: vsmtrk_prod, vsmtrk_attr, smltrk_prod,
         smltrk_attr, medtrk_prod, medtrk_attr, lrgtrk_prod, lrgtrk_attr
         """
+        ########################################################################
+        # 1. Generate trips based on land use
+        ########################################################################
+        _trips_df = pd.DataFrame()
 
-        link_trips = pd.DataFrame()
-        # linked trips (non-garage-based) - productions
-        # (very small updated with NAICS coefficients)
-        link_trips["vsmtrk_prod"] = (
-            0.96
-            * (
-                0.95409 * landuse.RETEMPN
-                + 0.54333 * landuse.FPSEMPN
-                + 0.50769 * landuse.HEREMPN
-                + 0.63558 * landuse.OTHEMPN
-                + 1.10181 * landuse.AGREMPN
-                + 0.81576 * landuse.MWTEMPN
-                + 0.26565 * landuse.TOTHH
-            )
-        ).round(decimals=0)
-        link_trips["smltrk_prod"] = (0.0324 * landuse.TOTEMP).round()
-        link_trips["medtrk_prod"] = (0.0039 * landuse.TOTEMP).round()
-        link_trips["lrgtrk_prod"] = (0.0073 * landuse.TOTEMP).round()
-        # linked trips (non-garage-based) - attractions (equal productions)
-        link_trips["vsmtrk_attr"] = link_trips["vsmtrk_prod"]
-        link_trips["smltrk_attr"] = link_trips["smltrk_prod"]
-        link_trips["medtrk_attr"] = link_trips["medtrk_prod"]
-        link_trips["lrgtrk_attr"] = link_trips["lrgtrk_prod"]
-        garage_trips = pd.DataFrame()
-        # garage-based - productions (updated NAICS coefficients)
-        garage_trips["smltrk_prod"] = (
-            0.02146 * landuse.RETEMPN
-            + 0.02424 * landuse.FPSEMPN
-            + 0.01320 * landuse.HEREMPN
-            + 0.04325 * landuse.OTHEMPN
-            + 0.05021 * landuse.AGREMPN
-            + 0.01960 * landuse.MWTEMPN
-        ).round()
-        garage_trips["medtrk_prod"] = (
-            0.00102 * landuse.RETEMPN
-            + 0.00147 * landuse.FPSEMPN
-            + 0.00025 * landuse.HEREMPN
-            + 0.00331 * landuse.OTHEMPN
-            + 0.00445 * landuse.AGREMPN
-            + 0.00165 * landuse.MWTEMPN
-        ).round()
-        garage_trips["lrgtrk_prod"] = (
-            0.00183 * landuse.RETEMPN
-            + 0.00482 * landuse.FPSEMPN
-            + 0.00274 * landuse.HEREMPN
-            + 0.00795 * landuse.OTHEMPN
-            + 0.01125 * landuse.AGREMPN
-            + 0.00486 * landuse.MWTEMPN
-        ).round()
-        # garage-based - attractions
-        garage_trips["smltrk_attr"] = (0.0234 * landuse.TOTEMP).round()
-        garage_trips["medtrk_attr"] = (0.0046 * landuse.TOTEMP).round()
-        garage_trips["lrgtrk_attr"] = (0.0136 * landuse.TOTEMP).round()
-        # balance attractions to productions (applies to garage trips only)
-        for name in ["smltrk", "medtrk", "lrgtrk"]:
-            total_attract = garage_trips[name + "_attr"].sum()
-            total_prod = garage_trips[name + "_prod"].sum()
-            garage_trips[name + "_attr"] = garage_trips[name + "_attr"] * (
-                total_prod / total_attract
-            )
-
-        trip_ends = pd.DataFrame(
-            {
-                "vsmtrk_prod": link_trips["vsmtrk_prod"],
-                "vsmtrk_attr": link_trips["vsmtrk_attr"],
-                "smltrk_prod": link_trips["smltrk_prod"] + garage_trips["smltrk_prod"],
-                "smltrk_attr": link_trips["smltrk_attr"] + garage_trips["smltrk_attr"],
-                "medtrk_prod": link_trips["medtrk_prod"] + garage_trips["medtrk_prod"],
-                "medtrk_attr": link_trips["medtrk_attr"] + garage_trips["medtrk_attr"],
-                "lrgtrk_prod": link_trips["lrgtrk_prod"] + garage_trips["lrgtrk_prod"],
-                "lrgtrk_attr": link_trips["lrgtrk_attr"] + garage_trips["lrgtrk_attr"],
-            }
+        _type_class_pa = itertools.product(
+            ["linked","garage"],
+            self.config.truck.classes,
+            ["productions","attractions"],
         )
-        trip_ends.round(decimals=7)
-        for name, value in trip_ends.items():
-            self.logger.log(f"{name}: {value.sum()}", level="DEBUG")
-        return trip_ends
+
+        # TODO Do this with multi-indexing rather than relying on column naming
+
+        for _trip_type, _trk_class, _pa in _type_class_pa:
+            
+            _constant =  _trk_class[_trip_type][_pa].constant
+            _multiplier = _trk_class[_trip_type][_pa].multiplier
+            _rate_trips_df = landuse_df.multiply(
+                    pd.DataFrame(
+                    _trk_class[_trip_type][_pa].land_use_rates, 
+                    index=landuse_df.index
+                )
+            )
+            _trips_df = _rate_trips_df * _multiplier + _constant
+  
+            _trips_df[f"{_trip_type}_{_trk_class.name}_{_pa}"] = _trips_df.sum(axis = 1).round()
+
+        ########################################################################
+        # 2. Balance trips to productions or attractions
+        ########################################################################
+        _type_class = itertools.product(
+            ["linked","garage"],
+            self.config.truck.classes,
+        )
+        for _trip_type, _trk_class in _type_class:
+            _balance_to = _trk_class[_trip_type].balance_to
+            
+            _tots = {
+                "attractions": _trips_df[f"{_trip_type}_{_trk_class}_attractions"].sum(),
+                "productions": _trips_df[f"{_trip_type}_{_trk_class}_productions"].sum(),
+            }
+
+            # if productions OR attractions are zero, fill one with other
+            if not _tots["attractions"]:
+                _trips_df[f"{_trip_type}_{_trk_class}_attractions"] = \
+                    _trips_df[f"{_trip_type}_{_trk_class}_productions"]
+
+            elif not _tots["productions"]:
+                _trips_df[f"{_trip_type}_{_trk_class}_productions"] = \
+                    _trips_df[f"{_trip_type}_{_trk_class}_attractions"]
+
+            # otherwise balance based on sums
+            elif _balance_to == "productions":
+                _trips_df[f"{_trip_type}_{_trk_class}_attractions"] = \
+                    _trips_df[f"{_trip_type}_{_trk_class}_attractions"] * (
+                    _tots["productions"] / _tots["attractions"]
+                )
+
+            elif _balance_to == "attractions":
+                _trips_df[f"{_trip_type}_{_trk_class}_productions"] = \
+                    _trips_df[f"{_trip_type}_{_trk_class}_productions"] * (
+                    _tots["attractions"] /  _tots["productions"]
+                )
+            else: 
+                raise ValueError(f"{_balance_to} is not a valid balance_to value")
+     
+        ########################################################################
+        # 3. Sum tripends across trip purpose
+        ########################################################################
+
+        trip_ends_df = pd.DataFrame()
+
+        _class_pa = itertools.product(
+            self.config.truck.classes,
+            ["productions","attractions"],
+        )
+
+        for _trk_class, _pa in _class_pa:
+            _sum_cols = [c for c in _trips_df.columns if c.endswith(f"{_trk_class}_{_pa}")]
+            trip_ends_df[f"{_trk_class.name}_{_pa}"] = _trips_df[_sum_cols].sum()
+ 
+        trip_ends_df.round(decimals=7)
+
+        self.logger.log(trip_ends_df.describe().to_string(), level="DEBUG")
+
+        return trip_ends_df
 
     @LogStartEnd(level="DEBUG")
     def _distribution(self, trip_ends: pd.DataFrame) -> Dict[str, NumpyArray]:

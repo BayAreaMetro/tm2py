@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import os
 from typing import Dict
-
 import numpy as np
 import openmatrix as _omx
 
 from tm2py.components.component import Component
 from tm2py.emme.matrix import OMXManager, TollChoiceCalculator
 from tm2py.logger import LogStartEnd
+
 
 NumpyArray = np.array
 
@@ -130,7 +130,7 @@ class InternalExternal(Component):
         self._export_results(class_demands)
 
     def _load_data(self) -> Dict[str, NumpyArray]:
-        """Load reference matrices from .omx
+        """Load reference matrices from .omx.
 
         input file: config.internal_external.input_demand_file,
             default is inputs/nonres/ixDaily2006x4.may2208.new.omx
