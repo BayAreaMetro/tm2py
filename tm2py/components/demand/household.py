@@ -4,8 +4,8 @@
 import shutil as _shutil
 
 from tm2py.components.component import Component
-from tm2py.tools import run_process
 from tm2py.logger import LogStartEnd
+from tm2py.tools import run_process
 
 
 class HouseholdModel(Component):
@@ -20,7 +20,7 @@ class HouseholdModel(Component):
             2. Starts matrix manager.
             3. Starts resident travel model (CTRAMP).
             4. Cleans up CTRAMP java.
-        """        
+        """
         self._start_household_manager()
         self._start_matrix_manager()
         self._run_resident_model()

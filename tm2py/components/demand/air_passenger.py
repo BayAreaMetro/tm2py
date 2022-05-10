@@ -2,6 +2,7 @@
 
 
 from __future__ import annotations
+
 import itertools
 import os
 from typing import TYPE_CHECKING
@@ -136,20 +137,20 @@ class AirPassenger(Component):
 
         input_demand = self._load_air_pax_demand()
         aggr_demand = self._aggregate_demand(input_demand)
-        #for period in self._periods:
-        #for group in self._mode_groups:
+        # for period in self._periods:
+        # for group in self._mode_groups:
         #    name = f"{period}_{group}"
         demand = interpolate_dfs(
-            aggr_demand, 
-            int(self._start_year), 
+            aggr_demand,
+            int(self._start_year),
             int(self._end_year),
-            int(self.config.scenario.year)
+            int(self.config.scenario.year),
         )
         self._export_result(demand)
 
     def _load_air_pax_demand(self) -> pd.DataFrame:
         """Loads demand from the CSV files into pandas dataframe.
-        
+
         Uses the following configs to determine the input file names and paths:
         - self.config.air_passenger.input_demand_folder
         - self.config.air_passenger.airport_names
@@ -171,7 +172,7 @@ class AirPassenger(Component):
             return f"{name}_{year}"
 
         input_data_folder = self.config.air_passenger.input_demand_folder
-        
+
         _airport_direction = itertools.product(
             self.config.air_passenger.airport_names,
             ["to", "from"],
@@ -179,8 +180,8 @@ class AirPassenger(Component):
 
         _input_demand_df_list = []
         for year in [self._start_year, self._end_year]:
-            _input_df_year_list= []
-            for airport, direction  in _airport_direction:
+            _input_df_year_list = []
+            for airport, direction in _airport_direction:
                 _file_name = f"{year}_{direction}{airport}.csv"
                 _file_path = os.path.join(
                     self.controller.run_dir, input_data_folder, _file_name
@@ -192,18 +193,18 @@ class AirPassenger(Component):
             _input_demand_df_list.append(_input_year_df)
 
         _air_pax_demand_df = pd.merge(
-            _input_demand_df_list[0], 
-            _input_demand_df_list[1], 
-            how="outer", 
-            on=["ORIG", "DEST"]
+            _input_demand_df_list[0],
+            _input_demand_df_list[1],
+            how="outer",
+            on=["ORIG", "DEST"],
         )
 
-        _grouped_air_pax_demand_df =  _air_pax_demand_df.groupby(["ORIG", "DEST"]).sum()
+        _grouped_air_pax_demand_df = _air_pax_demand_df.groupby(["ORIG", "DEST"]).sum()
         return _grouped_air_pax_demand_df
 
     def _aggregate_demand(self, input_demand: pd.DataFrame) -> pd.DataFrame:
         """Aggregate demand into the assignable classes for each year.
-        
+
         Args:
             input_demand: pandas dataframe with the following columns: TODO
         """
@@ -223,8 +224,6 @@ class AirPassenger(Component):
             aggr_demand[f"{_period}_{_group}_{_year}"] = data.sum(axis=1)
 
         return aggr_demand
-
-    
 
     def _export_result(self, demand: pd.DataFrame):
         """Export resulting model year demand to OMX files by period."""

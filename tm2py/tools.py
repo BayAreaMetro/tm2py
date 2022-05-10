@@ -8,12 +8,11 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
-
-from typing import Collection, Union, List
-
 from contextlib import contextmanager as _context
+from typing import Collection, List, Union
 
 import pandas as pd
+
 
 def parse_num_processors(value: Union[str, int, float]):
     """Convert input value (parse if string) to number of processors.
@@ -181,20 +180,21 @@ def run_process(commands: List[str], name: str = ""):
         else:
             _subprocess.check_call(bat_file_path, shell=True)
 
+
 def interpolate_dfs(
     df: pd.DataFrame,
-    ref_points: Collection[Union[float,int]],
-    target_point: Union[float,int],
+    ref_points: Collection[Union[float, int]],
+    target_point: Union[float, int],
     ref_col_name: str = "ends_with",
 ) -> pd.DataFrame:
     """Interpolate for the model year assuming linear growth between the reference years.
-    
+
     Args:
         df (pd.DataFrame): dataframe to interpolate on, with ref points contained in column
-            name per ref_col_name.  
+            name per ref_col_name.
         ref_points (Collection[Union[float,int]]): reference years to interpolate between
         target_point (Union[float,int]): target year
-        ref_col_name (str, optional): column name to use for reference years. 
+        ref_col_name (str, optional): column name to use for reference years.
             Defaults to "ends_with".
     """
     if ref_col_name not in ["ends_with"]:
@@ -207,25 +207,30 @@ def interpolate_dfs(
     try:
         assert _start_point <= target_point <= _end_point
     except:
-        raise ValueError(f"Target Point: {target_point} not within range of \
-            Reference Points: {ref_points}")
+        raise ValueError(
+            f"Target Point: {target_point} not within range of \
+            Reference Points: {ref_points}"
+        )
 
-    _start_ref_df = df[[c for c in df.columns if c.endswith(f'{_start_point}')]].copy()
-    _end_ref_df = df[[c for c in df.columns if c.endswith(f'{_end_point}')]].copy()
+    _start_ref_df = df[[c for c in df.columns if c.endswith(f"{_start_point}")]].copy()
+    _end_ref_df = df[[c for c in df.columns if c.endswith(f"{_end_point}")]].copy()
 
     try:
         assert len(_start_ref_df.columns) == len(_end_ref_df.columns)
     except:
-        raise ValueError(f"{_start_point} and {_end_point} have different number of columns:\n\
+        raise ValueError(
+            f"{_start_point} and {_end_point} have different number of columns:\n\
            {_start_point} Columns: {_start_ref_df.columns}\n\
            {_end_point} Columns: {_end_ref_df.columns}\
-        ")
+        "
+        )
 
-    _start_ref_df.rename(columns=lambda x: x.replace(f"_{_start_point}", ""), inplace=True)
+    _start_ref_df.rename(
+        columns=lambda x: x.replace(f"_{_start_point}", ""), inplace=True
+    )
     _end_ref_df.rename(columns=lambda x: x.replace(f"_{_end_point}", ""), inplace=True)
     _scale_factor = float(target_point - _start_point) / (_end_point - _start_point)
 
-    interpolated_df = (1 - _scale_factor) * _start_ref_df\
-        + _scale_factor * _end_ref_df
+    interpolated_df = (1 - _scale_factor) * _start_ref_df + _scale_factor * _end_ref_df
 
     return interpolated_df

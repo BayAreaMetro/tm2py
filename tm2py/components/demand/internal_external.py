@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import os
 from typing import Dict
+
 import numpy as np
 import openmatrix as _omx
 
 from tm2py.components.component import Component
 from tm2py.emme.matrix import OMXManager, TollChoiceCalculator
 from tm2py.logger import LogStartEnd
-
 
 NumpyArray = np.array
 

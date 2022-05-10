@@ -13,9 +13,8 @@ from disk.
 from typing import Dict, List, Union
 
 import openmatrix as _omx
-from numpy import exp
 from numpy import array as NumpyArray
-from numpy import resize
+from numpy import exp, resize
 
 from tm2py.emme.manager import EmmeMatrix, EmmeScenario
 
