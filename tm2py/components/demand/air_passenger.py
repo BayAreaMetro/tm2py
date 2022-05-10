@@ -13,7 +13,7 @@ import pandas as pd
 
 from tm2py.components.component import Component
 from tm2py.logger import LogStartEnd
-from tm2py.tools import interpolate_dfs
+from tm2py.tools import interpolate_dfs, df_to_omx
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
@@ -225,35 +225,19 @@ class AirPassenger(Component):
 
         return aggr_demand
 
-    def _export_result(self, demand: pd.DataFrame):
+    def _export_result(self, demand_df: pd.DataFrame):
         """Export resulting model year demand to OMX files by period."""
-        # dropping ORIG and DEST index for calculation of numpy array index
-        demand = demand.reset_index()
-        # get all used Zone IDs to produce index and zone mapping in OMX file
-        zone_ids = sorted(set(demand["ORIG"]).union(set(demand["DEST"])))
-        num_zones = len(zone_ids)
-        zone_map = dict((z, i) for i, z in enumerate(zone_ids))
-        # calculate index of entries in numpy array list
-        demand["INDEX"] = demand.apply(
-            lambda r: zone_map[r["ORIG"]] * len(zone_ids) + zone_map[r["DEST"]], axis=1
-        )
         path_tmplt = os.path.join(
             self.controller.run_dir, self.config.air_passenger.highway_demand_file
         )
         os.makedirs(os.path.dirname(path_tmplt), exist_ok=True)
+
         for period in self._periods:
             file_path = path_tmplt.format(period=period)
-            omx_file = _omx.open_file(file_path, "w")
-            try:
-                omx_file.create_mapping("zone_number", zone_ids)
-                for name in self._mode_groups:
-                    array = np.zeros(shape=(num_zones, num_zones))
-                    # Insert values at the calculated indices in array
-                    np.put(
-                        array,
-                        demand["INDEX"].to_numpy(),
-                        demand[f"{period}_{name}"].to_numpy(),
-                    )
-                    omx_file.create_matrix(self._out_names[name], obj=array)
-            finally:
-                omx_file.close()
+            df_to_omx(
+                demand_df,
+                {group:f"{period}_{group}" for group in self._mode_groups},
+                file_path,
+                orig_column = "ORIG",
+                dest_column = "DEST",
+            )
