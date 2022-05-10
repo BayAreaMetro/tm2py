@@ -241,10 +241,10 @@ def interpolate_dfs(
 def df_to_omx(
     df: pd.DataFrame,
     matrix_dict: Mapping[str, str],
-    omx_filename: str, 
+    omx_filename: str,
     orig_column: str = "ORIG",
     dest_column: str = "DEST",
-    ):
+):
     """Export a dataframe to an OMX matrix file.
 
     Args:
@@ -265,7 +265,8 @@ def df_to_omx(
 
     # calculate omx index of entries in numpy array list
     df["omx_idx"] = df.apply(
-        lambda r: zone_map[r[orig_column]] * num_zones + zone_map[r[dest_column]], axis=1
+        lambda r: zone_map[r[orig_column]] * num_zones + zone_map[r[dest_column]],
+        axis=1,
     )
 
     _omx_file = _omx.open_file(omx_filename, "w")
@@ -285,3 +286,49 @@ def df_to_omx(
             # TODO add logging
     finally:
         _omx_file.close()
+
+
+def zonal_csv_to_matrices(
+    csv_file: str,
+    i_column: str = "ORIG",
+    j_column: str = "DEST",
+    value_columns: str = ["VALUE"],
+    default_value: float = 0.0,
+    fill_zones: bool = False,
+    max_zone: int = None,
+    delimiter: str = ",",
+) -> Mapping[str, pd.DataFrame]:
+    """Read a CSV file with zonal data and into dataframes.
+
+    Input CSV file should have a header row specifying the I, J, and Value column names.
+
+    Args:
+        csv_file (str): _description_
+        i_column (str, optional): Name of j zone column. Defaults to "ORIG".
+        j_column (str, optional): Name of i zone column. Defaults to "DEST".
+        value_columns (str, optional): List of columns to turn into matrices. Defaults to ["VALUE"].
+        default_value (float, optional): Value to fill empty cells with. Defaults to 0.0.
+        fill_zones (bool, optional): If true, will fill zones without values to max zone with
+            default value. Defaults to False.
+        max_zone (int, optional): If fill_zones is True, used to determine matrix size.
+            Defaults to max(I, J).
+        delimiter (str, optional): Input file delimeter. Defaults to ",".
+
+    Returns:
+        dict: Dictionary of Pandas dataframes with matrix names as keys.
+    """
+    # TODO Create a test
+    _df = pd.read_csv(csv_file, delimiter=delimiter)
+    _df_idx = _df.set_index([i_column, j_column])
+    _df_m = _df_idx.unstack(fill_value=default_value)
+    _dfs_dict = {v: _df_idx[v] for v in value_columns}
+    if not fill_zones:
+        return _dfs_dict
+
+    if max_zone is None:
+        max_zone = _df[[i_column, j_column]].max().max()
+
+    _zone_list = list(range(1, max_zone + 1))
+    for v, _df in _dfs_dict.items():
+        _df[v].reindex(index=_zone_list, columns=_zone_list, fill_value=default_value)
+    return _dfs_dict

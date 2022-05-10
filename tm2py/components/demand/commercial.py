@@ -12,7 +12,8 @@ import pandas as pd
 from tm2py.components.component import Component
 from tm2py.emme.matrix import OMXManager, TollChoiceCalculator
 from tm2py.logger import LogStartEnd
-from tm2py.tools import parse_num_processors
+from tm2py.network.tools import get_blended_skim
+from tm2py.tools import parse_num_processors, zonal_csv_to_matrices
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
@@ -50,6 +51,7 @@ _land_use_aggregation = {
     "TOTEMP": ["emp_total"],
     "TOTHH": ["HH"],
 }
+
 
 class CommercialVehicleModel(Component):
     """Commercial vehicle (truck) demand model for 4 sizes of truck, toll choice, and time of day.
@@ -185,7 +187,7 @@ class CommercialVehicleModel(Component):
         taz_landuse = self._aggregate_landuse()
         trip_ends = self._generation(taz_landuse)
         daily_demand = self._distribution(trip_ends)
-        period_demand = self._time_of_day(daily_demand)
+        period_demand = self._split_by_time_of_day(daily_demand)
         class_demands = self._toll_choice(period_demand)
         self._export_results(class_demands)
 
@@ -281,66 +283,71 @@ class CommercialVehicleModel(Component):
         _trips_df = pd.DataFrame()
 
         _type_class_pa = itertools.product(
-            ["linked","garage"],
+            ["linked", "garage"],
             self.config.truck.classes,
-            ["productions","attractions"],
+            ["productions", "attractions"],
         )
 
         # TODO Do this with multi-indexing rather than relying on column naming
 
         for _trip_type, _trk_class, _pa in _type_class_pa:
-            
-            _constant =  _trk_class[_trip_type][_pa].constant
+
+            _constant = _trk_class[_trip_type][_pa].constant
             _multiplier = _trk_class[_trip_type][_pa].multiplier
             _rate_trips_df = landuse_df.multiply(
-                    pd.DataFrame(
-                    _trk_class[_trip_type][_pa].land_use_rates, 
-                    index=landuse_df.index
+                pd.DataFrame(
+                    _trk_class[_trip_type][_pa].land_use_rates, index=landuse_df.index
                 )
             )
             _trips_df = _rate_trips_df * _multiplier + _constant
-  
-            _trips_df[f"{_trip_type}_{_trk_class.name}_{_pa}"] = _trips_df.sum(axis = 1).round()
+
+            _trips_df[f"{_trip_type}_{_trk_class.name}_{_pa}"] = _trips_df.sum(
+                axis=1
+            ).round()
 
         ########################################################################
         # 2. Balance trips to productions or attractions
         ########################################################################
         _type_class = itertools.product(
-            ["linked","garage"],
+            ["linked", "garage"],
             self.config.truck.classes,
         )
         for _trip_type, _trk_class in _type_class:
             _balance_to = _trk_class[_trip_type].balance_to
-            
+
             _tots = {
-                "attractions": _trips_df[f"{_trip_type}_{_trk_class}_attractions"].sum(),
-                "productions": _trips_df[f"{_trip_type}_{_trk_class}_productions"].sum(),
+                "attractions": _trips_df[
+                    f"{_trip_type}_{_trk_class}_attractions"
+                ].sum(),
+                "productions": _trips_df[
+                    f"{_trip_type}_{_trk_class}_productions"
+                ].sum(),
             }
 
             # if productions OR attractions are zero, fill one with other
             if not _tots["attractions"]:
-                _trips_df[f"{_trip_type}_{_trk_class}_attractions"] = \
-                    _trips_df[f"{_trip_type}_{_trk_class}_productions"]
+                _trips_df[f"{_trip_type}_{_trk_class}_attractions"] = _trips_df[
+                    f"{_trip_type}_{_trk_class}_productions"
+                ]
 
             elif not _tots["productions"]:
-                _trips_df[f"{_trip_type}_{_trk_class}_productions"] = \
-                    _trips_df[f"{_trip_type}_{_trk_class}_attractions"]
+                _trips_df[f"{_trip_type}_{_trk_class}_productions"] = _trips_df[
+                    f"{_trip_type}_{_trk_class}_attractions"
+                ]
 
             # otherwise balance based on sums
             elif _balance_to == "productions":
-                _trips_df[f"{_trip_type}_{_trk_class}_attractions"] = \
-                    _trips_df[f"{_trip_type}_{_trk_class}_attractions"] * (
-                    _tots["productions"] / _tots["attractions"]
-                )
+                _trips_df[f"{_trip_type}_{_trk_class}_attractions"] = _trips_df[
+                    f"{_trip_type}_{_trk_class}_attractions"
+                ] * (_tots["productions"] / _tots["attractions"])
 
             elif _balance_to == "attractions":
-                _trips_df[f"{_trip_type}_{_trk_class}_productions"] = \
-                    _trips_df[f"{_trip_type}_{_trk_class}_productions"] * (
-                    _tots["attractions"] /  _tots["productions"]
-                )
-            else: 
+                _trips_df[f"{_trip_type}_{_trk_class}_productions"] = _trips_df[
+                    f"{_trip_type}_{_trk_class}_productions"
+                ] * (_tots["attractions"] / _tots["productions"])
+            else:
                 raise ValueError(f"{_balance_to} is not a valid balance_to value")
-     
+
         ########################################################################
         # 3. Sum tripends across trip purpose
         ########################################################################
@@ -349,13 +356,15 @@ class CommercialVehicleModel(Component):
 
         _class_pa = itertools.product(
             self.config.truck.classes,
-            ["productions","attractions"],
+            ["productions", "attractions"],
         )
 
         for _trk_class, _pa in _class_pa:
-            _sum_cols = [c for c in _trips_df.columns if c.endswith(f"{_trk_class}_{_pa}")]
+            _sum_cols = [
+                c for c in _trips_df.columns if c.endswith(f"{_trk_class}_{_pa}")
+            ]
             trip_ends_df[f"{_trk_class.name}_{_pa}"] = _trips_df[_sum_cols].sum()
- 
+
         trip_ends_df.round(decimals=7)
 
         self.logger.log(trip_ends_df.describe().to_string(), level="DEBUG")
@@ -382,13 +391,27 @@ class CommercialVehicleModel(Component):
         Returns:
              Pandas dataframe of the the daily truck trip matrices
         """
-        # load skims from OMX file
-        trk_blend_time = self._get_blended_time("trk")
-        lrgtrk_blend_time = self._get_blended_time("lrgtrk")
+        # Get blended skims
+        trk_blend_time = get_blended_skim(
+            self.controller, mode="trk", blend={"AM": 1.0 / 3, "MD": 2.0 / 3}
+        )
         # note that very small, small and medium are assigned as one class
-        # and share the same output skims
+
+        lrgtrk_blend_time = get_blended_skim(
+            self.controller, mode="lrgtrk", blend={"AM": 1.0 / 3, "MD": 2.0 / 3}
+        )
+
         ffactors = self._load_ff_lookup_tables()
-        k_factors = self._load_k_factors()
+        k_factors = zonal_csv_to_matrices(
+            self.get_abs_path(self.config.truck.k_factors_file),
+            i_column="I_taz_tm2_v2_2",
+            j_column="J_taz_tm2_v2_2",
+            value_columns="truck_k",
+            fill_zones=True,
+            default_value=0,
+            max_zone=max(self._scenario.zone_numbers),
+        )["truck_k"].values
+
         friction_calculations = [
             {"name": "vsmtrk", "time": trk_blend_time, "use_k_factors": False},
             {"name": "smltrk", "time": trk_blend_time, "use_k_factors": True},
@@ -420,29 +443,8 @@ class CommercialVehicleModel(Component):
             )
         return daily_demand
 
-    def _get_blended_time(self, name: str) -> NumpyArray:
-        """Blend AM and MD truck times for distribution calculations.
-
-        Uses 1/3 * AM + 2/3 * MD, sources skims from generated OMX files
-        """
-        skim_path_tmplt = self.get_abs_path(self.config.highway.output_skim_path)
-        with OMXManager(skim_path_tmplt.format(period="AM"), "r") as am_file:
-            am_time = am_file.read(f"am_{name}_time")
-        with OMXManager(skim_path_tmplt.format(period="MD"), "r") as md_file:
-            md_time = md_file.read(f"md_{name}_time")
-        # blend truck times
-        # compute blended truck time as an average 1/3 AM and 2/3 MD
-        #     NOTE: Cube outputs skims\COM_HWYSKIMAM_taz.tpp, skims\COM_HWYSKIMMD_taz.tpp
-        #           are in the highway_skims_{period}.omx files in Emme version
-        #           with updated matrix names, {period}_trk_time, {period}_lrgtrk_time.
-        #           Also, there will no longer be separate very small, small and medium
-        #           truck times, as they are assigned together as the same class.
-        #           There is only the trk_time.
-        blend_time = 1 / 3.0 * am_time + 2 / 3.0 * md_time
-        return blend_time
-
     @LogStartEnd(level="DEBUG")
-    def _time_of_day(
+    def _split_by_time_of_day(
         self, daily_demand: Dict[str, Dict[str, NumpyArray]]
     ) -> Dict[str, NumpyArray]:
         """Apply period factors to convert daily demand totals to per-period demands.
@@ -600,20 +602,3 @@ class CommercialVehicleModel(Component):
                 for key, token in zip(factors.keys(), tokens):
                     factors[key].append(float(token))
         return factors
-
-    def _load_k_factors(self) -> NumpyArray:
-        """Load k-factors table from CSV file [config.truck.k_factors_file]."""
-        # NOTE: loading from this text format to numpy is pretty slow (~10 seconds)
-        #       would be better to use a different format
-        data = pd.read_csv(self.get_abs_path(self.config.truck.k_factors_file))
-        zones = np.unique(data["I_taz_tm2_v2_2"])
-        num_data_zones = len(zones)
-        row_index = np.searchsorted(zones, data["I_taz_tm2_v2_2"])
-        col_index = np.searchsorted(zones, data["J_taz_tm2_v2_2"])
-        k_factors = np.zeros((num_data_zones, num_data_zones))
-        k_factors[row_index, col_index] = data["truck_k"]
-        num_zones = len(self._scenario.zone_numbers)
-        if num_data_zones < num_zones:
-            padding = ((0, num_zones - num_data_zones), (0, num_zones - num_data_zones))
-            k_factors = np.pad(k_factors, padding)
-        return k_factors

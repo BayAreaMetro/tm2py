@@ -13,7 +13,7 @@ import pandas as pd
 
 from tm2py.components.component import Component
 from tm2py.logger import LogStartEnd
-from tm2py.tools import interpolate_dfs, df_to_omx
+from tm2py.tools import df_to_omx, interpolate_dfs
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
@@ -236,8 +236,8 @@ class AirPassenger(Component):
             file_path = path_tmplt.format(period=period)
             df_to_omx(
                 demand_df,
-                {group:f"{period}_{group}" for group in self._mode_groups},
+                {group: f"{period}_{group}" for group in self._mode_groups},
                 file_path,
-                orig_column = "ORIG",
-                dest_column = "DEST",
+                orig_column="ORIG",
+                dest_column="DEST",
             )

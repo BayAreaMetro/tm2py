@@ -278,37 +278,56 @@ class InternalExternalConfig(ConfigItem):
         default_factory=list
     )
 
+
 @dataclass(frozen=True)
 class LandUseRateConfig(ConfigItem):
     """LandUseRateConfig - multiplier for land use file columns."""
+
     property: str
     rate: float
+
+
 @dataclass(frozen=True)
 class TripGenerationFormulaConfig(ConfigItem):
     """TripProductionConfig.
-    
+
     Trip productions for a zone are the constant plus the sum of the rates * values in land use
-    file for that zone. 
+    file for that zone.
     """
+
     land_use_rates: List[LandUseRateConfig]
     constant: Field(type=float, default=0.0)
     multiplier: Field(type=float, default=1.0)
-    
+
+
 @dataclass(frozen=True)
 class TripGenerationConfig(ConfigItem):
     """Trip Generation parameters."""
+
     name: str
     production_formula: TripGenerationFormulaConfig
     attraction_formula: TripGenerationFormulaConfig
     balance_to: Optional[str] = Field(default="production")
 
+
+@dataclass(frozen=True)
+class TripDistributionConfig(ConfigItem):
+    """Trip Distribution parameters."""
+
+    use_k_factors: bool
+    k_factor_file: Optional[str] = Field(default=None)
+
+
 @dataclass(frozen=True)
 class TruckClassConfig(ConfigItem):
     """Truck class parameters."""
+
     name: str
     time_of_day_split: List[TimeOfDaySplitConfig]
     trip_type_config: List[TripGenerationConfig]
-    
+    trip_distribution_config: TripDistributionConfig
+
+
 @dataclass(frozen=True)
 class TruckConfig(ConfigItem):
     """Truck model parameters."""
@@ -323,7 +342,7 @@ class TruckConfig(ConfigItem):
     max_balance_relative_error: float
     classes: List[TruckClassConfig]
 
-    
+
 @dataclass(frozen=True)
 class ActiveModeShortestPathSkimConfig(ConfigItem):
     """Active mode skim entry."""

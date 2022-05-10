@@ -88,7 +88,15 @@ def test_interpolate(inro_context):
     assert_frame_equal(_2030_output_df, _2030_expected_output_df)
 
 
-def df_to_omx(inro_context):
+def test_df_to_omx(inro_context):
     """Test df_to_omx."""
     from tm2py.tools import df_to_omx
+
+    # TODO
+
+
+def test_csv_to_dfs(inro_context):
+    """Test zonal_csv_to_matrices."""
+    from tm2py.tools import zonal_csv_to_matrices
+
     # TODO
