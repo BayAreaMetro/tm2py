@@ -9,10 +9,18 @@ from tm2py.logger import LogStartEnd
 
 
 class HouseholdModel(Component):
-    """Run household resident model"""
+    """Run household resident model."""
 
     @LogStartEnd()
     def run(self):
+        """Run the the household resident travel demand model.
+
+        Steps:
+            1. Starts household manager.
+            2. Starts matrix manager.
+            3. Starts resident travel model (CTRAMP).
+            4. Cleans up CTRAMP java.
+        """        
         self._start_household_manager()
         self._start_matrix_manager()
         self._run_resident_model()

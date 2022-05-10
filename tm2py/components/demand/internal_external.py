@@ -1,6 +1,4 @@
-"""Module containing Internal <-> External trip model.
-
-"""
+"""Module containing Internal <-> External trip model."""
 
 from __future__ import annotations
 
@@ -124,7 +122,7 @@ class InternalExternal(Component):
 
     @LogStartEnd()
     def run(self):
-        """docstring for component run"""
+        """Docstring for component run."""
         input_demand = self._load_data()
         daily_demand = self._growth_forecast(input_demand)
         period_demand = self._time_of_day(daily_demand)
@@ -135,7 +133,7 @@ class InternalExternal(Component):
         """Load reference matrices from .omx
 
         input file: config.internal_external.input_demand_file,
-            default is inputs\\nonres\\ixDaily2006x4.may2208.new.omx
+            default is inputs/nonres/ixDaily2006x4.may2208.new.omx
         """
         file_path = self.get_abs_path(self.config.internal_external.input_demand_file)
         omx_file = _omx.open_file(file_path)
@@ -150,11 +148,11 @@ class InternalExternal(Component):
     def _growth_forecast(self, demand: Dict[str, NumpyArray]) -> Dict[str, NumpyArray]:
         """Calculate adjusted demand based on scenario year and growth rates.
 
-        STEPS:
-        1.1 apply special factors to certain gateways based on ID
+        Steps:
+        - 1.1 apply special factors to certain gateways based on ID
           NOTE: these should be expressed such that we can put
                 them in the config later
-        1.2 apply gateway-specific annual growth rates to results of step 1
+        - 1.2 apply gateway-specific annual growth rates to results of step 1
            to generate year specific forecast
 
         Args:
@@ -163,7 +161,6 @@ class InternalExternal(Component):
         Returns:
              Dictionary of Numpy matrices of daily PA by class mode
         """
-
         # Build adjustment matrix to be applied to all input matrices
         # special gateway adjustments based on zone index
         year = int(self.config.scenario.year)
@@ -187,7 +184,7 @@ class InternalExternal(Component):
     def _time_of_day(
         self, daily_prod_attract: Dict[str, NumpyArray]
     ) -> Dict[str, Dict[str, NumpyArray]]:
-        """Calculate time of day matrices
+        """Calculate time of day matrices.
 
         input: results of _ix_forecast, daily PA matrices
         STEPS:

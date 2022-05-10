@@ -713,7 +713,7 @@ class SlackNotifier:
         """Posts text to the slack channel via the webhook if slack_webhook_url is found.
 
         Args:
-            - text: text message to send to slack
+           text: text message to send to slack
         """
         if self._slack_webhook_url is None:
             return

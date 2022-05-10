@@ -13,7 +13,7 @@ files in .toml format (by convention a scenario.toml and a model.toml)
   `python <path>/tm2py/tm2py/controller.py –s scenario.toml –m model.toml`
 
 """
-
+import itertools
 import os
 from typing import List, Tuple, Union
 
@@ -197,7 +197,7 @@ class RunController:
 
         Args:
             iteration (int): iteration to add component to.
-            component (Component): Component to add to queue.
+            component_name (Component): Component to add to queue.
         """
         _component = self._component_map[component_name]
         if component_name not in self._validated_components:

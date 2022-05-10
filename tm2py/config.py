@@ -245,7 +245,7 @@ class AirPassengerConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class GateFactorConfig(ConfigItem):
-    """Mapping of gateway (zone ordering ID) to factor value"""
+    """Mapping of gateway (zone ordering ID) to factor value."""
 
     zone_index: int
     factor: float
@@ -253,7 +253,7 @@ class GateFactorConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class TimeOfDaySplitConfig(ConfigItem):
-    """Time of day demand split for productions and attractions"""
+    """Time of day demand split for productions and attractions."""
 
     time_period: str
     production: float

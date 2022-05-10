@@ -1,5 +1,5 @@
-"""Commercial vehicle / truck model module.
-"""
+"""Commercial vehicle / truck model module."""
+
 from __future__ import annotations
 
 import os
@@ -172,6 +172,11 @@ class CommercialVehicleModel(Component):
     """
 
     def __init__(self, controller: RunController):
+        """Constructor for the CommercialVehicleModel component.
+
+        Args:
+            controller (RunController): Run controller for model run.
+        """
         super().__init__(controller)
         self._num_processors = parse_num_processors(self.config.emme.num_processors)
         self._scenario = None
@@ -359,10 +364,10 @@ class CommercialVehicleModel(Component):
         """Run trip distribution model for 4 truck types using Emme matrix balancing.
 
         Notes on distribution steps:
-            load nonres\truck_kfactors_taz.csv
-            load nonres\truckFF.dat
+            load nonres/truck_kfactors_taz.csv
+            load nonres/truckFF.dat
             Apply friction factors and kfactors to produce balancing matrix
-            apply the gravity models using friction factors from nonres\truckFF.dat
+            apply the gravity models using friction factors from nonres/truckFF.dat
             (note the very small trucks do not use the K-factors)
             Can use Emme matrix balancing for this - important note: reference
             matrices by name and ensure names are unique

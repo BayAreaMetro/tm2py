@@ -12,8 +12,8 @@ from disk.
 
 from typing import Dict, List, Union
 
-from numpy import array as NumpyArray, resize, exp
 import openmatrix as _omx
+from numpy import exp
 from numpy import array as NumpyArray
 from numpy import resize
 
@@ -278,7 +278,7 @@ class TollChoiceCalculator:
     Commercial and Internal-external sub models. Loads input skims
     from OMXManager
 
-    Args:
+    Properties:
         value_of_time: value of time to use in the utility expression
         coeff_time: coefficient of time value used in the utility expression
         operating_cost_per_mile: operating cost value in cents per mile
@@ -288,6 +288,14 @@ class TollChoiceCalculator:
     def __init__(
         self, value_of_time: float, coeff_time: float, operating_cost_per_mile: float
     ):
+        """Constructor for TollChoiceCalculator.
+
+        Args:
+            value_of_time (float): value of time to use in the utility expression
+            coeff_time (float): coefficient of time value used in the utility expression
+            operating_cost_per_mile (float): operating cost value in cents per mile
+                for converting distance to cost
+        """
         self.value_of_time = value_of_time
         self.coeff_time = coeff_time
         self.operating_cost_per_mile = operating_cost_per_mile
@@ -346,6 +354,7 @@ class TollChoiceCalculator:
         prob_nontoll: NumpyArray,
     ):
         """Mask the nontoll probability matrix.
+
         Set to 1.0 if no toll path toll cost, or to 0.0 if no nontoll time.
 
         Args:
