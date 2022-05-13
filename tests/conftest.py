@@ -40,6 +40,11 @@ def temp_dir():
     tf.cleanup()
 
 
+def pytest_addoption(parser):
+    """Parse command line arguments."""
+    parser.addoption("--inro", action="store", default="notmock")
+
+
 def mocked_inro_context():
     """Mocking of modules which need to be mocked for tests."""
     sys.modules["inro.emme.database.emmebank"] = MagicMock()
@@ -53,9 +58,23 @@ def mocked_inro_context():
 
 
 @pytest.fixture(scope="session")
-def inro_context():
+def inro_context(pytestconfig):
     """Mocks necessary inro modules if they aren't successfully imported."""
+
     try:
-        import inro.emme.database.emmebank
-    except ModuleNotFoundError:
-        mocked_inro_context()
+        _inro = pytestconfig.getoption("inro")
+        if _inro.lower() == "mock":
+            print("Mocking inro environment.")
+            mocked_inro_context()
+        else:
+            import inro.emme.database.emmebank
+
+            print("Using inro environment.")
+    except:
+        try:
+            import inro.emme.database.emmebank
+
+            print("Using inro environment.")
+        except ModuleNotFoundError:
+            print("Mocking inro environment.")
+            mocked_inro_context()
