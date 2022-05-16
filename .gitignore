@@ -116,7 +116,6 @@ venv.bak/
 .project
 .pydevproject
 .settings
-.vscode
 
 # mypy
 .mypy_cache/

@@ -1,0 +1,23 @@
+{
+    "recommendations": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "njqdev.vscode-python-typehint",
+        "njpwerner.autodocstring",
+        "davidanson.vscode-markdownlint",
+        "bierner.markdown-mermaid",
+        "takumii.markdowntable",
+        "github.copilot",
+        "github.vscode-pull-request-github",
+        "mhutchie.git-graph",
+        "eamodio.gitlens",
+        "jasonnutter.vscode-codeowners",
+        "tamasfe.even-better-toml",
+        "redhat.vscode-yaml",
+        "zainchen.json",
+        "randomfractalsinc.geo-data-viewer",
+        "tht13.html-preview-vscode",
+        "visualstudioexptteam.vscodeintellicode",
+        "ms-toolsai.jupyter",
+    ]
+}
