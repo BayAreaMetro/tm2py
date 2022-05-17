@@ -17,7 +17,8 @@ files in .toml format (by convention a scenario.toml and a model.toml)
 import itertools
 import os
 from pathlib import Path
-from typing import Collection, Union
+from typing import List, Tuple, Collection, Union
+
 
 from tm2py.components.component import Component
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
@@ -57,6 +58,13 @@ class RunController:
             transit assignments and skims) utilities.
         complete_components: list of components which have completed, tuple of
             (iteration, name, Component object)
+
+    Internal properties:
+        _emme_manager: EmmeManager object, cached on first access
+        _iteration: current iteration
+        _component: current running / last run Component
+        _component_name: name of the current / last run component
+        _queued_components: list of iteration, name, Component
     """
 
     def __init__(
@@ -78,7 +86,8 @@ class RunController:
         self._run_dir = Path(run_dir)
 
         self.config = Configuration.load_toml(config_file)
-
+        # NOTE: Logger opens log file on __enter__ (in run), not ready for logging yet
+        # Logger uses self.config.logging
         self.logger = Logger(self)
         self.top_sheet = None
         self.trace = None
@@ -86,11 +95,12 @@ class RunController:
 
         # mapping from defined names referenced in config to Component objects
         self._component_map = {k: v(self) for k, v in component_cls_map.items()}
+        self._validated_components = set()
         self._emme_manager = None
         self._iteration = None
         self._component = None
+        self._component_name = None
         self._queued_components = []
-        self._queue_components()
 
     @property
     def run_dir(self) -> Path:
@@ -98,11 +108,22 @@ class RunController:
         return self._run_dir
 
     @property
+    def run_iterations(self) -> List[int]:
+        """List of iterations for this model run."""
+        return range(
+            max(1, self.config.run.start_iteration), self.config.run.end_iteration + 1
+        )
+
+    @property
     def iteration(self) -> int:
         """Current iteration of model."""
         return self._iteration
 
     @property
+    def iter_component(self) -> Tuple[int, str]:
+        """Tuple of the current iteration and component name."""
+        return self._iteration, self._component_name
+
     def component(self) -> Component:
         """Current component of model."""
         return self._component
@@ -143,43 +164,45 @@ class RunController:
 
     def _queue_components(self):
         """Add components per iteration to queue according to input Config."""
-        self._queued_components = []
+        try:
+            assert not self._queued_components
+        except AssertionError:
+            "Components already queued, returning without re-queuing."
+            return
+
         if self.config.run.start_iteration == 0:
-            self._queued_components += [
-                (0, c_name, self._component_map[c_name])
-                for c_name in self.config.run.initial_components
-            ]
-        iteration_nums = range(
-            max(1, self.config.run.start_iteration), self.config.run.end_iteration + 1
-        )
-        iteration_components = [
-            self._component_map[c_name]
-            for c_name in self.config.run.global_iteration_components
-        ]
-        self._queued_components += list(
-            itertools.product(
-                iteration_nums,
-                iteration_components,
-                self.config.run.global_iteration_components,
-            )
-        )
-        self._queued_components += [
-            (self.config.run.end_iteration + 1, self._component_map[c_name])
-            for c_name in self.config.run.final_components
-        ]
+            for _c_name in self.config.run.initial_components:
+                self._add_component_to_queue(0, _c_name)
 
+        # Queue components which are run for each iteration
+        _iteration_x_components = itertools.product(
+            self.run_iterations, self.config.run.global_iteration_components
+        )
+
+        for _iteration, _c_name in _iteration_x_components:
+            self._add_component_to_queue(_iteration, _c_name)
+
+        # Queue components which are run after final iteration
+        _finalizer_iteration = self.config.run.end_iteration + 1
+
+        for c_name in self.config.run.final_components:
+            self._add_component_to_queue(_finalizer_iteration, _c_name)
+
+        # If start_component specified, remove things before its first occurance
         if self.config.run.start_component:
-            start_index = [
-                idx
-                for idx, c in enumerate(self._queued_components)
-                if self.config.run.start_component == c[1]
-            ][0]
-            self._queued_components = self._queued_components[start_index:]
+            _queued_c_names = [c.name for c in self._queued_components]
+            _start_c_index = _queued_c_names.index(self.config.run.start_component)
+            self._queued_components = self._queued_components[_start_c_index:]
 
-    def validate_inputs(self):
-        """Validate input state prior to run."""
-        already_validated_components = set()
-        for _, name, component in self._queued_components:
-            if name not in already_validated_components:
-                component.validate_inputs()
-                already_validated_components.add(name)
+    def _add_component_to_queue(self, iteration: int, component_name: str):
+        """Add component to queue (self._queued_components), first validating its inputs.
+
+        Args:
+            iteration (int): iteration to add component to.
+            component (Component): Component to add to queue.
+        """
+        _component = self._component_map[component_name]
+        if component_name not in self._validated_components:
+            _component.validate_inputs()
+            self._validated_components.add(component_name)
+        self._queued_components.append((self._iteration, component_name, _component))

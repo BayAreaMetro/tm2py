@@ -13,6 +13,19 @@ if TYPE_CHECKING:
     from tm2py.controller import RunController
 
 
+class FileFormatError(Exception):
+    """Exception raised when a file is not in the expected format."""
+
+    def __init__(self, f, *args):
+        """Exception for invalid file formats."""
+        super().__init__(args)
+        self.f = f
+
+    def __str__(self):
+        """String representation for FileFormatError."""
+        return f"The {self.f} is not a valid format."
+
+
 class Component(ABC):
     """Base component class for tm2py top-level inheritance.
 
@@ -90,8 +103,9 @@ class Component(ABC):
         """Reference to trace."""
         return self._trace
 
+    @abstractmethod
     def validate_inputs(self):
-        """Validate inputs are correct at model initiation, fail fast if not."""
+        """Validate inputs are correct at model initiation, raise on error."""
 
     @abstractmethod
     def run(self):
