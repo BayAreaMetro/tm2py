@@ -16,7 +16,9 @@ files in .toml format (by convention a scenario.toml and a model.toml)
 
 import itertools
 import os
-from typing import List, Tuple, Union
+from pathlib import Path
+from typing import List, Tuple, Collection, Union
+
 
 from tm2py.components.component import Component
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
@@ -65,22 +67,23 @@ class RunController:
         _queued_components: list of iteration, name, Component
     """
 
-    def __init__(self, config_file: Union[List[str], str] = None, run_dir: str = None):
-        """Constructor for the RunController.
+    def __init__(
+        self,
+        config_file: Union[Collection[Union[str, Path]], str, Path] = None,
+        run_dir: Union[Path, str] = None,
+    ):
+        """Constructor for RunController class.
 
         Args:
-            config_file (Union[List[str], str], optional): Configuration TOML filenames or list
-                of files. Defaults to None.
-            run_dir (str, optional): Model run base directory. Defaults to where first listed
-                config file is located.
+            config_file: Single or list of config file locations as strings or Path objects.
+                Defaults to None.
+            run_dir: Model run directory as a Path object or string. If not provided, defaults
+                to the directory of the first config_file.
         """
-        if not isinstance(config_file, list):
-            config_file = [config_file]
         if run_dir is None:
-            run_dir = os.path.dirname(config_file[0])
-        if not os.path.isabs(run_dir):
-            run_dir = os.path.abspath(run_dir)
-        self._run_dir = run_dir
+            run_dir = Path(os.path.abspath(os.path.dirname(config_file[0])))
+
+        self._run_dir = Path(run_dir)
 
         self.config = Configuration.load_toml(config_file)
         # NOTE: Logger opens log file on __enter__ (in run), not ready for logging yet
@@ -100,8 +103,8 @@ class RunController:
         self._queued_components = []
 
     @property
-    def run_dir(self) -> str:
-        """The root run directory of the model run."""
+    def run_dir(self) -> Path:
+        """The root run directory of the model run"""
         return self._run_dir
 
     @property
@@ -140,6 +143,12 @@ class RunController:
         )
         # Initialize Modeller to use Emme assignment tools and other APIs
         self._emme_manager.modeller(project)
+
+    def get_abs_path(self, rel_path: Union[Path, str]) -> Path:
+        """Get the absolute path from the root run directory given a relative path."""
+        if not isinstance(rel_path, Path):
+            rel_path = Path(rel_path)
+        return os.path.join(self.run_dir, rel_path)
 
     def run(self):
         """Main interface to run model."""
