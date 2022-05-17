@@ -1,10 +1,9 @@
 """Config implementation and schema."""
 # pylint: disable=too-many-instance-attributes
 
-from abc import ABC
 import pathlib
-from typing import Collection, Tuple, Union, Optional
-from typing_extensions import Literal
+from abc import ABC
+from typing import Collection, Optional, Tuple, Union
 
 import toml
 from pydantic import Field, validator
