@@ -57,5 +57,8 @@ def inro_context():
     """Mocks necessary inro modules if they aren't successfully imported."""
     try:
         import inro.emme.database.emmebank
+
+        yield "inro"
     except ModuleNotFoundError:
         mocked_inro_context()
+        yield "mocked"

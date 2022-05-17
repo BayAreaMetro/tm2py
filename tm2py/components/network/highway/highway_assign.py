@@ -102,6 +102,11 @@ class HighwayAssignment(Component):
         self._matrix_cache = None
         self._skim_matrices = []
 
+    def validate_inputs(self):
+        """Validate inputs files are correct, raise if an error is found."""
+        # TODO
+        pass
+
     @LogStartEnd("Highway assignment and skims", level="STATUS")
     def run(self):
         """Run highway assignment."""

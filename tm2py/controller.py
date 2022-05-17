@@ -17,8 +17,7 @@ files in .toml format (by convention a scenario.toml and a model.toml)
 import itertools
 import os
 from pathlib import Path
-from typing import List, Tuple, Collection, Union
-
+from typing import Collection, List, Tuple, Union
 
 from tm2py.components.component import Component
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
@@ -149,6 +148,11 @@ class RunController:
         if not isinstance(rel_path, Path):
             rel_path = Path(rel_path)
         return os.path.join(self.run_dir, rel_path)
+
+    def validate_inputs(self):
+        """Validate inputs files are correct, raise if an error is found."""
+        # TODO
+        pass
 
     def run(self):
         """Main interface to run model."""
