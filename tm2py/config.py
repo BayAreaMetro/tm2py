@@ -1,8 +1,9 @@
 """Config implementation and schema."""
 # pylint: disable=too-many-instance-attributes
 
+import pathlib
 from abc import ABC
-from typing import List, Optional, Tuple, Union
+from typing import Collection, Optional, Tuple, Union
 
 import toml
 from pydantic import Field, validator
@@ -46,7 +47,7 @@ class ScenarioConfig(ConfigItem):
         year: model year, must be at least 2005
     """
 
-    maz_landuse_file: str
+    maz_landuse_file: pathlib.Path
     year: int = Field(ge=2005)
     verify: Optional[bool] = Field(default=False)
 
@@ -192,8 +193,8 @@ class TimePeriodConfig(ConfigItem):
 class HouseholdConfig(ConfigItem):
     """Household (residents) model parameters."""
 
-    highway_demand_file: str
-    transit_demand_file: str
+    highway_demand_file: pathlib.Path
+    transit_demand_file: pathlib.Path
 
 
 @dataclass(frozen=True)
@@ -235,8 +236,8 @@ class AirPassengerConfig(ConfigItem):
         demand to highway class demand
     """
 
-    highway_demand_file: str
-    input_demand_folder: str
+    highway_demand_file: pathlib.Path
+    input_demand_folder: pathlib.Path
     reference_start_year: str
     reference_end_year: str
     airport_names: Tuple[str, ...]
@@ -264,8 +265,8 @@ class TimeOfDaySplitConfig(ConfigItem):
 class InternalExternalConfig(ConfigItem):
     """Internal <-> External model parameters."""
 
-    highway_demand_file: str
-    input_demand_file: str
+    highway_demand_file: pathlib.Path
+    input_demand_file: pathlib.Path
     reference_year: int
     toll_choice_time_coefficient: float
     value_of_time: float
@@ -332,9 +333,9 @@ class TruckClassConfig(ConfigItem):
 class TruckConfig(ConfigItem):
     """Truck model parameters."""
 
-    highway_demand_file: str
-    k_factors_file: str
-    friction_factors_file: str
+    highway_demand_file: pathlib.Path
+    k_factors_file: pathlib.Path
+    friction_factors_file: pathlib.Path
     value_of_time: float
     operating_cost_per_mile: float
     toll_choice_time_coefficient: float
@@ -506,7 +507,7 @@ class HighwayTollsConfig(ConfigItem):
                 skims: "bridgetoll_{vehicle}", "valuetoll_{vehicle}"
     """
 
-    file_path: str = Field()
+    file_path: pathlib.Path = Field()
     tollbooth_start_index: int = Field(gt=1)
     src_vehicle_group_names: Tuple[str, ...] = Field()
     dst_vehicle_group_names: Tuple[str, ...] = Field()
@@ -582,10 +583,10 @@ class HighwayMazToMazConfig(ConfigItem):
     operating_cost_per_mile: float = Field(ge=0)
     max_skim_cost: float = Field(gt=0)
     excluded_links: Tuple[str, ...] = Field()
-    demand_file: str = Field()
+    demand_file: pathlib.Path = Field()
     demand_county_groups: Tuple[DemandCountyGroupConfig, ...] = Field()
     skim_period: str = Field()
-    output_skim_file: str = Field()
+    output_skim_file: pathlib.Path = Field()
 
     @validator("demand_county_groups")
     def unique_group_numbers(value):
@@ -621,7 +622,7 @@ class HighwayConfig(ConfigItem):
     relative_gap: float = Field(ge=0)
     max_iterations: int = Field(ge=0)
     area_type_buffer_dist_miles: float = Field(gt=0)
-    output_skim_path: str = Field()
+    output_skim_path: pathlib.Path = Field()
     tolls: HighwayTollsConfig = Field()
     maz_to_maz: HighwayMazToMazConfig = Field()
     classes: Tuple[HighwayClassConfig, ...] = Field()
@@ -755,15 +756,15 @@ class TransitConfig(ConfigItem):
     initial_boarding_penalty: float
     transfer_boarding_penalty: float
     max_transfers: int
-    output_skim_path: str
-    fares_path: str
-    fare_matrix_path: str
+    output_skim_path: pathlib.Path
+    fares_path: pathlib.Path
+    fare_matrix_path: pathlib.Path
     fare_max_transfer_distance_miles: float
     use_fares: bool
     override_connector_times: bool
-    input_connector_access_times_path: Optional[str] = Field(default=None)
-    input_connector_egress_times_path: Optional[str] = Field(default=None)
-    output_stop_usage_path: Optional[str] = Field(default=None)
+    input_connector_access_times_path: Optional[pathlib.Path] = Field(default=None)
+    input_connector_egress_times_path: Optional[pathlib.Path] = Field(default=None)
+    output_stop_usage_path: Optional[pathlib.Path] = Field(default=None)
 
 
 @dataclass(frozen=True)
@@ -773,7 +774,7 @@ class EmmeConfig(ConfigItem):
     Properties:
         all_day_scenario_id: scenario ID to use for all day
             (initial imported) scenario with all time period data
-        project_path: relative path to Emme desktop project (.emp)
+        project_path: relative path from run_dir to Emme desktop project (.emp)
         highway_database_path: relative path to highway Emmebank
         active_database_paths: list of relative paths to active mode Emmebanks
         transit_database_path: relative path to transit Emmebank
@@ -784,11 +785,11 @@ class EmmeConfig(ConfigItem):
     """
 
     all_day_scenario_id: int
-    project_path: str
-    highway_database_path: str
-    active_database_paths: Tuple[str, ...]
-    transit_database_path: str
-    num_processors: str = Field(regex=r"(?i)^MAX$|^MAX[\s]*-[\s]*[\d]+$|^[\d]+$")
+    project_path: pathlib.Path
+    highway_database_path: pathlib.Path
+    active_database_paths: Tuple[pathlib.Path, ...]
+    transit_database_path: pathlib.Path
+    num_processors: str = Field(regex=r"^MAX$|^MAX-\d+$|^\d+$")
 
 
 @dataclass(frozen=True)
@@ -809,22 +810,28 @@ class Configuration(ConfigItem):
     logging: Optional[LoggingConfig] = Field(default_factory=LoggingConfig)
 
     @classmethod
-    def load_toml(cls, path: Union[str, List[str]]):
-        """Load configuration from .toml files(s).
+    def load_toml(
+        cls,
+        toml_path: Union[Collection[Union[str, pathlib.Path]], str, pathlib.Path],
+    ) -> "Configuration":
+        """Load configuration from .toml files(s)
 
         Normally the config is split into a scenario_config.toml file and a
         model_config.toml file.
 
         Args:
-            path: a valid system path to a TOML format config file or list of paths
+            toml_path: a valid system path string or Path object to a TOML format config file or
+                list of paths of path objects to a set of TOML files.
 
         Returns:
             A Configuration object
         """
-        if isinstance(path, str):
-            path = [path]
-        data = _load_toml(path[0])
-        for path_item in path[1:]:
+        if not isinstance(toml_path, Collection):
+            toml_path = [toml_path]
+        toml_path = list(map(pathlib.Path, toml_path))
+
+        data = _load_toml(toml_path[0])
+        for path_item in toml_path[1:]:
             _merge_dicts(data, _load_toml(path_item))
         return cls(**data)
 
@@ -839,8 +846,8 @@ class Configuration(ConfigItem):
         return value
 
 
-def _load_toml(path: str) -> dict:
-    """Load config from toml file at path."""
+def _load_toml(path: pathlib.Path) -> dict:
+    """Load config from toml file at path"""
     with open(path, "r", encoding="utf-8") as toml_file:
         data = toml.load(toml_file)
     return data

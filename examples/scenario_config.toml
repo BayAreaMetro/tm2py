@@ -5,7 +5,7 @@
 [scenario]
     year = 2015
     verify = false
-    maz_landuse_file = "inputs\\landuse\\maz_data.csv"
+    maz_landuse_file = "inputs/landuse/maz_data.csv"
 
 [run]
     start_component = ""

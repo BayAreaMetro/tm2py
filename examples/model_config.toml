@@ -676,7 +676,7 @@
     #output_stop_usage_path = "inputs/trn/stop_usage_{period}.csv"
 
 [emme]
-    num_processors = "max-1"
+    num_processors = "MAX-1"
     all_day_scenario_id = 1
     project_path = "emme_project/mtc_emme.emp"
     highway_database_path = "emme_project/Database_highway/emmebank"

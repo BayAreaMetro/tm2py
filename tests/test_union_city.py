@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 import openmatrix as omx
 import pandas as pd
 import pytest
+from conftest import inro_context
 
 
 def test_example_download(examples_dir, root_dir, inro_context):
@@ -73,8 +74,7 @@ def diff_omx(ref_omx: str, run_omx: str) -> Collection[Collection[str]]:
 
 
 @pytest.fixture(scope="module")
-@pytest.mark.skipci
-def union_city(examples_dir, root_dir):
+def union_city(examples_dir, root_dir, inro_context):
     """Union City model run testing fixture."""
     from tm2py.controller import RunController
     from tm2py.examples import get_example
@@ -94,7 +94,6 @@ def union_city(examples_dir, root_dir):
     return controller
 
 
-@pytest.mark.menow
 def test_validate_input_fail(examples_dir, inro_context, temp_dir):
     """Test that validate_input fails when required inputs are missing."""
     import toml
@@ -124,7 +123,7 @@ def test_validate_input_fail(examples_dir, inro_context, temp_dir):
         assert e_info.type is FileNotFoundError
 
 
-@pytest.mark.skipci
+@pytest.mark.skipif(inro_context != "inro", reason="requires full inro context")
 def test_highway_skims(union_city):
     """Test that the OMX highway skims match the reference."""
     run_dir = union_city.run_dir
@@ -171,7 +170,7 @@ def assert_csv_equal(ref_csv: str, run_csv: str):
     return pd.testing.assert_frame_equal(ref_df, run_df)
 
 
-@pytest.mark.skipci
+@pytest.mark.skipif(inro_context != "inro", reason="requires full inro context")
 def test_maz_da_skims(union_city):
     """Test that the DA MAZ skims match the reference."""
     run_dir = union_city.run_dir

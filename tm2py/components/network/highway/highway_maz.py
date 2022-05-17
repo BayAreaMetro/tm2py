@@ -90,6 +90,11 @@ class AssignMAZSPDemand(Component):
         self._root_index = None
         self._leaf_index = None
 
+    def validate_inputs(self):
+        """Validate inputs files are correct, raise if an error is found."""
+        # TODO
+        pass
+
     @LogStartEnd()
     def run(self):
         """Run MAZ-to-MAZ shortest path assignment."""
@@ -620,6 +625,11 @@ class SkimMAZCosts(Component):
         super().__init__(controller)
         self._scenario = None
         self._network = None
+
+    def validate_inputs(self):
+        """Validate inputs files are correct, raise if an error is found."""
+        # TODO
+        pass
 
     @LogStartEnd()
     def run(self):
