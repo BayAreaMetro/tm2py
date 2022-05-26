@@ -8,6 +8,7 @@ from typing import Dict, List, Union
 
 import tm2py.emme.manager as _manager
 
+
 EmmeScenario = _manager.EmmeScenario
 EmmeNetworkCalcSpecification = Dict[str, Union[str, Dict[str, str]]]
 

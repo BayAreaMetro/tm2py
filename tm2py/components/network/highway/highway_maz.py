@@ -42,7 +42,6 @@ from tm2py.emme.manager import EmmeNode
 from tm2py.emme.matrix import OMXManager
 from tm2py.emme.network import NetworkCalculator
 from tm2py.logger import LogStartEnd
-from tm2py.tools import parse_num_processors
 
 # from tables import NoSuchNodeError
 
@@ -381,7 +380,7 @@ class AssignMAZSPDemand(Component):
         max_radius = max_radius * 5280 + 100  # add some buffer for rounding error
         ext = "ebp" if _USE_BINARY else "txt"
         file_name = f"sp_{time}_{bin_no}.{ext}"
-        num_processors = parse_num_processors(self.config.emme.num_processors)
+ 
         spec = {
             "type": "SHORTEST_PATH",
             "modes": [self.config.highway.maz_to_maz.mode_code],
@@ -408,7 +407,7 @@ class AssignMAZSPDemand(Component):
                 },
             },
             "performance_settings": {
-                "number_of_processors": num_processors,
+                "number_of_processors": self.controller.num_processors,
                 "direction": "FORWARD",
                 "method": "STANDARD",
             },
@@ -654,8 +653,6 @@ class SkimMAZCosts(Component):
             operating_cost_per_mile: auto operating cost
             max_skim_cost: max cost value used to limit the shortest path search
             mode_code:
-
-        config.emme.num_processors
         """
         ref_period = None
         ref_period_name = self.config.highway.maz_to_maz.skim_period
@@ -745,7 +742,7 @@ class SkimMAZCosts(Component):
         shortest_paths_tool = self.controller.emme_manager.tool(
             "inro.emme.network_calculation.shortest_path"
         )
-        num_processors = parse_num_processors(self.config.emme.num_processors)
+        num_processors = self.controller.num_processors
         max_cost = float(self.config.highway.maz_to_maz.max_skim_cost)
         spec = {
             "type": "SHORTEST_PATH",
@@ -787,7 +784,7 @@ class SkimMAZCosts(Component):
                 }
             },
             "performance_settings": {
-                "number_of_processors": num_processors,
+                "number_of_processors": self.controller.num_processors,
                 "direction": "FORWARD",
                 "method": "STANDARD",
             },

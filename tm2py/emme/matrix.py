@@ -10,14 +10,13 @@ the MatrixCache to support easy write from Emmebank without re-reading data
 from disk.
 """
 
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 import openmatrix as _omx
 from numpy import array as NumpyArray
-from numpy import exp, resize
+from numpy import exp, pad, resize
 
 from tm2py.emme.manager import EmmeMatrix, EmmeScenario
-
 
 class MatrixCache:
     """Write through cache of Emme matrix data via Numpy arrays."""
@@ -35,6 +34,26 @@ class MatrixCache:
         self._timestamps = {}
         # cache of Emme matrix data, key: matrix object, value: numpy array of data
         self._data = {}
+
+    def get_or_init_matrix(self, name: str, matrix_type: Optional[str] = "FULL", description: Optional[str] = None):
+        """Add matrix to emmebank if it doesn't exist and return as object.
+
+        Args:
+            name: name of matrix - sans spaces
+            matrix_type: One of "ORIGIN","DESTINATION","FULL". Defaults to "FULL".
+            description: description of matrix, if not provided, will default to name.
+        """
+        _matrix = self._emmebank.matrix(name)
+        if _matrix:
+            return _matrix
+
+        _id = self._emmebank.available_matrix_identifier(matrix_type)
+        _matrix = self._emmebank.create_matrix(_id)
+        _matrix.name = name
+        if description is None: description = name
+        _matrix.description = description
+
+        return matrix
 
     def get_data(self, matrix: Union[str, EmmeMatrix]) -> NumpyArray:
         """Get Emme matrix data as numpy array.
@@ -54,18 +73,39 @@ class MatrixCache:
             self._data[matrix] = matrix.get_numpy_data(self._scenario.id)
         return self._data[matrix]
 
-    def set_data(self, matrix: Union[str, EmmeMatrix], data: NumpyArray):
-        """Set numpy array to Emme matrix (write through cache).
+    def set_data(
+        self, 
+        matrix: Union[str, EmmeMatrix], 
+        data: NumpyArray, 
+        matrix_type: Optional[str] = "FULL", 
+        description: Optional[str] = None
+    ):
+        """Set numpy array to Emme matrix, filling zones and creating matrix in Emmebank if necessary. 
 
         Args:
             matrix: Emme matrix object or unique name / ID for Emme matrix in Emmebank
             data: Numpy array, must match the scenario zone system
+            matrix_type: one of "ORIGIN","DESTINATION","FULL". Defaults to "FULL".
+            description: description of matrix, if not provided, will default to name.
         """
+        
+        # Reshape so that zone sizes match by padding external stations with zeros
+        num_zones = len(self._scenario.zone_numbers)
+        shape = data.shape
+        if shape[0] < num_zones:
+            padding = [(0, num_zones - dim_shape) for dim_shape in shape]
+            data = pad(data, padding)
+
         if isinstance(matrix, str):
-            matrix = self._emmebank.matrix(matrix)
+            matrix = self.get_or_init_matrix(matrix, matrix_type = matrix_type, description = description)
+
         matrix.set_numpy_data(data, self._scenario.id)
         self._timestamps[matrix] = matrix.timestamp
         self._data[matrix] = data
+
+        return matrix
+
+        
 
     def clear(self):
         """Clear the cache."""
@@ -269,99 +309,3 @@ class OMXManager:
         """
         return self._omx_file.get_node(path).read()
 
-
-class TollChoiceCalculator:
-    """Implements toll choice calculations.
-
-    Centralized implementation of Toll Choice calculations common to
-    Commercial and Internal-external sub models. Loads input skims
-    from OMXManager
-
-    Properties:
-        value_of_time: value of time to use in the utility expression
-        coeff_time: coefficient of time value used in the utility expression
-        operating_cost_per_mile: operating cost value in cents per mile
-            for converting distance to cost
-    """
-
-    def __init__(
-        self, value_of_time: float, coeff_time: float, operating_cost_per_mile: float
-    ):
-        """Constructor for TollChoiceCalculator.
-
-        Args:
-            value_of_time (float): value of time to use in the utility expression
-            coeff_time (float): coefficient of time value used in the utility expression
-            operating_cost_per_mile (float): operating cost value in cents per mile
-                for converting distance to cost
-        """
-        self.value_of_time = value_of_time
-        self.coeff_time = coeff_time
-        self.operating_cost_per_mile = operating_cost_per_mile
-        self._omx_manager = None
-
-    def set_omx_manager(self, omx_manager: OMXManager):
-        """Set the OMX manager for referencing the skim matrices.
-
-        Args:
-            omx_manager: OMXManager which accesses the skim file for reading
-                the skim matrices
-        """
-        self._omx_manager = omx_manager
-
-    def calc_exp_util(
-        self,
-        time_name: str,
-        dist_name: str,
-        toll_names: List[str],
-        toll_factor: float = 1.0,
-    ) -> NumpyArray:
-        """Calculate the exp(utils) for the time, distance and costs skims.
-
-        Loads the referenced skim matrices and calculates the result as:
-        exp(coeff_time * time + coeff_cost * (op_cost * dist + cost)))
-
-        coeff_cost = coeff_time / vot * 0.6
-
-        Args:
-            time_name: Name of the time skim matrix in the OMX file
-            dist_name: Name of the distance skim matrix in the OMX file
-            toll_names: List of names of the the toll skim matrix in the OMX file
-            toll_factor: Optional factor to apply to the tolls
-
-        Returns:
-            A numpy array with the calculated exp(util) result.
-        """
-        vot = self.value_of_time
-        k_ivtt = self.coeff_time
-        op_cost = self.operating_cost_per_mile
-        k_cost = (k_ivtt / vot) * 0.6
-        time = self._omx_manager.read(time_name)
-        dist = self._omx_manager.read(dist_name)
-        toll = self._omx_manager.read(toll_names[0])
-        for name in toll_names[1:]:
-            toll += self._omx_manager.read(name)
-        if toll_factor != 1:
-            toll = toll * toll_factor
-        e_util = exp(k_ivtt * time + k_cost * (op_cost * dist + toll))
-        return e_util
-
-    def mask_non_available(
-        self,
-        toll_cost_name: str,
-        nontoll_time: str,
-        prob_nontoll: NumpyArray,
-    ):
-        """Mask the nontoll probability matrix.
-
-        Set to 1.0 if no toll path toll cost, or to 0.0 if no nontoll time.
-
-        Args:
-            toll_cost_name: Name of toll available cost (toll) skim matrix
-            nontoll_time: Name of the time for non-toll skim matrix in the OMX file
-            prob_nontoll: numpy array of calculated probability for non-toll
-        """
-        toll_tollcost = self._omx_manager.read(toll_cost_name)
-        nontoll_time = self._omx_manager.read(nontoll_time)
-        prob_nontoll[(toll_tollcost == 0) | (toll_tollcost > 999999)] = 1.0
-        prob_nontoll[(nontoll_time == 0) | (nontoll_time > 999999)] = 0.0

@@ -13,11 +13,19 @@ files in .toml format (by convention a scenario.toml and a model.toml)
   `python <path>/tm2py/tm2py/controller.py –s scenario.toml –m model.toml`
 
 """
-import itertools
+from io import RawIOBase
 import os
-from pathlib import Path
-from typing import Collection, List, Tuple, Union
+import itertools
+import multiprocessing
+import re
 
+from collections import deque
+from multiprocessing.sharedctypes import Value
+from pathlib import Path
+import queue
+from typing import Any, Collection, Dict, List, Tuple, Union
+
+from tm2py.tools import emme_context
 from tm2py.components.component import Component
 from tm2py.components.demand.air_passenger import AirPassenger
 from tm2py.components.demand.commercial import CommercialVehicleModel
@@ -77,6 +85,7 @@ class RunController:
         self,
         config_file: Union[Collection[Union[str, Path]], str, Path] = None,
         run_dir: Union[Path, str] = None,
+        run_components: Collection[str] = component_cls_map.keys(),
     ):
         """Constructor for RunController class.
 
@@ -85,6 +94,7 @@ class RunController:
                 Defaults to None.
             run_dir: Model run directory as a Path object or string. If not provided, defaults
                 to the directory of the first config_file.
+            run_components: List of component names to run. Defaults to all components.
         """
         if run_dir is None:
             run_dir = Path(os.path.abspath(os.path.dirname(config_file[0])))
@@ -92,6 +102,7 @@ class RunController:
         self._run_dir = Path(run_dir)
 
         self.config = Configuration.load_toml(config_file)
+        self.has_emme: bool = emme_context()
         # NOTE: Logger opens log file on __enter__ (in run), not ready for logging yet
         # Logger uses self.config.logging
         self.logger = Logger(self)
@@ -103,10 +114,22 @@ class RunController:
         self._component_map = {k: v(self) for k, v in component_cls_map.items()}
         self._validated_components = set()
         self._emme_manager = None
+        self._num_processors = None
         self._iteration = None
         self._component = None
         self._component_name = None
-        self._queued_components = []
+        self._queued_components = deque()
+
+        self._queue_components(run_components=run_components)
+
+    def __repr__(self):
+        _str = f"""RunController
+            Run Directory: {self.run_dir}
+            Iteration: {self.iteration} of {self.run_iterations}
+            Component: {self.component_name}
+            Completed: {self.completed_components}
+            Queued: {self._queued_components}"""
+        return _str
 
     @property
     def run_dir(self) -> Path:
@@ -119,11 +142,23 @@ class RunController:
         return range(
             max(1, self.config.run.start_iteration), self.config.run.end_iteration + 1
         )
+    @property
+    def num_processors(self) -> int:
+        """Number of processors available for parallel processing."""
+        if self._num_processors is None:
+            self._num_processors = self._calculate_num_processors(multiprocessing.cpu_count())
+        
+        return self._num_processors
 
     @property
     def iteration(self) -> int:
-        """Current iteration of model."""
+        """Current iteration of model run."""
         return self._iteration
+
+    @property
+    def component_name(self) -> str:
+        "Name of current component of model run."
+        return self._component_name
 
     @property
     def iter_component(self) -> Tuple[int, str]:
@@ -138,7 +173,14 @@ class RunController:
     def emme_manager(self) -> EmmeManager:
         """Cached Emme Manager object."""
         if self._emme_manager is None:
-            self._init_emme_manager()
+            if self.has_emme:
+                self._init_emme_manager()
+            else:
+                self.logger.log("Emme not found, skipping Emme-related components")
+                # TODO: All of the Emme-related components need to be handled "in place" rather
+                # than skippping using a Mock
+                from unittest.mock import MagicMock
+                self._emme_manager = MagicMock()
         return self._emme_manager
 
     def _init_emme_manager(self):
@@ -156,38 +198,59 @@ class RunController:
             rel_path = Path(rel_path)
         return os.path.join(self.run_dir, rel_path)
 
-    def validate_inputs(self):
-        """Validate inputs files are correct, raise if an error is found."""
-        # TODO
-        pass
-
     def run(self):
-        """Main interface to run model."""
-        self._iteration = None
-        self.validate_inputs()
-        for iteration, name, component in self._queued_components:
-            if self._iteration != iteration:
-                self.logger.log_time(f"Start iteration {iteration}")
-            self._iteration = iteration
-            self._component = component
-            component.run()
-            self.completed_components.append((iteration, name, component))
+        """Main interface to run model.
 
-    def _queue_components(self):
-        """Add components per iteration to queue according to input Config."""
+        Iterates through the self._queued_components and runs them.
+        """
+        self._iteration = None
+        while self._queued_components:
+            self.run_next()
+
+    def run_next(self):
+        """Run next component in the queue."""
+        if not self._queued_components:
+            raise ValueError("No components in queue")
+        iteration, name, component = self._queued_components.popleft()
+        if self._iteration != iteration:
+            self.logger.log_time(f"Start iteration {iteration}")
+        self._iteration = iteration
+        self._component = component
+        component.run()
+        self.completed_components.append((iteration, name, component))
+
+    def _queue_components(self, run_components: Collection[str] = None):
+        """Add components per iteration to queue according to input Config.
+
+        Args:
+            run_components: if provided, only run these components
+        """
         try:
             assert not self._queued_components
         except AssertionError:
             "Components already queued, returning without re-queuing."
             return
+        _initial_components = self.config.run.initial_components
+        _global_iter_components = self.config.run.global_iteration_components
+        _final_components = self.config.run.final_components
+
+        if run_components is not None:
+            _initial_components = [
+                c for c in _initial_components if c in run_components
+            ]
+            _global_iter_components = [
+                c for c in _global_iter_components if c in run_components
+            ]
+            _final_components = [c for c in _final_components if c in run_components]
 
         if self.config.run.start_iteration == 0:
-            for _c_name in self.config.run.initial_components:
+            for _c_name in _initial_components:
                 self._add_component_to_queue(0, _c_name)
 
         # Queue components which are run for each iteration
+
         _iteration_x_components = itertools.product(
-            self.run_iterations, self.config.run.global_iteration_components
+            self.run_iterations, _global_iter_components
         )
 
         for _iteration, _c_name in _iteration_x_components:
@@ -196,12 +259,18 @@ class RunController:
         # Queue components which are run after final iteration
         _finalizer_iteration = self.config.run.end_iteration + 1
 
-        for c_name in self.config.run.final_components:
+        for c_name in _final_components:
             self._add_component_to_queue(_finalizer_iteration, _c_name)
 
         # If start_component specified, remove things before its first occurance
         if self.config.run.start_component:
+
             _queued_c_names = [c.name for c in self._queued_components]
+            if self.config.run.start_component not in _queued_c_names:
+                raise ValueError(
+                    f"Start component {self.config.run.start_component} not found in queued \
+                    components {_queued_c_names}"
+                )
             _start_c_index = _queued_c_names.index(self.config.run.start_component)
             self._queued_components = self._queued_components[_start_c_index:]
 
@@ -216,4 +285,36 @@ class RunController:
         if component_name not in self._validated_components:
             _component.validate_inputs()
             self._validated_components.add(component_name)
-        self._queued_components.append((self._iteration, component_name, _component))
+        self._queued_components.append((iteration, component_name, _component))
+
+    def _calculate_num_processors(self, cpu_processors: int):
+        """Convert input value (parse if string) to number of processors.
+
+        nt or string as 'MAX-X'
+
+        Args:
+            cpu_processors (int): number of processors on current CPU
+        Returns:
+            An int of the number of processors to use
+
+        Raises:
+            Exception: Input value exceeds number of available processors
+            Exception: Input value less than 1 processors
+        """
+        _config_value = self.config.emme.num_processors
+        num_processors = 0
+        if isinstance(_config_value, str):
+            if _config_value.upper() == "MAX":
+                num_processors = cpu_processors
+            elif re.match("^[0-9]+$", _config_value):
+                num_processors = int(_config_value)
+            else:
+                _processor_range = re.split(r"^MAX[/s]*-[/s]*", _config_value.upper())
+                num_processors =  max(cpu_processors - int(_processor_range[1]), 1)
+        else:
+            num_processors = int(_config_value)
+
+        num_processors = min(cpu_processors,num_processors)
+        num_processors = max(1,num_processors)
+        
+        return num_processors

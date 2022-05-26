@@ -3,7 +3,7 @@
 
 import pathlib
 from abc import ABC
-from typing import Collection, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import toml
 from pydantic import Field, validator
@@ -257,8 +257,8 @@ class TimeOfDaySplitConfig(ConfigItem):
     """Time of day demand split for productions and attractions."""
 
     time_period: str
-    production: float
-    attraction: Optional[float]
+    production: Optional[float] = Field(default=None)
+    attraction: Optional[float] = Field(default=None)
 
 
 @dataclass(frozen=True)
@@ -281,7 +281,7 @@ class InternalExternalConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
-class LandUseRateConfig(ConfigItem):
+class CoefficientConfig(ConfigItem):
     """LandUseRateConfig - multiplier for land use file columns."""
 
     property: str
@@ -292,13 +292,13 @@ class LandUseRateConfig(ConfigItem):
 class TripGenerationFormulaConfig(ConfigItem):
     """TripProductionConfig.
 
-    Trip productions for a zone are the constant plus the sum of the rates * values in land use
-    file for that zone.
+    Trip productions or attractions for a zone are the constant plus the sum of the rates * values
+    in land use file for that zone.
     """
 
-    land_use_rates: List[LandUseRateConfig]
-    constant: Field(type=float, default=0.0)
-    multiplier: Field(type=float, default=1.0)
+    land_use_rates: List[CoefficientConfig]
+    constant: Optional[float] = Field(default=0.0)
+    multiplier: Optional[float] = Field(default=1.0)
 
 
 @dataclass(frozen=True)
@@ -306,15 +306,21 @@ class TripGenerationConfig(ConfigItem):
     """Trip Generation parameters."""
 
     name: str
-    production_formula: TripGenerationFormulaConfig
-    attraction_formula: TripGenerationFormulaConfig
+    production_formula: Optional[TripGenerationFormulaConfig] = Field(default=None)
+    attraction_formula: Optional[TripGenerationFormulaConfig] = Field(default=None)
     balance_to: Optional[str] = Field(default="production")
 
 
 @dataclass(frozen=True)
 class TripDistributionConfig(ConfigItem):
-    """Trip Distribution parameters."""
+    """Trip Distribution parameters.
 
+    Properties:
+        impedance: refers to an impedance (skim) matrix to use - often a blended skim.
+
+    """
+
+    impedance: str
     use_k_factors: bool
     k_factor_file: Optional[str] = Field(default=None)
 
@@ -324,9 +330,32 @@ class TruckClassConfig(ConfigItem):
     """Truck class parameters."""
 
     name: str
-    time_of_day_split: List[TimeOfDaySplitConfig]
     trip_type_config: List[TripGenerationConfig]
     trip_distribution_config: TripDistributionConfig
+    time_of_day_split: List[TimeOfDaySplitConfig]
+    description: Optional[str] = Field(default="")
+    toll_choice_skim_mode: Optional[str] = Field(default="trk")
+
+
+@dataclass(frozen=True)
+class ImpedanceConfig(ConfigItem):
+    """Blended skims used for accessibility/friction calculations.
+
+    Properties:I
+        name: name to store it as, referred to in TripDistribution config
+        mode: name of the mode to use for the blended skim
+        blend: blend of time periods to use; mapped to the factors (which should sum to 1)
+    """
+
+    name: str
+    mode: str
+    blend: Dict[str, float]
+
+    @validator("blend")
+    def sums_to_one(value):
+        """Validate highway.maz_to_maz.skim_period refers to a valid period."""
+        assert sum(value.values()) - 1 < 0.0001, "blend factors must sum to 1"
+        return value
 
 
 @dataclass(frozen=True)
@@ -342,6 +371,7 @@ class TruckConfig(ConfigItem):
     max_balance_iterations: int
     max_balance_relative_error: float
     classes: List[TruckClassConfig]
+    impedances: List[ImpedanceConfig]
 
 
 @dataclass(frozen=True)
@@ -812,7 +842,7 @@ class Configuration(ConfigItem):
     @classmethod
     def load_toml(
         cls,
-        toml_path: Union[Collection[Union[str, pathlib.Path]], str, pathlib.Path],
+        toml_path: Union[List[Union[str, pathlib.Path]], str, pathlib.Path],
     ) -> "Configuration":
         """Load configuration from .toml files(s)
 
@@ -826,7 +856,7 @@ class Configuration(ConfigItem):
         Returns:
             A Configuration object
         """
-        if not isinstance(toml_path, Collection):
+        if not isinstance(toml_path, List):
             toml_path = [toml_path]
         toml_path = list(map(pathlib.Path, toml_path))
 

@@ -16,38 +16,6 @@ import openmatrix as _omx
 import pandas as pd
 
 
-def parse_num_processors(value: Union[str, int, float]):
-    """Convert input value (parse if string) to number of processors.
-
-    Args:
-        value: an int, float or string; string value can be "X" or "MAX-X"
-    Returns:
-        An int of the number of processors to use
-
-    Raises:
-        Exception: Input value exceeds number of available processors
-        Exception: Input value less than 1 processors
-    """
-    max_processors = multiprocessing.cpu_count()
-    if isinstance(value, str):
-        result = value.upper()
-        if result == "MAX":
-            return max_processors
-        if re.match("^[0-9]+$", value):
-            return int(value)
-        result = re.split(r"^MAX[/s]*-[/s]*", result)
-        if len(result) == 2:
-            return max(max_processors - int(result[1]), 1)
-        raise Exception(f"Input value {value} is an int or string as 'MAX-X'")
-
-    result = int(value)
-    if result > max_processors:
-        raise Exception(f"Input value {value} greater than available processors")
-    if result < 1:
-        raise Exception(f"Input value {value} less than 1 processors")
-    return value
-
-
 @_context
 def _urlopen(url):
     """Access the url, following redirect if needed (i.e. box).
@@ -320,7 +288,7 @@ def zonal_csv_to_matrices(
     # TODO Create a test
     _df = pd.read_csv(csv_file, delimiter=delimiter)
     _df_idx = _df.set_index([i_column, j_column])
-    _df_m = _df_idx.unstack(fill_value=default_value)
+
     _dfs_dict = {v: _df_idx[v] for v in value_columns}
     if not fill_zones:
         return _dfs_dict
@@ -332,3 +300,37 @@ def zonal_csv_to_matrices(
     for v, _df in _dfs_dict.items():
         _df[v].reindex(index=_zone_list, columns=_zone_list, fill_value=default_value)
     return _dfs_dict
+
+
+def mocked_inro_context():
+    """Mocking of modules which need to be mocked for tests."""
+    import sys
+    from unittest.mock import MagicMock
+
+    sys.modules["inro.emme.database.emmebank"] = MagicMock()
+    sys.modules["inro.emme.network"] = MagicMock()
+    sys.modules["inro.emme.database.scenario"] = MagicMock()
+    sys.modules["inro.emme.database.matrix"] = MagicMock()
+    sys.modules["inro.emme.network.node"] = MagicMock()
+    sys.modules["inro.emme.desktop.app"] = MagicMock()
+    sys.modules["inro"] = MagicMock()
+    sys.modules["inro.modeller"] = MagicMock()
+    sys.modules["tm2py.emme.manager.EmmeManager.project"]= MagicMock()
+    sys.modules["tm2py.emme.manager.EmmeManager.emmebank"]= MagicMock()
+
+def emme_context():
+    """Return True if Emme is installed."""
+    import pkg_resources
+    _inro_package = "inro"
+    _avail_packages =  [pkg.key for pkg in pkg_resources.working_set]
+
+    if _inro_package not in _avail_packages:
+        print("Inro not found. Skipping inro setup.")
+        mocked_inro_context()
+        return False
+    else:
+        import inro
+        if 'MagicMock' in str(type(inro)):
+            return False
+        
+    return True

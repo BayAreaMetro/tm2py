@@ -185,214 +185,235 @@
     toll_choice_time_coefficient = -0.088
     max_balance_iterations = 999
     max_balance_relative_error = 0.0001
+    [[truck.impedances]]
+        name = "trk"
+        mode = "trk"
+        [truck.impedances.blend]
+            "AM" = 0.3333333333
+            "MD" = 0.6666666667
+    [[truck.impedances]]
+        name = "lrgtrk"
+        mode = "lrgtrk"
+        [truck.impedances.blend]
+            "AM" = 0.3333333333
+            "MD" = 0.6666666667
     [[truck.classes]]
         name = "vsmtrk"
-        [[truck.classes.trip_distribution_config]]
+        description = "very small truck"
+        [truck.classes.trip_distribution_config]
+            impedance = "trk"
             use_k_factors = false
         [[truck.classes.trip_type_config]]
             name = "linked"
             balance_to = "productions"
-            [[truck.classes.trip_type_config.production_formula]]
+            [truck.classes.trip_type_config.production_formula]
                 constant = 0
                 multiplier = 0.96
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'RETEMPN'
                     rate = 0.95409
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'FPSEMPN'
                     rate = 0.54333
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'HEREMPN'
                     rate = 0.50769
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'OTHEMPN'
                     rate = 0.63558
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'AGREMPN'
                     rate = 1.10181
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'MWTEMPN'
                     rate = 0.81576
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'TOTHH'
                     rate = 0.26565
         [[truck.classes.time_of_day_split]]
             time_period = "ea"
-            productions = 0.0235
+            production = 0.0235
         [[truck.classes.time_of_day_split]]
-        time_period = "am"
-        productions = 0.0700
+            time_period = "am"
+            production = 0.0700
         [[truck.classes.time_of_day_split]]
-        time_period = "md"
-        productions = 0.6360
+            time_period = "md"
+            production = 0.6360
         [[truck.classes.time_of_day_split]]
-        time_period = "pm"
-        productions = 0.1000
+            time_period = "pm"
+            production = 0.1000
         [[truck.classes.time_of_day_split]]
-        time_period = "ev"
-        productions = 0.1705
+            time_period = "ev"
+            production = 0.1705
     [[truck.classes]]
         name = "smtrk"
-        [[truck.classes.trip_distribution_config]]
+        description = "small truck"
+        [truck.classes.trip_distribution_config]
+            impedance = "trk"
             use_k_factors = true
         [[truck.classes.trip_type_config]]
             name = "linked"
             balance_to = "productions"
-            [[truck.classes.trip_type_config.production_formula]]
+            [truck.classes.trip_type_config.production_formula]
                 constant = 0
                 multiplier = 1
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                 property = 'TOTEMP'
                 rate = 0.0324
         [[truck.classes.trip_type_config]]
             name = "garage"
             balance_to = "productions"
-            [[truck.classes.trip_type_config.production_formula]]
-                [[truck.classes.production_formula.land_use_rates]]
+            [truck.classes.trip_type_config.production_formula]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'RETEMPN'
                     rate = 0.02146
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'FPSEMPN'
                     rate = 0.02424
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'HEREMPN'
                     rate = 0.01320
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'OTHEMPN'
                     rate = 0.04325
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'AGREMPN'
                     rate = 0.05021
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'MWTEMPN'
                     rate = 0.01960
-            [[truck.classes.trip_type_config.attraction_formula]]
-                [[truck.classes.attraction_formula.land_use_rates]]
+            [truck.classes.trip_type_config.attraction_formula]
+                [[truck.classes.trip_type_config.attraction_formula.land_use_rates]]
                     property = 'TOTEMP'
                     rate = 0.0234
         [[truck.classes.time_of_day_split]]
             time_period = "ea"
-            productions = 0.0765
+            production = 0.0765
         [[truck.classes.time_of_day_split]]
             time_period = "am"
-            productions = 0.2440
+            production = 0.2440
         [[truck.classes.time_of_day_split]]
             time_period = "md"
-            productions = 0.3710
+            production = 0.3710
         [[truck.classes.time_of_day_split]]
             time_period = "pm"
-            productions = 0.2180
+            production = 0.2180
         [[truck.classes.time_of_day_split]]
-        time_period = "ev"
-        productions = 0.0905
+            time_period = "ev"
+            production = 0.0905
     [[truck.classes]]
         name = "medtrk"
-        [[truck.classes.trip_distribution_config]]
-                use_k_factors = true
+        description = "medium truck"
+        [truck.classes.trip_distribution_config]
+            impedance = "trk"
+            use_k_factors = true
         [[truck.classes.trip_type_config]]
             name = "linked"
             balance_to = "productions"
-            [[truck.classes.trip_type_config.production_formula]]
+            [truck.classes.trip_type_config.production_formula]
                 constant = 0
                 multiplier =  1
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'TOTEMP'
                     rate = 0.0039
          [[truck.classes.trip_type_config]]
             name = "garage"
             balance_to = "productions"
-            [[truck.classes.trip_type_config.production_formula]]
-                [[truck.classes.production_formula.land_use_rates]]
+            [truck.classes.trip_type_config.production_formula]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'RETEMPN'
                     rate = 0.00102
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'FPSEMPN'
                     rate = 0.00147
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'HEREMPN'
                     rate = 0.00025
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'OTHEMPN'
                     rate = 0.00331
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'AGREMPN'
                     rate = 0.00445
-                [[truck.classes.production_formula.land_use_rates]]
+                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'MWTEMPN'
                     rate = 0.00165
-            [[truck.classes.trip_type_config.attraction_formula]]
-                [[truck.classes.attraction_formula.land_use_rates]]
+            [truck.classes.trip_type_config.attraction_formula]
+                [[truck.classes.trip_type_config.attraction_formula.land_use_rates]]
                     property = 'TOTEMP'
                     rate = 0.0046
         [[truck.classes.time_of_day_split]]
             time_period = "ea"
-            productions = 0.0665
+            production = 0.0665
         [[truck.classes.time_of_day_split]]
             time_period = "am"
-            productions = 0.2930
+            production = 0.2930
         [[truck.classes.time_of_day_split]]
             time_period = "md"
-            productions = 0.3935
+            production = 0.3935
         [[truck.classes.time_of_day_split]]
             time_period = "pm"
-            productions = 0.1730
+            production = 0.1730
         [[truck.classes.time_of_day_split]]
             time_period = "ev"
-            productions = 0.0740
+            production = 0.0740
     [[truck.classes]]
         name = "lrgtrk"
-            [[truck.classes.trip_distribution_config]]
+        description = "large truck"
+        toll_choice_skim_mode = "lrgtrk"
+            [truck.classes.trip_distribution_config]
+                impedance = "lrgtrk"
                 use_k_factors = true
             [[truck.classes.trip_type_config]]
                 name = "linked"
                 balance_to = "productions"
-                [[truck.classes.trip_type_config.production_formula]]
+                [truck.classes.trip_type_config.production_formula]
                     constant = 0
                     multiplier =  1
-                    [[truck.classes.production_formula.land_use_rates]]
+                    [[truck.classes.trip_type_config.production_formula.land_use_rates]]
                     property = 'TOTEMP'
                     rate = 0.0073
             [[truck.classes.trip_type_config]]
                 name = "garage"
                 balance_to = "productions"
-                [[truck.classes.trip_type_config.production_formula]]
-                [[truck.classes.production_formula.land_use_rates]]
-                    property = 'RETEMPN'
-                    rate = 0.00183
-                [[truck.classes.production_formula.land_use_rates]]
-                    property = 'FPSEMPN'
-                    rate = 0.00482
-                [[truck.classes.production_formula.land_use_rates]]
-                    property = 'HEREMPN'
-                    rate = 0.00274
-                [[truck.classes.production_formula.land_use_rates]]
-                    property = 'OTHEMPN'
-                    rate = 0.00795
-                [[truck.classes.production_formula.land_use_rates]]
-                    property = 'AGREMPN'
-                    rate = 0.01125
-                [[truck.classes.production_formula.land_use_rates]]
-                    property = 'MWTEMPN'
-                    rate = 0.00486
-            [[truck.classes.trip_type_config.attraction_formula]]
-                [[truck.classes.attraction_formula.land_use_rates]]
+                [truck.classes.trip_type_config.production_formula]
+                    [[truck.classes.trip_type_config.production_formula.land_use_rates]]
+                        property = 'RETEMPN'
+                        rate = 0.00183
+                    [[truck.classes.trip_type_config.production_formula.land_use_rates]]
+                        property = 'FPSEMPN'
+                        rate = 0.00482
+                    [[truck.classes.trip_type_config.production_formula.land_use_rates]]
+                        property = 'HEREMPN'
+                        rate = 0.00274
+                    [[truck.classes.trip_type_config.production_formula.land_use_rates]]
+                        property = 'OTHEMPN'
+                        rate = 0.00795
+                    [[truck.classes.trip_type_config.production_formula.land_use_rates]]
+                        property = 'AGREMPN'
+                        rate = 0.01125
+                    [[truck.classes.trip_type_config.production_formula.land_use_rates]]
+                        property = 'MWTEMPN'
+                        rate = 0.00486
+            [truck.classes.trip_type_config.attraction_formula]
+                [[truck.classes.trip_type_config.attraction_formula.land_use_rates]]
                     property = 'TOTEMP'
                     rate = 0.0136
         [[truck.classes.time_of_day_split]]
             time_period = "ea"
-            productions = 0.1430
+            production = 0.1430
         [[truck.classes.time_of_day_split]]
             time_period = "am"
-            productions = 0.2320
+            production = 0.2320
         [[truck.classes.time_of_day_split]]
             time_period = "md"
-            productions = 0.3315
+            production = 0.3315
         [[truck.classes.time_of_day_split]]
             time_period = "pm"
-            productions = 0.1750
+            production = 0.1750
         [[truck.classes.time_of_day_split]]
             time_period = "ev"
-            productions = 0.1185
+            production = 0.1185
 
 [active_modes]
     emme_scenario_id = 1

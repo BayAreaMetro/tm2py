@@ -96,9 +96,6 @@ class HighwayAssignment(Component):
             controller (RunController): Reference to current run controller.
         """
         super().__init__(controller)
-        self._num_processors = tools.parse_num_processors(
-            self.config.emme.num_processors
-        )
         self._matrix_cache = None
         self._skim_matrices = []
 
@@ -252,7 +249,7 @@ class HighwayAssignment(Component):
                 "relative_gap": relative_gap,
                 "normalized_gap": 0.0,
             },
-            "performance_settings": {"number_of_processors": self._num_processors},
+            "performance_settings": {"number_of_processors": self.controller.num_processors},
         }
         return base_spec
 

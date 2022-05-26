@@ -138,6 +138,7 @@ class Logger:
         ]
 
         self._use_emme_logbook = self.controller.config.logging.use_emme_logbook
+
         self._slack_notifier = SlackNotifier(self)
 
     @classmethod
@@ -174,7 +175,7 @@ class Logger:
         timestamp = datetime.now().strftime("%d-%b-%Y (%H:%M:%S): ") if time else None
         for log_formatter in self._log_formatters:
             log_formatter.log(text, levels[level], indent, timestamp)
-        if self._use_emme_logbook:
+        if self._use_emme_logbook and self.controller.has_emme:
             self.controller.emme_manager.logbook_write(text)
 
     def log_time(self, text: str, level: LogLevel = "INFO", indent: bool = True):

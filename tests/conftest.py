@@ -1,7 +1,6 @@
 """Shared fixtures for tests."""
 import os
 import sys
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -40,21 +39,11 @@ def temp_dir():
     tf.cleanup()
 
 
-def mocked_inro_context():
-    """Mocking of modules which need to be mocked for tests."""
-    sys.modules["inro.emme.database.emmebank"] = MagicMock()
-    sys.modules["inro.emme.network"] = MagicMock()
-    sys.modules["inro.emme.database.scenario"] = MagicMock()
-    sys.modules["inro.emme.database.matrix"] = MagicMock()
-    sys.modules["inro.emme.network.node"] = MagicMock()
-    sys.modules["inro.emme.desktop.app"] = MagicMock()
-    sys.modules["inro"] = MagicMock()
-    sys.modules["inro.modeller"] = MagicMock()
-
-
 @pytest.fixture(scope="session")
 def inro_context():
     """Mocks necessary inro modules if they aren't successfully imported."""
+    from tm2py.tools import mocked_inro_context
+
     try:
         import inro.emme.database.emmebank
 
