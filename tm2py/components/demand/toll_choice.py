@@ -1,13 +1,14 @@
-"""Toll Choice Model"""
+"""Toll Choice Model."""
 import itertools
 import os
-from typing import Optional, List, TYPE_CHECKING
+from math import exp
+from typing import TYPE_CHECKING, List, Optional
 
 import numpy as np
 import openmatrix as _omx
 import pandas as pd
 
-from tm2py.components.component import Component,Subcomponent
+from tm2py.components.component import Component, Subcomponent
 from tm2py.emme.matrix import OMXManager
 from tm2py.logger import LogStartEnd
 from tm2py.tools import df_to_omx, interpolate_dfs
@@ -16,6 +17,7 @@ NumpyArray = np.array
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
+
 
 class TollChoiceCalculator(Subcomponent):
     """Implements toll choice calculations.
@@ -32,9 +34,9 @@ class TollChoiceCalculator(Subcomponent):
     """
 
     def __init__(
-        self, 
-        controller: RunController, 
-        component:Component, 
+        self,
+        controller: 'RunController',
+        component: Component,
     ):
         """Constructor for TollChoiceCalculator.
 
@@ -42,7 +44,7 @@ class TollChoiceCalculator(Subcomponent):
             controller: RunController object
             component: Component which contains this subcomponent
         """
-        self.value_of_time  = None
+        self.value_of_time = None
         self.coeff_time = None
         self.operating_cost_per_mile = None
         self._omx_manager = None
@@ -53,11 +55,11 @@ class TollChoiceCalculator(Subcomponent):
         """Return the directory where the skim matrices are located."""
         return self._skim_dir
 
-    @property.setter
+    @skim_dir.setter
     def skim_dir(self, value):
         """Set the directory where the skim matrices are located.
-        
-        If the directory is different from previous directory, initialize on OMX manager 
+
+        If the directory is different from previous directory, initialize on OMX manager
         to manage skims.
         """
         if not os.path.isdir(value):
@@ -68,7 +70,8 @@ class TollChoiceCalculator(Subcomponent):
 
     @property
     def omx_manager(self):
-        return self._omx_manager 
+        """Access to self._omx_manager."""
+        return self._omx_manager
 
     def calc_exp_util(
         self,

@@ -18,6 +18,7 @@ from numpy import exp, pad, resize
 
 from tm2py.emme.manager import EmmeMatrix, EmmeScenario
 
+
 class MatrixCache:
     """Write through cache of Emme matrix data via Numpy arrays."""
 
@@ -35,7 +36,12 @@ class MatrixCache:
         # cache of Emme matrix data, key: matrix object, value: numpy array of data
         self._data = {}
 
-    def get_or_init_matrix(self, name: str, matrix_type: Optional[str] = "FULL", description: Optional[str] = None):
+    def get_or_init_matrix(
+        self,
+        name: str,
+        matrix_type: Optional[str] = "FULL",
+        description: Optional[str] = None,
+    ):
         """Add matrix to emmebank if it doesn't exist and return as object.
 
         Args:
@@ -50,10 +56,11 @@ class MatrixCache:
         _id = self._emmebank.available_matrix_identifier(matrix_type)
         _matrix = self._emmebank.create_matrix(_id)
         _matrix.name = name
-        if description is None: description = name
+        if description is None:
+            description = name
         _matrix.description = description
 
-        return matrix
+        return _matrix
 
     def get_data(self, matrix: Union[str, EmmeMatrix]) -> NumpyArray:
         """Get Emme matrix data as numpy array.
@@ -74,13 +81,13 @@ class MatrixCache:
         return self._data[matrix]
 
     def set_data(
-        self, 
-        matrix: Union[str, EmmeMatrix], 
-        data: NumpyArray, 
-        matrix_type: Optional[str] = "FULL", 
-        description: Optional[str] = None
+        self,
+        matrix: Union[str, EmmeMatrix],
+        data: NumpyArray,
+        matrix_type: Optional[str] = "FULL",
+        description: Optional[str] = None,
     ):
-        """Set numpy array to Emme matrix, filling zones and creating matrix in Emmebank if necessary. 
+        """Set numpy array to Emme matrix, filling zones and creating matrix in Emmebank if necessary.
 
         Args:
             matrix: Emme matrix object or unique name / ID for Emme matrix in Emmebank
@@ -88,7 +95,6 @@ class MatrixCache:
             matrix_type: one of "ORIGIN","DESTINATION","FULL". Defaults to "FULL".
             description: description of matrix, if not provided, will default to name.
         """
-        
         # Reshape so that zone sizes match by padding external stations with zeros
         num_zones = len(self._scenario.zone_numbers)
         shape = data.shape
@@ -97,15 +103,15 @@ class MatrixCache:
             data = pad(data, padding)
 
         if isinstance(matrix, str):
-            matrix = self.get_or_init_matrix(matrix, matrix_type = matrix_type, description = description)
+            matrix = self.get_or_init_matrix(
+                matrix, matrix_type=matrix_type, description=description
+            )
 
         matrix.set_numpy_data(data, self._scenario.id)
         self._timestamps[matrix] = matrix.timestamp
         self._data[matrix] = data
 
         return matrix
-
-        
 
     def clear(self):
         """Clear the cache."""
@@ -308,4 +314,3 @@ class OMXManager:
             Numpy array from OMX file
         """
         return self._omx_file.get_node(path).read()
-

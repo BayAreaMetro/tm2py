@@ -380,7 +380,7 @@ class AssignMAZSPDemand(Component):
         max_radius = max_radius * 5280 + 100  # add some buffer for rounding error
         ext = "ebp" if _USE_BINARY else "txt"
         file_name = f"sp_{time}_{bin_no}.{ext}"
- 
+
         spec = {
             "type": "SHORTEST_PATH",
             "modes": [self.config.highway.maz_to_maz.mode_code],
@@ -742,7 +742,6 @@ class SkimMAZCosts(Component):
         shortest_paths_tool = self.controller.emme_manager.tool(
             "inro.emme.network_calculation.shortest_path"
         )
-        num_processors = self.controller.num_processors
         max_cost = float(self.config.highway.maz_to_maz.max_skim_cost)
         spec = {
             "type": "SHORTEST_PATH",

@@ -9,7 +9,8 @@ import numpy as np
 import openmatrix as _omx
 
 from tm2py.components.component import Component
-from tm2py.emme.matrix import OMXManager, TollChoiceCalculator
+from tm2py.components.demand.toll_choice import TollChoiceCalculator
+from tm2py.emme.matrix import OMXManager
 from tm2py.logger import LogStartEnd
 
 NumpyArray = np.array
@@ -119,6 +120,10 @@ class InternalExternal(Component):
      Output: Five, six-table trip matrices, one for each time period.  Two tables for each vehicle
              class representing value-toll paying path trips and non-value-toll paying path trips.
     """
+
+    def validate_inputs(self):
+        """Validate inputs to component."""
+        pass
 
     @LogStartEnd()
     def run(self):

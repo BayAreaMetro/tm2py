@@ -32,7 +32,7 @@ class Component(ABC):
     A component is a piece of the model that can be run independently (of other components) given
     the required input data and configuration.  It communicates information to other components via
     disk I/O (including the emmebank).
-    
+
     Note: if the component needs data that is not written to disk, it would be considered a
     subcomponent.
 
@@ -91,6 +91,7 @@ class Component(ABC):
         return self._controller
 
     def get_abs_path(self, path: Union[Path, str]) -> str:
+        """Convenince method to get absolute path from run directory."""
         return self.controller.get_abs_path(path)
 
     def get_emme_scenario(self, emmebank_path: str, time_period: str) -> EmmeScenario:
@@ -164,10 +165,10 @@ class Component(ABC):
     @abstractmethod
     def test_component(self):
         """Run stand-alone component test."""
-    
+
 
 class Subcomponent(Component):
-    """Template for sub-component class.  
+    """Template for sub-component class.
 
     A sub-component is a more loosly defined component that allows for input into the run()
     method.  It is used to break-up larger processes into smaller chunks which can be:
@@ -192,7 +193,7 @@ class Subcomponent(Component):
     @abstractmethod
     def run(self, *args, **kwargs):
         """Run sub-component, allowing for multiple inputs.
-        
-        Allowing for inputs to the run() method is what differentiates a sub-component from 
+
+        Allowing for inputs to the run() method is what differentiates a sub-component from
         a component.
         """

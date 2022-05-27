@@ -174,9 +174,7 @@ def interpolate_dfs(
 
     ref_points.sort()
     _start_point, _end_point = ref_points
-    try:
-        assert _start_point <= target_point <= _end_point
-    except:
+    if not _start_point <= target_point <= _end_point:
         raise ValueError(
             f"Target Point: {target_point} not within range of \
             Reference Points: {ref_points}"
@@ -185,9 +183,7 @@ def interpolate_dfs(
     _start_ref_df = df[[c for c in df.columns if c.endswith(f"{_start_point}")]].copy()
     _end_ref_df = df[[c for c in df.columns if c.endswith(f"{_end_point}")]].copy()
 
-    try:
-        assert len(_start_ref_df.columns) == len(_end_ref_df.columns)
-    except:
+    if len(_start_ref_df.columns) != len(_end_ref_df.columns):
         raise ValueError(
             f"{_start_point} and {_end_point} have different number of columns:\n\
            {_start_point} Columns: {_start_ref_df.columns}\n\
@@ -274,7 +270,8 @@ def zonal_csv_to_matrices(
         csv_file (str): _description_
         i_column (str, optional): Name of j zone column. Defaults to "ORIG".
         j_column (str, optional): Name of i zone column. Defaults to "DEST".
-        value_columns (str, optional): List of columns to turn into matrices. Defaults to ["VALUE"].
+        value_columns (str, optional): List of columns to turn into matrices.
+            Defaults to ["VALUE"].
         default_value (float, optional): Value to fill empty cells with. Defaults to 0.0.
         fill_zones (bool, optional): If true, will fill zones without values to max zone with
             default value. Defaults to False.
@@ -315,14 +312,16 @@ def mocked_inro_context():
     sys.modules["inro.emme.desktop.app"] = MagicMock()
     sys.modules["inro"] = MagicMock()
     sys.modules["inro.modeller"] = MagicMock()
-    sys.modules["tm2py.emme.manager.EmmeManager.project"]= MagicMock()
-    sys.modules["tm2py.emme.manager.EmmeManager.emmebank"]= MagicMock()
+    sys.modules["tm2py.emme.manager.EmmeManager.project"] = MagicMock()
+    sys.modules["tm2py.emme.manager.EmmeManager.emmebank"] = MagicMock()
+
 
 def emme_context():
     """Return True if Emme is installed."""
     import pkg_resources
+
     _inro_package = "inro"
-    _avail_packages =  [pkg.key for pkg in pkg_resources.working_set]
+    _avail_packages = [pkg.key for pkg in pkg_resources.working_set]
 
     if _inro_package not in _avail_packages:
         print("Inro not found. Skipping inro setup.")
@@ -330,7 +329,8 @@ def emme_context():
         return False
     else:
         import inro
-        if 'MagicMock' in str(type(inro)):
+
+        if "MagicMock" in str(type(inro)):
             return False
-        
+
     return True

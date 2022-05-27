@@ -844,7 +844,7 @@ class Configuration(ConfigItem):
         cls,
         toml_path: Union[List[Union[str, pathlib.Path]], str, pathlib.Path],
     ) -> "Configuration":
-        """Load configuration from .toml files(s)
+        """Load configuration from .toml files(s).
 
         Normally the config is split into a scenario_config.toml file and a
         model_config.toml file.
@@ -877,7 +877,7 @@ class Configuration(ConfigItem):
 
 
 def _load_toml(path: pathlib.Path) -> dict:
-    """Load config from toml file at path"""
+    """Load config from toml file at path."""
     with open(path, "r", encoding="utf-8") as toml_file:
         data = toml.load(toml_file)
     return data

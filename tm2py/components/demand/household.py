@@ -1,5 +1,4 @@
-"""Placeholder docstring for CT-RAMP related components for household residents' model
-"""
+"""Placeholder docstring for CT-RAMP related components for household residents' model."""
 
 import shutil as _shutil
 
@@ -10,6 +9,10 @@ from tm2py.tools import run_process
 
 class HouseholdModel(Component):
     """Run household resident model."""
+
+    def validate_inputs(self):
+        """Validates inputs for component."""
+        pass
 
     @LogStartEnd()
     def run(self):

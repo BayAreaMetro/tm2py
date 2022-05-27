@@ -13,19 +13,17 @@ files in .toml format (by convention a scenario.toml and a model.toml)
   `python <path>/tm2py/tm2py/controller.py –s scenario.toml –m model.toml`
 
 """
-from io import RawIOBase
-import os
 import itertools
 import multiprocessing
+import os
+import queue
 import re
-
 from collections import deque
+from io import RawIOBase
 from multiprocessing.sharedctypes import Value
 from pathlib import Path
-import queue
 from typing import Any, Collection, Dict, List, Tuple, Union
 
-from tm2py.tools import emme_context
 from tm2py.components.component import Component
 from tm2py.components.demand.air_passenger import AirPassenger
 from tm2py.components.demand.commercial import CommercialVehicleModel
@@ -37,6 +35,7 @@ from tm2py.components.network.highway.highway_network import PrepareNetwork
 from tm2py.config import Configuration
 from tm2py.emme.manager import EmmeManager
 from tm2py.logger import Logger
+from tm2py.tools import emme_context
 
 # mapping from names referenced in config.run to imported classes
 # NOTE: component names also listed as literal in tm2py.config for validation
@@ -123,6 +122,7 @@ class RunController:
         self._queue_components(run_components=run_components)
 
     def __repr__(self):
+        """Legible representation."""
         _str = f"""RunController
             Run Directory: {self.run_dir}
             Iteration: {self.iteration} of {self.run_iterations}
@@ -133,7 +133,7 @@ class RunController:
 
     @property
     def run_dir(self) -> Path:
-        """The root run directory of the model run"""
+        """The root run directory of the model run."""
         return self._run_dir
 
     @property
@@ -142,12 +142,15 @@ class RunController:
         return range(
             max(1, self.config.run.start_iteration), self.config.run.end_iteration + 1
         )
+
     @property
     def num_processors(self) -> int:
         """Number of processors available for parallel processing."""
         if self._num_processors is None:
-            self._num_processors = self._calculate_num_processors(multiprocessing.cpu_count())
-        
+            self._num_processors = self._calculate_num_processors(
+                multiprocessing.cpu_count()
+            )
+
         return self._num_processors
 
     @property
@@ -157,7 +160,7 @@ class RunController:
 
     @property
     def component_name(self) -> str:
-        "Name of current component of model run."
+        """Name of current component of model run."""
         return self._component_name
 
     @property
@@ -180,6 +183,7 @@ class RunController:
                 # TODO: All of the Emme-related components need to be handled "in place" rather
                 # than skippping using a Mock
                 from unittest.mock import MagicMock
+
                 self._emme_manager = MagicMock()
         return self._emme_manager
 
@@ -310,11 +314,11 @@ class RunController:
                 num_processors = int(_config_value)
             else:
                 _processor_range = re.split(r"^MAX[/s]*-[/s]*", _config_value.upper())
-                num_processors =  max(cpu_processors - int(_processor_range[1]), 1)
+                num_processors = max(cpu_processors - int(_processor_range[1]), 1)
         else:
             num_processors = int(_config_value)
 
-        num_processors = min(cpu_processors,num_processors)
-        num_processors = max(1,num_processors)
-        
+        num_processors = min(cpu_processors, num_processors)
+        num_processors = max(1, num_processors)
+
         return num_processors

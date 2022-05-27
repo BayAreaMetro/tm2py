@@ -117,6 +117,11 @@ class AirPassenger(Component):
         self._mode_groups = {}
         self._out_names = {}
 
+    def validate_inputs(self):
+        """Validate the inputs."""
+        # TODO
+        pass
+
     @LogStartEnd()
     def run(self):
         """Run the Air Passenger Demand model to generate the demand matrices.

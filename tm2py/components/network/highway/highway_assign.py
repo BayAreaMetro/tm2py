@@ -249,7 +249,9 @@ class HighwayAssignment(Component):
                 "relative_gap": relative_gap,
                 "normalized_gap": 0.0,
             },
-            "performance_settings": {"number_of_processors": self.controller.num_processors},
+            "performance_settings": {
+                "number_of_processors": self.controller.num_processors
+            },
         }
         return base_spec
 

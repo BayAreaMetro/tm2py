@@ -13,15 +13,15 @@ from contextlib import contextmanager as _context
 from socket import error as _socket_error
 from typing import Any, Dict, List, Union
 
-
 from ..tools import emme_context
+
 emme_context()
 
 import inro.emme.desktop.app as _app
 
 # PyLint cannot build AST from compiled Emme libraries
 # so disabling relevant import module checks
-# pylint: disable=E0611, E0401, E1101
+# pylint: disable=E0611, E0401, E0402, E1101
 from inro.emme.database.emmebank import Emmebank
 from inro.emme.database.matrix import Matrix as EmmeMatrix  # pylint: disable=W0611
 from inro.emme.database.scenario import Scenario as EmmeScenario

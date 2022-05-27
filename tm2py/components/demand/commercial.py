@@ -1,21 +1,21 @@
 """Commercial vehicle / truck model module."""
 
 from __future__ import annotations
-from collections import defaultdict
 
 import itertools
 import os
-from pyexpat import model
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from collections import defaultdict
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
+from pyexpat import model
 
 from tm2py.components.component import Component, Subcomponent
-from tm2py.emme.matrix import OMXManager, MatrixCache
-from tm2py.logger import LogStartEnd
 from tm2py.components.demand.toll_choice import TollChoiceCalculator
 from tm2py.components.network.skims import get_blended_skim
+from tm2py.emme.matrix import MatrixCache, OMXManager
+from tm2py.logger import LogStartEnd
 from tm2py.tools import zonal_csv_to_matrices
 
 if TYPE_CHECKING:
@@ -57,9 +57,14 @@ _land_use_aggregation = {
 
 
 class CommercialVehicleModel(Component):
-    """Commercial Vehicle model for four truck types:
+    """Commercial Vehicle demand model.
 
-    The four truck types are:
+    Generates truck demand matrices from:
+        - land use
+        - highway network impedances
+        - parameters
+
+    Segmented into four truck types:
         (1) very small trucks (two-axle, four-tire),
         (2) small trucks (two-axle, six-tire),
         (3) medium trucks (three-axle),
@@ -89,10 +94,11 @@ class CommercialVehicleModel(Component):
             "time of day": CommercialVehicleTimeOfDay(controller, self),
             "toll choice": CommercialVehicleTollChoice(controller, self),
         }
-        
+
         # Variables from configs (for easy access)
         self.trk_class_configs = {
-            trk_class.name:self.config.truck.classes for trk_class in self.config.truck.classes
+            trk_class.name: self.config.truck.classes
+            for trk_class in self.config.truck.classes
         }
         self.trk_classes = [trk_class.name for trk_class in self.config.truck.classes]
 
@@ -114,20 +120,25 @@ class CommercialVehicleModel(Component):
     @LogStartEnd()
     def run(self):
         """Run commercial vehicle model."""
-
         self.total_tripends_df = self.sub_components["trip generation"]
-        self.daily_demand_dict = self.sub_components["trip distribution"].run(self.total_tripends_df)
-        self.trkclass_tp_demand_dict = self.sub_components["time of day"].run(self.daily_demand_dict)
-        self.trkclass_tp_toll_demand_dict = self.sub_components["toll choice"].run(self.trkclass_tp_demand_dict)
+        self.daily_demand_dict = self.sub_components["trip distribution"].run(
+            self.total_tripends_df
+        )
+        self.trkclass_tp_demand_dict = self.sub_components["time of day"].run(
+            self.daily_demand_dict
+        )
+        self.trkclass_tp_toll_demand_dict = self.sub_components["toll choice"].run(
+            self.trkclass_tp_demand_dict
+        )
         self._export_results_to_omx(self.trkclass_tp_toll_demand_dict)
-    
+
     @property
     def emmebank(self):
         """Reference to highway assignment Emmebank.
-        
-        TODO 
+
+        TODO
             This should really be in the controller?
-            Or part of network.skims? 
+            Or part of network.skims?
         """
         return self.controller.emme_manager.emmebank(
             self.get_abs_path(self.config.emme.highway_database_path)
@@ -139,7 +150,7 @@ class CommercialVehicleModel(Component):
 
         Use first valid scenario for reference Zone IDs.
 
-        TODO 
+        TODO
             This should really be in the controller?
             Or part of network.skims?
         """
@@ -148,20 +159,32 @@ class CommercialVehicleModel(Component):
 
     @property
     def matrix_cache(self):
+        """Access to MatrixCache to Emmebank for given emme_scenario."""
         if self._matrix_cache is None:
             self._matrix_cache = MatrixCache(self.emme_scenario)
         return self._matrix_cache
 
     @property
     def time_periods(self):
-        return list(
-            set([tp for tp_list in self.tod_split.values() for tp in tp_list])
-        )
+        """Convenience access for all time period names.
+
+        e.g. AM, PM, etc.
+
+        Returns:
+            Collection[str]: list of time periods
+        """
+        return list(set([tp for tp_list in self.tod_split.values() for tp in tp_list]))
 
     @property
     def trk_classes(self):
-        return [tc.name for tc in self.config.truck.classes]
+        """Convenience access for abbreviated names for all truck classes.
 
+        e.g. medtrk, lrgtrk, etc.
+
+        Returns:
+            Collection[str]:list of truck classes
+        """
+        return [tc.name for tc in self.config.truck.classes]
 
     @LogStartEnd(level="DEBUG")
     def _export_results_as_omx(self, class_demand):
@@ -172,6 +195,7 @@ class CommercialVehicleModel(Component):
             with OMXManager(path_tmplt.format(period=period), "w") as output_file:
                 for name, data in matrices.items():
                     output_file.write_array(data, name)
+
 
 class CommercialVehicleTripGeneration(Subcomponent):
     """Commercial vehicle (truck) Trip Generation for 4 sizes of truck.
@@ -261,7 +285,6 @@ class CommercialVehicleTripGeneration(Subcomponent):
         Returns:
             pd.DataFrame: Dataframe with unbalanced production and attraction trip ends.
         """
-
         tripends_df = pd.DataFrame()
 
         _type_class_pa = itertools.product(
@@ -300,7 +323,6 @@ class CommercialVehicleTripGeneration(Subcomponent):
         Returns:
             pd.DataFrame: Dataframe with balanced production and attraction trip ends.
         """
-
         _type_class = itertools.product(
             ["linked", "garage"],
             self.config.truck.classes,
@@ -356,7 +378,6 @@ class CommercialVehicleTripGeneration(Subcomponent):
                 medtrk_prod, medtrk_attr,
                 lrgtrk_prod, lrgtrk_attr
         """
-
         agg_tripends_df = pd.DataFrame()
 
         _class_pa = itertools.product(
@@ -446,12 +467,22 @@ class CommercialVehicleTripDistribution(Subcomponent):
 
     @property
     def k_factors(self):
+        """Zone-to-zone values of truck K factors.
+
+        Returns:
+             NumpyArray: Zone-to-zone values of truck K factors.
+        """
         if self._k_factors is None:
             self._k_factors = self._load_k_factors()
         return self._k_factors
 
     def _load_k_factors(self):
-        "Loads k-factors from self.config.truck.k_factors_file csv file."
+        """Loads k-factors from self.config.truck.k_factors_file csv file.
+
+        Returns:
+            NumpyArray: Zone-to-zone values of truck K factors.
+
+        """
         return zonal_csv_to_matrices(
             self.get_abs_path(self.config.truck.k_factors_file),
             i_column="I_taz_tm2_v2_2",
@@ -481,12 +512,24 @@ class CommercialVehicleTripDistribution(Subcomponent):
         return self._blended_skims[mode]
 
     @property
-    def friction_factor_matrices(self, trk_class: str, k_factors=None):
+    def friction_factor_matrices(
+        self, trk_class: str, k_factors: Union[None, NumpyArray] = None
+    ) -> NumpyArray:
+        """Zone to zone NumpyArray of impedences for a given truck class.
 
+        Args:
+            trk_class (str): Truck class abbreviated name
+            k_factors (Union[None,NumpyArray]): If not None, gives an zone-by-zone array of
+                k-factors--additive impedances to be added on top of friciton factors.
+                Defaults to None.
+
+        Returns:
+            NumpyArray: Zone-by-zone matrix of friction factors
+        """
         if not self._friction_factor_matrices.get(trk_class):
             self._friction_factor_matrices = self._calculate_friction_factor_matrix(
-                trk_class, 
-                self.dist_config(trk_class)["blended_skim"], 
+                trk_class,
+                self.dist_config(trk_class)["blended_skim"],
                 self.dist_config(trk_class)["use_k_factors"],
             )
 
@@ -494,19 +537,21 @@ class CommercialVehicleTripDistribution(Subcomponent):
 
     @LogStartEnd(level="DEBUG")
     def _calculate_friction_factor_matrix(
-        self, segment_name, blended_skim_name: str, k_factors: Optional[Any] = None
+        self,
+        segment_name,
+        blended_skim_name: str,
+        k_factors: Union[None, NumpyArray] = None,
     ):
         """Calculates friction matrix by interpolating time; optionally multiplying by k_factors.
 
         Args:
             segment_name: Name of the segment to calculate the friction factors for (i.e. vstruck)
             blended_skim_name (str): Name of blended skim
-            k_factors (Optional[NumpyArray]): Optional k-factors matrix
+            k_factors (Union[None,NumpyArray): Optional k-factors matrix
 
         Returns:
             friction_matrix NumpyArray: friction matrix for a truck class
         """
-
         _friction_matrix = np.interp(
             self.blended_skims[blended_skim_name],
             self.friction_factors["time"].tolist(),
@@ -518,17 +563,20 @@ class CommercialVehicleTripDistribution(Subcomponent):
 
         return _friction_matrix
 
-    def _create_friction_factor_matrix(self, array: NumpyArray)
-
     @property
     def friction_factors(self):
+        """Table of friction factors for each time band by truck class.
+
+        Returns:
+            pd.Dataframe: Dataframe of friction factors read from disk.
+        """
         if self._fricton_factors is None:
             self._fricton_factors = self._read_ffactors()
         return self._fricton_factors
 
     def _read_ffactors(self) -> pd.DataFrame:
         """Load friction factors lookup tables from csv file to dataframe.
-        
+
         Reads from file: config.truck.friction_factors_file with following assumed column order:
             0: Time
             1: Very Small Truck FF
@@ -549,7 +597,7 @@ class CommercialVehicleTripDistribution(Subcomponent):
         Returns:
             _type_: _description_
         """
-        return self.model.trk_class_config[trk_class]['trip_distribution_config']
+        return self.model.trk_class_config[trk_class]["trip_distribution_config"]
 
     def validate_inputs(self):
         """Validate the inputs."""
@@ -557,11 +605,10 @@ class CommercialVehicleTripDistribution(Subcomponent):
         pass
 
     @LogStartEnd()
-    def run(self, tripends_df) -> Dict[str,NumpyArray]:
+    def run(self, tripends_df) -> Dict[str, NumpyArray]:
         """Run commercial vehicle trip distribution."""
-
         daily_demand_dict = {
-            tc:self._distribute_ods(tripends_df,tc) for tc in self.model.trk_classes
+            tc: self._distribute_ods(tripends_df, tc) for tc in self.model.trk_classes
         }
 
         return daily_demand_dict
@@ -574,7 +621,7 @@ class CommercialVehicleTripDistribution(Subcomponent):
         orig_factor: float = 0.5,
         dest_factor: float = 0.5,
     ) -> NumpyArray:
-        """Distribute a trip ends for a given a truck class. 
+        """Distribute a trip ends for a given a truck class.
 
         Args:
             tripends_df: dataframe with trip ends as "{trk_class}_prod" and{trk_class}_attr".
@@ -597,8 +644,11 @@ class CommercialVehicleTripDistribution(Subcomponent):
             tripends_df[f"{trk_class}_attr"].to_numpy(),
             trk_class,
         )
-        daily_demand = orig_factor * _prod_attr_matrix + dest_factor * _prod_attr_matrix.transpose()
-        
+        daily_demand = (
+            orig_factor * _prod_attr_matrix
+            + dest_factor * _prod_attr_matrix.transpose()
+        )
+
         self.logger.log(
             f"{trk_class}, prod sum: {_prod_attr_matrix.sum()}, "
             f"daily sum: {daily_demand.sum()}",
@@ -620,8 +670,8 @@ class CommercialVehicleTripDistribution(Subcomponent):
             dest_totals: Total demand for destinations as a numpy array
             trk_class (str): Truck class name
 
-        
-        
+
+
         """
         matrix_balancing = self.controller.emme_manager.tool(
             "inro.emme.matrix_calculation.matrix_balancing"
@@ -629,31 +679,29 @@ class CommercialVehicleTripDistribution(Subcomponent):
         matrix_round = self.controller.emme_manager.tool(
             "inro.emme.matrix_calculation.matrix_controlled_rounding"
         )
-        
+
         # Transfer numpy to emmebank
         _ff_emme_mx_name = self.component.matrix_cache.set_data(
-            f"{trk_class}_friction", 
-            self.friction_factor_matrices(trk_class), 
-            matrix_type="FULL"
+            f"{trk_class}_friction",
+            self.friction_factor_matrices(trk_class),
+            matrix_type="FULL",
         ).name
 
         _orig_tots_emme_mx_name = self.component.matrix_cache.set_data(
-            f"{trk_class}_prod", 
-            orig_totals, 
-            matrix_type="ORIGIN"
+            f"{trk_class}_prod", orig_totals, matrix_type="ORIGIN"
         ).name
 
         _dest_tots_emme_mx_name = self.component.matrix_cache.set_data(
-            f"{trk_class}_attr", 
-            dest_totals, 
-            matrix_type="DESTINATION"
-        ).na e
+            f"{trk_class}_attr", dest_totals, matrix_type="DESTINATION"
+        ).name
 
         # Create a destination matrix for output to live in Emmebank
-        _result_emme_mx_name = self.component.matrix_cache.get_or_init_matrix(f"{trk_class}_daily_demand").name
+        _result_emme_mx_name = self.component.matrix_cache.get_or_init_matrix(
+            f"{trk_class}_daily_demand"
+        ).name
 
         spec = {
-            "od_values_to_balance":  _ff_emme_mx_name,
+            "od_values_to_balance": _ff_emme_mx_name,
             "origin_totals": _orig_tots_emme_mx_name,
             "destination_totals": _dest_tots_emme_mx_name,
             "allowable_difference": 0.01,
@@ -667,7 +715,7 @@ class CommercialVehicleTripDistribution(Subcomponent):
             "type": "MATRIX_BALANCING",
         }
         matrix_balancing(spec, scenario=self.component.emme_scenario)
-        
+
         matrix_round(
             _result_emme_mx_name,
             _result_emme_mx_name,
@@ -685,16 +733,15 @@ class CommercialVehicleTimeOfDay(Subcomponent):
     Input:  Trips origin and destination matrices by 4 truck sizes
     Ouput:  20 trips origin and destination matrices by 4 truck sizes by 5 times periods
 
-    NOTE:
+    Note:
         The diurnal factors are taken from the BAYCAST-90 model with adjustments made
     during calibration to the very small truck values to better match counts.
     """
 
     @property
     def tod_splits(self):
-        return  {
-            c.name: c.time_of_day_split for c in self.config.truck.classes
-        }
+        """Mapping of time periods to fraction of trips which should be assigned to that period."""
+        return {c.name: c.time_of_day_split for c in self.config.truck.classes}
 
     def validate_inputs(self):
         """Validate the inputs."""
@@ -702,7 +749,9 @@ class CommercialVehicleTimeOfDay(Subcomponent):
         pass
 
     @LogStartEnd()
-    def run(self, daily_demand: Dict[str, NumpyArray]) -> Dict[str, Dict[str,NumpyArray]]:
+    def run(
+        self, daily_demand: Dict[str, NumpyArray]
+    ) -> Dict[str, Dict[str, NumpyArray]]:
         """Splits the daily demand by time of day based on factors in the config.
 
         Uses self.config.truck.classes.{class_name}.time_of_day_split to split the daily demand.
@@ -718,9 +767,13 @@ class CommercialVehicleTimeOfDay(Subcomponent):
         for t_class, tod_split in self.tod_split.items():
             trkclass_tp_demand_dict[t_class] = {}
             for t_period, factor in tod_split.items():
-                trkclass_tp_demand_dict[t_class][t_period] = np.around(factor * daily_demand[t_class], decimals=2)
+                trkclass_tp_demand_dict[t_class][t_period] = np.around(
+                    factor * daily_demand[t_class], decimals=2
+                )
 
         return trkclass_tp_demand_dict
+
+
 class CommercialVehicleTollChoice(Subcomponent):
     """Commercial vehicle (truck) toll choice.
 
@@ -756,10 +809,18 @@ class CommercialVehicleTollChoice(Subcomponent):
             (7)  The in-vehicle time coefficient is from the work trip mode choice model.
     """
 
-    def __init__(self, config, component):
-        super().__init__(config, component)
+    def __init__(self, controller, component):
+        """Constructor for Commercial Vehicle Toll Choice.
+
+        Also calls Subclass __init__().
+
+        Args:
+            controller: model run controller
+            component: parent component
+        """
+        super().__init__(controller, component)
         self.sub_components = {
-            "toll choice calculator": TollChoiceCalculator(config, component),
+            "toll choice calculator": TollChoiceCalculator(controller, component),
         }
 
         # shortcut
@@ -767,27 +828,29 @@ class CommercialVehicleTollChoice(Subcomponent):
 
         self._toll_choice.value_of_time = self.config.truck.value_of_time
         self._toll_choice.coeff_time = self.config.truck.toll_choice_time_coefficient
-        self._toll_choice.operating_cost_per_mile = self.config.truck.operating_cost_per_mile
+        self._toll_choice.operating_cost_per_mile = (
+            self.config.truck.operating_cost_per_mile
+        )
 
     def validate_inputs(self):
         """Validate the inputs."""
         # TODO
         pass
 
-    
         self.get_abs_path(self.config.highway.output_skim_path)
 
     @LogStartEnd()
-    def run(self,trkclass_tp_demand_dict):
+    def run(self, trkclass_tp_demand_dict):
         """Run truck sub-model to generate assignable truck class demand."""
         # future note: should not round intermediate results
         # future note: could use skim matrix cache from assignment (in same process)
         #              (save disk read time, minor optimization)
-       
+
         self.sub_components["toll choice calculator"].run(trkclass_tp_demand_dict)
 
-
-        _tclass_time_combos = itertools.product(self.component.time_periods, self.component.trk_classes)
+        _tclass_time_combos = itertools.product(
+            self.component.time_periods, self.component.trk_classes
+        )
 
         class_demands = defaultdict()
         for _time_period, _tclass in _tclass_time_combos:
@@ -800,7 +863,7 @@ class CommercialVehicleTollChoice(Subcomponent):
 
     @LogStartEnd(level="DEBUG")
     def _toll_choice(
-        self, 
+        self,
         demand: NumpyArray,
         time_period: str,
         trk_class: str,
@@ -808,7 +871,7 @@ class CommercialVehicleTollChoice(Subcomponent):
         """Split per-period truck demands into nontoll and toll classes.
 
         Uses OMX skims output from highway assignment: traffic_skims_{period}.omx
-       
+
         NOTE matrix name changes in tm2py, using {period}_{class}_{skim}.{format}
 
         Args:
@@ -817,8 +880,12 @@ class CommercialVehicleTollChoice(Subcomponent):
         Returns:
             dictionary mapping "toll" and "no toll" to demand matrices
         """
-        _skim_mode = self.component.trk_class_configs[trk_class]["toll_choice_skim_mode"]
-        self._toll_choice.skim_dir = self.component.highway.output_skim_path.format(time_period)
+        _skim_mode = self.component.trk_class_configs[trk_class][
+            "toll_choice_skim_mode"
+        ]
+        self._toll_choice.skim_dir = self.component.highway.output_skim_path.format(
+            time_period
+        )
 
         e_util_nontoll = self._toll_choice.calc_exp_util(
             f"{time_period:}_{_skim_mode}_time",
@@ -829,8 +896,8 @@ class CommercialVehicleTollChoice(Subcomponent):
             f"{time_period:}_{_skim_mode}toll_time",
             f"{time_period:}_{_skim_mode}toll_dist",
             [
-                f"{time_period:}_{_skim_mode}toll_bridgetolltrk}",
-                f"{time_period:d}_{_skim_mode}toll_valuetolltrk}",
+                f"{time_period:}_{_skim_mode}toll_bridgetolltrk",
+                f"{time_period:d}_{_skim_mode}toll_valuetolltrk",
             ],
         )
         prob_nontoll = e_util_nontoll / (e_util_toll + e_util_nontoll)
@@ -843,10 +910,9 @@ class CommercialVehicleTollChoice(Subcomponent):
 
         split_demand = {
             "non toll": prob_nontoll * demand,
-            "toll" : (1 - prob_nontoll) * demand,
+            "toll": (1 - prob_nontoll) * demand,
         }
         return split_demand
-
 
 
 def _trkclass_config(config, trkclass):
