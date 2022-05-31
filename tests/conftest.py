@@ -1,6 +1,7 @@
 """Shared fixtures for tests."""
 import os
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -10,19 +11,19 @@ print("CONFTEST LOADED")
 @pytest.fixture(scope="session")
 def root_dir():
     """Root tm2py directory."""
-    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 @pytest.fixture(scope="session")
 def examples_dir(root_dir):
     """Directory for example files."""
-    return os.path.join(root_dir, "examples")
+    return root_dir / "examples"
 
 
 @pytest.fixture(scope="session")
 def bin_dir(root_dir):
     """Directory for bin files."""
-    return os.path.join(root_dir, "bin")
+    return root_dir / "bin"
 
 
 @pytest.fixture()

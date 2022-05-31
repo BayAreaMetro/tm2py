@@ -144,6 +144,16 @@ class RunController:
         )
 
     @property
+    def time_period_names(self) -> List[str]:
+        """Return input time_period name or names and return list of time_period names.
+
+        Implemented here for easy access for all components.
+
+        Returns: list of uppercased string names of time periods
+        """
+        return [time.name.upper() for time in self.config.time_periods]
+
+    @property
     def num_processors(self) -> int:
         """Number of processors available for parallel processing."""
         if self._num_processors is None:

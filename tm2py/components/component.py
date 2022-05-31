@@ -123,9 +123,9 @@ class Component(ABC):
 
         Implemented here for easy access for all components.
 
-        Returns: list of string names of time periods
+        Returns: list of uppercased string names of time periods
         """
-        return [time.name for time in self.config.time_periods]
+        return self.controller.time_period_names
 
     @property
     def top_sheet(self):
@@ -150,19 +150,19 @@ class Component(ABC):
     def run(self):
         """Run model component."""
 
-    @abstractmethod
+    # @abstractmethod
     def report_progress(self):
         """Write progress to log file."""
 
-    @abstractmethod
+    # @abstractmethod
     def verify(self):
         """Verify component outputs / results."""
 
-    @abstractmethod
+    # @abstractmethod
     def write_top_sheet(self):
         """Write key outputs to the model top sheet."""
 
-    @abstractmethod
+    # @abstractmethod
     def test_component(self):
         """Run stand-alone component test."""
 

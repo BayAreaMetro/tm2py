@@ -111,7 +111,7 @@ class AirPassenger(Component):
             controller: parent Controller object
         """
         super().__init__(controller)
-        self._periods = [p.upper() for p in self.time_period_names()]
+        self._periods = [p.upper() for p in self.time_period_names]
         self._start_year = None
         self._end_year = None
         self._mode_groups = {}

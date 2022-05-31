@@ -2,7 +2,7 @@
 import itertools
 import os
 from math import exp
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 import numpy as np
 import openmatrix as _omx
@@ -35,7 +35,7 @@ class TollChoiceCalculator(Subcomponent):
 
     def __init__(
         self,
-        controller: 'RunController',
+        controller: "RunController",
         component: Component,
     ):
         """Constructor for TollChoiceCalculator.
@@ -47,6 +47,7 @@ class TollChoiceCalculator(Subcomponent):
         self.value_of_time = None
         self.coeff_time = None
         self.operating_cost_per_mile = None
+        self.toll_skim_suffix = ""
         self._omx_manager = None
         self._skim_dir = None
 
@@ -72,6 +73,64 @@ class TollChoiceCalculator(Subcomponent):
     def omx_manager(self):
         """Access to self._omx_manager."""
         return self._omx_manager
+
+    def validate_inputs(self):
+        """Validate inputs."""
+        # TODO
+        if not self.value_of_time:
+            raise ValueError("value_of_time not set.")
+
+        if not self.coeff_time:
+            raise ValueError("coeff_time not set.")
+
+        if not self.operating_cost_per_mile:
+            raise ValueError("operating_cost_per_mile not set.")
+
+    def run(
+        self, demand: NumpyArray, skim_mode: str, time_period: str
+    ) -> Dict[str, NumpyArray]:
+        """Run toll choice calculator.
+
+        Splits
+
+        Args:
+            demand (NumpyArray): Zone-by-zone demand to split into toll/non-toll
+            skim_mode (str): Skim mode to use for calculating impedances
+            time_period (str): Time period to use for calculating impedances
+
+        Returns:
+            Dict[str,NumpyArray]: Dictionary mapping "toll" and "non toll" to NumpyArrays with
+                demand assigned to each.
+        """
+        self.validate_inputs()
+
+        e_util_nontoll = self.calc_exp_util(
+            f"{time_period:}_{skim_mode}_time",
+            f"{time_period:}_{skim_mode}_dist",
+            [f"{time_period:}_{skim_mode}_bridgetoll{self.toll_skim_suffix}"],
+        )
+        e_util_toll = self.calc_exp_util(
+            f"{time_period:}_{skim_mode}toll_time",
+            f"{time_period:}_{skim_mode}toll_dist",
+            [
+                f"{time_period:}_{skim_mode}toll_bridgetoll{self.toll_skim_suffix}",
+                f"{time_period:d}_{skim_mode}toll_valuetoll{self.toll_skim_suffix}",
+            ],
+        )
+        prob_nontoll = e_util_nontoll / (e_util_toll + e_util_nontoll)
+
+        self.mask_non_available(
+            f"{time_period:}_{skim_mode}toll_valuetoll{self.toll_skim_suffix}",
+            f"{time_period:}_{skim_mode}_time",
+            prob_nontoll,
+        )
+
+        split_demand = {
+            "non toll": prob_nontoll * demand,
+            "toll": (1 - prob_nontoll) * demand,
+        }
+
+        return split_demand
 
     def calc_exp_util(
         self,

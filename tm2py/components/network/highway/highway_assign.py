@@ -99,6 +99,13 @@ class HighwayAssignment(Component):
         self._matrix_cache = None
         self._skim_matrices = []
 
+        # Variables from configs (for easy access)
+        self.hwy_class_configs = {
+            hwy_class.name: hwy_class for hwy_class in self.config.highway.classes
+        }
+
+        self.hwy_classes = [hwy_class.name for hwy_class in self.config.highway.classes]
+
     def validate_inputs(self):
         """Validate inputs files are correct, raise if an error is found."""
         # TODO

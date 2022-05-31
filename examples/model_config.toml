@@ -454,7 +454,9 @@
         output = "skim_matrices/non_motorized/ped_distance_tap_tap.txt"
 
 [highway]
-    output_skim_path = "skim_matrices/highway/HWYSKM{period}_taz.omx"
+    output_skim_path = "skim_matrices/highway"
+    output_skim_filename_tmpl = "HWYSKM{time_period}_taz.omx"
+    output_skim_matrixname_tmpl = "{time_period}_{mode}_{property}"
     relative_gap = 0.0005
     max_iterations = 100
     # labels entire highway network (any of the classes) + MAZ connectors

@@ -638,7 +638,11 @@ class HighwayConfig(ConfigItem):
         area_type_buffer_dist_miles: used to in calculation to categorize link @areatype
             The area type is determined based on the average density of nearby
             (within this buffer distance) MAZs, using (pop+jobs*2.5)/acres
-        output_skim_path: relative path template for output skims in OMX format
+        output_skim_path: relative path template from run dir for OMX output skims
+        output_skim_filename_tmpl: template for OMX filename for a time period. Must include
+            {time_period} in the string and end in '.omx'.
+        output_skim_matrixname_tmpl: template for matrix names within OMX output skims.
+            Should include {time_period}, {mode}, and {property}
         tolls: input toll specification, see HighwayTollsConfig
         maz_to_maz: maz-to-maz shortest path assignment and skim specification,
             see HighwayMazToMazConfig
@@ -653,10 +657,37 @@ class HighwayConfig(ConfigItem):
     max_iterations: int = Field(ge=0)
     area_type_buffer_dist_miles: float = Field(gt=0)
     output_skim_path: pathlib.Path = Field()
+    output_skim_filename_tmpl: str = Field()
+    output_skim_matrixname_tmpl: str = Field()
     tolls: HighwayTollsConfig = Field()
     maz_to_maz: HighwayMazToMazConfig = Field()
     classes: Tuple[HighwayClassConfig, ...] = Field()
     capclass_lookup: Tuple[HighwayCapClassConfig, ...] = Field()
+
+    @validator("output_skim_filename_tmpl")
+    def valid_skim_template(value):
+        """Validate skim template has correct {} and extension."""
+        assert (
+            "{time_period" in value
+        ), f"-> output_skim_filename_tmpl must have {{time_period}}', found {value}."
+        assert (
+            value[-4:].lower() == ".omx"
+        ), f"-> 'output_skim_filename_tmpl must end in '.omx', found {value[-4:].lower() }"
+        return value
+
+    @validator("output_skim_matrixname_tmpl")
+    def valid_skim_matrix_name_template(value):
+        """Validate skim matrix template has correct {}."""
+        assert (
+            "{time_period" in value
+        ), "-> 'output_skim_matrixname_tmpl must have {time_period}, found {value}."
+        assert (
+            "{property" in value
+        ), "-> 'output_skim_matrixname_tmpl must have {property}, found {value}."
+        assert (
+            "{mode" in value
+        ), "-> 'output_skim_matrixname_tmpl must have {mode}, found {value}."
+        return value
 
     @validator("capclass_lookup")
     def unique_capclass_numbers(value):
