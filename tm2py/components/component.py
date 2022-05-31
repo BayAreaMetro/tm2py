@@ -163,8 +163,11 @@ class Component(ABC):
         """Write key outputs to the model top sheet."""
 
     # @abstractmethod
+    @classmethod
     def test_component(self):
         """Run stand-alone component test."""
+        # TODO
+        pass
 
 
 class Subcomponent(Component):

@@ -142,19 +142,16 @@ class AirPassenger(Component):
 
         input_demand = self._load_air_pax_demand()
         aggr_demand = self._aggregate_demand(input_demand)
-        # for period in self._periods:
-        # for group in self._mode_groups:
-        #    name = f"{period}_{group}"
+
         demand = interpolate_dfs(
             aggr_demand,
-            int(self._start_year),
-            int(self._end_year),
+            [int(self._start_year), int(self._end_year)],
             int(self.config.scenario.year),
         )
         self._export_result(demand)
 
     def _load_air_pax_demand(self) -> pd.DataFrame:
-        """Loads demand from the CSV files into pandas dataframe.
+        """Loads demand from the CSV files into single pandas dataframe.
 
         Uses the following configs to determine the input file names and paths:
         - self.config.air_passenger.input_demand_folder
@@ -171,10 +168,29 @@ class AirPassenger(Component):
             (4) demand
         """
 
-        def _rename_columns(name):
-            if name in ["ORIG", "DEST"]:
-                return name
-            return f"{name}_{year}"
+        _start_demand_df = self._get_air_demand_for_year(self._start_year)
+        _end_demand_df = self._get_air_demand_for_year(self._end_year)
+
+        _air_pax_demand_df = pd.merge(
+            _start_demand_df,
+            _end_demand_df,
+            how="outer",
+            suffixes=(f"_{self._start_year}", f"_{self._end_year}"),
+            on=["ORIG", "DEST"],
+        )
+
+        _grouped_air_pax_demand_df = _air_pax_demand_df.groupby(["ORIG", "DEST"]).sum()
+        return _grouped_air_pax_demand_df
+
+    def _get_air_demand_for_year(self, year: str) -> pd.DataFrame:
+        """Creates a dataframe of concatenated data from CSVs for all airport x direction combos.
+
+        Args:
+            year (str): year of demand
+
+        Returns:
+            pd.DataFrame: concatenation of all CSVs that were read in as a dataframe
+        """
 
         input_data_folder = self.config.air_passenger.input_demand_folder
 
@@ -182,30 +198,20 @@ class AirPassenger(Component):
             self.config.air_passenger.airport_names,
             ["to", "from"],
         )
+        demand_df = None
+        for airport, direction in _airport_direction:
 
-        _input_demand_df_list = []
-        for year in [self._start_year, self._end_year]:
-            _input_df_year_list = []
-            for airport, direction in _airport_direction:
-                _file_name = f"{year}_{direction}{airport}.csv"
-                _file_path = os.path.join(
-                    self.controller.run_dir, input_data_folder, _file_name
-                )
-                _input_df = pd.read_csv(_file_path)
-                _input_df.rename(columns=_rename_columns, inplace=True)
-                _input_df_year_list.append(_input_df)
-            _input_year_df = pd.concat(_input_df_year_list)
-            _input_demand_df_list.append(_input_year_df)
+            _file_name = self.config.air_passenger.input_demand_filename_tmpl.format(
+                airport=airport, year=year, direction=direction
+            )
+            _file_path = self.controller.run_dir / input_data_folder / _file_name
+            _df = pd.read_csv(_file_path)
+            if demand_df is not None:
+                demand_df = pd.concat([demand_df, _df])
+            else:
+                demand_df = _df
 
-        _air_pax_demand_df = pd.merge(
-            _input_demand_df_list[0],
-            _input_demand_df_list[1],
-            how="outer",
-            on=["ORIG", "DEST"],
-        )
-
-        _grouped_air_pax_demand_df = _air_pax_demand_df.groupby(["ORIG", "DEST"]).sum()
-        return _grouped_air_pax_demand_df
+        return demand_df
 
     def _aggregate_demand(self, input_demand: pd.DataFrame) -> pd.DataFrame:
         """Aggregate demand into the assignable classes for each year.
@@ -218,11 +224,11 @@ class AirPassenger(Component):
         _year_tp_group_accessmode = itertools.product(
             [self._start_year, self._end_year],
             self._periods,
-            *self._mode_groups.items(),
+            self._mode_groups.items(),
         )
 
         # TODO This should be done entirely in pandas using group-by
-        for _year, _period, _group, _access_modes in _year_tp_group_accessmode:
+        for _year, _period, (_group, _access_modes) in _year_tp_group_accessmode:
             data = input_demand[
                 [f"{_period}_{_access}_{_group}_{_year}" for _access in _access_modes]
             ]

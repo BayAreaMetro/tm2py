@@ -45,6 +45,7 @@
 [air_passenger]
     highway_demand_file = "demand_matrices/highway/air_passenger/tripsAirPax{period}.omx"
     input_demand_folder = "inputs/nonres"
+    input_demand_filename_tmpl = "{year}_{direction}{airport}.csv"
     reference_start_year = "2007"
     reference_end_year = "2035"
     airport_names = [ "SFO", "OAK", "SJC",]

@@ -4,6 +4,7 @@ import os
 
 import pytest
 
+
 def test_example_download(examples_dir, root_dir, inro_context):
     """Tests that example data can be downloaded."""
     EXAMPLE = "UnionCity"

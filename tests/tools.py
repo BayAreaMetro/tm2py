@@ -47,12 +47,15 @@ def diff_omx(ref_omx: str, run_omx: str) -> Collection[Collection[str]]:
     return missing_matrices, different_matrices
 
 
-def test_component(examples_dir,component, example_name = "UnionCity"):
+def test_component(examples_dir, component, example_name="UnionCity"):
     from tm2py.controller import RunController
+
     base_configs = [
         examples_dir / "model_config.toml",
         examples_dir / "scenario_config.toml",
     ]
     my_components = [component]
-    my_run = RunController(base_configs, run_dir = examples_dir / example_name, run_components=my_components)
+    my_run = RunController(
+        base_configs, run_dir=examples_dir / example_name, run_components=my_components
+    )
     return my_run

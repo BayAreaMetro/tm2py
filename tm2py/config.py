@@ -223,7 +223,9 @@ class AirPassengerConfig(ConfigItem):
     Properties
 
     highway_demand_file: output OMX file
-    input_demand_folder: location to find the input
+    input_demand_folder: location to find the input demand csvs
+    input_demand_filename_tmpl: filename template for input demand. Should have
+        {year}, {direction} and {airport} variables and end in '.csv'
     reference_start_year: base start year for input demand tables
         used to calculate the linear interpolation, as well as
         in the file name template {year}_{direction}{airport}.csv
@@ -238,10 +240,26 @@ class AirPassengerConfig(ConfigItem):
 
     highway_demand_file: pathlib.Path
     input_demand_folder: pathlib.Path
+    input_demand_filename_tmpl: str
     reference_start_year: str
     reference_end_year: str
     airport_names: Tuple[str, ...]
     demand_aggregation: Tuple[AirPassengerDemandAggregationConfig, ...]
+
+    @validator("input_demand_filename_tmpl")
+    def valid_input_demand_filename_tmpl(value):
+        """Validate skim matrix template has correct {}."""
+
+        assert (
+            "{year}" in value
+        ), "-> 'output_skim_matrixname_tmpl must have {year}, found {value}."
+        assert (
+            "{direction}" in value
+        ), "-> 'output_skim_matrixname_tmpl must have {direction}, found {value}."
+        assert (
+            "{airport}" in value
+        ), "-> 'output_skim_matrixname_tmpl must have {airport}, found {value}."
+        return value
 
 
 @dataclass(frozen=True)

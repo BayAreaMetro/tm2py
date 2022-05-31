@@ -1,10 +1,50 @@
+"""Testing of highway network components"""
 import glob
 import os
 
 import pytest
-
-from tools import assert_csv_equal, diff_omx
 from conftest import inro_context
+from tools import assert_csv_equal, diff_omx
+
+
+def test_prepare_highway_network(examples_dir):
+    "Tests that prepare highway network component can be run."
+    from tools import test_component
+
+    my_run = test_component(examples_dir, "prepare_network_highway")
+    my_run.run_next()
+
+    # TODO write assert
+
+
+def test_highway_assign(examples_dir):
+    "Tests that highway network assignment component can be run."
+    from tools import test_component
+
+    my_run = test_component(examples_dir, "highway")
+    my_run.run_next()
+
+    # TODO write assert
+
+
+def test_highway_maz_assign(examples_dir):
+    "Tests that highway MAZ network assignment component can be run."
+    from tools import test_component
+
+    my_run = test_component(examples_dir, "highway_maz_assign")
+    my_run.run_next()
+
+    # TODO write assert
+
+
+def test_highway_maz_skim(examples_dir):
+    "Tests that highway MAZ network skimming component can be run."
+    from tools import test_component
+
+    my_run = test_component(examples_dir, "highway_maz_skim")
+    my_run.run_next()
+
+    # TODO write assert
 
 
 @pytest.mark.skipif(inro_context != "inro", reason="requires full inro context")
