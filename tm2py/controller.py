@@ -110,7 +110,9 @@ class RunController:
         self.completed_components = []
 
         # mapping from defined names referenced in config to Component objects
-        self._component_map = {k: v(self) for k, v in component_cls_map.items()}
+        self._component_map = {
+            k: v(self) for k, v in component_cls_map.items() if k in run_components
+        }
         self._validated_components = set()
         self._emme_manager = None
         self._num_processors = None
@@ -210,7 +212,7 @@ class RunController:
         """Get the absolute path from the root run directory given a relative path."""
         if not isinstance(rel_path, Path):
             rel_path = Path(rel_path)
-        return os.path.join(self.run_dir, rel_path)
+        return Path(os.path.join(self.run_dir, rel_path))
 
     def run(self):
         """Main interface to run model.
@@ -244,6 +246,8 @@ class RunController:
         except AssertionError:
             "Components already queued, returning without re-queuing."
             return
+
+        print("RUN COMPOMENTS", run_components)
         _initial_components = self.config.run.initial_components
         _global_iter_components = self.config.run.global_iteration_components
         _final_components = self.config.run.final_components

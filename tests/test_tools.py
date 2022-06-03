@@ -11,6 +11,7 @@ _EXAMPLE_URL = (
 )
 
 
+@pytest.mark.skip("Takes a while")
 def test_download_unzip(temp_dir, inro_context):
     """If (and only if) Emme is not installed, replace INRO libraries with MagicMock."""
     from tm2py.tools import _download, _unzip
@@ -90,7 +91,14 @@ def test_interpolate(inro_context):
 
 def test_df_to_omx(inro_context):
     """Test df_to_omx."""
-    from tm2py.tools import df_to_omx
+    from tm2py.omx import df_to_omx
+
+    # TODO
+
+
+def test_omx_to_dict(inro_context):
+    """Test omx to dict."""
+    from tm2py.omx import omx_to_dict
 
     # TODO
 

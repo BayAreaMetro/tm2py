@@ -55,7 +55,11 @@ def test_component(examples_dir, component, example_name="UnionCity"):
         examples_dir / "scenario_config.toml",
     ]
     my_components = [component]
+    print(f"TESTING COMPONENTS: {my_components}")
     my_run = RunController(
         base_configs, run_dir=examples_dir / example_name, run_components=my_components
     )
+    # TODO RUN COMPONENT
+    print(f"RIGHT NOW JUST INITIATING - NOT RUNNING")
+    print(my_run)
     return my_run

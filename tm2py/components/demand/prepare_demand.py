@@ -99,6 +99,10 @@ class PrepareHighwayDemand(PrepareDemand):
         super().__init__(controller)
         self._emmebank_path = None
 
+    def validate_inputs(self):
+        # TODO
+        pass
+
     # @LogStartEnd("prepare highway demand")
     def run(self):
         """Open combined demand OMX files from demand models and prepare for assignment."""

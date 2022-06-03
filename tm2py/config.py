@@ -6,8 +6,9 @@ from abc import ABC
 from typing import Dict, List, Optional, Tuple, Union
 
 import toml
-from pydantic import Field, validator
+from pydantic import Field, NonNegativeFloat, validator
 from pydantic.dataclasses import dataclass
+from pydantic.error_wrappers import ValidationError
 from typing_extensions import Literal
 
 
@@ -93,33 +94,33 @@ class RunConfig(ConfigItem):
     end_iteration: int = Field(gt=0)
     start_component: Optional[Union[ComponentNames, EmptyString]] = Field(default="")
 
-    @validator("end_iteration")
-    def end_iteration_gt_start(value, values):
+    @validator("end_iteration", allow_reuse=True)
+    def end_iteration_gt_start(cls, value, values):
         """Validate end_iteration greater than start_iteration."""
-        if "start_iteration" in values:
+        if values.get("start_iteration"):
             assert (
                 value > values["start_iteration"]
-            ), "must be greater than start_iteration"
+            ), f"'end_iteration' ({value}) must be greater than 'start_iteration'\
+                ({values['start_iteration']})"
         return value
 
-    @validator("start_component")
-    def start_component_used(value, values):
+    @validator("start_component", allow_reuse=True)
+    def start_component_used(cls, value, values):
         """Validate start_component is listed in *_components."""
-        if "start_component" not in values:
-            return value
-        if not value:
+        if not values.get("start_component") or not value:
             return value
 
         if "start_iteration" in values:
-            if values["start_iteration"] == 0:
-                if "initial_components" in values:
-                    assert (
-                        value in values["initial_components"]
-                    ), "must be one of the components listed in initial_components"
-            elif "global_iteration_components" in values:
-                assert (
-                    value in values["global_iteration_components"]
-                ), "must be one of the components listed in global_iteration_components"
+            if values.get("start_iteration") == 0:
+                assert value in values.get(
+                    "initial_components", [value]
+                ), f"'start_component' ({value}) must be one of the components listed in\
+                    initial_components if 'start_iteration = 0'"
+            else:
+                assert value in values.get(
+                    "global_iteration_components", [values]
+                ), f"'start_component' ({value}) must be one of the components listed in\
+                    global_iteration_components if 'start_iteration > 0'"
         return value
 
 
@@ -190,6 +191,55 @@ class TimePeriodConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class TimeSplitConfig(ConfigItem):
+    """Split matrix i and j.
+
+    i.e. for time of day splits.
+    """
+
+    time_period: str
+    production: Optional[NonNegativeFloat] = None
+    attraction: Optional[NonNegativeFloat] = None
+    od: Optional[NonNegativeFloat] = None
+
+    @validator("production", "attraction", "od")
+    def less_than_equal_one(cls, v):
+        if v:
+            assert v <= 1.0, "Value should be less than or equal to 1"
+            return v
+
+    def __post_init__(self):
+        if self.od and any([self.production, self.attraction]):
+            raise ValueError(
+                f"TimeSplitConfig: Must either specifify an od or any of\
+            production/attraction - not both.\n{self}"
+            )
+
+        if not all([self.production, self.attraction]) and any(
+            [self.production, self.attraction]
+        ):
+            raise ValueError(
+                f"TimeSplitConfig: Must have both production AND attraction\
+            if one of them is specified."
+            )
+
+
+@dataclass(frozen=True)
+class TimeOfDayClassConfig(ConfigItem):
+    """Configuraiton for a class of time of day model."""
+
+    name: str
+    time_period_split: List[TimeSplitConfig]
+
+
+@dataclass(frozen=True)
+class TimeOfDayConfig(ConfigItem):
+    """Configuration for time of day model."""
+
+    classes: List[TimeOfDayClassConfig]
+
+
+@dataclass(frozen=True)
 class HouseholdConfig(ConfigItem):
     """Household (residents) model parameters."""
 
@@ -202,17 +252,17 @@ class AirPassengerDemandAggregationConfig(ConfigItem):
     """Air passenger demand aggregation input parameters.
 
     Properties:
-        result_class_name: name used in the output OMX matrix names, note
+        name: (src_group_name) name used for the class group in the input columns
+            for the trip tables,
+        mode: (result_class_name) name used in the output OMX matrix names, note
             that this should match the expected naming convention in the
             HighwayClassDemandConfig name(s)
-        src_group_name: name used for the class group in the input columns
-            for the trip tables,
         access_modes: list of names used for the access modes in the input
             columns for the trip tables
     """
 
-    result_class_name: str
-    src_group_name: str
+    name: str
+    mode: str
     access_modes: Tuple[str, ...]
 
 
@@ -238,16 +288,17 @@ class AirPassengerConfig(ConfigItem):
         demand to highway class demand
     """
 
-    highway_demand_file: pathlib.Path
+    output_trip_table_directory: pathlib.Path
+    outfile_trip_table_tmp: str
     input_demand_folder: pathlib.Path
     input_demand_filename_tmpl: str
     reference_start_year: str
     reference_end_year: str
-    airport_names: Tuple[str, ...]
-    demand_aggregation: Tuple[AirPassengerDemandAggregationConfig, ...]
+    airport_names: List[str]
+    demand_aggregation: List[AirPassengerDemandAggregationConfig]
 
     @validator("input_demand_filename_tmpl")
-    def valid_input_demand_filename_tmpl(value):
+    def valid_input_demand_filename_tmpl(cls, value):
         """Validate skim matrix template has correct {}."""
 
         assert (
@@ -263,47 +314,120 @@ class AirPassengerConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
-class GateFactorConfig(ConfigItem):
-    """Mapping of gateway (zone ordering ID) to factor value."""
+class MatrixFactorConfig(ConfigItem):
+    """Mapping of zone or list of zones to factor value."""
 
-    zone_index: int
-    factor: float
+    zone_index: Optional[Union[int, List[int]]]
+    factor: Optional[float] = Field(default=None)
+    i_factor: Optional[float] = Field(default=None)
+    j_factor: Optional[float] = Field(default=None)
+    as_growth_rate: Optional[bool] = Field(default=False)
+
+    @validator("zone_index", allow_reuse=True)
+    def valid_zone_index(value):
+        """Validate zone index and turn to list if isn't one."""
+        if isinstance(value, str):
+            value = int(value)
+        if isinstance(value, int):
+            value = [value]
+        assert all([x >= 0 for x in value]), "Zone_index must be greater or equal to 0"
+        return value
+
+    @validator("factor", allow_reuse=True)
+    def valid_factor(value, values):
+        assert (
+            "i_factor" not in values.keys()
+        ), "Found both `factor` and\
+            `i_factor` in MatrixFactorConfig. Should be one or the other."
+
+        assert (
+            "j_factor" not in values.keys()
+        ), "Found both `factor` and\
+            `j_factor` in MatrixFactorConfig. Should be one or the other."
 
 
 @dataclass(frozen=True)
-class TimeOfDaySplitConfig(ConfigItem):
-    """Time of day demand split for productions and attractions."""
+class CoefficientConfig(ConfigItem):
+    """Coefficient and properties to be used in utility or regression."""
 
-    time_period: str
-    production: Optional[float] = Field(default=None)
-    attraction: Optional[float] = Field(default=None)
+    property: str
+    coeff: Optional[float] = Field(default=None)
+
+
+@dataclass(frozen=True)
+class ChoiceClassConfig(ConfigItem):
+    """Choice class parameters.
+
+    Properties:
+        property_to_skim_toll: Maps a property in the utility equation with a list of skim
+            properties. If more than one skim property is listed, they will be summed together
+            (e.g. cost if the sum of bridge toll and value toll). This defaults to a value in the
+            code.
+        property_to_skim_notoll: Maps a property in the utility equation with a list of skim
+            properties for no toll choice.If more than one skim property is listed, they will
+            be summed together  (e.g. cost if the sum of bridge toll and value toll). This
+            defaults to a value in the code.
+        property_factors: This will scale the property for this class. e.g. a shared ride cost
+            could be applied a factor assuming that the cost is shared among individuals.
+
+    The end value in the utility equation for class c and property p is:
+
+       utility[p].coeff *
+       classes[c].property_factor[p] *
+       sum(skim(classes[c].skim_mode,skim_p) for skim_p in property_to_skim[p])
+    """
+
+    name: str
+    skim_mode: Optional[str] = Field(default="da")
+    property_factors: Optional[List[CoefficientConfig]] = Field(default=None)
+
+
+@dataclass(frozen=True)
+class TollChoiceConfig(ConfigItem):
+    """Toll choice parameters.
+
+    Properties:
+        property_to_skim_toll: Maps a property in the utility equation with a list of skim
+            properties. If more than one skim property is listed, they will be summed together
+            (e.g. cost if the sum of bridge toll and value toll). This defaults to a value in the
+            code.
+        property_to_skim_notoll: Maps a property in the utility equation with a list of skim
+            properties for no toll choice.If more than one skim property is listed, they will
+            be summed together  (e.g. cost if the sum of bridge toll and value toll). This
+            defaults to a value in the code.
+    """
+
+    classes: List[ChoiceClassConfig]
+    value_of_time: float
+    operating_cost_per_mile: float
+    property_to_skim_toll: Optional[Dict[str, List[str]]] = Field(default_factory=dict)
+    property_to_skim_notoll: Optional[Dict[str, List[str]]] = Field(
+        default_factory=dict
+    )
+    utility: Optional[List[CoefficientConfig]] = Field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class DemandGrowth(ConfigItem):
+    input_demand_file: pathlib.Path
+    input_demand_matrixname_tmpl: str
+    reference_year: int
+    annual_growth_rate: List[MatrixFactorConfig]
+    special_gateway_adjust: Optional[List[MatrixFactorConfig]] = Field(
+        default_factory=list
+    )
 
 
 @dataclass(frozen=True)
 class InternalExternalConfig(ConfigItem):
     """Internal <-> External model parameters."""
 
-    highway_demand_file: pathlib.Path
-    input_demand_file: pathlib.Path
-    reference_year: int
-    toll_choice_time_coefficient: float
-    value_of_time: float
-    shared_ride_2_toll_factor: float
-    shared_ride_3_toll_factor: float
-    operating_cost_per_mile: float
-    time_of_day_split: List[TimeOfDaySplitConfig]
-    annual_growth_rate: List[GateFactorConfig]
-    special_factor_adjust: Optional[List[GateFactorConfig]] = Field(
-        default_factory=list
-    )
-
-
-@dataclass(frozen=True)
-class CoefficientConfig(ConfigItem):
-    """LandUseRateConfig - multiplier for land use file columns."""
-
-    property: str
-    rate: float
+    output_trip_table_directory: pathlib.Path
+    outfile_trip_table_tmp: str
+    modes: List[str]
+    demand: DemandGrowth
+    time_of_day: TimeOfDayConfig
+    toll_choice: TollChoiceConfig
 
 
 @dataclass(frozen=True)
@@ -320,27 +444,36 @@ class TripGenerationFormulaConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
-class TripGenerationConfig(ConfigItem):
+class TripGenerationClassConfig(ConfigItem):
     """Trip Generation parameters."""
 
     name: str
+    purpose: Optional[str] = Field(default=None)
     production_formula: Optional[TripGenerationFormulaConfig] = Field(default=None)
     attraction_formula: Optional[TripGenerationFormulaConfig] = Field(default=None)
     balance_to: Optional[str] = Field(default="production")
 
 
 @dataclass(frozen=True)
-class TripDistributionConfig(ConfigItem):
+class TripGenerationConfig(ConfigItem):
+    """Trip Generation parameters."""
+
+    classes: List[TripGenerationClassConfig]
+
+
+@dataclass(frozen=True)
+class TripDistributionClassConfig(ConfigItem):
     """Trip Distribution parameters.
 
     Properties:
-        impedance: refers to an impedance (skim) matrix to use - often a blended skim.
-
+        name: name of class to apply to
+        impedance_name: refers to an impedance (skim) matrix to use - often a blended skim.
+        use_k_factors: boolean on if to use k-factors
     """
 
+    name: str
     impedance: str
     use_k_factors: bool
-    k_factor_file: Optional[str] = Field(default=None)
 
 
 @dataclass(frozen=True)
@@ -348,11 +481,7 @@ class TruckClassConfig(ConfigItem):
     """Truck class parameters."""
 
     name: str
-    trip_type_config: List[TripGenerationConfig]
-    trip_distribution_config: TripDistributionConfig
-    time_of_day_split: List[TimeOfDaySplitConfig]
-    description: Optional[str] = Field(default="")
-    toll_choice_skim_mode: Optional[str] = Field(default="trk")
+    description: Optional[str] = ""
 
 
 @dataclass(frozen=True)
@@ -361,15 +490,15 @@ class ImpedanceConfig(ConfigItem):
 
     Properties:I
         name: name to store it as, referred to in TripDistribution config
-        mode: name of the mode to use for the blended skim
-        blend: blend of time periods to use; mapped to the factors (which should sum to 1)
+        skim_mode: name of the mode to use for the blended skim
+        time_blend: blend of time periods to use; mapped to the factors (which should sum to 1)
     """
 
     name: str
-    mode: str
-    blend: Dict[str, float]
+    skim_mode: str
+    time_blend: Dict[str, float]
 
-    @validator("blend")
+    @validator("time_blend", allow_reuse=True)
     def sums_to_one(value):
         """Validate highway.maz_to_maz.skim_period refers to a valid period."""
         assert sum(value.values()) - 1 < 0.0001, "blend factors must sum to 1"
@@ -377,19 +506,58 @@ class ImpedanceConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class TripDistributionConfig(ConfigItem):
+    """Trip Distribution parameters."""
+
+    classes: List[TripDistributionClassConfig]
+    max_balance_iterations: int
+    max_balance_relative_error: float
+    friction_factors_file: pathlib.Path
+    k_factors_file: Optional[pathlib.Path] = None
+
+
+@dataclass(frozen=True)
 class TruckConfig(ConfigItem):
     """Truck model parameters."""
 
-    highway_demand_file: pathlib.Path
-    k_factors_file: pathlib.Path
-    friction_factors_file: pathlib.Path
-    value_of_time: float
-    operating_cost_per_mile: float
-    toll_choice_time_coefficient: float
-    max_balance_iterations: int
-    max_balance_relative_error: float
     classes: List[TruckClassConfig]
     impedances: List[ImpedanceConfig]
+    trip_gen: TripGenerationConfig
+    trip_dist: TripDistributionConfig
+    time_of_day: TimeOfDayConfig
+    toll_choice: TollChoiceConfig
+    output_trip_table_directory: pathlib.Path
+    outfile_trip_table_tmp: str
+
+    """
+    @validator("classes")
+    def class_consistency(cls, v, values):
+        # TODO Can't get to work righ tnow
+        _class_names = [c.name for c in v]
+        _gen_classes = [c.name for c in values["trip_gen"]]
+        _dist_classes = [c.name for c in values["trip_dist"]]
+        _time_classes = [c.name for c in values["time_split"]]
+        _toll_classes = [c.name for c in values["toll_choice"]]
+
+        assert (
+            _class_names == _gen_classes
+        ), "truck.classes ({_class_names}) doesn't equal\
+            class names in truck.trip_gen ({_gen_classes})."
+        assert (
+            _class_names == _dist_classes
+        ), "truck.classes ({_class_names}) doesn't  equal\
+            class names in truck.trip_dist ({_dist_classes})."
+        assert (
+            _class_names == _time_classes
+        ), "truck.classes ({_class_names}) doesn't  equal\
+            class names in truck.time_split ({_time_classes})."
+        assert (
+            _class_names == _toll_classes
+        ), "truck.classes ({_class_names}) doesn't equal\
+            class names in truck.toll_choice ({_toll_classes})."
+
+        return v
+    """
 
 
 @dataclass(frozen=True)

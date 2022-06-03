@@ -107,15 +107,10 @@ class Component(ABC):
         if not os.path.isabs(emmebank_path):
             emmebank_path = self.get_abs_path(emmebank_path)
         emmebank = self.controller.emme_manager.emmebank(emmebank_path)
-        scenario_id = {tp.name: tp.emme_scenario_id for tp in self.config.time_periods}[
-            time_period
-        ]
+        scenario_id = {
+            tp.name: tp.emme_scenario_id for tp in self.controller.config.time_periods
+        }[time_period.lower()]
         return emmebank.scenario(scenario_id)
-
-    @property
-    def config(self):
-        """Reference to configuration settings loaded from config files."""
-        return self.controller.config
 
     @property
     def time_period_names(self) -> List[str]:
@@ -161,13 +156,6 @@ class Component(ABC):
     # @abstractmethod
     def write_top_sheet(self):
         """Write key outputs to the model top sheet."""
-
-    # @abstractmethod
-    @classmethod
-    def test_component(self):
-        """Run stand-alone component test."""
-        # TODO
-        pass
 
 
 class Subcomponent(Component):

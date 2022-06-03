@@ -43,378 +43,377 @@
     transit_demand_file = "demand_matrices/transit/TAP_Demand_{set}_{period}.omx"
 
 [air_passenger]
-    highway_demand_file = "demand_matrices/highway/air_passenger/tripsAirPax{period}.omx"
+    output_trip_table_directory = "demand_matrices/highway/air_passenger"
+    outfile_trip_table_tmp = "tripsAirPax{period}.omx"
     input_demand_folder = "inputs/nonres"
     input_demand_filename_tmpl = "{year}_{direction}{airport}.csv"
     reference_start_year = "2007"
     reference_end_year = "2035"
     airport_names = [ "SFO", "OAK", "SJC",]
     [[air_passenger.demand_aggregation]]
-        result_class_name = "da"
-        src_group_name = "DA"
+        name = "DA"
+        mode = "da"
         access_modes = [ "ES", "PK", "RN", "TX", "LI",]
     [[air_passenger.demand_aggregation]]
-        result_class_name = "sr2"
-        src_group_name = "S2"
+        name = "S2"
+        mode = "sr2"
         access_modes = [ "ES", "PK", "RN", "TX", "LI",]
     [[air_passenger.demand_aggregation]]
-        result_class_name = "sr3"
-        src_group_name = "S3"
+        name = "S3"
+        mode = "sr3"
         access_modes = [ "ES", "PK", "RN", "TX", "LI", "VN", "HT", "CH",]
 
 [internal_external]
-    highway_demand_file = "demand_matrices/highway/internal_external/tripsIx{period}.omx"
-    input_demand_file = "inputs/nonres/IXDaily2006x4.may2208.new.omx"
-    reference_year = 2005
-    # The in-vehicle time coefficient is taken from the work trip mode choice model.
-    # coefficient for in-vehicle time = -0.0220/0.25 = -0.088
-    toll_choice_time_coefficient = -0.088
-    value_of_time = 18.93
-    shared_ride_2_toll_factor = 0.5714285714285714
-    shared_ride_3_toll_factor = 0.4
-    operating_cost_per_mile = 17.23
+    output_trip_table_directory = "demand_matrices/highway/internal_external"
+    outfile_trip_table_tmp = "tripsIx{period}.omx"
+    modes = ["da","sr2","sr3"]
+    [internal_external.demand]
+        input_demand_file = "inputs/nonres/IXDaily2006x4.may2208.new.omx"
+        input_demand_matrixname_tmpl = "IX_Daily_{mode}"
+        reference_year = 2005
     # Union city compatible test with 43 zones
-    [[internal_external.annual_growth_rate]]
-        zone_index = 41
+    [[internal_external.demand.annual_growth_rate]]
+        zone_index = [41, 42, 4688, 4689, 4690, 4691, 4692, 4704, 4705, 4706, 4707, 4708]
         factor = 1.05
-    [[internal_external.annual_growth_rate]]
-        zone_index = 42
-        factor = 1.05
-    # Uncomment for full model gateways
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4688
-    #     factor = 1.005
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4689
-    #     factor = 1.005
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4690
-    #     factor = 1.005
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4691
-    #     factor = 1.005
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4692
-    #     factor = 1.005
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4693
-    #     factor = 1.010
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4694
-    #     factor = 1.010
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4695
-    #     factor = 1.010
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4696
-    #     factor = 1.010
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4697
-    #     factor = 0
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4698
-    #     factor = 1.010
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4699
-    #     factor = 1.010
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4700
-    #     factor = 1.015
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4701
-    #     factor = 1.010
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4702
-    #     factor = 1.010
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4703
-    #     factor = 1.010
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4704
-    #     factor = 1.005
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4705
-    #     factor = 1.005
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4706
-    #     factor = 1.005
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4707
-    #     factor = 1.005
-    # [[internal_external.annual_growth_rate]]
-    #     zone_index = 4708
-    #     factor = 1.005
-    # [[internal_external.special_gateway_adjust]]
-    #     zone_index = 4693
-    #     factor = 1.020228
-    # [[internal_external.special_gateway_adjust]]
-    #     zone_index = 4695
-    #     factor = 1.242555
-    # [[internal_external.special_gateway_adjust]]
-    #     zone_index = 4696
-    #     factor = 0.848518
-    # [[internal_external.special_gateway_adjust]]
-    #     zone_index = 4698
-    #     factor = 1.673817
-    [[internal_external.time_of_day_split]]
-        time_period = "ea"
-        production = 0.15329
-        attraction = 0.06440
-    [[internal_external.time_of_day_split]]
-        time_period = "am"
-        production = 0.26441
-        attraction = 0.17540
-    [[internal_external.time_of_day_split]]
-        time_period = "md"
-        production = 0.25720
-        attraction = 0.26950
-    [[internal_external.time_of_day_split]]
-        time_period = "pm"
-        production = 0.21490
-        attraction = 0.29824
-    [[internal_external.time_of_day_split]]
-        time_period = "ev"
-        production = 0.11020
-        attraction = 0.19246
+        as_growth_rate = true
+    [[internal_external.demand.annual_growth_rate]]
+        zone_index = [4693, 4694,4695, 4696, 4698, 4699,  4701, 4702, 4703]
+        factor = 1.010
+        as_growth_rate = true
+    [[internal_external.demand.annual_growth_rate]]
+        zone_index = [4697]
+        factor = 0
+    [[internal_external.demand.annual_growth_rate]]
+        zone_index = 4700
+        factor = 1.015
+        as_growth_rate = true
+    [[internal_external.demand.special_gateway_adjust]]
+        zone_index = 4693
+        factor = 1.020228
+    [[internal_external.demand.special_gateway_adjust]]
+        zone_index = 4695
+        factor = 1.242555
+    [[internal_external.demand.special_gateway_adjust]]
+        zone_index = 4696
+        factor = 0.848518
+    [[internal_external.demand.special_gateway_adjust]]
+        zone_index = 4698
+        factor = 1.673817
+    [internal_external.time_of_day]
+        [[internal_external.time_of_day.classes]]
+            name = "internal_external"
+            [[internal_external.time_of_day.classes.time_period_split]]
+                time_period = "ea"
+                production = 0.15329
+                attraction = 0.06440
+            [[internal_external.time_of_day.classes.time_period_split]]
+                time_period = "am"
+                production = 0.26441
+                attraction = 0.17540
+            [[internal_external.time_of_day.classes.time_period_split]]
+                time_period = "md"
+                production = 0.25720
+                attraction = 0.26950
+            [[internal_external.time_of_day.classes.time_period_split]]
+                time_period = "pm"
+                production = 0.21490
+                attraction = 0.29824
+            [[internal_external.time_of_day.classes.time_period_split]]
+                time_period = "ev"
+                production = 0.11020
+                attraction = 0.19246
+    [internal_external.toll_choice]
+        value_of_time = 18.93
+        operating_cost_per_mile = 17.23
+        [[internal_external.toll_choice.classes]]
+            name = "da"
+            skim_mode = "da"
+        [[internal_external.toll_choice.classes]]
+            name = "sr2"
+            skim_mode = "sr2"
+            [[internal_external.toll_choice.classes.property_factors]]
+                property = "toll"
+                coeff = 0.5714285714285714
+        [[internal_external.toll_choice.classes]]
+            name = "sr3"
+            skim_mode = "sr3"
+            [[internal_external.toll_choice.classes.property_factors]]
+                property = "toll"
+                coeff = 0.4
+        [[internal_external.toll_choice.utility]]
+            # The in-vehicle time coefficient is taken from the work trip mode choice model.
+            # coefficient for in-vehicle time = -0.0220/0.25 = -0.088
+            property = "time"
+            coeff = -0.088
 
 [truck]
-    highway_demand_file = "demand_matrices/highway/commercial/tripstrk{period}.omx"
-    k_factors_file = "inputs/nonres/truck_kfactors_taz.csv"
-    friction_factors_file = "inputs/nonres/truckFF.dat"
-    value_of_time = 37.87
-    operating_cost_per_mile = 31.28
-    toll_choice_time_coefficient = -0.088
-    max_balance_iterations = 999
-    max_balance_relative_error = 0.0001
-    [[truck.impedances]]
-        name = "trk"
-        mode = "trk"
-        [truck.impedances.blend]
-            "AM" = 0.3333333333
-            "MD" = 0.6666666667
-    [[truck.impedances]]
-        name = "lrgtrk"
-        mode = "lrgtrk"
-        [truck.impedances.blend]
-            "AM" = 0.3333333333
-            "MD" = 0.6666666667
+    output_trip_table_directory = "demand_matrices/highway/household"
+    outfile_trip_table_tmp = "TAZ_Demand_{period}.omx"
     [[truck.classes]]
         name = "vsmtrk"
         description = "very small truck"
-        [truck.classes.trip_distribution_config]
-            impedance = "trk"
-            use_k_factors = false
-        [[truck.classes.trip_type_config]]
-            name = "linked"
-            balance_to = "productions"
-            [truck.classes.trip_type_config.production_formula]
-                constant = 0
-                multiplier = 0.96
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'RETEMPN'
-                    rate = 0.95409
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'FPSEMPN'
-                    rate = 0.54333
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'HEREMPN'
-                    rate = 0.50769
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'OTHEMPN'
-                    rate = 0.63558
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'AGREMPN'
-                    rate = 1.10181
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'MWTEMPN'
-                    rate = 0.81576
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'TOTHH'
-                    rate = 0.26565
-        [[truck.classes.time_of_day_split]]
-            time_period = "ea"
-            production = 0.0235
-        [[truck.classes.time_of_day_split]]
-            time_period = "am"
-            production = 0.0700
-        [[truck.classes.time_of_day_split]]
-            time_period = "md"
-            production = 0.6360
-        [[truck.classes.time_of_day_split]]
-            time_period = "pm"
-            production = 0.1000
-        [[truck.classes.time_of_day_split]]
-            time_period = "ev"
-            production = 0.1705
     [[truck.classes]]
         name = "smtrk"
         description = "small truck"
-        [truck.classes.trip_distribution_config]
-            impedance = "trk"
-            use_k_factors = true
-        [[truck.classes.trip_type_config]]
-            name = "linked"
-            balance_to = "productions"
-            [truck.classes.trip_type_config.production_formula]
-                constant = 0
-                multiplier = 1
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                property = 'TOTEMP'
-                rate = 0.0324
-        [[truck.classes.trip_type_config]]
-            name = "garage"
-            balance_to = "productions"
-            [truck.classes.trip_type_config.production_formula]
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'RETEMPN'
-                    rate = 0.02146
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'FPSEMPN'
-                    rate = 0.02424
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'HEREMPN'
-                    rate = 0.01320
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'OTHEMPN'
-                    rate = 0.04325
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'AGREMPN'
-                    rate = 0.05021
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'MWTEMPN'
-                    rate = 0.01960
-            [truck.classes.trip_type_config.attraction_formula]
-                [[truck.classes.trip_type_config.attraction_formula.land_use_rates]]
-                    property = 'TOTEMP'
-                    rate = 0.0234
-        [[truck.classes.time_of_day_split]]
-            time_period = "ea"
-            production = 0.0765
-        [[truck.classes.time_of_day_split]]
-            time_period = "am"
-            production = 0.2440
-        [[truck.classes.time_of_day_split]]
-            time_period = "md"
-            production = 0.3710
-        [[truck.classes.time_of_day_split]]
-            time_period = "pm"
-            production = 0.2180
-        [[truck.classes.time_of_day_split]]
-            time_period = "ev"
-            production = 0.0905
     [[truck.classes]]
         name = "medtrk"
         description = "medium truck"
-        [truck.classes.trip_distribution_config]
-            impedance = "trk"
-            use_k_factors = true
-        [[truck.classes.trip_type_config]]
-            name = "linked"
-            balance_to = "productions"
-            [truck.classes.trip_type_config.production_formula]
-                constant = 0
-                multiplier =  1
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'TOTEMP'
-                    rate = 0.0039
-         [[truck.classes.trip_type_config]]
-            name = "garage"
-            balance_to = "productions"
-            [truck.classes.trip_type_config.production_formula]
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'RETEMPN'
-                    rate = 0.00102
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'FPSEMPN'
-                    rate = 0.00147
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'HEREMPN'
-                    rate = 0.00025
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'OTHEMPN'
-                    rate = 0.00331
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'AGREMPN'
-                    rate = 0.00445
-                [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'MWTEMPN'
-                    rate = 0.00165
-            [truck.classes.trip_type_config.attraction_formula]
-                [[truck.classes.trip_type_config.attraction_formula.land_use_rates]]
-                    property = 'TOTEMP'
-                    rate = 0.0046
-        [[truck.classes.time_of_day_split]]
-            time_period = "ea"
-            production = 0.0665
-        [[truck.classes.time_of_day_split]]
-            time_period = "am"
-            production = 0.2930
-        [[truck.classes.time_of_day_split]]
-            time_period = "md"
-            production = 0.3935
-        [[truck.classes.time_of_day_split]]
-            time_period = "pm"
-            production = 0.1730
-        [[truck.classes.time_of_day_split]]
-            time_period = "ev"
-            production = 0.0740
     [[truck.classes]]
         name = "lrgtrk"
         description = "large truck"
-        toll_choice_skim_mode = "lrgtrk"
-            [truck.classes.trip_distribution_config]
-                impedance = "lrgtrk"
-                use_k_factors = true
-            [[truck.classes.trip_type_config]]
-                name = "linked"
-                balance_to = "productions"
-                [truck.classes.trip_type_config.production_formula]
-                    constant = 0
-                    multiplier =  1
-                    [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                    property = 'TOTEMP'
-                    rate = 0.0073
-            [[truck.classes.trip_type_config]]
-                name = "garage"
-                balance_to = "productions"
-                [truck.classes.trip_type_config.production_formula]
-                    [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                        property = 'RETEMPN'
-                        rate = 0.00183
-                    [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                        property = 'FPSEMPN'
-                        rate = 0.00482
-                    [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                        property = 'HEREMPN'
-                        rate = 0.00274
-                    [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                        property = 'OTHEMPN'
-                        rate = 0.00795
-                    [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                        property = 'AGREMPN'
-                        rate = 0.01125
-                    [[truck.classes.trip_type_config.production_formula.land_use_rates]]
-                        property = 'MWTEMPN'
-                        rate = 0.00486
-            [truck.classes.trip_type_config.attraction_formula]
-                [[truck.classes.trip_type_config.attraction_formula.land_use_rates]]
-                    property = 'TOTEMP'
-                    rate = 0.0136
-        [[truck.classes.time_of_day_split]]
-            time_period = "ea"
-            production = 0.1430
-        [[truck.classes.time_of_day_split]]
-            time_period = "am"
-            production = 0.2320
-        [[truck.classes.time_of_day_split]]
-            time_period = "md"
-            production = 0.3315
-        [[truck.classes.time_of_day_split]]
-            time_period = "pm"
-            production = 0.1750
-        [[truck.classes.time_of_day_split]]
-            time_period = "ev"
-            production = 0.1185
+    [[truck.impedances]]
+        name = "trk"
+        skim_mode = "trk"
+        [truck.impedances.time_blend]
+            "AM" = 0.3333333333
+            "MD" = 0.6666666667
+    [[truck.impedances]]
+        name = "lrgtrk"
+        skim_mode = "lrgtrk"
+        [truck.impedances.time_blend]
+            "AM" = 0.3333333333
+            "MD" = 0.6666666667
+    [truck.trip_dist]
+        k_factors_file = "inputs/nonres/truck_kfactors_taz.csv"
+        friction_factors_file = "inputs/nonres/truckFF.dat"
+        max_balance_iterations = 999
+        max_balance_relative_error = 0.0001
+    [[truck.trip_dist.classes]]
+        name = "vsmtrk"
+        impedance = "trk"
+        use_k_factors = false
+    [[truck.trip_dist.classes]]
+        name = "smtrk"
+        impedance = "trk"
+        use_k_factors = true
+    [[truck.trip_dist.classes]]
+        name = "medtrk"
+        impedance = "trk"
+        use_k_factors = true
+    [[truck.trip_dist.classes]]
+        name = "lrgtrk"
+        impedance = "lrgtrk"
+        use_k_factors = true
+    [[truck.trip_gen.classes]]
+        name = "vsmtrk"
+        purpose = "linked"
+        balance_to = "productions"
+        [truck.trip_gen.classes.production_formula]
+            constant = 0
+            multiplier = 0.96
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'RETEMPN'
+                coeff = 0.95409
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'FPSEMPN'
+                coeff = 0.54333
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'HEREMPN'
+                coeff = 0.50769
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'OTHEMPN'
+                coeff = 0.63558
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'AGREMPN'
+                coeff = 1.10181
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'MWTEMPN'
+                coeff = 0.81576
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'TOTHH'
+                coeff = 0.26565
+    [[truck.trip_gen.classes]]
+        name = "smtrk"
+        purpose = "linked"
+        balance_to = "productions"
+        [truck.trip_gen.classes.production_formula]
+            constant = 0
+            multiplier = 1
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+            property = 'TOTEMP'
+            coeff = 0.0324
+    [[truck.trip_gen.classes]]
+        name = "smtrk"
+        purpose = "garage"
+        balance_to = "productions"
+        [truck.trip_gen.classes.production_formula]
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'RETEMPN'
+                coeff = 0.02146
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'FPSEMPN'
+                coeff = 0.02424
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'HEREMPN'
+                coeff = 0.01320
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'OTHEMPN'
+                coeff = 0.04325
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'AGREMPN'
+                coeff = 0.05021
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'MWTEMPN'
+                coeff = 0.01960
+        [truck.trip_gen.classes.attraction_formula]
+            [[truck.trip_gen.classes.attraction_formula.land_use_rates]]
+                property = 'TOTEMP'
+                coeff = 0.0234
+    [[truck.trip_gen.classes]]
+        name = "medtrk"
+        purpose = "linked"
+        balance_to = "productions"
+        [truck.trip_gen.classes.production_formula]
+            constant = 0
+            multiplier =  1
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'TOTEMP'
+                coeff = 0.0039
+    [[truck.trip_gen.classes]]
+        name = "medtrk"
+        purpose = "garage"
+        balance_to = "productions"
+        [truck.trip_gen.classes.production_formula]
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'RETEMPN'
+                coeff = 0.00102
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'FPSEMPN'
+                coeff = 0.00147
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'HEREMPN'
+                coeff = 0.00025
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'OTHEMPN'
+                coeff = 0.00331
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'AGREMPN'
+                coeff = 0.00445
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'MWTEMPN'
+                coeff = 0.00165
+        [truck.trip_gen.classes.attraction_formula]
+            [[truck.trip_gen.classes.attraction_formula.land_use_rates]]
+                property = 'TOTEMP'
+                coeff = 0.0046
+    [[truck.trip_gen.classes]]
+        name = "lrgtrk"
+        purpose = "linked"
+        balance_to = "productions"
+        [truck.trip_gen.classes.production_formula]
+            constant = 0
+            multiplier =  1
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+            property = 'TOTEMP'
+            coeff = 0.0073
+    [[truck.trip_gen.classes]]
+        name  = "lrgtrk"
+        purpose = "garage"
+        balance_to = "productions"
+        [truck.trip_gen.classes.production_formula]
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'RETEMPN'
+                coeff = 0.00183
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'FPSEMPN'
+                coeff = 0.00482
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'HEREMPN'
+                coeff = 0.00274
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'OTHEMPN'
+                coeff = 0.00795
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'AGREMPN'
+                coeff = 0.01125
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'MWTEMPN'
+                coeff = 0.00486
+        [truck.trip_gen.classes.attraction_formula]
+            [[truck.trip_gen.classes.attraction_formula.land_use_rates]]
+                property = 'TOTEMP'
+                coeff = 0.0136
+        [truck.time_of_day]
+        [[truck.time_of_day.classes]]
+            name = "vsmtrk"
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "ea"
+                od = 0.0235
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "am"
+                od = 0.0700
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "md"
+                od = 0.6360
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "pm"
+                od = 0.1000
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "ev"
+                od = 0.1705
+        [[truck.time_of_day.classes]]
+            name = "smtrk"
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "ea"
+                od = 0.0765
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "am"
+                od = 0.2440
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "md"
+                od = 0.3710
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "pm"
+                od= 0.2180
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "ev"
+                od = 0.0905
+        [[truck.time_of_day.classes]]
+            name = "medtrk"
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "ea"
+                od = 0.0665
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "am"
+                od = 0.2930
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "md"
+                od = 0.3935
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "pm"
+                od = 0.1730
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "ev"
+                od = 0.0740
+        [[truck.time_of_day.classes]]
+            name = "lrgtrk"
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "ea"
+                od = 0.1430
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "am"
+                od = 0.2320
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "md"
+                od = 0.3315
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "pm"
+                od = 0.1750
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "ev"
+                od = 0.1185
+    [truck.toll_choice]
+        value_of_time = 18.93
+        operating_cost_per_mile = 17.23
+        [[truck.toll_choice.classes]]
+            name = "trk"
+            skim_mode = "trk"
+        [[truck.toll_choice.classes]]
+            name = "lgstrk"
+            skim_mode = "lrgtrk"
+        [[truck.toll_choice.utility]]
+            property = "time"
+            coeff = -0.088
 
 [active_modes]
     emme_scenario_id = 1

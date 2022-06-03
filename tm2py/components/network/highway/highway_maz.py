@@ -72,22 +72,42 @@ class AssignMAZSPDemand(Component):
         Args:
             controller: parent Controller object
         """
+
         super().__init__(controller)
-        self._scenario = None
+        self.config = self.controller.config.highway.maz_to_maz
+        self._debug = False
+
         # bins: performance parameter: crow-fly distance bins
         #       to limit shortest path calculation by origin to furthest destination
         #       semi-exposed for performance testing
         self._bin_edges = _default_bin_edges
-        self._debug = False
+
+        # Lazily-loaded Emme Properties
+        self._emmebank = None
+        self._eb_dir = None
 
         # Internal attributes to track data through the sequence of steps
-        self._eb_dir = None
+        self._scenario = None
         self._mazs = None
-        self._demand = None
+        self._demand = _defaultdict(lambda: [])
         self._max_dist = 0
         self._network = None
         self._root_index = None
         self._leaf_index = None
+
+    @property
+    def emmebank(self):
+        if self._emmebank is None:
+            self._emmebank = self.controller.emme_manager.emmebank(
+                self.get_abs_path(self.controller.config.emme.highway_database_path)
+            )
+        return self._emmebank
+
+    @property
+    def eb_dir(self):
+        if self._eb_dir is None:
+            self._eb_dir = os.path.dirname(self.emmebank.path)
+        return self._eb_dir
 
     def validate_inputs(self):
         """Validate inputs files are correct, raise if an error is found."""
@@ -97,16 +117,12 @@ class AssignMAZSPDemand(Component):
     @LogStartEnd()
     def run(self):
         """Run MAZ-to-MAZ shortest path assignment."""
-        emme_manager = self.controller.emme_manager
-        emmebank = emme_manager.emmebank(
-            self.get_abs_path(self.config.emme.highway_database_path)
-        )
-        self._eb_dir = os.path.dirname(emmebank.path)
+
         county_groups = {}
-        for group in self.config.highway.maz_to_maz.demand_county_groups:
+        for group in self.config.demand_county_groups:
             county_groups[group.number] = group.counties
-        for time in self.time_period_names():
-            self._scenario = self.get_emme_scenario(emmebank.path, time)
+        for time in self.time_period_names:
+            self._scenario = self.get_emme_scenario(self.emmebank.path, time)
             with self._setup(time):
                 self._prepare_network()
                 for i, names in county_groups.items():
@@ -276,7 +292,7 @@ class AssignMAZSPDemand(Component):
             time: time period name
             index: group index of the demand file, used to find the file by name
         """
-        file_path_tmplt = self.get_abs_path(self.config.highway.maz_to_maz.demand_file)
+        file_path_tmplt = self.get_abs_path(self.config.demand_file)
         omx_file_path = self.get_abs_path(
             file_path_tmplt.format(period=time, number=index)
         )
@@ -383,7 +399,7 @@ class AssignMAZSPDemand(Component):
 
         spec = {
             "type": "SHORTEST_PATH",
-            "modes": [self.config.highway.maz_to_maz.mode_code],
+            "modes": [self.config.mode_code],
             "root_nodes": "@maz_root",
             "leaf_nodes": "@maz_leaf",
             "link_cost": "@link_cost_maz",
@@ -622,8 +638,19 @@ class SkimMAZCosts(Component):
             controller: parent RunController object
         """
         super().__init__(controller)
+        self.config = self.controller.config.highway.maz_to_maz
+        self.ref_period_name = self.config.skim_period
+        # TODO add config requirement that most be a valid time period
         self._scenario = None
         self._network = None
+
+        @property
+        def scenario(self):
+            if self._scenario is None:
+                self._scenario = self.get_emme_scenario(
+                    self.controller.config.emme.highway_database_path, self.ref_period
+                )
+            return self._scenario
 
     def validate_inputs(self):
         """Validate inputs files are correct, raise if an error is found."""
@@ -654,26 +681,14 @@ class SkimMAZCosts(Component):
             max_skim_cost: max cost value used to limit the shortest path search
             mode_code:
         """
-        ref_period = None
-        ref_period_name = self.config.highway.maz_to_maz.skim_period
-        for period in self.config.time_periods:
-            if period.name == ref_period_name:
-                ref_period = period
-                break
-        if ref_period is None:
-            raise Exception(
-                "highway.maz_to_maz.skim_period: is not the name of an existing time_period"
-            )
-        self._scenario = self.get_emme_scenario(
-            self.config.emme.highway_database_path, ref_period.name
-        )
+
         # prepare output file and write header
-        output = self.get_abs_path(self.config.highway.maz_to_maz.output_skim_file)
+        output = self.get_abs_path(self.config.output_skim_file)
         os.makedirs(os.path.dirname(output), exist_ok=True)
         with open(output, "w", encoding="utf8") as output_file:
             output_file.write("FROM_ZONE, TO_ZONE, COST, DISTANCE, BRIDGETOLL\n")
         counties = []
-        for group in self.config.highway.maz_to_maz.demand_county_groups:
+        for group in self.config.demand_county_groups:
             counties.extend(group.counties)
         with self._setup():
             self._prepare_network()
@@ -708,11 +723,11 @@ class SkimMAZCosts(Component):
         else:
             time_attr = "@free_flow_time"
         self.logger.log(f"Time attribute {time_attr}", level="DEBUG")
-        vot = self.config.highway.maz_to_maz.value_of_time
-        op_cost = self.config.highway.maz_to_maz.operating_cost_per_mile
+        vot = self.config.maz_to_maz.value_of_time
+        op_cost = self.config.operating_cost_per_mile
         net_calc("@link_cost", f"{time_attr} + 0.6 / {vot} * (length * {op_cost})")
         self._network = self.controller.emme_manager.get_network(
-            self._scenario, {"NODE": ["@maz_id", "#node_county"]}
+            self.scenario, {"NODE": ["@maz_id", "#node_county"]}
         )
 
     def _mark_roots(self, county: str) -> int:
@@ -725,7 +740,7 @@ class SkimMAZCosts(Component):
             else:
                 node["@maz_root"] = 0
         values = self._network.get_attribute_values("NODE", ["@maz_root"])
-        self._scenario.set_attribute_values("NODE", ["@maz_root"], values)
+        self.scenario.set_attribute_values("NODE", ["@maz_root"], values)
         return count_roots
 
     @LogStartEnd(level="DETAIL")
@@ -742,10 +757,10 @@ class SkimMAZCosts(Component):
         shortest_paths_tool = self.controller.emme_manager.tool(
             "inro.emme.network_calculation.shortest_path"
         )
-        max_cost = float(self.config.highway.maz_to_maz.max_skim_cost)
+        max_cost = float(self.config.max_skim_cost)
         spec = {
             "type": "SHORTEST_PATH",
-            "modes": [self.config.highway.maz_to_maz.mode_code],
+            "modes": [self.config.mode_code],
             "root_nodes": "@maz_root",
             "leaf_nodes": "@maz_id",
             "link_cost": "@link_cost",
@@ -788,7 +803,7 @@ class SkimMAZCosts(Component):
                 "method": "STANDARD",
             },
         }
-        sp_values = shortest_paths_tool(spec, self._scenario)
+        sp_values = shortest_paths_tool(spec, self.scenario)
         return sp_values
 
     def _export_results(self, sp_values: Dict[str, NumpyArray]):
@@ -821,6 +836,6 @@ class SkimMAZCosts(Component):
         result_df = result_df.query("COST > 0 & COST < 1e19")
         # write remaining values to text file
         # FROM_ZONE,TO_ZONE,COST,DISTANCE,BRIDGETOLL
-        output = self.get_abs_path(self.config.highway.maz_to_maz.output_skim_file)
+        output = self.get_abs_path(self.config.output_skim_file)
         with open(output, "a", newline="", encoding="utf8") as output_file:
             result_df.to_csv(output_file, header=False, index=False)

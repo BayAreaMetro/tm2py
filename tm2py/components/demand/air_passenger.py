@@ -13,7 +13,8 @@ import pandas as pd
 
 from tm2py.components.component import Component
 from tm2py.logger import LogStartEnd
-from tm2py.tools import df_to_omx, interpolate_dfs
+from tm2py.omx import df_to_omx
+from tm2py.tools import interpolate_dfs
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
@@ -111,11 +112,44 @@ class AirPassenger(Component):
             controller: parent Controller object
         """
         super().__init__(controller)
-        self._periods = [p.upper() for p in self.time_period_names]
-        self._start_year = None
-        self._end_year = None
-        self._mode_groups = {}
-        self._out_names = {}
+
+        self.config = self.controller.config.air_passenger
+
+        self.start_year = self.config.reference_start_year
+        self.end_year = self.config.reference_end_year
+        self.scenario_year = self.controller.config.scenario.year
+
+        self.airports = self.controller.config.air_passenger.airport_names
+
+        self._demand_classes = None
+        self._access_mode_groups = None
+        self._class_modes = None
+
+    @property
+    def classes(self):
+        return [c.name for c in self.config.demand_aggregation]
+
+    @property
+    def demand_classes(self):
+        if not self._demand_classes:
+            self._demand_classes = {c.name: c for c in self.config.demand_aggregation}
+        return self._demand_classes
+
+    @property
+    def access_mode_groups(self):
+        if not self._access_mode_groups:
+            self._access_mode_groups = {
+                c_name: c.access_modes for c_name, c in self.demand_classes.items()
+            }
+        return self._access_mode_groups
+
+    @property
+    def class_modes(self):
+        if self._class_modes is None:
+            self._class_modes = {
+                c_name: c.mode for c_name, c in self.demand_classes.items()
+            }
+        return self._class_modes
 
     def validate_inputs(self):
         """Validate the inputs."""
@@ -132,21 +166,14 @@ class AirPassenger(Component):
             3. Create the demand matrices be interpolating the demand data.
             4. Write the demand matrices to OMX files.
         """
-        self._start_year = self.config.air_passenger.reference_start_year
-        self._end_year = self.config.air_passenger.reference_end_year
-        self._mode_groups = {}
-        self._out_names = {}
-        for group in self.config.air_passenger.demand_aggregation:
-            self._mode_groups[group["src_group_name"]] = group["access_modes"]
-            self._out_names[group["src_group_name"]] = group["result_class_name"]
 
         input_demand = self._load_air_pax_demand()
         aggr_demand = self._aggregate_demand(input_demand)
 
         demand = interpolate_dfs(
             aggr_demand,
-            [int(self._start_year), int(self._end_year)],
-            int(self.config.scenario.year),
+            [self.start_year, self.end_year],
+            self.scenario_year,
         )
         self._export_result(demand)
 
@@ -168,21 +195,28 @@ class AirPassenger(Component):
             (4) demand
         """
 
-        _start_demand_df = self._get_air_demand_for_year(self._start_year)
-        _end_demand_df = self._get_air_demand_for_year(self._end_year)
+        _start_demand_df = self._get_air_demand_for_year(self.start_year)
+        _end_demand_df = self._get_air_demand_for_year(self.end_year)
 
         _air_pax_demand_df = pd.merge(
             _start_demand_df,
             _end_demand_df,
             how="outer",
-            suffixes=(f"_{self._start_year}", f"_{self._end_year}"),
+            suffixes=(f"_{self.start_year}", f"_{self.end_year}"),
             on=["ORIG", "DEST"],
         )
 
         _grouped_air_pax_demand_df = _air_pax_demand_df.groupby(["ORIG", "DEST"]).sum()
         return _grouped_air_pax_demand_df
 
-    def _get_air_demand_for_year(self, year: str) -> pd.DataFrame:
+    def _input_demand_filename(self, airport, year, direction):
+        _file_name = self.config.input_demand_filename_tmpl.format(
+            airport=airport, year=year, direction=direction
+        )
+
+        return self.get_abs_path(self.config.input_demand_folder) / _file_name
+
+    def _get_air_demand_for_year(self, year) -> pd.DataFrame:
         """Creates a dataframe of concatenated data from CSVs for all airport x direction combos.
 
         Args:
@@ -191,21 +225,13 @@ class AirPassenger(Component):
         Returns:
             pd.DataFrame: concatenation of all CSVs that were read in as a dataframe
         """
-
-        input_data_folder = self.config.air_passenger.input_demand_folder
-
         _airport_direction = itertools.product(
-            self.config.air_passenger.airport_names,
+            self.airports,
             ["to", "from"],
         )
         demand_df = None
         for airport, direction in _airport_direction:
-
-            _file_name = self.config.air_passenger.input_demand_filename_tmpl.format(
-                airport=airport, year=year, direction=direction
-            )
-            _file_path = self.controller.run_dir / input_data_folder / _file_name
-            _df = pd.read_csv(_file_path)
+            _df = pd.read_csv(self._input_demand_filename(airport, year, direction))
             if demand_df is not None:
                 demand_df = pd.concat([demand_df, _df])
             else:
@@ -214,41 +240,45 @@ class AirPassenger(Component):
         return demand_df
 
     def _aggregate_demand(self, input_demand: pd.DataFrame) -> pd.DataFrame:
-        """Aggregate demand into the assignable classes for each year.
+        """Aggregate demand accross access modes to assignable classes for each year.
 
         Args:
-            input_demand: pandas dataframe with the following columns: TODO
+            input_demand: pandas dataframe with the columns for each combo of:
+                {_period}_{_access}_{_group}_{_year}
         """
         aggr_demand = pd.DataFrame()
 
         _year_tp_group_accessmode = itertools.product(
-            [self._start_year, self._end_year],
-            self._periods,
-            self._mode_groups.items(),
+            [self.start_year, self.end_year],
+            self.time_period_names,
+            self.access_mode_groups.items(),
         )
 
         # TODO This should be done entirely in pandas using group-by
-        for _year, _period, (_group, _access_modes) in _year_tp_group_accessmode:
+        for _year, _period, (_class, _access_modes) in _year_tp_group_accessmode:
             data = input_demand[
-                [f"{_period}_{_access}_{_group}_{_year}" for _access in _access_modes]
+                [f"{_period}_{_access}_{_class}_{_year}" for _access in _access_modes]
             ]
-            aggr_demand[f"{_period}_{_group}_{_year}"] = data.sum(axis=1)
+            aggr_demand[f"{_period}_{_class}_{_year}"] = data.sum(axis=1)
 
         return aggr_demand
 
     def _export_result(self, demand_df: pd.DataFrame):
         """Export resulting model year demand to OMX files by period."""
-        path_tmplt = os.path.join(
-            self.controller.run_dir, self.config.air_passenger.highway_demand_file
-        )
+        path_tmplt = self.get_abs_path(self.config.output_trip_table_directory)
         os.makedirs(os.path.dirname(path_tmplt), exist_ok=True)
 
-        for period in self._periods:
-            file_path = path_tmplt.format(period=period)
+        for _period in self.time_period_names:
+            _file_path = path_tmplt / self.config.outfile_trip_table_tmp.format(
+                period=_period
+            )
             df_to_omx(
                 demand_df,
-                {group: f"{period}_{group}" for group in self._mode_groups},
-                file_path,
+                {
+                    _mode: f"{_period}_{_class}"
+                    for _class, _mode in self.class_modes.items()
+                },
+                _file_path,
                 orig_column="ORIG",
                 dest_column="DEST",
             )

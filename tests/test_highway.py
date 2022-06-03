@@ -17,6 +17,7 @@ def test_prepare_highway_network(examples_dir):
     # TODO write assert
 
 
+@pytest.mark.skipif(inro_context != "inro", reason="requires full inro context")
 def test_highway_assign(examples_dir):
     "Tests that highway network assignment component can be run."
     from tools import test_component
@@ -27,6 +28,7 @@ def test_highway_assign(examples_dir):
     # TODO write assert
 
 
+@pytest.mark.skipif(inro_context != "inro", reason="requires full inro context")
 def test_highway_maz_assign(examples_dir):
     "Tests that highway MAZ network assignment component can be run."
     from tools import test_component
@@ -37,6 +39,7 @@ def test_highway_maz_assign(examples_dir):
     # TODO write assert
 
 
+@pytest.mark.skipif(inro_context != "inro", reason="requires full inro context")
 def test_highway_maz_skim(examples_dir):
     "Tests that highway MAZ network skimming component can be run."
     from tools import test_component

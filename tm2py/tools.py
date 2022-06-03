@@ -11,8 +11,6 @@ import zipfile
 from contextlib import contextmanager as _context
 from typing import Collection, Mapping, Union
 
-import numpy as np
-import openmatrix as _omx
 import pandas as pd
 
 
@@ -172,12 +170,15 @@ def interpolate_dfs(
     if len(ref_points) != 2:
         raise NotImplementedError(f"{ref_points} reference points not implemented")
 
-    ref_points.sort()
-    _start_point, _end_point = ref_points
-    if not _start_point <= target_point <= _end_point:
+    _ref_points = list(map(int, ref_points))
+    _target_point = int(target_point)
+
+    _ref_points.sort()
+    _start_point, _end_point = _ref_points
+    if not _start_point <= _target_point <= _end_point:
         raise ValueError(
-            f"Target Point: {target_point} not within range of \
-            Reference Points: {ref_points}"
+            f"Target Point: {_target_point} not within range of \
+            Reference Points: {_ref_points}"
         )
 
     _start_ref_df = df[[c for c in df.columns if c.endswith(f"{_start_point}")]].copy()
@@ -200,56 +201,6 @@ def interpolate_dfs(
     interpolated_df = (1 - _scale_factor) * _start_ref_df + _scale_factor * _end_ref_df
 
     return interpolated_df
-
-
-def df_to_omx(
-    df: pd.DataFrame,
-    matrix_dict: Mapping[str, str],
-    omx_filename: str,
-    orig_column: str = "ORIG",
-    dest_column: str = "DEST",
-):
-    """Export a dataframe to an OMX matrix file.
-
-    Args:
-        df (pd.DataFrame): Dataframe to export.
-        omx_filename (str): OMX file to write to.
-        matrix_dict (Mapping[str, str]): Mapping of OMX matrix name to DF column name.
-        orig_column (str, optional): Origin column name. Defaults to "ORIG".
-        dest_column (str, optional): Destination column name. Defaults to "DEST".
-    """
-    df = df.reset_index()
-
-    # Get all used Zone IDs to produce index and zone mapping in OMX file
-    zone_ids = sorted(set(df[orig_column]).union(set(df[dest_column])))
-    num_zones = len(zone_ids)
-
-    # Map zone id to zone index #
-    zone_map = dict((z, i) for i, z in enumerate(zone_ids))
-
-    # calculate omx index of entries in numpy array list
-    df["omx_idx"] = df.apply(
-        lambda r: zone_map[r[orig_column]] * num_zones + zone_map[r[dest_column]],
-        axis=1,
-    )
-
-    _omx_file = _omx.open_file(omx_filename, "w")
-    _omx_file.create_mapping("zone_number", zone_ids)
-
-    try:
-        for _name, _df_col in matrix_dict.items():
-            _array = np.zeros(shape=(num_zones, num_zones))
-            np.put(
-                _array,
-                df["omx_idx"].to_numpy(),
-                df[_df_col].to_numpy(),
-            )
-
-            _omx_file.create_matrix(_name, obj=_array)
-
-            # TODO add logging
-    finally:
-        _omx_file.close()
 
 
 def zonal_csv_to_matrices(
@@ -305,6 +256,7 @@ def mocked_inro_context():
     from unittest.mock import MagicMock
 
     sys.modules["inro.emme.database.emmebank"] = MagicMock()
+    sys.modules["inro.emme.database.emmebank.path"] = MagicMock(return_value=".")
     sys.modules["inro.emme.network"] = MagicMock()
     sys.modules["inro.emme.database.scenario"] = MagicMock()
     sys.modules["inro.emme.database.matrix"] = MagicMock()

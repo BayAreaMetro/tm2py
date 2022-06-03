@@ -5,6 +5,7 @@ import os
 import pytest
 
 
+@pytest.mark.skip("Takes a while")
 def test_example_download(examples_dir, root_dir, inro_context):
     """Tests that example data can be downloaded."""
     EXAMPLE = "UnionCity"
