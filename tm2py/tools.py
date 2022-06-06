@@ -272,7 +272,7 @@ def emme_context():
     """Return True if Emme is installed."""
     import pkg_resources
 
-    _inro_package = "inro"
+    _inro_package = "inro-emme"
     _avail_packages = [pkg.key for pkg in pkg_resources.working_set]
 
     if _inro_package not in _avail_packages:
