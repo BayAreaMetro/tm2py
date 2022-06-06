@@ -92,7 +92,7 @@ class Component(ABC):
 
     def get_abs_path(self, path: Union[Path, str]) -> str:
         """Convenince method to get absolute path from run directory."""
-        return self.controller.get_abs_path(path)
+        return self.controller.get_abs_path(path).__str__()
 
     def get_emme_scenario(self, emmebank_path: str, time_period: str) -> EmmeScenario:
         """Get the Emme scenario object from the Emmebank at emmebank_path for the time_period ID.
