@@ -124,7 +124,7 @@ class CommercialVehicleModel(Component):
     @LogStartEnd()
     def run(self):
         """Run commercial vehicle model."""
-        self.total_tripends_df = self.sub_components["trip generation"]
+        self.total_tripends_df = self.sub_components["trip generation"].run()
         self.daily_demand_dict = self.sub_components["trip distribution"].run(
             self.total_tripends_df
         )
@@ -145,7 +145,7 @@ class CommercialVehicleModel(Component):
             Or part of network.skims?
         """
         return self.controller.emme_manager.emmebank(
-            self.get_abs_path(self.config.emme.highway_database_path)
+            self.get_abs_path(self.controller.config.emme.highway_database_path)
         )
 
     @property
@@ -269,7 +269,7 @@ class CommercialVehicleTripGeneration(Subcomponent):
             self.controller.config.scenario.maz_landuse_file
         )
         maz_input_data = pd.read_csv(maz_data_file)
-        zones = self._scenario.zone_numbers
+        zones = self.component.emme_scenario.zone_numbers
         maz_input_data = maz_input_data[maz_input_data["TAZ_ORIGINAL"].isin(zones)]
         taz_input_data = maz_input_data.groupby(["TAZ_ORIGINAL"]).sum()
         taz_input_data = taz_input_data.sort_values(by="TAZ_ORIGINAL")
@@ -296,7 +296,7 @@ class CommercialVehicleTripGeneration(Subcomponent):
 
         _class_pa = itertools.product(
             self.config.classes,
-            ["productions", "attractions"],
+            ["production_formula", "attraction_formula"],
         )
 
         # TODO Do this with multi-indexing rather than relying on column naming
@@ -306,18 +306,31 @@ class CommercialVehicleTripGeneration(Subcomponent):
             _trip_type = _c.purpose
             _trk_class = _c.name
 
-            _constant = _trk_class[_trip_type][_pa].constant
-            _multiplier = _trk_class[_trip_type][_pa].multiplier
-            _rate_trips_df = landuse_df.multiply(
-                pd.DataFrame(
-                    _trk_class[_trip_type][_pa].land_use_rates, index=landuse_df.index
-                )
-            )
-            _trips_df = _rate_trips_df * _multiplier + _constant
+            if _pa.endswith('_formula'):
+                _pa_short = _pa.split('_')[0]
+            
+            # linked trips (non-garage-based) - attractions (equal productions)
+            if (_trip_type == 'linked') & (_pa_short == 'attraction'):
+                tripends_df[f"{_trip_type}_{_trk_class}_{_pa_short}s"] = tripends_df[f"{_trip_type}_{_trk_class}_productions"]
+            else:
+                _constant = _c[_pa].constant
+                _multiplier = _c[_pa].multiplier
+                
+                land_use_rates = pd.DataFrame(
+                        _c[_pa].land_use_rates
+                    ).T
+                land_use_rates = land_use_rates.rename(
+                    columns = land_use_rates.loc['property']
+                    ).drop('property', axis = 0)
 
-            tripends_df[f"{_trip_type}_{_trk_class.name}_{_pa}"] = _trips_df.sum(
-                axis=1
-            ).round()
+                _rate_trips_df = landuse_df.mul(
+                    land_use_rates.iloc[0]
+                )
+                _trips_df = _rate_trips_df * _multiplier + _constant
+
+                tripends_df[f"{_trip_type}_{_trk_class}_{_pa_short}s"] = _trips_df.sum(
+                    axis=1
+                ).round()
 
         return tripends_df
 
@@ -332,12 +345,11 @@ class CommercialVehicleTripGeneration(Subcomponent):
         Returns:
             pd.DataFrame: DataFrame with balanced production and attraction trip ends.
         """
-        _type_class = itertools.product(
-            self.purposes,
-            self.classes,
-        )
-        for _trip_type, _trk_class in _type_class:
-            _balance_to = _trk_class[_trip_type].balance_to
+        
+        for _c in self.config.classes:
+            _trip_type = _c.purpose
+            _trk_class = _c.name
+            _balance_to = _c.balance_to
 
             _tots = {
                 "attractions": tripends_df[
@@ -390,15 +402,15 @@ class CommercialVehicleTripGeneration(Subcomponent):
         agg_tripends_df = pd.DataFrame()
 
         _class_pa = itertools.product(
-            self.classes,
+            self.component.classes,
             ["productions", "attractions"],
         )
 
         for _trk_class, _pa in _class_pa:
             _sum_cols = [
-                c for c in tripends_df.columns if c.endswith(f"{_trk_class}_{_pa}")
+                c for c in tripends_df.columns if c.endswith(f"_{_trk_class}_{_pa}")
             ]
-            agg_tripends_df[f"{_trk_class.name}_{_pa}"] = tripends_df[_sum_cols].sum()
+            agg_tripends_df[f"{_trk_class}_{_pa}"] = pd.Series(tripends_df[_sum_cols].sum().sum())
 
         agg_tripends_df.round(decimals=7)
 
@@ -545,7 +557,7 @@ class CommercialVehicleTripDistribution(Subcomponent):
             NumpyArray: Zone-by-zone matrix of friction factors
         """
         if not self._friction_factor_matrices.get(trk_class):
-            self._friction_factor_matrices = self._calculate_friction_factor_matrix(
+            self._friction_factor_matrices[trk_class] = self._calculate_friction_factor_matrix(
                 trk_class,
                 self.class_config[trk_class].impedance,
                 self.class_config[trk_class].use_k_factors,
@@ -588,9 +600,9 @@ class CommercialVehicleTripDistribution(Subcomponent):
         Returns:
             pd.DataFrame: DataFrame of friction factors read from disk.
         """
-        if self._fricton_factors is None:
-            self._fricton_factors = self._read_ffactors()
-        return self._fricton_factors
+        if self._friction_factors is None:
+            self._friction_factors = self._read_ffactors()
+        return self._friction_factors
 
     def _read_ffactors(self) -> pd.DataFrame:
         """Load friction factors lookup tables from csv file to dataframe.
@@ -646,9 +658,8 @@ class CommercialVehicleTripDistribution(Subcomponent):
             )
 
         _prod_attr_matrix = self._matrix_balancing(
-            self.friction_factor_matrices(trk_class),
-            tripends_df[f"{trk_class}_prod"].to_numpy(),
-            tripends_df[f"{trk_class}_attr"].to_numpy(),
+            tripends_df[f"{trk_class}_productions"].to_numpy(),
+            tripends_df[f"{trk_class}_attractions"].to_numpy(),
             trk_class,
         )
         daily_demand = (
