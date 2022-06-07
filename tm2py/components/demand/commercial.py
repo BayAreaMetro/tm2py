@@ -733,7 +733,7 @@ class CommercialVehicleTripDistribution(Subcomponent):
             "type": "MATRIX_BALANCING",
         }
         matrix_balancing(spec, scenario=self.component.emme_scenario)
-
+        """
         matrix_round(
             _result_emme_mx_name,
             _result_emme_mx_name,
@@ -741,7 +741,7 @@ class CommercialVehicleTripDistribution(Subcomponent):
             values_to_round="ALL_NON_ZERO",
             scenario=self.component.emme_scenario,
         )
-
+        """
         return self.component.matrix_cache.get_data(_result_emme_mx_name)
 
 
@@ -773,7 +773,7 @@ class CommercialVehicleTimeOfDay(Subcomponent):
 
     @property
     def time_periods(self):
-        return self.controller.time_periods
+        return self.controller.config.time_periods
 
     @property
     def classes(self):
@@ -787,10 +787,10 @@ class CommercialVehicleTimeOfDay(Subcomponent):
 
     @property
     def class_period_splits(self):
-        """Returns split fraction dictonary mapped to [time period class][time period]."""
+        """Returns split fraction dictonary mapped to [time period class][time period].""" 
         if not self._class_period_splits:
             self._class_period_splits = {
-                c_name: {c.time_period: c for c in config}
+                c_name: {c.time_period: c for c in config.time_period_split}
                 for c_name, config in self.class_configs.items()
             }
 
@@ -817,13 +817,13 @@ class CommercialVehicleTimeOfDay(Subcomponent):
         Returns:
              Nested dictionary of truck class: time period name => numpy array of demand
         """
-        trkclass_tp_demand_dict = defaultdict()
+        trkclass_tp_demand_dict = defaultdict(dict)
 
         _class_timeperiod = itertools.product(self.classes, self.time_periods)
 
         for _t_class, _tp in _class_timeperiod:
-            trkclass_tp_demand_dict[_t_class][_tp] = np.around(
-                self.class_period_splits[_t_class][_tp][self.split_factor]
+            trkclass_tp_demand_dict[_t_class][_tp.name] = np.around(
+                self.class_period_splits[_t_class][_tp.name][self.split_factor]
                 * daily_demand[_t_class],
                 decimals=2,
             )
@@ -903,14 +903,14 @@ class CommercialVehicleTollChoice(Subcomponent):
         Uses OMX skims output from highway assignment: traffic_skims_{period}.omx"""
 
         _tclass_time_combos = itertools.product(
-            self.component.time_periods, self.component.classes
+            self.controller.config.time_periods, self.component.classes
         )
 
         class_demands = defaultdict()
         for _time_period, _tclass in _tclass_time_combos:
 
             _split_demand = self._toll_choice.run(
-                trkclass_tp_demand_dict[_tclass][_time_period], _tclass, _time_period
+                trkclass_tp_demand_dict[_tclass][_time_period.name], _tclass, _time_period
             )
 
             class_demands[_time_period][_tclass] = _split_demand["no toll"]
