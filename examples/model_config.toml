@@ -153,7 +153,7 @@
         name = "vsmtrk"
         description = "very small truck"
     [[truck.classes]]
-        name = "smtrk"
+        name = "smltrk"
         description = "small truck"
     [[truck.classes]]
         name = "medtrk"
@@ -183,7 +183,7 @@
         impedance = "trk"
         use_k_factors = false
     [[truck.trip_dist.classes]]
-        name = "smtrk"
+        name = "smltrk"
         impedance = "trk"
         use_k_factors = true
     [[truck.trip_dist.classes]]
@@ -223,7 +223,7 @@
                 property = 'TOTHH'
                 coeff = 0.26565
     [[truck.trip_gen.classes]]
-        name = "smtrk"
+        name = "smltrk"
         purpose = "linked"
         balance_to = "productions"
         [truck.trip_gen.classes.production_formula]
@@ -233,7 +233,7 @@
             property = 'TOTEMP'
             coeff = 0.0324
     [[truck.trip_gen.classes]]
-        name = "smtrk"
+        name = "smltrk"
         purpose = "garage"
         balance_to = "productions"
         [truck.trip_gen.classes.production_formula]
@@ -352,7 +352,7 @@
                 time_period = "ev"
                 od = 0.1705
         [[truck.time_of_day.classes]]
-            name = "smtrk"
+            name = "smltrk"
             [[truck.time_of_day.classes.time_period_split]]
                 time_period = "ea"
                 od = 0.0765
