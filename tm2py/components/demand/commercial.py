@@ -134,7 +134,7 @@ class CommercialVehicleModel(Component):
         self.trkclass_tp_toll_demand_dict = self.sub_components["toll choice"].run(
             self.trkclass_tp_demand_dict
         )
-        self._export_results_to_omx(self.trkclass_tp_toll_demand_dict)
+        self._export_results_as_omx(self.trkclass_tp_toll_demand_dict)
 
     @property
     def emmebank(self):
@@ -186,7 +186,7 @@ class CommercialVehicleModel(Component):
         os.makedirs(os.path.dirname(outdir), exist_ok=True)
         for period, matrices in class_demand.items():
             with OMXManager(
-                outdir / self.config.outfile_trip_table_tmp.format(period=period), "w"
+                os.path.join(outdir, self.config.outfile_trip_table_tmp.format(period=period)), "w"
             ) as output_file:
                 for name, data in matrices.items():
                     output_file.write_array(data, name)
