@@ -24,6 +24,7 @@ from multiprocessing.sharedctypes import Value
 from pathlib import Path
 from typing import Any, Collection, Dict, List, Tuple, Union
 
+from tm2py.components.access import HomeAccessibility
 from tm2py.components.component import Component
 from tm2py.components.demand.air_passenger import AirPassenger
 from tm2py.components.demand.commercial import CommercialVehicleModel
@@ -44,6 +45,7 @@ component_cls_map = {
     "highway": HighwayAssignment,
     "highway_maz_assign": AssignMAZSPDemand,
     "highway_maz_skim": SkimMAZCosts,
+    "home_accessibility": HomeAccessibility,
     "air_passenger": AirPassenger,
     "internal_external": InternalExternal,
     "truck": CommercialVehicleModel,

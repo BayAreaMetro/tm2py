@@ -3,6 +3,7 @@
 
 import pathlib
 from abc import ABC
+from pickletools import floatnl
 from typing import Dict, List, Optional, Tuple, Union
 
 import toml
@@ -55,6 +56,7 @@ class ScenarioConfig(ConfigItem):
 
 ComponentNames = Literal[
     "create_tod_scenarios",
+    "home_accessibility",
     "active_modes",
     "air_passenger",
     "prepare_network_highway",
@@ -482,6 +484,18 @@ class TruckClassConfig(ConfigItem):
 
     name: str
     description: Optional[str] = ""
+
+
+@dataclass(frozen=True)
+class HomeAccessibilityConfig(ConfigItem):
+    """Home Accessibility Parameters."""
+
+    dispersion_auto: float = -0.05
+    dispersion_transit: float = -0.05
+    dispersion_walk: float = -1.00
+    max_walk_distance: float = 3.0
+    out_of_vehicle_time_weight: float = 2.0
+    outfile: pathlib.Path
 
 
 @dataclass(frozen=True)
@@ -1047,6 +1061,7 @@ class Configuration(ConfigItem):
     run: RunConfig
     time_periods: Tuple[TimePeriodConfig, ...]
     household: HouseholdConfig
+    accessibility: HomeAccessibilityConfig
     air_passenger: AirPassengerConfig
     internal_external: InternalExternalConfig
     truck: TruckConfig
