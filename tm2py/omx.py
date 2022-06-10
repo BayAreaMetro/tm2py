@@ -2,8 +2,8 @@ from pathlib import Path
 from typing import Collection, Dict, Mapping, Union
 
 import numpy as np
-import pandas as pd
 import openmatrix as _omx
+import pandas as pd
 
 NumpyArray = np.array
 
@@ -44,7 +44,7 @@ def omx_to_dict(
             )
     else:
         _matrices = {m: m for m in _avail_matrices}
-    
+
     omx_dict = {key: omx_file[omx_name].read() for key, omx_name in _matrices.items()}
     omx_file.close()
     return omx_dict

@@ -1,6 +1,7 @@
 """Module with helpful matrix helper functions."""
 
 from typing import Collection, Dict, Mapping, Optional, Union
+
 import numpy as np
 import pandas as pd
 
