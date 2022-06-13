@@ -13,6 +13,10 @@ from contextlib import contextmanager as _context
 from socket import error as _socket_error
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
+from ..tools import emme_context
+
+emme_context()
+
 import inro.emme.desktop.app as _app
 
 if TYPE_CHECKING:
@@ -35,7 +39,6 @@ EmmeDesktopApp = _app.App
 
 # "Emme Manager requires Emme to be installed unless running in a test environment."
 # "Please install Emme and try again."
-
 
 # Cache running Emme projects from this process (simple singleton implementation)
 _EMME_PROJECT_REF = {}

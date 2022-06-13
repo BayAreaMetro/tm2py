@@ -47,7 +47,7 @@ import numpy as np
 
 from tm2py import tools
 from tm2py.components.component import Component
-from tm2py.components.demand.demand import PrepareHighwayDemand
+from tm2py.components.demand.prepare_demand import PrepareHighwayDemand
 from tm2py.emme.manager import EmmeScenario
 from tm2py.emme.matrix import MatrixCache, OMXManager
 from tm2py.emme.network import NetworkCalculator
@@ -96,29 +96,45 @@ class HighwayAssignment(Component):
             controller (RunController): Reference to current run controller.
         """
         super().__init__(controller)
-        self._num_processors = tools.parse_num_processors(
-            self.config.emme.num_processors
-        )
+
+        self.config = self.controller.config.highway
+
         self._matrix_cache = None
         self._skim_matrices = []
+        self._class_config = None
+
+    @property
+    def classes(self):
+        # self.hwy_classes
+        return [c.name for c in self.config.classes]
+
+    @property
+    def class_config(self):
+        # self.hwy_class_configs
+        if not self._class_config:
+            self._class_config = {c.name: c for c in self.config.classes}
+
+        return self._class_config
+
+    def validate_inputs(self):
+        """Validate inputs files are correct, raise if an error is found."""
+        # TODO
+        pass
 
     @LogStartEnd("Highway assignment and skims", level="STATUS")
     def run(self):
         """Run highway assignment."""
         demand = PrepareHighwayDemand(self.controller)
-        emmebank_path = self.get_abs_path(self.config.emme.highway_database_path)
-        emmebank = self.controller.emme_manager.emmebank(emmebank_path)
         if self.controller.iteration >= 1:
             demand.run()
-        else:
-            demand.create_zero_matrix(emmebank)
-        for time in self.time_period_names():
-            scenario = self.get_emme_scenario(emmebank, time)
+        for time in self.time_period_names:
+            scenario = self.get_emme_scenario(
+                self.controller.config.emme.highway_database_path, time
+            )
             with self._setup(scenario, time):
                 iteration = self.controller.iteration
                 assign_classes = [
-                    AssignmentClass(c, time, iteration)
-                    for c in self.config.highway.classes
+                    AssignmentClass(c, time, iteration) for c in self.config.classes
                 ]
                 if iteration > 0:
                     self._copy_maz_flow(scenario)
@@ -139,13 +155,15 @@ class HighwayAssignment(Component):
                 for emme_class_spec in assign_spec["classes"]:
                     self._calc_time_skim(emme_class_spec)
                 # Set intra-zonal for time and dist to be 1/2 nearest neighbour
-                for class_config in self.config.highway.classes:
+                for class_config in self.config.classes:
                     self._set_intrazonal_values(
                         time,
                         class_config["name"],
                         class_config["skims"],
                     )
                 self._export_skims(scenario, time)
+                if self.logger.debug_enabled:
+                    self._log_debug_report(scenario, time)
 
     @_context
     def _setup(self, scenario: EmmeScenario, time_period: str):
@@ -213,9 +231,8 @@ class HighwayAssignment(Component):
                         matrix = create_matrix(
                             "mf", matrix_name, scenario=scenario, overwrite=True
                         )
-                        self.logger.log(
-                            f"Create matrix name: {matrix_name}, id: {matrix.id}",
-                            level="DEBUG",
+                        self.logger.debug(
+                            f"Create matrix name: {matrix_name}, id: {matrix.id}"
                         )
                     self._skim_matrices.append(matrix)
 
@@ -231,8 +248,8 @@ class HighwayAssignment(Component):
             Emme specification for SOLA traffic assignment
 
         """
-        relative_gap = self.config.highway.relative_gap
-        max_iterations = self.config.highway.max_iterations
+        relative_gap = self.config.relative_gap
+        max_iterations = self.config.max_iterations
         # NOTE: mazmazvol as background traffic in link.data1 ("ul1")
         base_spec = {
             "type": "SOLA_TRAFFIC_ASSIGNMENT",
@@ -248,7 +265,9 @@ class HighwayAssignment(Component):
                 "relative_gap": relative_gap,
                 "normalized_gap": 0.0,
             },
-            "performance_settings": {"number_of_processors": self._num_processors},
+            "performance_settings": {
+                "number_of_processors": self.controller.num_processors
+            },
         }
         return base_spec
 
@@ -282,8 +301,9 @@ class HighwayAssignment(Component):
             skims: list of requested skims (from config)
         """
         for skim_name in skims:
-            matrix_name = f"mf{time_period}_{class_name}_{skim_name}"
             if skim_name in ["time", "distance", "freeflowtime", "hovdist", "tolldist"]:
+                matrix_name = f"mf{time_period}_{class_name}_{skim_name}"
+                self.logger.debug(f"Setting intrazonals to 0.5*min for {matrix_name}")
                 data = self._matrix_cache.get_data(matrix_name)
                 # NOTE: sets values for external zones as well
                 np.fill_diagonal(data, np.inf)
@@ -299,13 +319,36 @@ class HighwayAssignment(Component):
         """
         # NOTE: skims in separate file by period
         omx_file_path = self.get_abs_path(
-            self.config.highway.output_skim_path.format(period=time_period)
+            self.config.output_skim_path.format(period=time_period)
+        )
+        self.logger.debug(
+            f"export {len(self._skim_matrices)} skim matrices to {omx_file_path}"
         )
         os.makedirs(os.path.dirname(omx_file_path), exist_ok=True)
         with OMXManager(
             omx_file_path, "w", scenario, matrix_cache=self._matrix_cache
         ) as omx_file:
             omx_file.write_matrices(self._skim_matrices)
+
+    def _log_debug_report(self, scenario: EmmeScenario, time_period: str):
+        num_zones = len(scenario.zone_numbers)
+        num_cells = num_zones * num_zones
+        self.logger.debug(f"Highway skim summary for period {time_period}")
+        self.logger.debug(
+            f"Number of zones: {num_zones}. Number of O-D pairs: {num_cells}. "
+            "Values outside -9999999, 9999999 are masked in summaries."
+        )
+        self.logger.debug(
+            "name                            min       max      mean           sum"
+        )
+        for matrix in self._skim_matrices:
+            values = self._matrix_cache.get_data(matrix)
+            data = np.ma.masked_outside(values, -9999999, 9999999)
+            stats = (
+                f"{matrix.name:25} {data.min():9.4g} {data.max():9.4g} "
+                f"{data.mean():9.4g} {data.sum(): 13.7g}"
+            )
+            self.logger.debug(stats)
 
 
 class AssignmentClass:

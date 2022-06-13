@@ -1,4 +1,4 @@
-"""Demand loading from OMX (generated from demand model components) to Emme database."""
+"""Demand loading from OMX to Emme database."""
 
 from __future__ import annotations
 
@@ -73,10 +73,16 @@ class PrepareDemand(Component, ABC):
         """Pad numpy array with zeros to match expect number of dimensions."""
         num_zones = len(self._scenario.zone_numbers)
         _shape = demand.shape
-        if _shape != (num_zones, num_zones):
+        if _shape < (num_zones, num_zones):
             demand = np.pad(
                 demand, ((0, num_zones - _shape[0]), (0, num_zones - _shape[1]))
             )
+        elif _shape > (num_zones, num_zones):
+            ValueError(
+                f"Provided demand matrix is larger ({_shape}) than the \
+                specified number of zones: {num_zones}"
+            )
+
         return demand
 
     def _save_demand(
@@ -148,13 +154,17 @@ class PrepareHighwayDemand(PrepareDemand):
         super().__init__(controller)
         self._emmebank_path = None
 
-    @LogStartEnd("prepare highway demand")
+    def validate_inputs(self):
+        # TODO
+        pass
+
+    # @LogStartEnd("prepare highway demand")
     def run(self):
         """Open combined demand OMX files from demand models and prepare for assignment."""
-        self._source_ref_key = "highway_demand_file"
-        emmebank_path = self.get_abs_path(self.config.emme.highway_database_path)
-        self._emmebank = self.controller.emme_manager.emmebank(emmebank_path)
-        self.create_zero_matrix()
+        self._emmebank_path = self.get_abs_path(self.config.emme.highway_database_path)
+
+        self._emmebank = self.controller.emme_manager.emmebank(self._emmebank_path)
+        self._create_zero_matrix()
         for time in self.time_period_names():
             for klass in self.config.highway.classes:
                 self._prepare_demand(klass.name, klass.description, klass.demand, time)
