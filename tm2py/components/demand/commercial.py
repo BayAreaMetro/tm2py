@@ -598,15 +598,14 @@ class CommercialVehicleTripDistribution(Subcomponent):
         """Load friction factors lookup tables from csv file to dataframe.
 
         Reads from file: config.truck.friction_factors_file with following assumed column order:
-            0: Time
-            1: Very Small Truck FF
-            2: Small Truck FF
-            3: Medium Truck FF
-            4: Large Truck FF
+            time: Time
+            vsmtrk: Very Small Truck FF
+            smltrk: Small Truck FF
+            medtrk: Medium Truck FF
+            lrgtrk: Large Truck FF
         """
-        _cols = ["time", "vsmtrk", "smltrk", "medtrk", "lrgtrk"]
         _file_path = self.get_abs_path(self.config.friction_factors_file)
-        return pd.read_fwf(_file_path, names=_cols, header=None)
+        return pd.read_csv(_file_path)
 
     def validate_inputs(self):
         """Validate the inputs."""
