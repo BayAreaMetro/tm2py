@@ -168,16 +168,6 @@ class CommercialVehicleModel(Component):
             self._matrix_cache = MatrixCache(self.emme_scenario)
         return self._matrix_cache
 
-    @property
-    def time_periods(self):
-        """Convenience access for all time period names.
-
-        e.g. AM, PM, etc.
-
-        Returns:
-            Collection[str]: list of time periods
-        """
-        return list(set([tp for tp_list in self.tod_split.values() for tp in tp_list]))
 
     @LogStartEnd(level="DEBUG")
     def _export_results_as_omx(self, class_demand):
@@ -819,7 +809,7 @@ class CommercialVehicleTimeOfDay(Subcomponent):
         """
         trkclass_tp_demand_dict = defaultdict(dict)
 
-        _class_timeperiod = itertools.product(self.classes, self.time_periods)
+        _class_timeperiod = itertools.product(self.classes, self.time_period_names)
 
         for _t_class, _tp in _class_timeperiod:
             trkclass_tp_demand_dict[_t_class][_tp.name] = np.around(
