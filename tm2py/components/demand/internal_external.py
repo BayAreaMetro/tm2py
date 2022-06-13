@@ -274,12 +274,12 @@ class ExternalTollChoice(Subcomponent):
 
         """
 
-        _tclass_time_combos = itertools.product(
-            self.component.time_periods, self.component.classes
+        _time_class_combos = itertools.product(
+            self.time_period_names, self.component.classes
         )
 
         class_demands = defaultdict()
-        for _time_period, _class in _tclass_time_combos:
+        for _time_period, _class in _time_class_combos:
 
             _split_demand = self._toll_choice.run(period_demand, _class, _time_period)
 

@@ -220,13 +220,13 @@ class TollChoiceCalculator(Subcomponent):
 
         e_util_nontoll = self.calc_exp_util(
             self.prop_to_skim_nontoll,
-            self.classe_configs[class_name],
+            self.class_configs[class_name],
             time_period,
         )
 
         e_util_toll = self.calc_exp_util(
             self.prop_to_skim_toll,
-            self.classe_configs[class_name],
+            self.class_configs[class_name],
             time_period,
         )
 

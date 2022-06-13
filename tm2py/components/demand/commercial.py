@@ -892,7 +892,7 @@ class CommercialVehicleTollChoice(Subcomponent):
         Uses OMX skims output from highway assignment: traffic_skims_{period}.omx"""
 
         _tclass_time_combos = itertools.product(
-            self.controller.config.time_periods, self.component.classes
+            self.time_period_names, self.component.classes
         )
 
         class_demands = defaultdict()
