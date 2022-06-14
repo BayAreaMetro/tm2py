@@ -87,12 +87,14 @@ class TollChoiceCalculator(Subcomponent):
         # Copy out parts of config that we want to update/manipulate
 
         # Fill in blanks with defaults
-        self.property_to_skim_toll = DEFAULT_PROPERTY_SKIM_TOLL.update(
+        DEFAULT_PROPERTY_SKIM_TOLL.update(
             self.config.property_to_skim_toll
         )
-        self.property_to_skim_notoll = DEFAULT_PROPERTY_SKIM_NOTOLL.update(
+        self.property_to_skim_toll = DEFAULT_PROPERTY_SKIM_TOLL
+        DEFAULT_PROPERTY_SKIM_NOTOLL.update(
             self.config.property_to_skim_notoll
         )
+        self.property_to_skim_notoll = DEFAULT_PROPERTY_SKIM_NOTOLL
 
         self.utility = {x.property: x.coeff for x in config.utility}
         # set utility for cost using value of time and distance using operating cost per mile
@@ -219,21 +221,21 @@ class TollChoiceCalculator(Subcomponent):
         """
 
         e_util_nontoll = self.calc_exp_util(
-            self.prop_to_skim_nontoll,
-            self.class_configs[class_name],
+            self.property_to_skim_notoll,
+            self.class_config[class_name],
             time_period,
         )
 
         e_util_toll = self.calc_exp_util(
-            self.prop_to_skim_toll,
-            self.class_configs[class_name],
+            self.property_to_skim_toll,
+            self.class_config[class_name],
             time_period,
         )
 
         prob_nontoll = e_util_nontoll / (e_util_toll + e_util_nontoll)
 
         prob_nontoll = self.mask_non_available(
-            prob_nontoll, time_period, self.class_configs[class_name].skim_mode
+            prob_nontoll, time_period, self.class_config[class_name].skim_mode
         )
 
     def calc_exp_util(
@@ -259,10 +261,10 @@ class TollChoiceCalculator(Subcomponent):
         for prop, skim_prop_list in prop_to_skim.items():
             _skim_values = get_summed_skims(
                 self.controller,
-                skim_prop_list,
-                choice_class_config.skim_mode,
-                time_period,
-                self._omx_manager,
+                property = skim_prop_list,
+                mode = choice_class_config.skim_mode,
+                time_period = time_period,
+                omx_manager = self._omx_manager,
             )
             _util = (
                 self.utility[prop]

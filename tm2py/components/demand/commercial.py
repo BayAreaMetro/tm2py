@@ -811,8 +811,8 @@ class CommercialVehicleTimeOfDay(Subcomponent):
         _class_timeperiod = itertools.product(self.classes, self.time_period_names)
 
         for _t_class, _tp in _class_timeperiod:
-            trkclass_tp_demand_dict[_t_class][_tp.name] = np.around(
-                self.class_period_splits[_t_class][_tp.name][self.split_factor]
+            trkclass_tp_demand_dict[_t_class][_tp] = np.around(
+                self.class_period_splits[_t_class][_tp.lower()][self.split_factor]
                 * daily_demand[_t_class],
                 decimals=2,
             )
@@ -899,7 +899,7 @@ class CommercialVehicleTollChoice(Subcomponent):
         for _time_period, _tclass in _tclass_time_combos:
 
             _split_demand = self._toll_choice.run(
-                trkclass_tp_demand_dict[_tclass][_time_period.name], _tclass, _time_period
+                trkclass_tp_demand_dict[_tclass][_time_period], _tclass, _time_period
             )
 
             class_demands[_time_period][_tclass] = _split_demand["no toll"]

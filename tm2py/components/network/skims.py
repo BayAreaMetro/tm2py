@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Collection, Mapping, Union
 
 import numpy as np
 from numpy import array as NumpyArray
+import os
 
 from tm2py.emme.matrix import OMXManager
 
@@ -105,6 +106,13 @@ def get_omx_skim_as_numpy(
         with OMXManager(_filepath, "r") as _f:
             return _f.read(_matrix_name)
     else:
+        if omx_manager._omx_file is None:
+            if not omx_manager._file_path.endswith(".omx"):
+                _filename = _config.output_skim_filename_tmpl.format(
+                    time_period=time_period.lower()
+                )
+                omx_manager._file_path = os.path.join(omx_manager._file_path, _filename)
+            omx_manager.open()
         return omx_manager.read(_matrix_name)
 
 
