@@ -16,6 +16,11 @@ from tm2py.emme.matrix import OMXManager
 if TYPE_CHECKING:
     from tm2py.controller import RunController
 
+# mployment category mappings, grouping into larger categories
+_land_use_aggregation = {
+    "RETEMPN": ["ret_loc", "ret_reg"],
+    "TOTEMP": ["emp_total"],
+}
 
 class HomeAccessibility(Component):
     """Computes relative, unite-less measures of accessibility for home loctn as f(skims,land use).
@@ -83,14 +88,40 @@ class HomeAccessibility(Component):
         super().__init__(controller)
         
         self.config = self.controller.config.accessibility
-        self.zones = self.controller.config.emme_scenario.zone_numbers
+        self.zones = self.emme_scenario.zone_numbers
         self.maz_data_file = self.get_abs_path(
             self.controller.config.scenario.maz_landuse_file
         )
-         
-        self._skims = defaultdict(defaultdict(defaultdict()))
+        
+        tree = lambda: defaultdict(tree)
+        self._skims = tree()
         self._employment_df = None
         self.logsums_df = pd.DataFrame()
+
+    @property
+    def emmebank(self):
+        """Reference to highway assignment Emmebank.
+
+        TODO
+            This should really be in the controller?
+            Or part of network.skims?
+        """
+        return self.controller.emme_manager.emmebank(
+            self.get_abs_path(self.controller.config.emme.highway_database_path)
+        )
+    
+    @property
+    def emme_scenario(self):
+        """Return emme scenario from emmebank.
+
+        Use first valid scenario for reference Zone IDs.
+
+        TODO
+            This should really be in the controller?
+            Or part of network.skims?
+        """
+        _ref_scenario_id = self.controller.config.time_periods[0].emme_scenario_id
+        return self.emmebank.scenario(_ref_scenario_id)
 
     @property
     def employment_df(self):
@@ -98,17 +129,29 @@ class HomeAccessibility(Component):
             self._employment_df = self.get_employment_df()
         return self._employment_df
     
-    def skims(self,mode,time_period):
+    def skims(self,mode,time_period,skim_prop):
         # TODO all the skim manipulations in https://github.com/BayAreaMetro/travel-model-one/blob/master/model-files/scripts/skims/Accessibility.job
-        if not self._skims.get(mode).get(time_period).get(skim_prop):
+        if len(self._skims[mode][time_period][skim_prop]) == 0:
             if mode == 'auto':
-
-                self._skims[mode][time_period][skim_prop] = get_omx_skim_as_numpy(
-                    self.controller,
-                    mode,
-                    time_period,
-                    skim_prop
-                )
+                if time_period == 'peak':
+                    self._skims[mode][time_period][skim_prop] = get_omx_skim_as_numpy(
+                        self.controller,
+                        'da',
+                        "AM",
+                        skim_prop
+                    ) + get_omx_skim_as_numpy(
+                        self.controller,
+                        'da',
+                        "PM",
+                        skim_prop
+                    ).T
+                else:
+                    self._skims[mode][time_period][skim_prop] = get_omx_skim_as_numpy(
+                        self.controller,
+                        'da',
+                        "MD",
+                        skim_prop
+                    )*2
 
             elif mode == 'transit':
                 #TODO need to sum up all the properties....
@@ -139,14 +182,23 @@ class HomeAccessibility(Component):
         pass
 
     def get_employment_df(self):
-        cols = ['TAZ_ORIGINAL','RETEMPN','TOTEMP']
-        lu_maz_df = pd.read_csv(self.maz_data_file, columns = cols)
+        """Aggregates landuse data from input CSV by MAZ to TAZ and employment groups.
+
+        TOTEMP, total employment (same regardless of classification system)
+        RETEMPN, retail trade employment per the NAICS classification system
+        """
+        lu_maz_df = pd.read_csv(self.maz_data_file)
         
         lu_maz_df = lu_maz_df[lu_maz_df["TAZ_ORIGINAL"].isin(self.zones)]
         lu_taz_df = lu_maz_df.groupby(["TAZ_ORIGINAL"]).sum()
         lu_taz_df = lu_taz_df.sort_values(by="TAZ_ORIGINAL")
-        lu_taz_df = lu_taz_df.rename(columns={"TOTEMP":"total","RETEMPN":"retail"})
-        return lu_taz_df
+        # combine categories
+        taz_landuse = pd.DataFrame()
+        for total_column, sub_categories in _land_use_aggregation.items():
+            taz_landuse[total_column] = lu_taz_df[sub_categories].sum(axis=1)
+        taz_landuse.reset_index(inplace=True)
+        taz_landuse = taz_landuse.rename(columns={"TOTEMP":"total","RETEMPN":"retail"})
+        return taz_landuse
 
     def validate_inputs(self):
         #TODO
@@ -171,7 +223,7 @@ class HomeAccessibility(Component):
                 each zone, weighted by how hard it is to get to the attractions. 
         """
 
-        size  = attraction * np.exp(decay_factor * impedance)
+        size = attraction * np.exp(decay_factor * impedance)
 
         # Set size of zero-impedance entries in either direction to zero 
         size = np.where(np.transpose(impedance)==0,0,size)
@@ -180,7 +232,7 @@ class HomeAccessibility(Component):
         #Sum exponentiated all columns for a given row and take the log
         logsum = np.log(size.sum(axis=1)+1.0)
        
-        return  logsum
+        return logsum
     
 
     def run(self):
@@ -190,10 +242,10 @@ class HomeAccessibility(Component):
         _mode_period_type = itertools.product(modes,time_periods,attraction_type)
 
         for _mode,_period,_type in _mode_period_type:
-            self.logsums_df[f'{_mode}_{_period}_{_type}'] = self.origin_logsum(
-                self.employment_df[type],
-                self.skim(_mode,_period,'time'),
-                self.config.__dict__[f'decay_factor_{_mode}'],
+            self.logsums_df[f'{_mode}_{_period}_{_type}'] = HomeAccessibility.origin_logsum(
+                self.employment_df[_type].values,
+                self.skims(mode=_mode,time_period=_period,skim_prop='time'),
+                self.config.__dict__[f'dispersion_{_mode}'],
             )
 
         self.logsums_df.to_csv(self.get_abs_path(self.config.outfile))
