@@ -111,10 +111,6 @@ class RunController:
         self.trace = None
         self.completed_components = []
 
-        # mapping from defined names referenced in config to Component objects
-        self._component_map = {
-            k: v(self) for k, v in component_cls_map.items() if k in run_components
-        }
         self._validated_components = set()
         self._emme_manager = None
         self._num_processors = None
@@ -122,6 +118,11 @@ class RunController:
         self._component = None
         self._component_name = None
         self._queued_components = deque()
+
+        # mapping from defined names referenced in config to Component objects
+        self._component_map = {
+            k: v(self) for k, v in component_cls_map.items() if k in run_components
+        }
 
         self._queue_components(run_components=run_components)
 

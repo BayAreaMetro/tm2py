@@ -42,6 +42,9 @@
     highway_demand_file = "demand_matrices/highway/household/TAZ_Demand_{period}.omx"
     transit_demand_file = "demand_matrices/transit/TAP_Demand_{set}_{period}.omx"
 
+[accessibility]
+    outfile = "inputs/accessibility.csv"
+
 [air_passenger]
     output_trip_table_directory = "demand_matrices/highway/air_passenger"
     outfile_trip_table_tmp = "tripsAirPax{period}.omx"

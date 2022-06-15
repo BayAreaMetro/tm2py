@@ -12,6 +12,7 @@
     initial_components = [
         #"create_tod_scenarios",
         #"active_modes",
+        "home_accessibility",
         "air_passenger",
         "prepare_network_highway",
         "highway",

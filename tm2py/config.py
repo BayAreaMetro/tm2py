@@ -490,12 +490,12 @@ class TruckClassConfig(ConfigItem):
 class HomeAccessibilityConfig(ConfigItem):
     """Home Accessibility Parameters."""
 
+    outfile: pathlib.Path
     dispersion_auto: float = -0.05
     dispersion_transit: float = -0.05
     dispersion_walk: float = -1.00
     max_walk_distance: float = 3.0
     out_of_vehicle_time_weight: float = 2.0
-    outfile: pathlib.Path
 
 
 @dataclass(frozen=True)
