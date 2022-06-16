@@ -151,7 +151,12 @@ class HomeAccessibility(Component):
                         'da',
                         "MD",
                         skim_prop
-                    )*2
+                    ) + get_omx_skim_as_numpy(
+                        self.controller,
+                        'da',
+                        "MD",
+                        skim_prop
+                    ).T
 
             elif mode == 'transit':
                 #TODO need to sum up all the properties....
@@ -163,7 +168,22 @@ class HomeAccessibility(Component):
 
             elif mode == 'active':
                 #TODO need to cut off at distance cutoff 
-                pass
+                distance = get_omx_skim_as_numpy(
+                    self.controller,
+                    'nm',
+                    "MD",
+                    "DISTWALK"
+                ) + get_omx_skim_as_numpy(
+                    self.controller,
+                    'nm',
+                    "MD",
+                    "DISTWALK"
+                ).T
+
+                if distance <= self.config.__dict__['max_walk_distance']:
+                    self._skims[mode][time_period][skim_prop] = distance
+                else:
+                    self._skims[mode][time_period][skim_prop] = 0
 
         return self._skims[mode][time_period][skim_prop]
         
@@ -178,8 +198,37 @@ class HomeAccessibility(Component):
             time_period (_type_): _description_
             skim_prop (_type_): _description_
         """
-        #TODO
-        pass
+        #TODO move skim specs to config
+        if time_period == 'peak':
+            ivt = get_omx_skim_as_numpy(self.controller,'wlk_trn_wlk',"AM",'ivt') + \
+                get_omx_skim_as_numpy(self.controller,'wlk_trn_wlk',"PM",'ivt').T
+            
+            ovt = get_omx_skim_as_numpy(self.controller,'wlk_trn_wlk',"AM",'iwait') + \
+                get_omx_skim_as_numpy(self.controller,'wlk_trn_wlk',"PM",'iwait').T + \
+                get_omx_skim_as_numpy(self.controller,'wlk_trn_wlk',"AM",'xwait') + \
+                get_omx_skim_as_numpy(self.controller,'wlk_trn_wlk',"PM",'xwait').T + \
+                get_omx_skim_as_numpy(self.controller,'wlk_trn_wlk',"AM",'waux') + \
+                get_omx_skim_as_numpy(self.controller,'wlk_trn_wlk',"PM",'waux').T
+                #get_omx_skim_as_numpy(self.controller,'wlk',"AM",'wacc') + \
+                #get_omx_skim_as_numpy(self.controller,'wlk',"PM",'wacc').T + \
+                #get_omx_skim_as_numpy(self.controller,'wlk',"AM",'wegr') + \
+                #get_omx_skim_as_numpy(self.controller,'wlk',"PM",'wegr').T
+        else:
+            ivt = get_omx_skim_as_numpy(self.controller,'wlk_trn_wlk',"MD",'ivt') + \
+                get_omx_skim_as_numpy(self.controller,'wlk_trn_wlk',"MD",'ivt').T
+            
+            ovt = get_omx_skim_as_numpy(self.controller,'wlk_trn_wlk',"MD",'iwait') + \
+                get_omx_skim_as_numpy(self.controller,'wlk_trn_wlk',"MD",'iwait').T + \
+                get_omx_skim_as_numpy(self.controller,'wlk_trn_wlk',"MD",'xwait') + \
+                get_omx_skim_as_numpy(self.controller,'wlk_trn_wlk',"MD",'xwait').T + \
+                get_omx_skim_as_numpy(self.controller,'wlk_trn_wlk',"MD",'waux') + \
+                get_omx_skim_as_numpy(self.controller,'wlk_trn_wlk',"MD",'waux').T
+                #get_omx_skim_as_numpy(self.controller,'wlk',"MD",'wacc') + \
+                #get_omx_skim_as_numpy(self.controller,'wlk',"MD",'wacc').T + \
+                #get_omx_skim_as_numpy(self.controller,'wlk',"MD",'wegr') + \
+                #get_omx_skim_as_numpy(self.controller,'wlk',"MD",'wegr').T
+            
+        return (ivt + self.config.__dict__['out_of_vehicle_time_weight'] * ovt)/100
 
     def get_employment_df(self):
         """Aggregates landuse data from input CSV by MAZ to TAZ and employment groups.
@@ -231,7 +280,7 @@ class HomeAccessibility(Component):
 
         #Sum exponentiated all columns for a given row and take the log
         logsum = np.log(size.sum(axis=1)+1.0)
-       
+        
         return logsum
     
 

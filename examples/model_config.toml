@@ -689,7 +689,9 @@
     initial_boarding_penalty = 10
     transfer_boarding_penalty = 10
     max_transfers = 3
-    output_skim_path = "skim_matrices/transit/transit_skims_{period}.omx"
+    output_skim_path = "skim_matrices/transit"
+    output_skim_filename_tmpl = "trnskm{time_period}_{mode}.omx"
+    output_skim_matrixname_tmpl = "{property}"
     fares_path = "inputs/trn/fares.far"
     fare_matrix_path = "inputs/trn/fareMatrix.txt"
     # max expected transfer distance for mode-to-mode transfer fare table generation
@@ -700,6 +702,10 @@
     #input_connector_access_times_path = "inputs/trn/estimated_taz_access_connectors.csv"
     #input_connector_egress_times_path = "inputs/trn/estimated_taz_egress_connectors.csv"
     #output_stop_usage_path = "inputs/trn/stop_usage_{period}.csv"
+    [[transit.classes]]
+        name = "wlk_trn_wlk"
+        description = "walk access to transit, walk egress from transit" 
+        skims = ['boards', 'fare', 'ivt', 'ivtCOM', 'ivtEXP', 'ivtFRY', 'ivtHVY', 'ivtLOC', 'ivtLRT', 'iwait', 'wait', 'waux', 'xwait', 'xwaux']
 
 [emme]
     num_processors = "MAX-1"

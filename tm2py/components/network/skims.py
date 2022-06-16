@@ -76,12 +76,16 @@ def get_omx_skim_as_numpy(
 
     # TODO need to more dutifully map skim modes to network modes
     _hwy_classes = {c.name: c for c in controller.config.highway.classes}
+    _trn_classes = {c.name: c for c in controller.config.transit.classes}
     if skim_mode in _hwy_classes.keys():
         _config = controller.config.highway
         _mode_config = _hwy_classes[skim_mode]
+    elif skim_mode in _trn_classes.keys():
+        _config = controller.config.transit
+        _mode_config = _trn_classes[skim_mode]
 
     else:
-        raise NotImplementedError("Haven't implemented non highway skim access")
+        raise NotImplementedError("Haven't implemented non highway & transit skim access")
 
     if property not in _mode_config["skims"]:
         raise ValueError(
@@ -89,18 +93,27 @@ def get_omx_skim_as_numpy(
             Available skims are:  {_mode_config['skims']}"
         )
 
-    _matrix_name = _config.output_skim_matrixname_tmpl.format(
-        time_period=time_period.lower(),
-        mode=skim_mode,
-        property=property,
-    )
+    if skim_mode in _hwy_classes.keys():
+        _matrix_name = _config.output_skim_matrixname_tmpl.format(
+            time_period=time_period.lower(),
+            mode=skim_mode,
+            property=property,
+        )
+        _filename = _config.output_skim_filename_tmpl.format(
+            time_period=time_period.lower()
+        )
+    elif skim_mode in _trn_classes.keys():
+        _matrix_name = _config.output_skim_matrixname_tmpl.format(
+            property=property
+        )
+        _filename = _config.output_skim_filename_tmpl.format(
+            time_period=time_period,
+            mode = skim_mode,
+        )
 
     # TODO figure out how to get upper() and lower() into actual format string
     if omx_manager is None:
 
-        _filename = _config.output_skim_filename_tmpl.format(
-            time_period=time_period.lower()
-        )
         _filepath = controller.run_dir / _config.output_skim_path / _filename
         with OMXManager(_filepath, "r") as _f:
             return _f.read(_matrix_name)
