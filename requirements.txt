@@ -16,6 +16,7 @@ mkdocs-jupyter
 mkdocs-macros-plugin
 mkdocs-material
 mkdocstrings
+mkdocstrings-python
 notebook
 numpy
 openmatrix
