@@ -26,6 +26,8 @@ def bin_dir(root_dir):
     return root_dir / "bin"
 
 
+# todo: why not use the existing tmp_path fixture?
+# https://docs.pytest.org/en/7.1.x/how-to/tmp_path.html
 @pytest.fixture()
 def temp_dir():
     """Create a temporary directory and clean it up upon test completion.

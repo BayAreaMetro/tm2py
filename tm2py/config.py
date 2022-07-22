@@ -1,7 +1,7 @@
 """Config implementation and schema."""
 # pylint: disable=too-many-instance-attributes
 
-import pathlib
+import datetime, pathlib
 from abc import ABC
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -137,15 +137,15 @@ class LoggingConfig(ConfigItem):
         display_level: filter level for messages to show in console, default
             is STATUS
         run_file_path: relative path to high-level log file for the model run,
-            default is log_run.txt
+            default is tm2py_run_[%Y%m%d_%H%M].log
         run_file_level: filter level for messages recorded in the run log,
             default is INFO
         log_file_path: relative path to general log file with more detail
-            than the run_file, default is log.txt
+            than the run_file, default is tm2py_detail_[%Y%m%d_%H%M].log
         log_file_level: optional, filter level for messages recorded in the
             standard log, default is DETAIL
         log_on_error_file_path: relative path to use for fallback log message cache
-            on error, default is log_on_error.txt
+            on error, default is tm2py_error_[%Y%m%d_%H%M].log
         notify_slack: if true notify_slack messages will be sent, default is False
         use_emme_logbook: if True log messages recorded in the standard log file will
             also be recorded in the Emme logbook, default is True
@@ -157,11 +157,11 @@ class LoggingConfig(ConfigItem):
     """
 
     display_level: Optional[LogLevel] = Field(default="STATUS")
-    run_file_path: Optional[str] = Field(default="log_run.txt")
+    run_file_path: Optional[str] = Field(default="tm2py_run_{}.log".format(datetime.datetime.now().strftime('%Y%m%d_%H%M')))
     run_file_level: Optional[LogLevel] = Field(default="INFO")
-    log_file_path: Optional[str] = Field(default="log.txt")
+    log_file_path: Optional[str] = Field(default="tm2py_detail_{}.log".format(datetime.datetime.now().strftime('%Y%m%d_%H%M')))
     log_file_level: Optional[LogLevel] = Field(default="DETAIL")
-    log_on_error_file_path: Optional[str] = Field(default="log_on_error.txt")
+    log_on_error_file_path: Optional[str] = Field(default="tm2py_error_{}.log".format(datetime.datetime.now().strftime('%Y%m%d_%H%M')))
 
     notify_slack: Optional[bool] = Field(default=False)
     use_emme_logbook: Optional[bool] = Field(default=True)

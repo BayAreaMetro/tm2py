@@ -229,7 +229,7 @@ class RunController:
             raise ValueError("No components in queue")
         iteration, name, component = self._queued_components.popleft()
         if self._iteration != iteration:
-            self.logger.log_time(f"Start iteration {iteration}")
+            self.logger.log(f"Start iteration {iteration}")
         self._iteration = iteration
         self._component = component
         component.run()

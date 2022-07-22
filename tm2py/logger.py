@@ -42,8 +42,8 @@ if TYPE_CHECKING:
 LogLevel = Literal[
     "TRACE", "DEBUG", "DETAIL", "INFO", "STATUS", "WARN", "ERROR", "FATAL"
 ]
-levels = dict((k, i) for i, k in enumerate(get_args(LogLevel)))
-
+LEVELS_STR_TO_INT = dict((k, i) for i, k in enumerate(get_args(LogLevel)))
+LEVELS_INT_TO_STR = dict((i,k) for i, k in enumerate(get_args(LogLevel)))
 
 # pylint: disable=too-many-instance-attributes
 
@@ -56,24 +56,16 @@ class Logger:
     Which will filter all messages of that severity and higher.
     See module note on use of descriptive level names.
 
-    To be used as a context, e.g.::
-
-        with Logger(controller) as logger:
-            logger.log("a message")
-            with logger.log_start_end("Running a set of steps"):
-                logger.log_time("Message with timestamp")
-                logger.log("A debug message", level="DEBUG")
-                # equivalently, use the .debug:
-                logger.debug("Another debug message")
-                if logger.debug_enabled:
-                    # only generate this report if logging DEBUG
-                    logger.log(
-                        "A debug report that takes time to produce",
-                        level="DEBUG")
-                logger.notify_slack("A slack message")
-
-    Note that the Logger should not be used until opened with a context.
-    Logger.log will not write to file.
+    logger.log("a message")
+    with logger.log_start_end("Running a set of steps"):
+        logger.log("Message with timestamp")
+        logger.log("A debug message", level="DEBUG")
+        # equivalently, use the .debug:
+        logger.debug("Another debug message")
+        if logger.debug_enabled:
+            # only generate this report if logging DEBUG
+            logger.log("A debug report that takes time to produce", level="DEBUG")
+        logger.notify_slack("A slack message")
 
     Methods can also be decorated with LogStartEnd (see class for more).
 
@@ -114,15 +106,15 @@ class Logger:
         log_config = controller.config.logging
         iter_component_level = log_config.iter_component_level or []
         iter_component_level = dict(
-            ((i, c), levels[l]) for i, c, l in iter_component_level
+            ((i, c), LEVELS_STR_TO_INT[l]) for i, c, l in iter_component_level
         )
-        display_logger = LogDisplay(levels[log_config.display_level])
+        display_logger = LogDisplay(LEVELS_STR_TO_INT[log_config.display_level])
         run_log_formatter = LogFile(
-            levels[log_config.run_file_level],
+            LEVELS_STR_TO_INT[log_config.run_file_level],
             os.path.join(controller.run_dir, log_config.run_file_path),
         )
         standard_log_formatter = LogFileLevelOverride(
-            levels[log_config.log_file_level],
+            LEVELS_STR_TO_INT[log_config.log_file_level],
             os.path.join(controller.run_dir, log_config.log_file_path),
             iter_component_level,
             controller,
@@ -140,6 +132,19 @@ class Logger:
         self._use_emme_logbook = self.controller.config.logging.use_emme_logbook
 
         self._slack_notifier = SlackNotifier(self)
+
+        # open log formatters
+        for log_formatter in self._log_formatters:
+            if hasattr(log_formatter, "open"):
+                log_formatter.open()
+
+    def __del__(self):
+        """
+        Destructor for logger object
+        """
+        for log_formatter in self._log_formatters:
+            if hasattr(log_formatter, "close"):
+                log_formatter.close()
 
     @classmethod
     def get_logger(cls):
@@ -159,114 +164,91 @@ class Logger:
         self,
         text: str,
         level: LogLevel = "INFO",
-        indent: bool = False,
-        time: bool = False,
-    ):
+        indent: bool = True):
         """Log text to file and display depending upon log level and config.
-
-        Note that log will not write to file until Logger is opened with a context.
 
         Args:
             text (str): text to log
             level (str): logging level
             indent (bool): if true indent text based on the number of open contexts
-            time (bool): if true include timestamp
         """
-        timestamp = datetime.now().strftime("%d-%b-%Y (%H:%M:%S): ") if time else None
+        timestamp = datetime.now().strftime("%d-%b-%Y (%H:%M:%S) ")
         for log_formatter in self._log_formatters:
-            log_formatter.log(text, levels[level], indent, timestamp)
+            log_formatter.log(text, LEVELS_STR_TO_INT[level], indent, timestamp)
         if self._use_emme_logbook and self.controller.has_emme:
             self.controller.emme_manager.logbook_write(text)
 
-    def log_time(self, text: str, level: LogLevel = "INFO", indent: bool = True):
-        """Log message with timestamp.
-
-        Args:
-            text (str): text to log
-            level (str): logging level
-            indent (bool): if true indent text based on the number of open contexts
-        """
-        self.log(text, level, indent, time=True)
-
-    def trace(self, text: str, indent: bool = False, time: bool = False):
+    def trace(self, text: str, indent: bool = False):
         """Log text with level=TRACE.
 
         Args:
             text (str): text to log
             indent (bool): if true indent text based on the number of open contexts
-            time (bool): if true include timestamp
         """
-        self.log(text, "TRACE", indent, time)
+        self.log(text, "TRACE", indent)
 
-    def debug(self, text: str, indent: bool = False, time: bool = False):
+    def debug(self, text: str, indent: bool = False):
         """Log text with level=DEBUG.
 
         Args:
             text (str): text to log
             indent (bool): if true indent text based on the number of open contexts
-            time (bool): if true include timestamp
         """
-        self.log(text, "DEBUG", indent, time)
+        self.log(text, "DEBUG", indent)
 
-    def detail(self, text: str, indent: bool = False, time: bool = False):
+    def detail(self, text: str, indent: bool = False):
         """Log text with level=DETAIL.
 
         Args:
             text (str): text to log
             indent (bool): if true indent text based on the number of open contexts
-            time (bool): if true include timestamp
         """
-        self.log(text, "DETAIL", indent, time)
+        self.log(text, "DETAIL", indent)
 
-    def info(self, text: str, indent: bool = False, time: bool = False):
+    def info(self, text: str, indent: bool = False):
         """Log text with level=INFO.
 
         Args:
             text (str): text to log
             indent (bool): if true indent text based on the number of open contexts
-            time (bool): if true include timestamp
         """
-        self.log(text, "INFO", indent, time)
+        self.log(text, "INFO", indent)
 
-    def status(self, text: str, indent: bool = False, time: bool = False):
+    def status(self, text: str, indent: bool = False):
         """Log text with level=STATUS.
 
         Args:
             text (str): text to log
             indent (bool): if true indent text based on the number of open contexts
-            time (bool): if true include timestamp
         """
-        self.log(text, "STATUS", indent, time)
+        self.log(text, "STATUS", indent)
 
-    def warn(self, text: str, indent: bool = False, time: bool = False):
+    def warn(self, text: str, indent: bool = False):
         """Log text with level=WARN.
 
         Args:
             text (str): text to log
             indent (bool): if true indent text based on the number of open contexts
-            time (bool): if true include timestamp
         """
-        self.log(text, "WARN", indent, time)
+        self.log(text, "WARN", indent)
 
-    def error(self, text: str, indent: bool = False, time: bool = False):
+    def error(self, text: str, indent: bool = False):
         """Log text with level=ERROR.
 
         Args:
             text (str): text to log
             indent (bool): if true indent text based on the number of open contexts
-            time (bool): if true include timestamp
         """
-        self.log(text, "ERROR", indent, time)
+        self.log(text, "ERROR", indent)
 
-    def fatal(self, text: str, indent: bool = False, time: bool = False):
+    def fatal(self, text: str, indent: bool = False):
         """Log text with level=FATAL.
 
         Args:
             text (str): text to log
             indent (bool): if true indent text based on the number of open contexts
-            time (bool): if true include timestamp
         """
-        self.log(text, "FATAL", indent, time)
+        self.log(text, "FATAL", indent)
 
     def _log_start(self, text: str, level: LogLevel = "INFO"):
         """Log message with timestamp and 'Start'.
@@ -275,9 +257,9 @@ class Logger:
             text (str): message text
             level (str): logging level
         """
-        self.log_time(f"Start {text}", level, indent=True)
+        self.log(f"Start {text}", level, indent=True)
         for log_formatter in self._log_formatters:
-            log_formatter.increase_indent(levels[level])
+            log_formatter.increase_indent(LEVELS_STR_TO_INT[level])
 
     def _log_end(self, text: str, level: LogLevel = "INFO"):
         """Log message with timestamp and 'End'.
@@ -287,8 +269,8 @@ class Logger:
             level (str): logging level
         """
         for log_formatter in self._log_formatters:
-            log_formatter.decrease_indent(levels[level])
-        self.log_time(f"End {text}", level, indent=True)
+            log_formatter.decrease_indent(LEVELS_STR_TO_INT[level])
+        self.log(f"End {text}", level, indent=True)
 
     @_context
     def log_start_end(self, text: str, level: LogLevel = "STATUS"):
@@ -327,39 +309,6 @@ class Logger:
         yield
         self._use_emme_logbook = use_emme
 
-    def __enter__(self):
-        """Enter context.
-
-        Returns:
-            _type_: TODO
-        """
-        for log_formatter in self._log_formatters:
-            if hasattr(log_formatter, "open"):
-                log_formatter.open()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context exit override.
-
-        Args:
-            exc_type (_type_): TODO
-            exc_val (_type_): TODO
-            exc_tb (_type_): TODO
-        """
-        if exc_type is not None:
-            self.log_time("Error during model run", level="ERROR")
-            self.log(
-                "".join(
-                    _traceback.format_exception(exc_type, exc_val, exc_tb, chain=False)
-                )
-            )
-            self._log_cache.write_cache()
-            self.notify_slack(f"Error during model run in {self.controller.run_dir}.")
-            self.notify_slack(f"{exc_val}")
-        for log_formatter in self._log_formatters:
-            if hasattr(log_formatter, "close"):
-                log_formatter.close()
-
     def clear_msg_cache(self):
         """Clear all log messages from cache."""
         self._log_cache.clear()
@@ -371,7 +320,7 @@ class Logger:
         Can be used to enable / disable debug logging which may have a performance
         impact.
         """
-        debug = levels["DEBUG"]
+        debug = LEVELS_STR_TO_INT["DEBUG"]
         for log_formatter in self._log_formatters:
             if log_formatter is not self._log_cache and log_formatter.level <= debug:
                 return True
@@ -384,7 +333,7 @@ class Logger:
         Can be used to enable / disable trace logging which may have a performance
         impact.
         """
-        trace = levels["TRACE"]
+        trace = LEVELS_STR_TO_INT["TRACE"]
         for log_formatter in self._log_formatters:
             if log_formatter is not self._log_cache and log_formatter.level <= trace:
                 return True
@@ -443,6 +392,7 @@ class LogFormatter:
     def _format_text(
         self,
         text: str,
+        level: int,
         indent: bool,
         timestamp: Union[str, None],
     ):
@@ -450,6 +400,7 @@ class LogFormatter:
 
         Args:
             text (str): text to format
+            level (int): logging level
             indent (bool): if true indent text based on the number of open contexts and
                 timestamp width
             timestamp (str): formatted datetime as a string or None for timestamp
@@ -461,7 +412,8 @@ class LogFormatter:
             indent = "  " * max(num_indents, 0)
         else:
             indent = ""
-        return f"{timestamp}{indent}{text}"
+        level_str = "{0:>6}".format(LEVELS_INT_TO_STR[level])
+        return f"{timestamp}{level_str}: {indent}{text}"
 
 
 class LogFile(LogFormatter):
@@ -499,8 +451,9 @@ class LogFile(LogFormatter):
             timestamp (str): formatted datetime as a string or None for timestamp
         """
         if level >= self.level and self.log_file is not None:
-            text = self._format_text(text, indent, timestamp)
+            text = self._format_text(text, level, indent, timestamp)
             self.log_file.write(f"{text}\n")
+            self.log_file.flush()
 
     def close(self):
         """Close the open log file."""
@@ -556,7 +509,7 @@ class LogDisplay(LogFormatter):
             timestamp (str): formatted datetime as a string or None
         """
         if level >= self.level:
-            print(self._format_text(text, indent, timestamp))
+            print(self._format_text(text, level, indent, timestamp))
 
 
 class LogCache(LogFormatter):
@@ -590,14 +543,13 @@ class LogCache(LogFormatter):
             indent (bool): if true indent text based on the number of open contexts
             timestamp (str): formatted datetime as a string or None
         """
-        self._msg_cache.append((level, self._format_text(text, indent, timestamp)))
+        self._msg_cache.append((level, self._format_text(text, level, indent, timestamp)))
 
     def write_cache(self):
         """Write all cached messages."""
-        _levels = dict((v, k) for k, v in levels.items())
         with open(self.file_path, "w", encoding="utf8") as file:
             for level, text in self._msg_cache:
-                file.write(f"{_levels[level]:6} {text}\n")
+                file.write(f"{LEVELS_INT_TO_STR[level]:6} {text}\n")
         self.clear()
 
     def clear(self):

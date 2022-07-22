@@ -190,7 +190,7 @@ class HighwayAssignment(Component):
         Args:
             scenario: Emme scenario object
         """
-        self.logger.log_time(
+        self.logger.log(
             "Copy @maz_flow to ul1 for background traffic", indent=True, level="DETAIL"
         )
         net_calc = NetworkCalculator(scenario)
@@ -202,7 +202,7 @@ class HighwayAssignment(Component):
         Args:
             scenario: Emme scenario object
         """
-        self.logger.log_time(
+        self.logger.log(
             "Set ul1 to 0 for background traffic", indent=True, level="DETAIL"
         )
         net_calc = NetworkCalculator(scenario)
