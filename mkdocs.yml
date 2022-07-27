@@ -48,6 +48,7 @@ plugins:
            - sys.modules["inro.emme.database.matrix"] = mock()
            - sys.modules["inro.emme.network"] = mock()
            - sys.modules["inro.emme.network.node"] = mock()
+           - sys.modules["inro.emme.network.link"] = mock()
            - sys.modules["inro.emme.desktop"] = mock()
            - sys.modules["inro.emme.desktop.app"] = mock()
            - sys.modules["inro.modeller"] = mock()

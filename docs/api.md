@@ -18,7 +18,7 @@
 
 ### Demand Components
 
-::: tm2py.components.demand.demand
+::: tm2py.components.demand.prepare_demand
 
 #### Household Demand
 
