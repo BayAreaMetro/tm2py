@@ -732,6 +732,7 @@
         name = "ALLPEN"
         description = "All w/ xfer pen"
         mode_types = ["ACCESS", "EGRESS", "WALK", "LOCAL", "PREMIUM"]
+        required_mode_combo = ["LOCAL","PREMIUM"] # AND not or
         [[transit.classes.demand]]
             source = "household"
             name = "WLK_SET_{period}"
@@ -747,7 +748,8 @@
     all_day_scenario_id = 1
     project_path = "emme_project/mtc_emme.emp"
     highway_database_path = "emme_project/Database_highway/emmebank"
-    active_database_paths = [ "emme_project/Database_active_south/emmebank", "emme_project/Database_active_north/emmebank" ]
+    active_north_database_path = "emme_project/Database_active_south/emmebank"
+    active_south_database_path = "emme_project/Database_active_south/emmebank"
     transit_database_path = "emme_project/Database_transit_taz/emmebank"
 
 

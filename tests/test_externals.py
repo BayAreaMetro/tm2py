@@ -5,7 +5,6 @@ import os
 import pytest
 
 
-# @pytest.mark.menow
 def test_external_travel(examples_dir):
     "Tests that internal/external travel component can be run."
     from tools import test_component

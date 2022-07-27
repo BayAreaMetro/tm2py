@@ -121,7 +121,6 @@ class RunController:
         }
         self._validated_components = set()
         self._emme_manager = None
-        self._num_processors = None
         self._iteration = None
         self._component = None
         self._component_name = None
@@ -163,13 +162,7 @@ class RunController:
 
     @property
     def num_processors(self) -> int:
-        """Number of processors available for parallel processing."""
-        if self._num_processors is None:
-            self._num_processors = self._calculate_num_processors(
-                multiprocessing.cpu_count()
-            )
-
-        return self._num_processors
+        return self.emme_manager.num_processors
 
     @property
     def iteration(self) -> int:
@@ -195,7 +188,7 @@ class RunController:
         """Cached Emme Manager object."""
         if self._emme_manager is None:
             if self.has_emme:
-                self._init_emme_manager()
+                self._emme_manager = EmmeManager(self, self.config.emme)
             else:
                 self.logger.log("Emme not found, skipping Emme-related components")
                 # TODO: All of the Emme-related components need to be handled "in place" rather
@@ -204,15 +197,6 @@ class RunController:
 
                 self._emme_manager = MagicMock()
         return self._emme_manager
-
-    def _init_emme_manager(self):
-        """Initialize Emme manager, start Emme desktop App, and initialize Modeller."""
-        self._emme_manager = EmmeManager()
-        project = self._emme_manager.project(
-            os.path.join(self.run_dir, self.config.emme.project_path)
-        )
-        # Initialize Modeller to use Emme assignment tools and other APIs
-        self._emme_manager.modeller(project)
 
     def get_abs_path(self, rel_path: Union[Path, str]) -> Path:
         """Get the absolute path from the root run directory given a relative path."""
@@ -310,35 +294,3 @@ class RunController:
             _component.validate_inputs()
             self._validated_components.add(component_name)
         self._queued_components.append((iteration, component_name, _component))
-
-    def _calculate_num_processors(self, cpu_processors: int):
-        """Convert input value (parse if string) to number of processors.
-
-        nt or string as 'MAX-X'
-
-        Args:
-            cpu_processors (int): number of processors on current CPU
-        Returns:
-            An int of the number of processors to use
-
-        Raises:
-            Exception: Input value exceeds number of available processors
-            Exception: Input value less than 1 processors
-        """
-        _config_value = self.config.emme.num_processors
-        num_processors = 0
-        if isinstance(_config_value, str):
-            if _config_value.upper() == "MAX":
-                num_processors = cpu_processors
-            elif re.match("^[0-9]+$", _config_value):
-                num_processors = int(_config_value)
-            else:
-                _processor_range = re.split(r"^MAX[/s]*-[/s]*", _config_value.upper())
-                num_processors = max(cpu_processors - int(_processor_range[1]), 1)
-        else:
-            num_processors = int(_config_value)
-
-        num_processors = min(cpu_processors, num_processors)
-        num_processors = max(1, num_processors)
-
-        return num_processors

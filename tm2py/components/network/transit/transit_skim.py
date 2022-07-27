@@ -1,142 +1,219 @@
 """Transit skims module."""
 
 from __future__ import annotations
-from collections import defaultdict as _defaultdict
-from contextlib import contextmanager as _context
+
+import itertools
 import os
-from typing import Dict, List, Tuple, TYPE_CHECKING
+from collections import defaultdict, namedtuple
+from contextlib import contextmanager as _context
+from typing import TYPE_CHECKING, Collection, Dict, List, Tuple, Union
 
 import numpy as np
 
+from tm2py import tools
 from tm2py.components.component import Component
 from tm2py.emme.matrix import MatrixCache, OMXManager
 from tm2py.logger import LogStartEnd
-from tm2py import tools
+from tm2py.omx import NumpyArray
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
+
+Skimproperty = namedtuple("Skimproperty", "name desc")
 
 
 class TransitSkim(Component):
     """Transit skim calculation methods."""
 
-    def __init__(self, controller: RunController):
+    def __init__(self, controller: "RunController"):
         """Constructor for TransitSkim class.
 
         Args:
             controller: The RunController instance.
         """
         super().__init__(controller)
-        self._scenario = None
-        self._network = None
+        self.config = self.controller.config.transit
+        self._emmebank = None
+
+        self._networks = None
+        self._scenarios = None
         self._matrix_cache = None
-        self._skim_matrices = []
-        self._time_period = None
-        self._assign_class = None
-        self._num_processors = tools.parse_num_processors(
-            self.config.emme.num_processors
-        )
+        self._skim_matrices = {
+            k: None
+            for k in itertools.product(
+                self.time_period_names,
+                self.config.transit.classes,
+                self.skim_properties,
+            )
+        }
+
+        self._skim_properties = None
+
+    def validate_inputs(self):
+        """Validate inputs."""
+        # TODO add input validation
+        pass
+
+    @property
+    def emmebank(self):
+        if not self._emmebank:
+            emmebank_path = self.get_abs_path(
+                self.controller.config.emme.transit_database_path
+            )
+            self._emmebank = self.controller.emme_manager.emmebank(emmebank_path)
+        return self._emmebank
+
+    @property
+    def scenarios(self):
+        if self._scenarios is None:
+            self._scenarios = {
+                tp: self.get_emme_scenario(self.emmebank, tp)
+                for tp in self.time_period_names
+            }
+        return self._scenarios
+
+    @property
+    def networks(self):
+        if self._networks is None:
+            self._networks = {
+                tp: self.scenario[tp].get_partial_network(
+                    ["TRANSIT_SEGMENT"], include_attributes=False
+                )
+                for tp in self.time_period_names
+            }
+        return self._networks
+
+    @property
+    def matrix_cache(self):
+        if self._matrix_cache is None:
+            self._matrix_cache = {
+                tp: MatrixCache(self.scenario[tp]) for tp in self.time_period_names
+            }
+        return self._matrix_cache
 
     @LogStartEnd("Transit skims")
     def run(self):
         """Run transit skims."""
-        for self._time_period in self.time_period_names():
-            with self._setup():
-                self._create_skim_matrices()
-                for self._assign_class in self.config.transit.classes:
-                    self._run_skims()
-                self._mask_transfers()
-                self._mask_allpen()
-                self._export_skims()
-                # if self.logger.debug_enabled:
-                #     self._debug_report()
-
-    @_context
-    def _setup(self):
-        emmebank_path = self.get_abs_path(self.config.emme.transit_database_path)
-        emmebank = self.controller.emme_manager.emmebank(emmebank_path)
-        self._scenario = self.get_emme_scenario(emmebank, self._time_period)
-        self._network = self._scenario.get_partial_network(
-            ["TRANSIT_SEGMENT"], include_attributes=False
-        )
-        self._matrix_cache = MatrixCache(self._scenario)
-        self._skim_matrices = []
+        self._initialize_skim_matrices()
         with self.logger.log_start_end(f"period {self._time_period}"):
-            with self.controller.emme_manager.logbook_trace(
-                f"Transit skims for period {self._time_period}"
-            ):
-                try:
-                    yield
-                finally:
-                    self._skim_matrices = []
-                    self._scenario = None
-                    self._network = None
-                    self._assign_class = None
-                    self._matrix_cache.clear()
-                    self._matrix_cache = None
+            for _time_period in self.time_period_names:
+                with self.controller.emme_manager.logbook_trace(
+                    f"Transit skims for period {_time_period}"
+                ):
+                    for _transit_class in self.config.transit.classes:
+                        self.run_skim_set(_time_period, _transit_class)
+                    self._export_skims()
 
-    def _tmplt_skim_matrices(self, names_only: bool = False):
-        """TODO.
+    @property
+    def skim_matrices(self):
+        return self._skim_matrices
 
-        Args:
-            names_only: TODO.
+    @property
+    def skim_properties(self):
+        """List of Skim Property named tuples: name, description.
+
+        TODO put these in config.
         """
-        tmplt_matrices = [
-            ("FIRSTWAIT", "first wait time"),
-            ("XFERWAIT", "transfer wait time"),
-            ("TOTALWAIT", "total wait time"),
-            ("XFERS", "num transfers"),
-            ("XFERWALK", "transfer walk time"),
-            ("TOTALWALK", "total walk time"),
-            ("TOTALIVTT", "total in-vehicle time"),
-            ("FARE", "fare"),
-        ]
-        for mode in self.config.transit.modes:
-            if mode.assign_type == "TRANSIT":
-                desc = mode.description or mode.name
-                tmplt_matrices.append(
-                    (
-                        f"{mode.name}IVTT",
-                        f"{desc} in-vehicle travel time"[:40],
-                    )
-                )
-        if self.config.transit.use_ccr:
-            tmplt_matrices.extend(
-                [
-                    ("LINKREL", "Link reliability"),
-                    ("CROWD", "Crowding penalty"),
-                    ("EAWT", "Extra added wait time"),
-                    ("CAPPEN", "Capacity penalty"),
-                ]
-            )
-        if names_only:
-            return [x[0] for x in tmplt_matrices]
-        return tmplt_matrices
+        if self._skim_properties is None:
+            from collections import namedtuple
 
-    def _create_skim_matrices(self):
-        """Create required skim matrices in Emmebank."""
-        time = self._time_period
-        scenario = self._scenario
+            # TODO config
+            self._skim_properties = []
+
+            _basic_skims = [
+                ("FIRSTWAIT", "first wait time"),
+                ("XFERWAIT", "transfer wait time"),
+                ("TOTALWAIT", "total wait time"),
+                ("XFERS", "num transfers"),
+                ("XFERWALK", "transfer walk time"),
+                ("TOTALWALK", "total walk time"),
+                ("TOTALIVTT", "total in-vehicle time"),
+                ("FARE", "fare"),
+            ]
+            self._skim_properties += [
+                Skimproperty(_name, _desc) for _name, _desc in _basic_skims
+            ]
+            for mode in self.config.transit.modes:
+                if mode.assign_type == "TRANSIT":
+                    desc = mode.description or mode.name
+                    self._skim_properties.append(
+                        Skimproperty(
+                            f"{mode.name}IVTT",
+                            f"{desc} in-vehicle travel time"[:40],
+                        )
+                    )
+            if self.config.transit.use_ccr:
+                self._skim_properties.extend(
+                    [
+                        Skimproperty("LINKREL", "Link reliability"),
+                        Skimproperty("CROWD", "Crowding penalty"),
+                        Skimproperty("EAWT", "Extra added wait time"),
+                        Skimproperty("CAPPEN", "Capacity penalty"),
+                    ]
+                )
+        return self._skim_properties
+
+    def emmebamk_skim_matrices(
+        self,
+        time_periods: List[str] = None,
+        transit_classes=None,
+        skim_properties: Skimproperty = None,
+    ) -> dict:
+        """Gets skim matrices from emmebank, or lazily creates them if they don't already exist."""
         create_matrix = self.controller.emme_manager.tool(
             "inro.emme.data.matrix.create_matrix"
         )
-        msg = f"Creating {time} skim matrices"
-        with self.controller.emme_manager.logbook_trace(msg):
-            for klass in self.config.transit.classes:
-                for skim_name, skim_desc in self._tmplt_skim_matrices():
-                    name = f"{time}_{klass.name}_{skim_name}"
-                    desc = f"{time} {klass.description}: {skim_desc}"
-                    matrix = scenario.emmebank.matrix(f'mf"{name}"')
-                    if not matrix:
-                        matrix = create_matrix(
-                            "mf", name, desc, scenario=scenario, overwrite=True
-                        )
-                    else:
-                        matrix.description = desc
-                    self._skim_matrices.append(matrix)
+        if time_periods is None:
+            time_periods = self.time_period_names
+        if not set(time_periods).is_subset(set(self.time_period_names)):
+            raise ValueError(
+                f"time_periods ({time_periods}) must be subset of time_period_names ({self.time_period_names})."
+            )
 
-    def _run_skims(self):
-        """Run the skim calculations, matrix result extraction and strategy analysis."""
+        if transit_classes is None:
+            transit_classes = self.config.transit_classes
+        if not set(transit_classes).is_subset(set(self.config.transit_classes)):
+            raise ValueError(
+                f"time_periods ({transit_classes}) must be subset of time_period_names ({self.config.transit_classes})."
+            )
+
+        if skim_properties is None:
+            skim_properties = self.skim_properties
+        if not set(skim_properties).is_subset(set(self.skim_properties)):
+            raise ValueError(
+                f"time_periods ({skim_properties}) must be subset of time_period_names ({self.skim_properties})."
+            )
+
+        _tp_tclass_skprop = itertools.product(
+            time_periods, transit_classes, skim_properties
+        )
+
+        for _tp, _tclass, _skprop in _tp_tclass_skprop:
+            if not self._skim_matrices[(_tp, _tclass, _skprop)]:
+                _name = f"{_tp}_{_tclass.name}_{_skprop.name}"
+                _desc = f"{_tp} {_tclass.description}: {_skprop.desc}"
+                _matrix = self.scenarios[_tp].emmebank.matrix(f'mf"{_name}"')
+                if not _matrix:
+                    _matrix = create_matrix(
+                        "mf", _name, _desc, scenario=self.scenarios[_tp], overwrite=True
+                    )
+                else:
+                    _matrix.description = _desc
+                self._skim_matrices[(_tp, _tclass, _skprop)] = _matrix
+        return {k: v for k, v in self._skim_matrices.items() if k in _tp_tclass_skprop}
+
+    def run_skim_set(self, time_period: str, transit_class: str):
+        """Run the transit skim calculations for a given time period and assignment class.
+
+        Results are stored in transit emmebank.
+
+        Steps:
+            1. determine if using transit capacity constraint
+            2. skim walk, wait time, boardings, and fares
+            3. skim in vehicle time by mode
+            4. mask transfers above max amount
+            5. mask if doesn't have required modes
+        """
         use_ccr = False
         if self.controller.iteration >= 1:
             use_ccr = self.config.transit.use_ccr
@@ -144,149 +221,275 @@ class TransitSkim(Component):
             "First and total wait time, number of boardings, "
             "fares, and total and transfer walk time"
         ):
-            self._skim_walk_wait_fares()
+            self._skim_walk_wait_boards_fares(time_period, transit_class)
         with self.controller.emme_manager.logbook_trace("In-vehicle time by mode"):
-            self._invehicle_time_by_mode()
+            self.skim_invehicle_time_by_mode(time_period, transit_class, use_ccr)
         if use_ccr:
             with self.controller.emme_manager.logbook_trace("CCR related skims"):
-                self._ccr_skims()
+                self.skim_reliability_crowding_capacity(time_period, transit_class)
+        self.mask_above_max_transfers(time_period, transit_class)
+        self.mask_if_not_required_modes(time_period, transit_class)
 
-    def _skim_walk_wait_fares(self):
-        """Skim basic results of wait, walk, board, and fares.
+    def skim_walk_wait_boards_fares(self, time_period: str, transit_class: str):
+        """Skim wait, walk, board, and fares for a given time period and transit assignment class.
 
         Skim the first and total wait time, number of boardings, (transfers + 1)
         fares, total walk time, total in-vehicle time.
         """
-        name = f"{self._time_period}_{self._assign_class.name}"
-        all_modes = [
-            m.id for m in self._network.modes() if m.type in ["TRANSIT", "AUX_TRANSIT"]
+        _tp_tclass = f"{time_period}_{transit_class.name}"
+        _network = self.networks[time_period]
+        _transit_mode_ids = [
+            m.id for m in _network.modes() if m.type in ["TRANSIT", "AUX_TRANSIT"]
         ]
         spec = {
             "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
-            "actual_first_waiting_times": f'mf"{name}_FIRSTWAIT"',
-            "actual_total_waiting_times": f'mf"{name}_TOTALWAIT"',
+            "actual_first_waiting_times": f'mf"{_tp_tclass}_FIRSTWAIT"',
+            "actual_total_waiting_times": f'mf"{_tp_tclass}_TOTALWAIT"',
             "by_mode_subset": {
-                "modes": all_modes,
-                "avg_boardings": f'mf"{name}_XFERS"',
-                "actual_aux_transit_times": f'mf"{name}_TOTALWALK"',
+                "modes": _transit_mode_ids,
+                "avg_boardings": f'mf"{_tp_tclass}_XFERS"',
+                "actual_aux_transit_times": f'mf"{_tp_tclass}_TOTALWALK"',
             },
         }
-        if self.config.transit.use_fares:
+        if self.config.use_fares:
             spec["by_mode_subset"].update(
                 {
-                    "actual_in_vehicle_costs": f'mf"{name}_IN_VEHICLE_COST"',
-                    "actual_total_boarding_costs": f'mf"{name}_FARE"',
+                    "actual_in_vehicle_costs": f'mf"{_tp_tclass}_IN_VEHICLE_COST"',
+                    "actual_total_boarding_costs": f'mf"{_tp_tclass}_FARE"',
                 }
             )
-        self._run_matrix_results(spec)
-        xfer_modes = []
-        for mode in self.config.transit.modes:
-            if mode.type == "WALK":
-                xfer_modes.append(mode.mode_id)
+
+        self.controller.emme_manager.matrix_results(
+            spec,
+            class_name=transit_class.name,
+            scenario=self.scenario[time_period],
+            num_processors=self.controller.num_processors,
+        )
+
+        self._calc_xfer_wait(time_period, transit_class.name)
+        self._calc_boardings(time_period, transit_class.name)
+        if self.config.transit.use_fares:
+            self._calc_fares(time_period, transit_class.name)
+
+    def _calc_xfer_walk(self, time_period, transit_class_name):
+        xfer_modes = [m.mode_id for m in self.config.modes if m.type == "WALK"]
+        tp_tclass = f"{time_period}_{transit_class_name}"
         spec = {
             "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
             "by_mode_subset": {
                 "modes": xfer_modes,
-                "actual_aux_transit_times": f'mf"{name}_XFERWALK"',
+                "actual_aux_transit_times": f'mf"{tp_tclass}_XFERWALK"',
             },
         }
-        self._run_matrix_results(spec)
-        matrix_calc = self.controller.emme_manager.tool(
-            "inro.emme.matrix_calculation.matrix_calculator"
-        )
-        spec_list = [
-            {  # convert number of boardings to number of transfers
-                "type": "MATRIX_CALCULATION",
-                "constraint": {
-                    "by_value": {
-                        "od_values": f'mf"{name}_XFERS"',
-                        "interval_min": 0,
-                        "interval_max": 9999999,
-                        "condition": "INCLUDE",
-                    }
-                },
-                "result": f'mf"{name}_XFERS"',
-                "expression": f'(mf"{name}_XFERS" - 1).max.0',
-            },
-            {
-                "type": "MATRIX_CALCULATION",
-                "constraint": {
-                    "by_value": {
-                        "od_values": f'mf"{name}_TOTALWAIT"',
-                        "interval_min": 0,
-                        "interval_max": 9999999,
-                        "condition": "INCLUDE",
-                    }
-                },
-                "result": f'mf"{name}_XFERWAIT"',
-                "expression": f'(mf"{name}_TOTALWAIT" - mf"{name}_FIRSTWAIT").max.0',
-            },
-        ]
-        if self.config.transit.use_fares:
-            # sum in-vehicle cost and boarding cost to get the fare paid
-            spec_list.append(
-                {
-                    "type": "MATRIX_CALCULATION",
-                    "constraint": None,
-                    "result": f'mf"{name}_FARE"',
-                    "expression": f'(mf"{name}_FARE" + mf"{name}_IN_VEHICLE_COST)"',
-                }
-            )
-        matrix_calc(
-            spec_list, scenario=self._scenario, num_processors=self._num_processors
+        self.controller.emme_manager.matrix_results(
+            spec,
+            class_name=transit_class_name,
+            scenario=self.scenarios[time_period],
+            num_processors=self.controller.num_processors,
         )
 
-    def _invehicle_time_by_mode(self):
-        """Skim in-vehicle by mode (used in this assignment class)."""
-        network = self._network
-        matrix_calc = self.controller.emme_manager.tool(
-            "inro.emme.matrix_calculation.matrix_calculator"
-        )
-        name = f"{self._time_period}_{self._assign_class.name}"
-        mode_combinations = self._get_emme_mode_ids()
-        total_ivtt_expr = []
-        if self.config.transit.use_ccr and self.controller.iteration >= 1:
-            # calculate in-vehicle travel time by mode
-            # set temp attribute @mode_timtr to contain the non-congested in-vehicle
-            # times for segments of the mode of interest
-            create_temps = self.controller.emme_manager.temp_attributes_and_restore
-            attrs = [["TRANSIT_SEGMENT", "@mode_timtr", "base time by mode"]]
-            with create_temps(self._scenario, attrs):
-                for mode_name, modes in mode_combinations:
-                    network.create_attribute("TRANSIT_SEGMENT", "@mode_timtr")
-                    for line in network.transit_lines():
-                        if line.mode.id in modes:
-                            for segment in line.segments():
-                                segment["@mode_timtr"] = segment["@base_timtr"]
-                    self.controller.emme_manager.copy_attribute_values(
-                        network, self._scenario, {"TRANSIT_SEGMENT": ["@mode_timtr"]}
-                    )
-                    network.delete_attribute("TRANSIT_SEGMENT", "@mode_timtr")
-                    ivtt_matrix = f'mf"{name}_{mode_name}IVTT"'
-                    total_ivtt_expr.append(ivtt_matrix)
-                    self._run_strategy_analysis(
-                        {"in_vehicle": "@mode_timtr"}, ivtt_matrix
-                    )
-        else:
-            for mode_name, modes in mode_combinations:
-                ivtt_matrix = f'mf"{name}_{mode_name}IVTT"'
-                total_ivtt_expr.append(ivtt_matrix)
-                spec = {
-                    "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
-                    "by_mode_subset": {
-                        "modes": modes,
-                        "actual_in_vehicle_times": ivtt_matrix,
-                    },
+    def _calc_xfer_wait(self, time_period, transit_class_name):
+        """Calculate transfer wait from total wait time and initial wait time and add to Emmebank.
+
+        TODO convert this type of calculation to numpy
+        """
+        tp_tclass = f"{time_period}_{transit_class_name}"
+        spec = {
+            "type": "MATRIX_CALCULATION",
+            "constraint": {
+                "by_value": {
+                    "od_values": f'mf"{tp_tclass}_TOTALWAIT"',
+                    "interval_min": 0,
+                    "interval_max": 9999999,
+                    "condition": "INCLUDE",
                 }
-                self._run_matrix_results(spec)
-        # sum total ivtt across all modes
+            },
+            "result": f'mf"{tp_tclass}_XFERWAIT"',
+            "expression": f'(mf"{tp_tclass}_TOTALWAIT" - mf"{tp_tclass}_FIRSTWAIT").max.0',
+        }
+
+        self.controller.emme_manager.matrix_calculator(
+            spec,
+            scenario=self.scenarios[time_period],
+            num_processors=self.controller.num_processors,
+        )
+
+    def _calc_boardings(self, time_period: str, transit_class_name: str):
+        """Calculate # boardings from # of transfers and add to Emmebank.
+
+        TODO convert this type of calculation to numpy
+        """
+        _tp_tclass = f"m{time_period}_{transit_class_name}"
+        spec = {
+            "type": "MATRIX_CALCULATION",
+            "constraint": {
+                "by_value": {
+                    "od_values": f"m{_tp_tclass}_XFERS",
+                    "interval_min": 0,
+                    "interval_max": 9999999,
+                    "condition": "INCLUDE",
+                }
+            },
+            # CHECK should this be BOARDS or similar, not xfers?
+            "result": f"m{_tp_tclass}_XFERS",
+            "expression": f'("m{_tp_tclass}_XFERS", - 1).max.0',
+        }
+
+        self.controller.emme_manager.matrix_calculator(
+            spec,
+            scenario=self.scenarios[time_period],
+            num_processors=self.controller.num_processors,
+        )
+
+    def _calc_fares(self, time_period: str, transit_class_name: str):
+        """Calculate fares as sum in-vehicle cost and boarding cost to get the fare paid and add to Emmebank.
+
+        TODO convert this type of calculation to numpy
+        """
+        _tp_tclass = f"m{time_period}_{transit_class_name}"
         spec = {
             "type": "MATRIX_CALCULATION",
             "constraint": None,
-            "result": f'mf"{name}_TOTALIVTT"',
+            "result": f'mf"{_tp_tclass}_FARE"',
+            "expression": f'(mf"{_tp_tclass}_FARE" + mf"{_tp_tclass}_IN_VEHICLE_COST)"',
+        }
+
+        self.controller.emme_manager.matrix_calculator(
+            spec,
+            scenario=self.scenarios[time_period],
+            num_processors=self.controller.num_processors,
+        )
+
+    @staticmethod
+    def _segments_with_modes(_network, _modes: Union[Collection[str], str]):
+        _modes = list(_modes)
+        segments = [
+            li.segments() for li in _network.transit_lines() if li.mode.id in _modes
+        ]
+        return segments
+
+    def _invehicle_time_by_mode_ccr(
+        self, time_period: str, transit_class: str, mode_combinations
+    ) -> List[str]:
+        """Calculate in-vehicle travel time by mode using CCR and store results in Emmebank.
+
+        Args:
+            time_period (_type_): time period abbreviation
+            transit_class (_type_): transit class name
+            mode_combinations (_type_): TODO
+
+        Returns:
+            List of matrix names in Emmebank to sum together to get total in-vehicle travel time.
+        """
+
+        _network = self.networks[time_period]
+        _scenario = self.scenarios[time_period]
+        _tp_tclass = f"{time_period}_{transit_class.name}"
+        _total_ivtt_expr = []
+        create_temps = self.controller.emme_manager.temp_attributes_and_restore
+        temp_attrs = [["TRANSIT_SEGMENT", "@mode_timtr", "base time by mode"]]
+        with create_temps(_scenario, temp_attrs):
+            for _mode_name, _modes in mode_combinations:
+                _network.create_attribute("TRANSIT_SEGMENT", "@mode_timtr")
+                _li_segs_with_mode = TransitSkim._segments_with_modes(_network, _modes)
+                # set temp attribute @mode_timtr to contain the non-congested in-vehicle
+                # times for segments of the mode of interest
+                for segment in _li_segs_with_mode:
+                    segment["@mode_timtr"] = segment["@base_timtr"]
+                # not sure why we to copy this if we are deleting it in next line? - ES
+                self.controller.emme_manager.copy_attribute_values(
+                    self.networks[time_period],
+                    _scenario,
+                    {"TRANSIT_SEGMENT": ["@mode_timtr"]},
+                )
+                self.networks[time_period].delete_attribute(
+                    "TRANSIT_SEGMENT", "@mode_timtr"
+                )
+                _ivtt_matrix_name = f'mf"{_tp_tclass}_{_mode_name}IVTT"'
+                _total_ivtt_expr.append(_ivtt_matrix_name)
+                self._run_strategy_analysis(
+                    {"in_vehicle": "@mode_timtr"}, _ivtt_matrix_name
+                )
+        return _total_ivtt_expr
+
+    def _invehicle_time_by_mode_no_ccr(
+        self, time_period: str, transit_class: str, mode_combinations
+    ) -> List[str]:
+        """Calculate in-vehicle travel time by without CCR and store results in Emmebank.
+
+        Args:
+            time_period (_type_): time period abbreviation
+            transit_class (_type_): transit class name
+            mode_combinations (_type_): TODO
+
+        Returns: List of matrix names in Emmebank to sum together to get total in-vehicle travel time.
+
+        """
+        _tp_tclass = f"{time_period}_{transit_class.name}"
+        _total_ivtt_expr = []
+        for _mode_name, modes in mode_combinations:
+            _ivtt_matrix_name = f'mf"{_tp_tclass}_{_mode_name}IVTT"'
+            _total_ivtt_expr.append(_ivtt_matrix_name)
+            spec = {
+                "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
+                "by_mode_subset": {
+                    "modes": modes,
+                    "actual_in_vehicle_times": _ivtt_matrix_name,
+                },
+            }
+            self.controller.emme_manager.matrix_results(
+                spec,
+                class_name=transit_class.name,
+                scenario=self.scenarios[time_period],
+                num_processors=self.controller.num_processors,
+            )
+        return _total_ivtt_expr
+
+    def skim_invehicle_time_by_mode(
+        self, time_period: str, transit_class: str, use_ccr: bool = False
+    ) -> None:
+        """Skim in-vehicle by mode for a time period and transit class and store results in Emmebank.
+
+        Args:
+            time_period (str): time period abbreviation
+            transit_class (str): transit class name
+            use_ccr (bool): if True, will use crowding, capacity, and reliability (ccr).
+                Defaults to False
+
+        """
+        mode_combinations = self._get_emme_mode_ids()
+        if use_ccr:
+            total_ivtt_expr = self._invehicle_time_by_mode_ccr(
+                time_period, transit_class, mode_combinations
+            )
+        else:
+            total_ivtt_expr = self._invehicle_time_by_mode_no_ccr(
+                time_period, transit_class, mode_combinations
+            )
+        # sum total ivtt across all modes
+        self._calc_total_ivt(time_period, transit_class, total_ivtt_expr)
+
+    def _calc_total_ivt(
+        self, time_period: str, transit_class: str, total_ivtt_expr: list[str]
+    ) -> None:
+        """Sums matrices to get total in vehicle time and stores in the Emmebank.
+
+        Args:
+            time_period (str): time period abbreviation
+            transit_class (str): transit class name
+            total_ivtt_expr (list[str]): List of matrix names in Emmebank which have IVT to sum to get total.
+        """
+        _tp_tclass = f"{time_period}_{transit_class.name}"
+        spec = {
+            "type": "MATRIX_CALCULATION",
+            "constraint": None,
+            "result": f'mf"{_tp_tclass }_TOTALIVTT"',
             "expression": "+".join(total_ivtt_expr),
         }
-        matrix_calc(spec, scenario=self._scenario, num_processors=self._num_processors)
+
+        self.controller.emme_manager.matrix_calculator(
+            spec, scenario=self._scenario, num_processors=self.controller.num_processors
+        )
 
     def _get_emme_mode_ids(self) -> List[Tuple[str, List[str]]]:
         """Get the Emme mode IDs used in the assignment.
@@ -317,7 +520,7 @@ class TransitSkim(Component):
         ]
         if self.config.transit.use_fares:
             # map to used modes in apply fares case
-            fare_modes = _defaultdict(lambda: set([]))
+            fare_modes = defaultdict(lambda: set([]))
             for line in self._network.transit_lines():
                 fare_modes[line["#src_mode"]].add(line.mode.id)
             emme_mode_ids = [
@@ -327,42 +530,60 @@ class TransitSkim(Component):
             emme_mode_ids = [(mode.name, [mode.mode_id]) for mode in valid_modes]
         return emme_mode_ids
 
-    def _ccr_skims(self):
-        """Generate skim results for CCR assignment."""
-        name = f"{self._time_period}_{self._assign_class.name}"
-        # # Link unreliability
-        # self._run_strategy_analysis({"in_vehicle": "@ul1"}, f'mf"{name}_LINKREL"')
-        # Crowding penalty
-        self._run_strategy_analysis({"in_vehicle": "@ccost"}, f'mf"{name}_CROWD"')
-        # skim node reliability, Extra added wait time (EAWT)
-        self._run_strategy_analysis({"boarding": "@eawt"}, f'mf"{name}_EAWT"')
-        # skim capacity penalty
-        self._run_strategy_analysis(
-            {"boarding": "@capacity_penalty"}, f'mf"{name}_CAPPEN"'
-        )
+    def skim_reliability_crowding_capacity(
+        self, time_period: str, transit_class
+    ) -> None:
+        """Generate skim results for CCR assignment and stores results in Emmebank.
 
-    def _run_matrix_results(self, spec):
-        """Run Emme Matrix results tool."""
-        matrix_results = self.controller.emme_manager.tool(
-            "inro.emme.transit_assignment.extended.matrix_results"
-        )
-        matrix_results(
-            spec,
-            class_name=self._assign_class.name,
-            scenario=self._scenario,
-            num_processors=self._num_processors,
-        )
-
-    def _run_strategy_analysis(self, components: Dict[str, str], matrix_name: str):
-        """TODO.
+        Generates the following:
+        1. Link Unreliability: LINKREL
+        2. Crowding penalty: CROWD
+        3. Extra added wait time: EAWT
+        4. Capacity penalty: CAPPEN
 
         Args:
-            components: TODO.
-            matrix_name: TODO.
+            time_period (str): time period abbreviation
+            transit_class: transit class
         """
+
+        # Link unreliability
+        self._run_strategy_analysis(
+            time_period, transit_class, {"in_vehicle": "@ul1"}, "LINKREL"
+        )
+        # Crowding penalty
+        self._run_strategy_analysis(
+            time_period, transit_class, {"in_vehicle": "@ccost"}, "CROWD"
+        )
+        # skim node reliability, extra added wait time (EAWT)
+        self._run_strategy_analysis(
+            time_period, transit_class, {"boarding": "@eawt"}, "EAWT"
+        )
+        # skim capacity penalty
+        self._run_strategy_analysis(
+            time_period, transit_class, {"boarding": "@capacity_penalty"}, "CAPPEN"
+        )
+
+    def _run_strategy_analysis(
+        self,
+        time_period: str,
+        transit_class,
+        components: Dict[str, str],
+        matrix_name_suffix: str,
+    ):
+        """Runs strategy analysis in Emme and stores results in emmebank.
+
+        Args:
+            time_period (str): Time period name abbreviation
+            transit_class (_type_): _description_
+            components (Dict[str, str]): _description_
+            matrix_name_suffix (str): Appended to time period and transit class name to create output matrix name.
+        """
+        _tp_tclass = f"{time_period}_{transit_class.name}"
+        _matrix_name = f'mf"{_tp_tclass}_{matrix_name_suffix}"'
         strategy_analysis = self.controller.emme_manager.tool(
             "inro.emme.transit_assignment.extended.strategy_based_analysis"
         )
+
         spec = {
             "trip_components": components,
             "sub_path_combination_operator": "+",
@@ -373,45 +594,73 @@ class TransitSkim(Component):
             },
             "analyzed_demand": None,
             "constraint": None,
-            "results": {"strategy_values": matrix_name},
+            "results": {"strategy_values": _matrix_name},
             "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS",
         }
         strategy_analysis(
             spec,
-            class_name=self._assign_class.name,
-            scenario=self._scenario,
-            num_processors=self._num_processors,
+            class_name=transit_class.name,
+            scenario=self.scenarios[time_period],
+            num_processors=self.controller.num_processors,
         )
 
-    def _mask_allpen(self):
-        """Reset skims to 0 if not both local and premium."""
-        localivt_skim = self._matrix_cache.get_data(
-            f'mf"{self._time_period}_ALLPEN_LBIVTT"'
-        )
-        totalivt_skim = self._matrix_cache.get_data(
-            f'mf"{self._time_period}_ALLPEN_TOTALIVTT"'
-        )
-        has_premium = np.greater((totalivt_skim - localivt_skim), 0)
-        has_both = np.greater(localivt_skim, 0) * has_premium
-        for skim in self._tmplt_skim_matrices(names_only=True):
-            mat_name = f'mf"{self._time_period}_ALLPEN_{skim}"'
-            data = self._matrix_cache.get_data(mat_name)
-            self._matrix_cache.set_data(mat_name, data * has_both)
+    def mask_if_not_required_modes(self, time_period: str, transit_class) -> None:
+        """
+        Enforce the `required_mode_combo` parameter by setting IVTs to 0 if don't have required modes.
 
-    def _mask_transfers(self):
-        """Reset skims to 0 if number of transfers is greater than max_transfers."""
-        max_transfers = self.config.transit.max_transfers
-        for klass in self.config.transit.classes:
-            xfers = self._matrix_cache.get_data(
-                f'mf"{self._time_period}_{klass.name}_XFERS"'
+        Args:
+            time_period (str): Time period name abbreviation
+            transit_class (_type_): _description_
+        """
+        if not transit_class.required_mode_combo:
+            return
+
+        _ivt_skims = [
+            self.matrix_cache[time_period].get_data(
+                f'mf"{time_period}_{transit_class.name}_{mode.name}IVTT"'
             )
-            xfer_mask = np.less_equal(xfers, max_transfers)
-            for skim in self._tmplt_skim_matrices(names_only=True):
-                mat_name = f'mf"{self._time_period}_{klass.name}_{skim}"'
-                data = self._matrix_cache.get_data(mat_name)
-                self._matrix_cache.set_data(mat_name, data * xfer_mask)
+            for mode in transit_class.required_mode_combo
+        ]
 
-    def _export_skims(self):
+        # multiply all IVT skims together and see if they are greater than zero
+        has_all = np.prod(np.vstack(_ivt_skims), axis=0)
+
+        self._mask_skim_set(time_period, transit_class, has_all)
+
+    def mask_above_max_transfers(self, time_period: str, transit_class):
+        """Reset skims to 0 if number of transfers is greater than max_transfers.
+
+        Args:
+            time_period (str): Time period name abbreviation
+            transit_class (_type_): _description_
+        """
+        max_transfers = self.config.transit.max_transfers
+        xfers = self.matrix_cache[time_period].get_data(
+            f'mf"{time_period}_{transit_class.name}_XFERS"'
+        )
+        xfer_mask = np.less_equal(xfers, max_transfers)
+        self._mask_skim_set(time_period, transit_class, xfer_mask)
+
+    def _mask_skim_set(self, time_period: str, transit_class, mask_array: NumpyArray):
+        """Mask a skim set (set of skims for a given time period and transit class) based on an array.
+
+        Array values of >0 are kept. Zero are not.
+
+        TODO add in checks for mask_array dimensions and values
+
+        Args:
+            time_period (str): Time period name abbreviation
+            transit_class (_type_): _description_
+            mask_array (NumpyArray): _description_
+        """
+        mask_array = np.greater(mask_array, 0)
+        for skim_name in self.emmebamk_skim_matrices(
+            time_periods=time_period, transit_class=transit_class
+        ):
+            skim_data = self.matrix_cache[time_period].get_data(skim_name)
+            self.matrix_cache[time_period].set_data(skim_name, skim_data * mask_array)
+
+    def _export_skims(self, time_period):
         """Export skims to OMX files by period."""
         # NOTE: skims in separate file by period
         omx_file_path = self.get_abs_path(
@@ -422,10 +671,12 @@ class TransitSkim(Component):
             omx_file_path,
             "w",
             self._scenario,
-            matrix_cache=self._matrix_cache,
+            matrix_cache=self.matrix_cache[time_period],
             mask_max_value=1e7,
         ) as omx_file:
-            omx_file.write_matrices(self._skim_matrices)
+            omx_file.write_matrices(
+                self.emmebank_skim_matrices(time_period=time_period)
+            )
 
     def _debug_report(self):
         num_zones = len(self._scenario.zone_numbers)
@@ -442,11 +693,13 @@ class TransitSkim(Component):
             "name                            min       max      mean           sum",
             level="DEBUG",
         )
-        for matrix in self._skim_matrices:
-            values = self._matrix_cache.get_data(matrix)
+
+        for time_period, transit_class, skim_property in self._skim_matrices.keys():
+            matrix_name = f'mf"{time_period}_{transit_class.name}_{skim_property}"'
+            values = self.matrix_cache[time_period].get_data(matrix_name)
             data = np.ma.masked_outside(values, -9999999, 9999999)
             stats = (
-                f"{matrix.name:25} {data.min():9.4g} {data.max():9.4g} "
+                f"{matrix_name:25} {data.min():9.4g} {data.max():9.4g} "
                 f"{data.mean():9.4g} {data.sum(): 13.7g}"
             )
             self.logger.log(stats, level="DEBUG")

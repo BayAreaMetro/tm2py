@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING, Dict, List, Union
 import numpy as np
 
 from tm2py.components.component import Component
-from tm2py.logger import LogStartEnd
 from tm2py.emme.manager import Emmebank
 from tm2py.emme.matrix import OMXManager
+from tm2py.logger import LogStartEnd
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
@@ -152,20 +152,24 @@ class PrepareHighwayDemand(PrepareDemand):
             controller (RunController): Reference to run controller object.
         """
         super().__init__(controller)
-        self._emmebank_path = None
+        self._emmebank = None
 
     def validate_inputs(self):
         # TODO
         pass
 
+    @property
+    def emmebank(self):
+        if self._emmebank == None:
+            self._emmebank = self.emme_manager.highway_emmebank
+        return self._emmebank
+
     # @LogStartEnd("prepare highway demand")
     def run(self):
         """Open combined demand OMX files from demand models and prepare for assignment."""
-        self._emmebank_path = self.get_abs_path(self.config.emme.highway_database_path)
 
-        self._emmebank = self.controller.emme_manager.emmebank(self._emmebank_path)
         self._create_zero_matrix()
-        for time in self.time_period_names():
+        for time in self.time_period_names:
             for klass in self.config.highway.classes:
                 self._prepare_demand(klass.name, klass.description, klass.demand, time)
 
@@ -189,7 +193,7 @@ class PrepareHighwayDemand(PrepareDemand):
                  "factor": <factor to apply to demand in this file>}
             time_period (str): the time time_period ID (name)
         """
-        self._scenario = self.get_emme_scenario(self._emmebank, time_period)
+        _scenario = self._emmebank.scenario(time_period)
         demand = self._read_demand(demand_config[0], {"period": time_period.upper()})
         for file_config in demand_config[1:]:
             demand = demand + self._read_demand(
@@ -218,7 +222,7 @@ class PrepareTransitDemand(PrepareDemand):
         emmebank_path = self.get_abs_path(self.config.emme.transit_database_path)
         self._emmebank = self.controller.emme_manager.emmebank(emmebank_path)
         self.create_zero_matrix()
-        for time in self.time_period_names():
+        for time in self.time_period_names:
             for klass in self.config.transit.classes:
                 self._prepare_demand(
                     klass.skim_set_id, klass.description, klass.demand, time

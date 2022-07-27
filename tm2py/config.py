@@ -1007,6 +1007,7 @@ class TransitClassConfig(ConfigItem):
     description: str
     mode_types: Tuple[str, ...]
     demand: Tuple[ClassDemandConfig, ...]
+    required_mode_combo: Optional[List[str]] = Field(default=None)
 
 
 @dataclass(frozen=True)
@@ -1049,7 +1050,8 @@ class EmmeConfig(ConfigItem):
             (initial imported) scenario with all time period data
         project_path: relative path from run_dir to Emme desktop project (.emp)
         highway_database_path: relative path to highway Emmebank
-        active_database_paths: list of relative paths to active mode Emmebanks
+        active_north_database_path:  relative paths to active mode Emmebank for north bay
+        active_south_database_path:  relative paths to active mode Emmebank for south bay
         transit_database_path: relative path to transit Emmebank
         num_processors: the number of processors to use in Emme procedures,
             either as an integer, or value MAX, MAX-N. Typically recommend
@@ -1060,7 +1062,8 @@ class EmmeConfig(ConfigItem):
     all_day_scenario_id: int
     project_path: pathlib.Path
     highway_database_path: pathlib.Path
-    active_database_paths: Tuple[pathlib.Path, ...]
+    active_north_database_path: pathlib.Path
+    active_south_database_path: pathlib.Path
     transit_database_path: pathlib.Path
     num_processors: str = Field(regex=r"^MAX$|^MAX-\d+$|^\d+$")
 

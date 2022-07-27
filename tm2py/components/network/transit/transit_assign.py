@@ -1,21 +1,21 @@
 """Transit assignment module."""
 
 from __future__ import annotations
-from typing import Union, List, Dict, Set, Tuple, TYPE_CHECKING
-from collections import defaultdict as _defaultdict
-import os
 
 import json as _json
+import os
+from collections import defaultdict as _defaultdict
+from typing import TYPE_CHECKING, Dict, List, Set, Tuple, Union
 
+from tm2py import tools
 from tm2py.components.component import Component
-from tm2py.components.demand.demand import PrepareTransitDemand
+from tm2py.components.demand.prepare_demand import PrepareTransitDemand
 from tm2py.emme.manager import EmmeNetwork
 from tm2py.logger import LogStartEnd
-from tm2py import tools
 
 if TYPE_CHECKING:
-    from tm2py.controller import RunController
     from tm2py.config import TransitClassConfig, TransitConfig, TransitModeConfig
+    from tm2py.controller import RunController
 
 
 _SEGMENT_COST_FUNCTION = """
@@ -121,13 +121,14 @@ EmmeTransitSpec = Dict[
 class TransitAssignment(Component):
     """Run transit assignment."""
 
-    def __init__(self, controller: RunController):
+    def __init__(self, controller: "RunController"):
         """Constructor for TransitAssignment.
 
         Args:
             controller: RunController object.
         """
         super().__init__(controller)
+        self.config = self.controller.config.transit
         self.demand = PrepareTransitDemand(self.controller)
         self._num_processors = tools.parse_num_processors(
             self.config.emme.num_processors
@@ -138,7 +139,9 @@ class TransitAssignment(Component):
     @LogStartEnd("Transit assignments")
     def run(self):
         """Run transit assignments."""
-        emmebank_path = self.get_abs_path(self.config.emme.transit_database_path)
+        emmebank_path = self.get_abs_path(
+            self.controller.config.emme.transit_database_path
+        )
         emmebank = self.controller.emme_manager.emmebank(emmebank_path)
         use_ccr = False
         if self.controller.iteration >= 1:
@@ -146,7 +149,7 @@ class TransitAssignment(Component):
             self.demand.run()
         else:
             self.demand.create_zero_matrix(emmebank)
-        for self._time_period in self.time_period_names():
+        for self._time_period in self.time_period_names:
             msg = f"Transit assignment for period {self._time_period}"
             with self.logger.log_start_end(msg):
                 self._scenario = self.get_emme_scenario(emmebank, self._time_period)

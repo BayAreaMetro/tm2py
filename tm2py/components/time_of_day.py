@@ -1,12 +1,12 @@
 """Module with helpful matrix helper functions."""
 
 from typing import Collection, Dict, Mapping, Optional, Union
+
 import numpy as np
 import pandas as pd
 
 from tm2py.components.component import Component, Subcomponent
 from tm2py.config import TimeSplitConfig
-
 from tm2py.logger import LogStartEnd
 
 NumpyArray = np.array

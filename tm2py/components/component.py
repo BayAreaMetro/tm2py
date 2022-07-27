@@ -7,9 +7,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Union
 
-from typing import List, Union, TYPE_CHECKING
-
-from tm2py.emme.manager import EmmeScenario, Emmebank
+from tm2py.emme.manager import Emmebank, EmmeScenario
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
@@ -49,7 +47,7 @@ class Component(ABC):
 
     Template Class methods - component classes inherit:
         get_abs_path: convenience method to get absolute path of the run directory
-        get_emme_scenario: ....
+
 
     Template Class Properties - component classes inherit:
         controller: RunController object
@@ -92,30 +90,13 @@ class Component(ABC):
         """Parent controller."""
         return self._controller
 
+    @property
+    def emme_manager(self):
+        return self.controller.emme_manager
+
     def get_abs_path(self, path: Union[Path, str]) -> str:
         """Convenince method to get absolute path from run directory."""
-        return self.controller.get_abs_path(path).__str__()
-
-    def get_emme_scenario(
-        self, emmebank: Union[Emmebank, str], time_period: str
-    ) -> EmmeScenario:
-        """Get the Emme scenario object from the Emmebank at emmebank_path for the time_period ID.
-
-        Args:
-            emmebank: valid Emmebank path, absolute or relative to root run directory,
-                or already constructed Emmebank object
-            time_period: valid time_period ID
-
-        Returns
-            Emme Scenario object (see Emme API Reference)
-        """
-        if not os.path.isabs(emmebank_path):
-            emmebank_path = self.get_abs_path(emmebank_path)
-        emmebank = self.controller.emme_manager.emmebank(emmebank_path)
-        scenario_id = {
-            tp.name: tp.emme_scenario_id for tp in self.controller.config.time_periods
-        }[time_period.lower()]
-        return emmebank.scenario(scenario_id)
+        return self.controller.get_abs_path(path).__str__
 
     @property
     def time_period_names(self) -> List[str]:

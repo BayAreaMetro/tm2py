@@ -8,10 +8,13 @@ Contains EmmeManager class for access to common Emme-related procedures
 and Modeller.
 """
 
+import multiprocessing
 import os
+import re
 from contextlib import contextmanager as _context
+from pathlib import Path
 from socket import error as _socket_error
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from ..tools import emme_context
 
@@ -20,7 +23,8 @@ emme_context()
 import inro.emme.desktop.app as _app
 
 if TYPE_CHECKING:
-    from tm2py.emme.manager import EmmeScenario, EmmeNetwork
+    from tm2py.config import EmmeConfig
+    from tm2py.emme.manager import EmmeNetwork, EmmeScenario
 
 # PyLint cannot build AST from compiled Emme libraries
 # so disabling relevant import module checks
@@ -44,43 +48,116 @@ EmmeDesktopApp = _app.App
 _EMME_PROJECT_REF = {}
 
 
+class EmmeBank:
+    """Emmebamk wrapper class."""
+
+    def __init__(self, emme_manager, path: Union[str, Path]):
+        self.emme_manager = emme_manager
+        self.controller = self.emme_project.controller
+        self._path = Path(path)
+        self._emmebank = None
+        self.scenario_dict = {
+            tp.name: tp.emme_scenario_id for tp in self.controller.config.time_periods
+        }
+
+    @property
+    def emmebank(self) -> Emmebank:
+        if self._emmebank is None:
+            self._emmebank = Emmebank(self.path)
+        return self._emmebank
+
+    @property
+    def path(self) -> Path:
+        """Return the path to the Emmebank."""
+        if not self._path.exists():
+            self._path = self.get_abs_path(self._path)
+        if not self._path.exists():
+            raise (FileNotFoundError(f"Emmebank not found: {self._path}"))
+        if not self._path.endswith("emmebank"):
+            self._path = os.path.join(self._path, "emmebank")
+        return self._path
+
+    def change_dimensions(self, dimensions: Dict[str, int]):
+        """Change the Emmebank dimensions as specified. See the Emme API help for details.
+
+        Args:
+            emmebank: the Emmebank object to change the dimensions
+            dimensions: dictionary of the specified dimensions to set.
+        """
+        dims = self.emmebank.dimensions
+        new_dims = dims.copy()
+        new_dims.update(dimensions)
+        if dims != new_dims:
+            change_dimensions = self.emme_manager.tool(
+                "inro.emme.data.database.change_database_dimensions"
+            )
+            change_dimensions(new_dims, self.emmebank, keep_backup=False)
+
+    def scenario(self, time_period: str):
+        """Return the EmmeScenario for the given time period.
+
+        Args:
+            time_period: valid time period abbreviation
+        """
+
+        _scenario_id = self.scenario_dict[time_period.lower()]
+        return self.emmebank.scenario(_scenario_id)
+
+
 class EmmeManager:
-    """Centralized cache for Emme project and related calls for traffic and transit assignments.
+    """Centralized cache for a single Emme project and related calls.
+
+    Leverages EmmeConfig.
 
     Wraps Emme Desktop API (see Emme API Reference for additional details on the Emme objects).
     """
 
-    def __init__(self):
+    def __init__(self, controller, emme_config: "EmmeConfig"):
         """The EmmeManager constructor.
 
         Maps an Emme project path to Emme Desktop API object for reference
         (projects are opened only once).
         """
-        self._project_cache = _EMME_PROJECT_REF
+        self.controller = controller
+        self.config = emme_config
 
-    def close_all(self):
+        self.project_path = self.controller.get_abs_path(self.config.project_path)
+
+        # see if works without os.path.normcase(os.path.realpath(project_path))
+        self.highway_database_path = self.controller.get_abs_path(
+            self.config.highway_database_path
+        )
+        self.transit_database_path = self.controller.get_abs_path(
+            self.config.transit_database_path
+        )
+        self.active_north_database_path = self.controller.get_abs_path(
+            self.config.active_north_database_path
+        )
+        self.active_south_database_path = self.controller.get_abs_path(
+            self.config.active_south_database_path
+        )
+
+        self._num_processors = None
+        self._project = None
+        self._modeller = None
+
+        self._highway_emmebank = None
+        self._transit_emmebank = None
+        self._active_north_emmebank = None
+        self._active_south_emmebank = None
+
+        # Initialize Modeller to use Emme assignment tools and other APIs
+        self._emme_manager.modeller(project)
+
+    def close(self):
         """Close all open cached Emme project(s).
 
         Should be called at the end of the model process / Emme assignments.
         """
-        while self._project_cache:
-            _, app = self._project_cache.popitem()
-            app.close()
+        self._project.close()
 
-    def create_project(self, project_dir: str, name: str) -> EmmeDesktopApp:
-        """Create, open and return Emme project.
-
-        Args:
-            project_dir: path to Emme root directory for new Emme project
-            name: name for the Emme project
-
-        Returns:
-            Emme Desktop App object, see Emme API Reference, Desktop section for details.
-        """
-        emp_path = _app.create_project(project_dir, name)
-        return self.project(emp_path)
-
-    def project(self, project_path: str) -> EmmeDesktopApp:
+    @property
+    def project(self) -> EmmeDesktopApp:
         """Return already open Emme project, or open new Desktop session if not found.
 
         Args:
@@ -89,55 +166,20 @@ class EmmeManager:
         Returns:
             Emme Desktop App object, see Emme API Reference, Desktop section for details.
         """
-        project_path = os.path.normcase(os.path.realpath(project_path))
-        emme_project = self._project_cache.get(project_path)
-        if emme_project:
+        if self._project is not None:
             try:  # Check if the Emme window was closed
-                emme_project.current_window()
+                self._project.current_window()
             except _socket_error:
-                emme_project = None
+                self._project = None
         # if window is not opened in this process, start a new one
-        if emme_project is None:
-            if not os.path.isfile(project_path):
-                raise Exception(f"Emme project path does not exist {project_path}")
-            emme_project = _app.start_dedicated(
-                visible=True, user_initials="inro", project=project_path
+        if self._project is None:
+            self._project = _app.start_dedicated(
+                visible=True, user_initials="inro", project=self.project_path
             )
-            self._project_cache[project_path] = emme_project
-        return emme_project
+        return self._project
 
-    @staticmethod
-    def emmebank(path: str) -> Emmebank:
-        """Open and return the Emmebank at path.
-
-        Args:
-            path: valid system path pointing to an Emmebank file
-        Returns:
-            Emmebank object, see Emme API Reference, Database section for details.
-        """
-        if not path.endswith("emmebank"):
-            path = os.path.join(path, "emmebank")
-        return Emmebank(path)
-
-    def change_emmebank_dimensions(
-        self, emmebank: Emmebank, dimensions: Dict[str, int]
-    ):
-        """Change the Emmebank dimensions as specified. See the Emme API help for details.
-
-        Args:
-            emmebank: the Emmebank object to change the dimensions
-            dimensions: dictionary of the specified dimensions to set.
-        """
-        dims = emmebank.dimensions
-        new_dims = dims.copy()
-        new_dims.update(dimensions)
-        if dims != new_dims:
-            change_dimensions = self.tool(
-                "inro.emme.data.database.change_database_dimensions"
-            )
-            change_dimensions(new_dims, emmebank, keep_backup=False)
-
-    def modeller(self, emme_project: EmmeDesktopApp = None) -> EmmeModeller:
+    @property
+    def modeller(self) -> EmmeModeller:
         """Initialize and return Modeller object.
 
         If Modeller has not already been initialized it will do so on
@@ -152,18 +194,37 @@ class EmmeManager:
             Emme Modeller object, see Emme API Reference, Modeller section for details.
         """
         # pylint: disable=E0611, E0401, E1101
-        try:
-            return EmmeModeller()
-        except AssertionError as error:
-            if emme_project is None:
-                if self._project_cache:
-                    emme_project = next(iter(self._project_cache.values()))
-                else:
-                    raise Exception(
-                        "modeller not yet initialized and no cached Emme project,"
-                        " emme_project arg must be provided"
-                    ) from error
-            return EmmeModeller(emme_project)
+        if self._modeller is None:
+            self._modeller = EmmeModeller(self.project)
+        return self._modeller
+
+    @property
+    def highway_emmebank(self) -> EmmeBank:
+        if self._highway_emmebank is None:
+            self._highway_emmebank = EmmeBank(self, self.highway_database_path)
+        return self._highway_emmebank
+
+    @property
+    def transit_emmebank(self) -> EmmeBank:
+        if self._transit_emmebank is None:
+            self._transit_emmebank = EmmeBank(self, self.transit_database_path)
+        return self._transit_emmebank
+
+    @property
+    def active_north_emmebank(self) -> EmmeBank:
+        if self._active_north_emmebank is None:
+            self._active_north_emmebank = EmmeBank(
+                self, self.active_north_database_path
+            )
+        return self._active_north_emmebank
+
+    @property
+    def active_south_emmebank(self) -> EmmeBank:
+        if self._active_south_emmebank is None:
+            self._active_south_emmebank = EmmeBank(
+                self, self.active_south_database_path
+            )
+        return self._active_south_emmebank
 
     def tool(self, namespace: str):
         """Return the Modeller tool at namespace.
@@ -172,6 +233,60 @@ class EmmeManager:
             Corresponding Tool object, see Emme Help for full details.
         """
         return self.modeller().tool(namespace)
+
+    @property
+    def matrix_calculator(self):
+        "Shortcut to matrix calculator."
+        return self.controller.emme_manager.tool(
+            "inro.emme.matrix_calculation.matrix_calculator"
+        )
+
+    @property
+    def matrix_results(self):
+        "Shortcut to matrix results."
+        return self.controller.emme_manager.tool(
+            "inro.emme.transit_assignment.extended.matrix_results"
+        )
+
+    @property
+    def num_processors(self) -> int:
+        """Number of processors available for parallel processing."""
+        if self._num_processors is None:
+            self._num_processors = self._calculate_num_processors()
+
+        return self._num_processors
+
+    @property
+    def num_processors(self):
+        """Convert input value (parse if string) to number of processors.
+
+
+        nt or string as 'MAX-X'
+        Returns:
+            An int of the number of processors to use
+
+        Raises:
+            Exception: Input value exceeds number of available processors
+            Exception: Input value less than 1 processors
+        """
+        _config_value = self.config.num_processors
+        _cpu_processors = multiprocessing.cpu_count()
+        num_processors = 0
+        if isinstance(_config_value, str):
+            if _config_value.upper() == "MAX":
+                num_processors = _cpu_processors
+            elif re.match("^[0-9]+$", _config_value):
+                num_processors = int(_config_value)
+            else:
+                _processor_range = re.split(r"^MAX[/s]*-[/s]*", _config_value.upper())
+                num_processors = max(_cpu_processors - int(_processor_range[1]), 1)
+        else:
+            num_processors = int(_config_value)
+
+        num_processors = min(_cpu_processors, num_processors)
+        num_processors = max(1, num_processors)
+
+        return num_processors
 
     @staticmethod
     def copy_attribute_values(
@@ -201,7 +316,7 @@ class EmmeManager:
     @staticmethod
     @_context
     def temp_attributes_and_restore(
-        scenario: EmmeScenario, attributes: List[List[str]]
+        scenario: "EmmeScenario", attributes: List[List[str]]
     ):
         """Create temp extra attribute and network field, and backup values and state and restore.
 
@@ -256,8 +371,8 @@ class EmmeManager:
                 scenario.set_attribute_values(domain, names, values)
 
     def get_network(
-        self, scenario: EmmeScenario, attributes: Dict[str, List[str]] = None
-    ) -> EmmeNetwork:
+        self, scenario: "EmmeScenario", attributes: Dict[str, List[str]] = None
+    ) -> "EmmeNetwork":
         """Read partial Emme network from the scenario for the domains and attributes specified.
 
         Optimized load of network object from scenario (disk / emmebank) for only the
