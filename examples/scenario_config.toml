@@ -3,6 +3,7 @@
 ####################################
 
 [scenario]
+    name = "UnionCity"
     year = 2015
     verify = false
     maz_landuse_file = "inputs/landuse/maz_data.csv"

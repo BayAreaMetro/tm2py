@@ -45,10 +45,12 @@ class ScenarioConfig(ConfigItem):
             (not implemented yet)
         maz_landuse_file: relative path to maz_landuse_file used by multiple
             components
+        name: scenario name string
         year: model year, must be at least 2005
     """
 
     maz_landuse_file: pathlib.Path
+    name: str
     year: int = Field(ge=2005)
     verify: Optional[bool] = Field(default=False)
 
