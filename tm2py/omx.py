@@ -25,7 +25,7 @@ def omx_to_dict(
     """
 
     # if specified as a list, then turn into a dictionary
-    if isinstance(matrices, Collection):
+    if isinstance(matrices, list):
         _matrices = {m: m for m in matrices}
     else:
         _matrices = matrices
