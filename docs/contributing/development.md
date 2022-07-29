@@ -240,14 +240,9 @@ logger.info()
 ```
 
 Additional arguments:
-
-- Add a timestamp: `time=True`
 - Indent the message: `indent=True`
 
-Just log the time – useful for doing performance baselineing: `logger.log_time(, level=)`
-
 Group log messages together:
-
 - Using a context: `logger.log_start_end()`
 - Using a decorator:
 

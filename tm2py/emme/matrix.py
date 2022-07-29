@@ -10,11 +10,11 @@ the MatrixCache to support easy write from Emmebank without re-reading data
 from disk.
 """
 
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 import openmatrix as _omx
 from numpy import array as NumpyArray
-from numpy import resize
+from numpy import exp, pad, resize
 
 from tm2py.emme.manager import EmmeMatrix, EmmeScenario
 
@@ -36,6 +36,32 @@ class MatrixCache:
         # cache of Emme matrix data, key: matrix object, value: numpy array of data
         self._data = {}
 
+    def get_or_init_matrix(
+        self,
+        name: str,
+        matrix_type: Optional[str] = "FULL",
+        description: Optional[str] = None,
+    ):
+        """Add matrix to emmebank if it doesn't exist and return as object.
+
+        Args:
+            name: name of matrix - sans spaces
+            matrix_type: One of "ORIGIN","DESTINATION","FULL". Defaults to "FULL".
+            description: description of matrix, if not provided, will default to name.
+        """
+        _matrix = self._emmebank.matrix(name)
+        if _matrix:
+            return _matrix
+
+        _id = self._emmebank.available_matrix_identifier(matrix_type)
+        _matrix = self._emmebank.create_matrix(_id)
+        _matrix.name = name
+        if description is None:
+            description = name
+        _matrix.description = description
+
+        return _matrix
+
     def get_data(self, matrix: Union[str, EmmeMatrix]) -> NumpyArray:
         """Get Emme matrix data as numpy array.
 
@@ -54,18 +80,38 @@ class MatrixCache:
             self._data[matrix] = matrix.get_numpy_data(self._scenario.id)
         return self._data[matrix]
 
-    def set_data(self, matrix: Union[str, EmmeMatrix], data: NumpyArray):
-        """Set numpy array to Emme matrix (write through cache).
+    def set_data(
+        self,
+        matrix: Union[str, EmmeMatrix],
+        data: NumpyArray,
+        matrix_type: Optional[str] = "FULL",
+        description: Optional[str] = None,
+    ):
+        """Set numpy array to Emme matrix, filling zones and creating matrix in Emmebank if necessary.
 
         Args:
             matrix: Emme matrix object or unique name / ID for Emme matrix in Emmebank
             data: Numpy array, must match the scenario zone system
+            matrix_type: one of "ORIGIN","DESTINATION","FULL". Defaults to "FULL".
+            description: description of matrix, if not provided, will default to name.
         """
+        # Reshape so that zone sizes match by padding external stations with zeros
+        num_zones = len(self._scenario.zone_numbers)
+        shape = data.shape
+        if shape[0] < num_zones:
+            padding = [(0, num_zones - dim_shape) for dim_shape in shape]
+            data = pad(data, padding)
+
         if isinstance(matrix, str):
-            matrix = self._emmebank.matrix(matrix)
+            matrix = self.get_or_init_matrix(
+                matrix, matrix_type=matrix_type, description=description
+            )
+
         matrix.set_numpy_data(data, self._scenario.id)
         self._timestamps[matrix] = matrix.timestamp
         self._data[matrix] = data
+
+        return matrix
 
     def clear(self):
         """Clear the cache."""
@@ -164,7 +210,7 @@ class OMXManager:
             for matrix in matrices:
                 self.write_matrix(matrix)
 
-    def write_matrix(self, matrix: [str, EmmeMatrix], name=None):
+    def write_matrix(self, matrix: Union[str, EmmeMatrix], name=None):
         """Write Emme matrix (as name or ID or Emme matrix object).
 
         Args:

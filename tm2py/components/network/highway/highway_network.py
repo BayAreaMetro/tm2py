@@ -47,25 +47,37 @@ The following attributes are calculated:
 """
 
 import os
-from typing import Dict, List, Set
+from typing import TYPE_CHECKING, Dict, List, Set
 
 from tm2py.components.component import Component, FileFormatError
 from tm2py.emme.manager import EmmeNetwork, EmmeScenario
 from tm2py.logger import LogStartEnd
 
+if TYPE_CHECKING:
+    from tm2py.controller import RunController
+
 
 class PrepareNetwork(Component):
     """Highway network preparation."""
 
+    def __init__(self, controller: "RunController"):
+        """Constructor for PPrepareNetwork.
+
+        Args:
+            controller (RunController): Reference to run controller object.
+        """
+        super().__init__(controller)
+        self.config = self.controller.config.highway
+
     @LogStartEnd("Prepare network attributes and modes")
     def run(self):
         """Run network preparation step."""
-        for time in self.time_period_names():
+        for time in self.time_period_names:
             with self.controller.emme_manager.logbook_trace(
                 f"prepare for highway assignment {time}"
             ):
                 scenario = self.get_emme_scenario(
-                    self.config.emme.highway_database_path, time
+                    self.controller.config.emme.highway_database_path, time
                 )
                 self._create_class_attributes(scenario, time)
                 network = scenario.get_network()
@@ -78,16 +90,16 @@ class PrepareNetwork(Component):
 
     def validate_inputs(self):
         """Validate inputs files are correct, raise if an error is found."""
-        toll_file_path = self.get_abs_path(self.config.highway.tolls.file_path)
+        toll_file_path = self.get_abs_path(self.config.tolls.file_path)
         if not os.path.exists(toll_file_path):
             self.logger.log(
                 f"Tolls file (config.highway.tolls.file_path) does not exist: {toll_file_path}",
                 level="ERROR",
             )
             raise FileNotFoundError(f"Tolls file does not exist: {toll_file_path}")
-        src_veh_groups = self.config.highway.tolls.src_vehicle_group_names
+        src_veh_groups = self.config.tolls.src_vehicle_group_names
         columns = ["fac_index"]
-        for time in self.config.time_periods:
+        for time in self.controller.config.time_periods:
             for vehicle in src_veh_groups:
                 columns.append(f"toll{time.name.lower()}_{vehicle}")
         with open(toll_file_path, "r", encoding="UTF8") as toll_file:
@@ -119,7 +131,7 @@ class PrepareNetwork(Component):
             ]
         }
         # toll field attributes by bridge and value and toll definition
-        dst_veh_groups = self.config.highway.tolls.dst_vehicle_group_names
+        dst_veh_groups = self.config.tolls.dst_vehicle_group_names
         for dst_veh in dst_veh_groups:
             for toll_type in "bridge", "value":
                 attributes["LINK"].append(
@@ -129,7 +141,7 @@ class PrepareNetwork(Component):
                     )
                 )
         # results for link cost and assigned flow
-        for assign_class in self.config.highway.classes:
+        for assign_class in self.config.classes:
             attributes["LINK"].append(
                 (
                     f"@cost_{assign_class.name.lower()}",
@@ -149,9 +161,9 @@ class PrepareNetwork(Component):
     def _set_tolls(self, network: EmmeNetwork, time_period: str):
         """Set the tolls in the network from the toll reference file."""
         toll_index = self._get_toll_indices()
-        src_veh_groups = self.config.highway.tolls.src_vehicle_group_names
-        dst_veh_groups = self.config.highway.tolls.dst_vehicle_group_names
-        tollbooth_start_index = self.config.highway.tolls.tollbooth_start_index
+        src_veh_groups = self.config.tolls.src_vehicle_group_names
+        dst_veh_groups = self.config.tolls.dst_vehicle_group_names
+        tollbooth_start_index = self.config.tolls.tollbooth_start_index
         for link in network.links():
             if link["@tollbooth"]:
                 index = (
@@ -183,7 +195,7 @@ class PrepareNetwork(Component):
 
     def _get_toll_indices(self) -> Dict[int, Dict[str, str]]:
         """Get the mapping of toll lookup table from the toll reference file."""
-        toll_file_path = self.get_abs_path(self.config.highway.tolls.file_path)
+        toll_file_path = self.get_abs_path(self.config.tolls.file_path)
         self.logger.debug(f"toll_file_path {toll_file_path}", indent=True)
         tolls = {}
         with open(toll_file_path, "r", encoding="UTF8") as toll_file:
@@ -197,13 +209,14 @@ class PrepareNetwork(Component):
         """Set capacity, VDF and critical speed on links."""
         capacity_map = {}
         critical_speed_map = {}
-        for row in self.config.highway.capclass_lookup:
+        for row in self.config.capclass_lookup:
             if row.get("capacity") is not None:
                 capacity_map[row["capclass"]] = row.get("capacity")
             if row.get("critical_speed") is not None:
                 critical_speed_map[row["capclass"]] = row.get("critical_speed")
         tp_mapping = {
-            tp.name: tp.highway_capacity_factor for tp in self.config.time_periods
+            tp.name.upper(): tp.highway_capacity_factor
+            for tp in self.controller.config.time_periods
         }
         period_capacity_factor = tp_mapping[time_period]
         akcelik_vdfs = [3, 4, 5, 7, 8, 10, 11, 12, 13, 14]
@@ -227,12 +240,11 @@ class PrepareNetwork(Component):
         """Set the link modes based on the per-class 'excluded_links' set."""
         # first reset link modes (script run more than once)
         # "generic_highway_mode_code" must already be created (in import to Emme script)
-        auto_mode = {network.mode(self.config.highway.generic_highway_mode_code)}
+        auto_mode = {network.mode(self.config.generic_highway_mode_code)}
         used_modes = {
-            network.mode(assign_class.mode_code)
-            for assign_class in self.config.highway.classes
+            network.mode(assign_class.mode_code) for assign_class in self.config.classes
         }
-        used_modes.add(network.mode(self.config.highway.maz_to_maz.mode_code))
+        used_modes.add(network.mode(self.config.maz_to_maz.mode_code))
         for link in network.links():
             link.modes -= used_modes
             if link["@drive_link"]:
@@ -243,13 +255,13 @@ class PrepareNetwork(Component):
 
         # Create special access/egress mode for MAZ connectors
         maz_access_mode = network.create_mode(
-            "AUX_AUTO", self.config.highway.maz_to_maz.mode_code
+            "AUX_AUTO", self.config.maz_to_maz.mode_code
         )
         maz_access_mode.description = "MAZ access"
         # create modes from class spec
         # (duplicate mode codes allowed provided the excluded_links is the same)
         mode_excluded_links = {}
-        for assign_class in self.config.highway.classes:
+        for assign_class in self.config.classes:
             if assign_class.mode_code in mode_excluded_links:
                 if (
                     assign_class.excluded_links
@@ -267,7 +279,7 @@ class PrepareNetwork(Component):
             mode.description = assign_class.name
             mode_excluded_links[mode.id] = assign_class.excluded_links
 
-        dst_veh_groups = self.config.highway.tolls.dst_vehicle_group_names
+        dst_veh_groups = self.config.tolls.dst_vehicle_group_names
         for link in network.links():
             modes = set(m.id for m in link.modes)
             if link.i_node["@maz_id"] + link.j_node["@maz_id"] > 0:
@@ -287,12 +299,12 @@ class PrepareNetwork(Component):
                     link[f"@valuetoll_{dst_veh}"] > 0
                 )
             self._apply_exclusions(
-                self.config.highway.maz_to_maz.excluded_links,
+                self.config.maz_to_maz.excluded_links,
                 maz_access_mode.id,
                 modes,
                 exclude_links_map,
             )
-            for assign_class in self.config.highway.classes:
+            for assign_class in self.config.classes:
                 self._apply_exclusions(
                     assign_class.excluded_links,
                     assign_class.mode_code,
@@ -316,7 +328,7 @@ class PrepareNetwork(Component):
 
     def _calc_link_skim_lengths(self, network: EmmeNetwork):
         """Calculate the length attributes used in the highway skims."""
-        tollbooth_start_index = self.config.highway.tolls.tollbooth_start_index
+        tollbooth_start_index = self.config.tolls.tollbooth_start_index
         for link in network.links():
             # distance in hov lanes / facilities
             if 2 <= link["@useclass"] <= 3:
@@ -331,7 +343,7 @@ class PrepareNetwork(Component):
 
     def _calc_link_class_costs(self, network: EmmeNetwork):
         """Calculate the per-class link cost from the tolls and operating costs."""
-        for assign_class in self.config.highway.classes:
+        for assign_class in self.config.classes:
             cost_attr = f"@cost_{assign_class.name.lower()}"
             op_cost = assign_class["operating_cost_per_mile"]
             toll_factor = assign_class.get("toll_factor")
