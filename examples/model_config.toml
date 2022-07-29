@@ -29,11 +29,7 @@
     emme_scenario_id = 15
 
 [logging]
-    display_level = "STATUS"
-    run_file_path  = "log_run.txt"
-    run_file_level = "STATUS"
-    log_file_path = "log_detail.txt"
-    log_file_level = "DETAIL"
+    # Use default log configuration
     log_on_error_file_path = "log_error.txt"
     notify_slack = false
     use_emme_logbook = true
