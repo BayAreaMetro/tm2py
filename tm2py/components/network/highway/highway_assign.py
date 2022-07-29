@@ -318,8 +318,9 @@ class HighwayAssignment(Component):
             time_period: time period name
         """
         # NOTE: skims in separate file by period
+        self.logger.debug("_export_skims: self.config.output_skim_path:{}".format( self.config.output_skim_path))
         omx_file_path = self.get_abs_path(
-            self.config.output_skim_path.format(period=time_period)
+            self.config.output_skim_path / self.config.output_skim_filename_tmpl.format(time_period=time_period)
         )
         self.logger.debug(
             f"export {len(self._skim_matrices)} skim matrices to {omx_file_path}"
