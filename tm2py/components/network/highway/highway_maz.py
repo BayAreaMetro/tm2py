@@ -644,13 +644,13 @@ class SkimMAZCosts(Component):
         self._scenario = None
         self._network = None
 
-        @property
-        def scenario(self):
-            if self._scenario is None:
-                self._scenario = self.get_emme_scenario(
-                    self.controller.config.emme.highway_database_path, self.ref_period
-                )
-            return self._scenario
+    @property
+    def scenario(self):
+        if self._scenario is None:
+            self._scenario = self.get_emme_scenario(
+                self.controller.config.emme.highway_database_path, self.ref_period_name
+            )
+        return self._scenario
 
     def validate_inputs(self):
         """Validate inputs files are correct, raise if an error is found."""
@@ -707,7 +707,7 @@ class SkimMAZCosts(Component):
             ("NODE", "@maz_root", "selected roots (origins)"),
         ]
         with self.controller.emme_manager.temp_attributes_and_restore(
-            self._scenario, attributes
+            self.scenario, attributes
         ):
             try:
                 yield
@@ -723,7 +723,7 @@ class SkimMAZCosts(Component):
         else:
             time_attr = "@free_flow_time"
         self.logger.log(f"Time attribute {time_attr}", level="DEBUG")
-        vot = self.config.maz_to_maz.value_of_time
+        vot = self.config.value_of_time
         op_cost = self.config.operating_cost_per_mile
         net_calc("@link_cost", f"{time_attr} + 0.6 / {vot} * (length * {op_cost})")
         self._network = self.controller.emme_manager.get_network(
