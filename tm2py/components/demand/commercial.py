@@ -168,7 +168,6 @@ class CommercialVehicleModel(Component):
             self._matrix_cache = MatrixCache(self.emme_scenario)
         return self._matrix_cache
 
-
     @LogStartEnd(level="DEBUG")
     def _export_results_as_omx(self, class_demand):
         """Export assignable class demands to OMX files by time-of-day."""
@@ -176,7 +175,10 @@ class CommercialVehicleModel(Component):
         os.makedirs(os.path.dirname(outdir), exist_ok=True)
         for period, matrices in class_demand.items():
             with OMXManager(
-                os.path.join(outdir, self.config.outfile_trip_table_tmp.format(period=period)), "w"
+                os.path.join(
+                    outdir, self.config.outfile_trip_table_tmp.format(period=period)
+                ),
+                "w",
             ) as output_file:
                 for name, data in matrices.items():
                     output_file.write_array(data, name)
@@ -296,26 +298,24 @@ class CommercialVehicleTripGeneration(Subcomponent):
             _trip_type = _c.purpose
             _trk_class = _c.name
 
-            if _pa.endswith('_formula'):
-                _pa_short = _pa.split('_')[0]
-            
+            if _pa.endswith("_formula"):
+                _pa_short = _pa.split("_")[0]
+
             # linked trips (non-garage-based) - attractions (equal productions)
-            if (_trip_type == 'linked') & (_pa_short == 'attraction'):
-                tripends_df[f"{_trip_type}_{_trk_class}_{_pa_short}s"] = tripends_df[f"{_trip_type}_{_trk_class}_productions"]
+            if (_trip_type == "linked") & (_pa_short == "attraction"):
+                tripends_df[f"{_trip_type}_{_trk_class}_{_pa_short}s"] = tripends_df[
+                    f"{_trip_type}_{_trk_class}_productions"
+                ]
             else:
                 _constant = _c[_pa].constant
                 _multiplier = _c[_pa].multiplier
-                
-                land_use_rates = pd.DataFrame(
-                        _c[_pa].land_use_rates
-                    ).T
-                land_use_rates = land_use_rates.rename(
-                    columns = land_use_rates.loc['property']
-                    ).drop('property', axis = 0)
 
-                _rate_trips_df = landuse_df.mul(
-                    land_use_rates.iloc[0]
-                )
+                land_use_rates = pd.DataFrame(_c[_pa].land_use_rates).T
+                land_use_rates = land_use_rates.rename(
+                    columns=land_use_rates.loc["property"]
+                ).drop("property", axis=0)
+
+                _rate_trips_df = landuse_df.mul(land_use_rates.iloc[0])
                 _trips_df = _rate_trips_df * _multiplier + _constant
 
                 tripends_df[f"{_trip_type}_{_trk_class}_{_pa_short}s"] = _trips_df.sum(
@@ -335,7 +335,7 @@ class CommercialVehicleTripGeneration(Subcomponent):
         Returns:
             pd.DataFrame: DataFrame with balanced production and attraction trip ends.
         """
-        
+
         for _c in self.config.classes:
             _trip_type = _c.purpose
             _trk_class = _c.name
@@ -400,7 +400,9 @@ class CommercialVehicleTripGeneration(Subcomponent):
             _sum_cols = [
                 c for c in tripends_df.columns if c.endswith(f"_{_trk_class}_{_pa}")
             ]
-            agg_tripends_df[f"{_trk_class}_{_pa}"] = pd.Series(tripends_df[_sum_cols].sum().sum())
+            agg_tripends_df[f"{_trk_class}_{_pa}"] = pd.Series(
+                tripends_df[_sum_cols].sum().sum()
+            )
 
         agg_tripends_df.round(decimals=7)
 
@@ -547,7 +549,9 @@ class CommercialVehicleTripDistribution(Subcomponent):
             NumpyArray: Zone-by-zone matrix of friction factors
         """
         if not self._friction_factor_matrices.get(trk_class):
-            self._friction_factor_matrices[trk_class] = self._calculate_friction_factor_matrix(
+            self._friction_factor_matrices[
+                trk_class
+            ] = self._calculate_friction_factor_matrix(
                 trk_class,
                 self.class_config[trk_class].impedance,
                 self.class_config[trk_class].use_k_factors,
@@ -776,7 +780,7 @@ class CommercialVehicleTimeOfDay(Subcomponent):
 
     @property
     def class_period_splits(self):
-        """Returns split fraction dictonary mapped to [time period class][time period].""" 
+        """Returns split fraction dictonary mapped to [time period class][time period]."""
         if not self._class_period_splits:
             self._class_period_splits = {
                 c_name: {c.time_period: c for c in config.time_period_split}

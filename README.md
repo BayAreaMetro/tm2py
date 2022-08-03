@@ -47,7 +47,7 @@ cd <path to tm2py git directory>
 pip install -e .
 conda env config vars set GDAL_VERSION=3.4.1
 ```
-Finally, install the Emme python packages using the Emme GUI. This effectively creates a file, 
+Finally, install the Emme python packages using the Emme GUI. This effectively creates a file,
 `C:\Users\%USERNAME%\.conda\envs\tm2py\Lib\site-packages\emme.pth` with the following contents, so you could create the file yourself.
 
 ```python

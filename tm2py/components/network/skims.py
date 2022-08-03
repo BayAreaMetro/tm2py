@@ -1,11 +1,11 @@
 """General skim-related tools."""
 
 import itertools
+import os
 from typing import TYPE_CHECKING, Collection, Mapping, Union
 
 import numpy as np
 from numpy import array as NumpyArray
-import os
 
 from tm2py.emme.matrix import OMXManager
 

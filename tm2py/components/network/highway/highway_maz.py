@@ -475,9 +475,7 @@ class AssignMAZSPDemand(Component):
                 link["temp_flow"] += dem
                 i_node = j_node
             assigned += dem
-        self.logger.log(
-            f"ASSIGN bin {bin_no}: total: {len(demand)}", level="DEBUG"
-        )
+        self.logger.log(f"ASSIGN bin {bin_no}: total: {len(demand)}", level="DEBUG")
         self.logger.log(
             f"assigned: {assigned}, not assigned: {not_assigned}", level="DEBUG"
         )

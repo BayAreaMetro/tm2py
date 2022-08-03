@@ -87,13 +87,9 @@ class TollChoiceCalculator(Subcomponent):
         # Copy out parts of config that we want to update/manipulate
 
         # Fill in blanks with defaults
-        DEFAULT_PROPERTY_SKIM_TOLL.update(
-            self.config.property_to_skim_toll
-        )
+        DEFAULT_PROPERTY_SKIM_TOLL.update(self.config.property_to_skim_toll)
         self.property_to_skim_toll = DEFAULT_PROPERTY_SKIM_TOLL
-        DEFAULT_PROPERTY_SKIM_NOTOLL.update(
-            self.config.property_to_skim_notoll
-        )
+        DEFAULT_PROPERTY_SKIM_NOTOLL.update(self.config.property_to_skim_notoll)
         self.property_to_skim_notoll = DEFAULT_PROPERTY_SKIM_NOTOLL
 
         self.utility = {x.property: x.coeff for x in config.utility}
@@ -261,10 +257,10 @@ class TollChoiceCalculator(Subcomponent):
         for prop, skim_prop_list in prop_to_skim.items():
             _skim_values = get_summed_skims(
                 self.controller,
-                property = skim_prop_list,
-                mode = choice_class_config.skim_mode,
-                time_period = time_period,
-                omx_manager = self._omx_manager,
+                property=skim_prop_list,
+                mode=choice_class_config.skim_mode,
+                time_period=time_period,
+                omx_manager=self._omx_manager,
             )
             _util = (
                 self.utility[prop]

@@ -1,7 +1,8 @@
 """Config implementation and schema."""
 # pylint: disable=too-many-instance-attributes
 
-import datetime, pathlib
+import datetime
+import pathlib
 from abc import ABC
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -159,11 +160,23 @@ class LoggingConfig(ConfigItem):
     """
 
     display_level: Optional[LogLevel] = Field(default="STATUS")
-    run_file_path: Optional[str] = Field(default="tm2py_run_{}.log".format(datetime.datetime.now().strftime('%Y%m%d_%H%M')))
+    run_file_path: Optional[str] = Field(
+        default="tm2py_run_{}.log".format(
+            datetime.datetime.now().strftime("%Y%m%d_%H%M")
+        )
+    )
     run_file_level: Optional[LogLevel] = Field(default="INFO")
-    log_file_path: Optional[str] = Field(default="tm2py_debug_{}.log".format(datetime.datetime.now().strftime('%Y%m%d_%H%M')))
+    log_file_path: Optional[str] = Field(
+        default="tm2py_debug_{}.log".format(
+            datetime.datetime.now().strftime("%Y%m%d_%H%M")
+        )
+    )
     log_file_level: Optional[LogLevel] = Field(default="DEBUG")
-    log_on_error_file_path: Optional[str] = Field(default="tm2py_error_{}.log".format(datetime.datetime.now().strftime('%Y%m%d_%H%M')))
+    log_on_error_file_path: Optional[str] = Field(
+        default="tm2py_error_{}.log".format(
+            datetime.datetime.now().strftime("%Y%m%d_%H%M")
+        )
+    )
 
     notify_slack: Optional[bool] = Field(default=False)
     use_emme_logbook: Optional[bool] = Field(default=True)

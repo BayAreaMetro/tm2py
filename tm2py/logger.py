@@ -43,7 +43,7 @@ LogLevel = Literal[
     "TRACE", "DEBUG", "DETAIL", "INFO", "STATUS", "WARN", "ERROR", "FATAL"
 ]
 LEVELS_STR_TO_INT = dict((k, i) for i, k in enumerate(get_args(LogLevel)))
-LEVELS_INT_TO_STR = dict((i,k) for i, k in enumerate(get_args(LogLevel)))
+LEVELS_INT_TO_STR = dict((i, k) for i, k in enumerate(get_args(LogLevel)))
 
 # pylint: disable=too-many-instance-attributes
 
@@ -160,11 +160,7 @@ class Logger:
         if self.controller.config.logging.notify_slack:
             self._slack_notifier.post_message(text)
 
-    def log(
-        self,
-        text: str,
-        level: LogLevel = "INFO",
-        indent: bool = True):
+    def log(self, text: str, level: LogLevel = "INFO", indent: bool = True):
         """Log text to file and display depending upon log level and config.
 
         Args:
@@ -543,7 +539,9 @@ class LogCache(LogFormatter):
             indent (bool): if true indent text based on the number of open contexts
             timestamp (str): formatted datetime as a string or None
         """
-        self._msg_cache.append((level, self._format_text(text, level, indent, timestamp)))
+        self._msg_cache.append(
+            (level, self._format_text(text, level, indent, timestamp))
+        )
 
     def write_cache(self):
         """Write all cached messages."""

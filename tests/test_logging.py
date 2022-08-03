@@ -1,5 +1,6 @@
 """Test module for Logging."""
-import os, pathlib
+import os
+import pathlib
 from datetime import datetime
 
 
@@ -37,7 +38,7 @@ def test_log(tmp_path: pathlib.Path):
         pass
 
     # we'll use the tmp_path for our logs
-    print('tmp_path: {}'.format(tmp_path))
+    print("tmp_path: {}".format(tmp_path))
     assert tmp_path.is_dir()
 
     controller = Controller(tmp_path)
@@ -48,12 +49,10 @@ def test_log(tmp_path: pathlib.Path):
         logger.log("a message")  # default log level is INFO
         logger.log("A status", level="STATUS")
         logger.log("detailed message", level="DETAIL")
-        logger.clear_msg_cache() # what is this?  Why is it called here?
+        logger.clear_msg_cache()  # what is this?  Why is it called here?
         with logger.log_start_end("Running a set of steps"):
             logger.log("Indented message with timestamp")
-            logger.log(
-                "Indented displayed message with timestamp", level="STATUS"
-            )
+            logger.log("Indented displayed message with timestamp", level="STATUS")
             logger.log(
                 "A debug message not indented",
                 level="DEBUG",
@@ -63,8 +62,7 @@ def test_log(tmp_path: pathlib.Path):
             logger.log("A trace message", level="TRACE")
             if logger.debug_enabled:
                 # only generate this report if logging DEBUG
-                logger.log("A debug report that takes time to produce", level="DEBUG"
-                )
+                logger.log("A debug report that takes time to produce", level="DEBUG")
         logger.warn("Warning")
 
         # raising error to test recording of error message in log
@@ -72,7 +70,7 @@ def test_log(tmp_path: pathlib.Path):
     except TestException:
         # catching the error to continue testing the content of the logs
 
-        # I think the context / logcache was meant to make the following line unnecessary and 
+        # I think the context / logcache was meant to make the following line unnecessary and
         # automate error logging when an exception is thrown during a logging context
         # But given that I don't like logging contexts, I think it's fine to explicitly log
         # errors when they're caught
@@ -80,13 +78,17 @@ def test_log(tmp_path: pathlib.Path):
         pass
 
     # Check the run_file recorded the high-level "STATUS" messages and above
-    print('Checking log messages in {}'.format(os.path.join(controller.run_dir, log_config["run_file_path"])))
+    print(
+        "Checking log messages in {}".format(
+            os.path.join(controller.run_dir, log_config["run_file_path"])
+        )
+    )
     with open(os.path.join(controller.run_dir, log_config["run_file_path"]), "r") as f:
         text = []
         for line in f:
             text.append(line)
-    print('Log run file: {}'.format(text))
-    assert len(text) == 6 # 4 status, 1 warning, 1 error
+    print("Log run file: {}".format(text))
+    assert len(text) == 6  # 4 status, 1 warning, 1 error
     assert text[0].endswith("STATUS: A status\n")
     assert text[1].endswith("STATUS: Start Running a set of steps\n")
     assert text[4].endswith("Warning\n")
@@ -97,8 +99,10 @@ def test_log(tmp_path: pathlib.Path):
         text = []
         for line in f:
             text.append(line)
-    print('Log file: {}'.format(text))
-    assert len(text) == 12 # INFO, STATUS, DETAIL, STATUS, INFO, STATUS, DEBUG x 3, STATUS, WARN, ERRORR
+    print("Log file: {}".format(text))
+    assert (
+        len(text) == 12
+    )  # INFO, STATUS, DETAIL, STATUS, INFO, STATUS, DEBUG x 3, STATUS, WARN, ERRORR
     assert text[0].endswith("INFO: a message\n")
     assert text[1].endswith("STATUS: A status\n")
     assert text[2].endswith("DETAIL: detailed message\n")
@@ -110,12 +114,12 @@ def test_log(tmp_path: pathlib.Path):
     for logline in text:
         assert "A trace message" not in logline
     # error message recorded
-    
-    # todo: resolve 
+
+    # todo: resolve
     # assert "Error during model run" in text[9]
     # assert text[10].startswith("Traceback")
 
-    # Commenting out the following pending resolution of issue#87 
+    # Commenting out the following pending resolution of issue#87
     # (Feature: Explain/justify or remove LogCache, special error file)
     # Check that the log_on_error is generated and has all messages
     # with open(
