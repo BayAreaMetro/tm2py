@@ -161,6 +161,11 @@ class RunController:
         return [time.name.upper() for time in self.config.time_periods]
 
     @property
+    def time_period_durations(self) -> dict:
+        """Return mapping of time periods to durations in hours."""
+        return dict((p.name, p.length_hours) for p in self.config.time_periods)
+
+    @property
     def num_processors(self) -> int:
         return self.emme_manager.num_processors
 

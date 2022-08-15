@@ -67,3 +67,24 @@ def factor_matrix(
     )
 
     return np.around(matrix * adj_matrix, decimals=decimals)
+
+
+def redim_matrix(matrix: NumpyArray, num_zones: int) -> NumpyArray:
+    """Pad numpy array with zeros to match expected square shape of zonexzone dimensions.
+
+    Args:
+        matrix: NumpyArray to redimension
+        num_zones: expected shape to redimension to
+    """
+    _shape = matrix.shape
+    if _shape < (num_zones, num_zones):
+        matrix = np.pad(
+            matrix, ((0, num_zones - _shape[0]), (0, num_zones - _shape[1]))
+        )
+    elif _shape > (num_zones, num_zones):
+        ValueError(
+            f"Provided matrix is larger ({_shape}) than the \
+            specified number of zones: {num_zones}"
+        )
+
+    return matrix

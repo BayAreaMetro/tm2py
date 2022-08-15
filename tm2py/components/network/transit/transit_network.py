@@ -72,8 +72,7 @@ class PrepareTransitNetwork(Component):
     def transit_scenarios(self):
         if self._transit_scenarios is None:
             self._transit_scenarios = {
-                tp: self.get_emme_scenario(self.transit_emmebank, tp)
-                for tp in self.time_period_names
+                tp: self.transit_emmebank.scenario(tp) for tp in self.time_period_names
             }
         return self._transit_scenarios
 
@@ -81,8 +80,7 @@ class PrepareTransitNetwork(Component):
     def highway_scenarios(self):
         if self._highway_scenarios is None:
             self._highway_scenarios = {
-                tp: self.get_emme_scenario(self.highway_emmebank, tp)
-                for tp in self.time_period_names
+                tp: self.highway_emmebank.scenario(tp) for tp in self.time_period_names
             }
         return self.highway_scenarios
 

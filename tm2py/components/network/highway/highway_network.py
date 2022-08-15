@@ -76,9 +76,7 @@ class PrepareNetwork(Component):
             with self.controller.emme_manager.logbook_trace(
                 f"prepare for highway assignment {time}"
             ):
-                scenario = self.get_emme_scenario(
-                    self.controller.config.emme.highway_database_path, time
-                )
+                scenario = self.emmebank.scenario(time)
                 self._create_class_attributes(scenario, time)
                 network = scenario.get_network()
                 self._set_tolls(network, time)

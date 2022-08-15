@@ -56,6 +56,7 @@ class EmmeBank:
         self.controller = self.emme_project.controller
         self._path = Path(path)
         self._emmebank = None
+        self._zero_matrix = None
         self.scenario_dict = {
             tp.name: tp.emme_scenario_id for tp in self.controller.config.time_periods
         }
@@ -103,6 +104,23 @@ class EmmeBank:
         _scenario_id = self.scenario_dict[time_period.lower()]
         return self.emmebank.scenario(_scenario_id)
 
+    def get_or_init(self, name: str, matrix_type: Literal["SCALAR", "FULL"] = "FULL"):
+        _matrix = self.emmebank.matrix(f'ms"{name}"')
+        if _matrix is None:
+            ident = self.emmebank.available_matrix_identifier(matrix_type)
+            _zero_matrix = self.emmebank.create_matrix(ident)
+            _zero_matrix.name = name
+            _zero_matrix.description = name
+        return _matrix
+
+    @property
+    def zero_matrix(self):
+        """Create ms"zero" matrix for zero-demand assignments."""
+        if self._zero_matrix is None:
+            self._zero_matrix = self.get_or_init("zero", "SCALAR")
+            self._zero_matrix.data = 0
+        return self._zero_matrix
+
 
 class EmmeManager:
     """Centralized cache for a single Emme project and related calls.
@@ -147,7 +165,7 @@ class EmmeManager:
         self._active_south_emmebank = None
 
         # Initialize Modeller to use Emme assignment tools and other APIs
-        self._emme_manager.modeller(project)
+        self._emme_manager.modeller(self.project)
 
     def close(self):
         """Close all open cached Emme project(s).

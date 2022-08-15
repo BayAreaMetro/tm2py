@@ -96,7 +96,10 @@ class Component(ABC):
 
     def get_abs_path(self, path: Union[Path, str]) -> str:
         """Convenince method to get absolute path from run directory."""
-        return self.controller.get_abs_path(path).__str__
+        if not os.path.isabs(path):
+            return self.controller.get_abs_path(path).__str__
+        else:
+            return path
 
     @property
     def time_period_names(self) -> List[str]:
@@ -107,6 +110,11 @@ class Component(ABC):
         Returns: list of uppercased string names of time periods
         """
         return self.controller.time_period_names
+
+    @property
+    def time_period_durations(self) -> dict:
+        """Return mapping of time periods to durations in hours."""
+        return self.controller.time_period_durations
 
     @property
     def top_sheet(self):

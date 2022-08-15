@@ -128,9 +128,7 @@ class HighwayAssignment(Component):
         if self.controller.iteration >= 1:
             demand.run()
         for time in self.time_period_names:
-            scenario = self.get_emme_scenario(
-                self.controller.config.emme.highway_database_path, time
-            )
+            scenario = self.emmebank.scenario(time)
             with self._setup(scenario, time):
                 iteration = self.controller.iteration
                 assign_classes = [

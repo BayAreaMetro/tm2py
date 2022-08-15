@@ -66,10 +66,7 @@ class TransitSkim(Component):
     @property
     def scenarios(self):
         if self._scenarios is None:
-            self._scenarios = {
-                tp: self.get_emme_scenario(self.emmebank, tp)
-                for tp in self.time_period_names
-            }
+            self._scenarios = {tp: self.emmebamk(tp) for tp in self.time_period_names}
         return self._scenarios
 
     @property

@@ -122,7 +122,7 @@ class AssignMAZSPDemand(Component):
         for group in self.config.demand_county_groups:
             county_groups[group.number] = group.counties
         for time in self.time_period_names:
-            self._scenario = self.get_emme_scenario(self.emmebank.path, time)
+            self._scenario = self.emmebank.scenario(time)
             with self._setup(time):
                 self._prepare_network()
                 for i, names in county_groups.items():
@@ -650,9 +650,7 @@ class SkimMAZCosts(Component):
         @property
         def scenario(self):
             if self._scenario is None:
-                self._scenario = self.get_emme_scenario(
-                    self.controller.config.emme.highway_database_path, self.ref_period
-                )
+                self._scenario = self.highway_emmebank.scenario(self.ref_period)
             return self._scenario
 
     def validate_inputs(self):

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from collections import product
 from typing import TYPE_CHECKING, Dict, List, Union
 
 import numpy as np
@@ -11,6 +12,7 @@ from tm2py.components.component import Component
 from tm2py.emme.manager import Emmebank
 from tm2py.emme.matrix import OMXManager
 from tm2py.logger import LogStartEnd
+from tm2py.matrix import redim_matrix
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
@@ -18,7 +20,7 @@ if TYPE_CHECKING:
 NumpyArray = np.array
 
 
-class PrepareDemand(Component, ABC):
+class EmmeDemand:
     """Abstract base class to import and average demand."""
 
     def __init__(self, controller: RunController):
@@ -31,27 +33,6 @@ class PrepareDemand(Component, ABC):
         self._emmebank = None
         self._scenario = None
         self._source_ref_key = None
-
-    def _read_demand(self, file_config, str_format) -> NumpyArray:
-        """Load demand from cross-referenced source file.
-
-        The named demand model component under the key self._source_ref_key
-        ("highway_demand_file" or "transit_demand_file")
-
-        Args:
-            file_config (dict): the file cross-reference(s) for the demand to be loaded
-                {"source": <name of demand model component in the config>,
-                 "name": <OMX key name template>,
-                 "factor": <factor to apply to demand in this file>}
-            str_format (dict): the string formatting key: value to be used in the
-                "name" (OMX key name) and file path. Usually {"period": <time_period>}
-                for highway, and {"period": <time_period>, "skim_set_id": <set_key>} for transit
-        """
-        source = file_config["source"]
-        name = file_config["name"].format(**str_format)
-        factor = file_config.get("factor")
-        path = self.get_abs_path(self.config[source][self._source_ref_key])
-        return self._read(path.format(**str_format), name, factor)
 
     def _read(self, path: str, name: str, factor: float = None) -> NumpyArray:
         """Read matrix array from OMX file at path with name, and multiple by factor (if specified).
@@ -67,22 +48,6 @@ class PrepareDemand(Component, ABC):
             demand = factor * demand
         demand = self._redim_demand(demand)
         # self.logger.log(f"{name} sum: {demand.sum()}", level=3)
-        return demand
-
-    def _redim_demand(self, demand: NumpyArray) -> NumpyArray:
-        """Pad numpy array with zeros to match expect number of dimensions."""
-        num_zones = len(self._scenario.zone_numbers)
-        _shape = demand.shape
-        if _shape < (num_zones, num_zones):
-            demand = np.pad(
-                demand, ((0, num_zones - _shape[0]), (0, num_zones - _shape[1]))
-            )
-        elif _shape > (num_zones, num_zones):
-            ValueError(
-                f"Provided demand matrix is larger ({_shape}) than the \
-                specified number of zones: {num_zones}"
-            )
-
         return demand
 
     def _save_demand(
@@ -103,7 +68,7 @@ class PrepareDemand(Component, ABC):
             apply_msa: bool, default False: use MSA on matrix with current array
                 values if model is on iteration >= 1
         """
-        matrix = self._emmebank.matrix(f'mf"{name}"')
+        matrix = self.emmebank.matrix(f'mf"{name}"')
         msa_iteration = self.controller.iteration
         if not apply_msa or msa_iteration <= 1:
             if not matrix:
@@ -120,17 +85,26 @@ class PrepareDemand(Component, ABC):
         self.logger.log(f"{name} sum: {demand.sum()}", level="DEBUG")
         matrix.set_numpy_data(demand, self._scenario.id)
 
-    def create_zero_matrix(self, emmebank: Emmebank = None):
-        """Create ms"zero" matrix for zero-demand assignments."""
-        if emmebank is None:
-            emmebank = self._emmebank
-        zero_matrix = emmebank.matrix('ms"zero"')
-        if zero_matrix is None:
-            ident = emmebank.available_matrix_identifier("SCALAR")
-            zero_matrix = emmebank.create_matrix(ident)
-            zero_matrix.name = "zero"
-            zero_matrix.description = "zero demand matrix"
-        zero_matrix.data = 0
+
+def avg_matrix_msa(
+    prev_avg_matrix: NumpyArray, this_iter_matrix: NumpyArray, msa_iteration: int
+) -> NumpyArray:
+    """Average matrices based on Method of Successive Averages (MSA).
+
+    Args:
+        prev_avg_matrix (NumpyArray): Previously averaged matrix
+        this_iter_matrix (NumpyArray): Matrix for this iteration
+        msa_iteration (int): MSA iteration
+
+    Returns:
+        NumpyArray: MSA Averaged matrix for this iteration.
+    """
+    if msa_iteration < 1:
+        return this_iter_matrix
+    result_matrix = prev_avg_matrix + (1.0 / msa_iteration) * (
+        this_iter_matrix - prev_avg_matrix
+    )
+    return result_matrix
 
 
 class PrepareHighwayDemand(PrepareDemand):
@@ -204,7 +178,7 @@ class PrepareHighwayDemand(PrepareDemand):
         self._save_demand(demand_name, demand, description, apply_msa=True)
 
 
-class PrepareTransitDemand(PrepareDemand):
+class PrepareTransitDemand(Component):
     """Import transit demand.
 
     Demand is imported from OMX files based on reference file paths and OMX
@@ -215,18 +189,34 @@ class PrepareTransitDemand(PrepareDemand):
 
     """
 
+    def __init__(self, controller: "RunController"):
+        """Constructor for PrepareTransitDemand.
+
+        Args:
+            controller: RunController object.
+        """
+        super().__init__(controller)
+        self.config = self.controller.config.transit
+        self._transit_emmebank = None
+
+    @property
+    def transit_emmebank(self):
+        if not self._transit_emmebank:
+            self._transit_emmebank = self.controller.emme_manager.emmebank(
+                self.get_abs_path(self.controller.config.emme.transit_database_path)
+            )
+        return self._transit_emmebank
+
     @LogStartEnd("Prepare transit demand")
     def run(self):
         """Open combined demand OMX files from demand models and prepare for assignment."""
         self._source_ref_key = "transit_demand_file"
-        emmebank_path = self.get_abs_path(self.config.emme.transit_database_path)
-        self._emmebank = self.controller.emme_manager.emmebank(emmebank_path)
-        self.create_zero_matrix()
-        for time in self.time_period_names:
-            for klass in self.config.transit.classes:
-                self._prepare_demand(
-                    klass.skim_set_id, klass.description, klass.demand, time
-                )
+        self.transit_emmebank.zero_matrix()
+        _time_period_tclass = product(self.time_period_names, self.config.classes)
+        for _time_period, _tclass in _time_period_tclass:
+            self._prepare_demand(
+                _tclass.skim_set_id, _tclass.description, _tclass.demand, _time_period
+            )
 
     def _prepare_demand(
         self,
@@ -249,7 +239,7 @@ class PrepareTransitDemand(PrepareDemand):
                  "factor": <factor to apply to demand in this file>}
             time_period (str): the time _time_period ID (name)
         """
-        self._scenario = self.get_emme_scenario(self._emmebank.path, time_period)
+        self._scenario = self.emmebank.scenario(time_period)
         str_format = {"period": time_period.upper(), "skim_set_id": name}
         demand = self._read_demand(demand_config[0], str_format)
         for file_config in demand_config[1:]:
