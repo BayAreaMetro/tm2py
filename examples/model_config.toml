@@ -1378,6 +1378,7 @@
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
+    eawt_factor = 0.4
 [[transit.modes]]
     mode_id = "f"
     description = "ferry"
@@ -1385,6 +1386,7 @@
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
+    eawt_factor = 0.2
 [[transit.modes]]
     mode_id = "l"
     description = "light_rail"
@@ -1392,6 +1394,7 @@
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
+    eawt_factor = 0.2
 [[transit.modes]]
     mode_id = "h"
     description = "heavy_rail"
@@ -1399,6 +1402,7 @@
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
+    eawt_factor = 0.2
 [[transit.modes]]
     mode_id = "r"
     description = "comm_rail"

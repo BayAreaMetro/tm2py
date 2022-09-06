@@ -963,6 +963,7 @@ class TransitModeConfig(ConfigItem):
     description: Optional[str] = ""
     in_vehicle_perception_factor: Optional[float] = Field(default=None, ge=0)
     speed_miles_per_hour: Optional[float] = Field(default=None, gt=0)
+    eawt_factor: Optional[float] = Field(default= 1)
 
     @validator("in_vehicle_perception_factor", always=True)
     def in_vehicle_perception_factor_valid(cls, value, values):
@@ -1030,6 +1031,15 @@ class CcrWeightsConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class EawtWeightsConfig(ConfigItem):
+    "Weights for calculating extra added wait time Configuration."
+    constant: float = Field(default=0.259625)
+    weight_inverse_headway: float = Field(default = 1.612019)
+    vcr: float = Field(default = 0.005274)
+    exit_proportion: float = Field(default = 0.591765)
+    default_eawt_factor: float = Field(default = 1)
+
+@dataclass(frozen=True)
 class TransitConfig(ConfigItem):
     """Transit assignment parameters."""
 
@@ -1051,7 +1061,8 @@ class TransitConfig(ConfigItem):
     use_fares: bool
     use_ccr: bool
     ccr_stop_criteria: Optional[AssignmentStoppingCriteriaConfig]
-    ccr_weights: Optional[CcrWeightsConfig]
+    ccr_weights: CcrWeightsConfig
+    eawt_weights: EawtWeightsConfig
     override_connector_times: bool
     apply_msa_demand: bool
     max_ccr_iterations: float = None
