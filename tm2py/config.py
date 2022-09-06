@@ -1011,6 +1011,25 @@ class TransitClassConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class AssignmentStoppingCriteriaConfig(ConfigItem):
+    "Assignment stop configuration parameters."
+    max_iterations: int
+    relative_difference: float
+    percent_segments_over_capacity: float
+
+
+@dataclass(frozen=True)
+class CcrWeightsConfig(ConfigItem):
+    "Weights for CCR Configuration."
+    min_seat: float = Field(default=1.0)
+    max_seat: float = Field(default=1.4)
+    power_seat: float = Field(default=2.2)
+    min_stand: float = Field(default=1.4)
+    max_stand: float = Field(default=1.6)
+    power_stand: float = Field(default=3.4)
+
+
+@dataclass(frozen=True)
 class TransitConfig(ConfigItem):
     """Transit assignment parameters."""
 
@@ -1031,6 +1050,8 @@ class TransitConfig(ConfigItem):
     fare_max_transfer_distance_miles: float
     use_fares: bool
     use_ccr: bool
+    ccr_stop_criteria: Optional[AssignmentStoppingCriteriaConfig]
+    ccr_weights: Optional[CcrWeightsConfig]
     override_connector_times: bool
     apply_msa_demand: bool
     max_ccr_iterations: float = None

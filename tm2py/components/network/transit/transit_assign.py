@@ -22,12 +22,15 @@ if TYPE_CHECKING:
 
 # QUESTION - can we put these functions in the TransitAssignment class? I pulled them out in case Emme was going to be picky about them being intertwined
 
-def time_period_capacity(vehicle_capacity: float, headway: float, time_period_duration: float) -> float:
+
+def time_period_capacity(
+    vehicle_capacity: float, headway: float, time_period_duration: float
+) -> float:
     """_summary_
 
     Args:
-        vehicle_capacity (float): Vehicle capacity per hour. For vehicles with multiple cars 
-            (i.e. trainsets), should be the capacity of all of them that are traveling together. 
+        vehicle_capacity (float): Vehicle capacity per hour. For vehicles with multiple cars
+            (i.e. trainsets), should be the capacity of all of them that are traveling together.
         headway (float): Vehicle (or train sets) per hour.
         time_period_duration (float): duration of the time period in minutes
 
@@ -36,8 +39,11 @@ def time_period_capacity(vehicle_capacity: float, headway: float, time_period_du
     """
     return vehicle_capacity * time_period_duration * 60 / headway
 
-def crowded_segment_cost(time_period_duration: float, weights, transit_volume: float, segment) -> float:
-    """Calculates crowding factor for a segment. 
+
+def crowded_segment_cost(
+    time_period_duration: float, weights, transit_volume: float, segment
+) -> float:
+    """Calculates crowding factor for a segment.
 
     Toronto implementation limited factor between 1.0 and 10.0.
     For use with Emme Capacitated assignment normalize by subtracting 1
@@ -47,36 +53,42 @@ def crowded_segment_cost(time_period_duration: float, weights, transit_volume: f
         weights (_type_): transit capacity weights
         segment_pax (float): transit passengers for the segment for the time period
         segment: emme line segment
-       
+
     Returns:
         float: crowding factor for a segment
     """
-    min_seat_weight = 1.0
-    max_seat_weight = 1.4
-    power_seat_weight = 2.2
-    min_stand_weight = 1.4
-    max_stand_weight = 1.6
-    power_stand_weight = 3.4
 
     if transit_volume == 0:
         return 0.0
 
     line = segment.line
-    segment_capacity = time_period_capacity(line.headway,line.vehicle.total_capacity, time_period_duration)
-    seated_capacity = time_period_capacity(line.headway,line.vehicle.seated_capacity, time_period_duration)
+    segment_capacity = time_period_capacity(
+        line.headway, line.vehicle.total_capacity, time_period_duration
+    )
+    seated_capacity = time_period_capacity(
+        line.headway, line.vehicle.seated_capacity, time_period_duration
+    )
 
     seated_pax = min(transit_volume, seated_capacity)
-    standing_pax = max(transit_volume-seated_pax, 0)
+    standing_pax = max(transit_volume - seated_pax, 0)
 
-    seated_cost = weights.min_seat \
-        + (weights.max_seat-weights.min_seat)*(transit_volume/segment_capacity)**weights.power_seat
+    seated_cost = (
+        weights.min_seat
+        + (weights.max_seat - weights.min_seat)
+        * (transit_volume / segment_capacity) ** weights.power_seat
+    )
 
-    standing_cost = weights.min_stand \
-        + (weights.max_stand-weights.min_stand)*(transit_volume/segment_capacity)**weights.power_stand
+    standing_cost = (
+        weights.min_stand
+        + (weights.max_stand - weights.min_stand)
+        * (transit_volume / segment_capacity) ** weights.power_stand
+    )
 
-    crowded_cost = (seated_cost * seated_pax + standing_cost * standing_pax)/(transit_volume+0.01)
+    crowded_cost = (seated_cost * seated_pax + standing_cost * standing_pax) / (
+        transit_volume + 0.01
+    )
 
-    normalized_crowded_cost = max(crowded_cost - 1,0)
+    normalized_crowded_cost = max(crowded_cost - 1, 0)
 
     return normalized_crowded_cost
 
@@ -86,14 +98,15 @@ def calc_total_offs(line) -> float:
 
     Args:
         line (_type_): _description_
-    """    
+    """
     # NOTE This was done previously using:
     # total_offs += prev_seg.transit_volume - seg.transit_volume + seg.transit_boardings
     # but offs should equal ons for a whole line, so this seems simpler
-    offs = [ seg.transit_boardings for seg in line.segments(True)]
-    total_offs =  sum(offs)
+    offs = [seg.transit_boardings for seg in line.segments(True)]
+    total_offs = sum(offs)
     # added lambda due to divide by zero error
     return lambda total_offs: total_offs if total_offs >= 0.001 else 9999
+
 
 def calc_offs_thru_segment(segment) -> float:
     """_summary_
@@ -103,14 +116,22 @@ def calc_offs_thru_segment(segment) -> float:
 
     Returns:
         float: _description_
-    """    
+    """
     # SIJIA TODO check that it should be [:segment.number+1] . Not sure if 0-indexed in emme or 1-indexed?
-    segments_thru_this_segment = [ seg for seg in iter(segment.line.segments)[:segment.number+1]]
-    offs_thru_this_seg = [prev_seg.transit_volume - this_seg.transit_volume + this_seg.transit_boardings for prev_seg, this_seg in zip(segments_thru_this_segment[:-1], segments_thru_this_segment[1:])]
+    segments_thru_this_segment = [
+        seg for seg in iter(segment.line.segments)[: segment.number + 1]
+    ]
+    offs_thru_this_seg = [
+        prev_seg.transit_volume - this_seg.transit_volume + this_seg.transit_boardings
+        for prev_seg, this_seg in zip(
+            segments_thru_this_segment[:-1], segments_thru_this_segment[1:]
+        )
+    ]
     total_offs_thru_this_seg = sum(offs_thru_this_seg)
     return total_offs_thru_this_seg
 
-def calc_extra_wait_time(segment, segment_capacity:float, use_fares:bool = False):
+
+def calc_extra_wait_time(segment, segment_capacity: float, use_fares: bool = False):
     """Calculate extra added wait time based on...
 
     # TODO document fully.
@@ -124,31 +145,35 @@ def calc_extra_wait_time(segment, segment_capacity:float, use_fares:bool = False
         _type_: _description_
     """
     _transit_volume = segment.transit_volume
-    _headway = lambda segment: segment.line.headway if segment.line.headway >= 0.1 else 9999
+    _headway = (
+        lambda segment: segment.line.headway if segment.line.headway >= 0.1 else 9999
+    )
     _total_offs = calc_total_offs(segment.line)
     _offs_thru_segment = calc_offs_thru_segment(segment)
 
     # TODO Document and add params to config. Have no idea what source is here.
-    eawt = 0.259625 \
-        + 1.612019*(1/_headway) \
-        + 0.005274*(_transit_volume / segment_capacity) \
-        + 0.591765*(_offs_thru_segment / _total_offs)
+    eawt = (
+        0.259625
+        + 1.612019 * (1 / _headway)
+        + 0.005274 * (_transit_volume / segment_capacity)
+        + 0.591765 * (_offs_thru_segment / _total_offs)
+    )
 
-    mode_char = lambda line: line["#src_mode"] if use_fares else line.mode.id 
+    mode_char = lambda line: line["#src_mode"] if use_fares else line.mode.id
     # TODO add to config and document more completely
     mode_to_eawt_factor = {
-        "l": 0.4, # LRT
-        "x": 0.4, # BRT
-        "h": 0.2, # HRT
-        "c": 0.2, # Commuter Rail?
-        "f": 0.2, #?
+        "l": 0.4,  # LRT
+        "x": 0.4,  # BRT
+        "h": 0.2,  # HRT
+        "c": 0.2,  # Commuter Rail?
+        "f": 0.2,  # ?
     }
     default_eawt_factor = 1
-    eawt_factor = mode_to_eawt_factor.get(mode_char,default_eawt_factor)
+    eawt_factor = mode_to_eawt_factor.get(mode_char, default_eawt_factor)
     return eawt * eawt_factor
 
 
-def calc_adjusted_headway(segment, segment_capacity:float)->float:
+def calc_adjusted_headway(segment, segment_capacity: float) -> float:
     """Headway adjusted based on ....?
 
     TODO: add documentation about source and theory behind this.
@@ -159,8 +184,8 @@ def calc_adjusted_headway(segment, segment_capacity:float)->float:
 
     Returns:
         float: Adjusted headway
-    """    
-    #TODO add to params
+    """
+    # TODO add to params
     max_hdwy_growth = 1.5
     max_headway = 999.98
     # QUESTION FOR INRO: what is the difference between segment["@phdwy"] and line.headway?
@@ -169,17 +194,23 @@ def calc_adjusted_headway(segment, segment_capacity:float)->float:
     _transit_boardings = segment.transit_boardings
     _previous_headway = segment["@phdwy"]
     _current_headway = segment.line.headway
-    _available_capacity = max(segment_capacity - _transit_volume + _transit_boardings, 0)
+    _available_capacity = max(
+        segment_capacity - _transit_volume + _transit_boardings, 0
+    )
 
     adjusted_headway = min(
-        max_headway, 
-        _previous_headway * min((_transit_boardings+1) / (_available_capacity+1), 1.5)
+        max_headway,
+        _previous_headway
+        * min((_transit_boardings + 1) / (_available_capacity + 1), 1.5),
     )
     adjusted_headway = max(_current_headway, adjusted_headway)
 
     return adjusted_headway
 
-def calc_updated_perceived_headway(time_period_duration: float, segment, use_fares:bool = False):
+
+def calc_updated_perceived_headway(
+    time_period_duration: float, segment, use_fares: bool = False
+):
     """Calculate perceived (???) headway updated by ... and extra added wait time.
 
     # TODO Document more fully.
@@ -187,24 +218,25 @@ def calc_updated_perceived_headway(time_period_duration: float, segment, use_far
     Args:
         time_period_duration(float): time period duration in minutes
         segment: Emme Transit segment object
-        use_fares (bool) 
+        use_fares (bool)
 
     Returns:
         _type_: _description_
-    """    
-    # QUESTION FOR INRO: Kevin separately put segment.line.headway and headway as an arg. 
-    # Would they be different? Why? 
+    """
+    # QUESTION FOR INRO: Kevin separately put segment.line.headway and headway as an arg.
+    # Would they be different? Why?
     # TODO: Either can we label the headways so it is clear what is diff about them or just use single value?
 
     _segment_capacity = time_period_capacity(
-        segment.line.headway,
-        segment.line.vehicle.total_capacity, 
-        time_period_duration
+        segment.line.headway, segment.line.vehicle.total_capacity, time_period_duration
     )
 
-    _extra_added_wait_time = calc_extra_wait_time(segment, _segment_capacity, use_fares) 
+    _extra_added_wait_time = calc_extra_wait_time(segment, _segment_capacity, use_fares)
 
-    _adjusted_headway = calc_adjusted_headway(segment, _segment_capacity, )
+    _adjusted_headway = calc_adjusted_headway(
+        segment,
+        _segment_capacity,
+    )
 
     return _adjusted_headway + _extra_added_wait_time
 
@@ -317,16 +349,16 @@ class TransitAssignment(Component):
                     spec_dir,
                 )
             )
-        return transit_classes   
+        return transit_classes
 
-    def _run_ccr_assign(self, time_period):
+    def _run_ccr_assign(self, time_period: str) -> None:
         """Runs capacity constrained (??) CCR transit assignment for a time period + update penalties.
 
         Args:
-            time_period (_type_): _description_
+            time_period: time period name
         """
         _duration = self.time_period_duration[time_period]
-        _ccr_weights = "TODO"
+        _ccr_weights = self.config.ccr_weights
         _emme_scenario = self.emmebank.scenario(time_period)
         transit_classes = self._transit_classes
 
@@ -337,11 +369,11 @@ class TransitAssignment(Component):
         _tclass_names = [tclass.name for tclass in transit_classes]
 
         # NOTE TO SIJIA
-        # If sending the actual function doesn't work in EMME and its needs the TEXT of the 
+        # If sending the actual function doesn't work in EMME and its needs the TEXT of the
         # function, then you can send it using
         #
         # put at top of code:
-        # import inspect.getsource 
+        # import inspect.getsource
         #
         # replace _cost_func["python_function"]:... with
         # "python_function":  inspect.getsource(partial.crowded_segment_cost(_duration, _ccr_weights))
@@ -351,21 +383,25 @@ class TransitAssignment(Component):
         _cost_func = {
             "segment": {
                 "type": "CUSTOM",
-                "python_function": partial.crowded_segment_cost(_duration, _ccr_weights),
+                "python_function": partial.crowded_segment_cost(
+                    _duration, _ccr_weights
+                ),
                 "congestion_attribute": "us3",
                 "orig_func": False,
             },
             "headway": {
                 "type": "CUSTOM",
-                "python_function": partial.calc_updated_perceived_headway(_duration, use_fares = self.config.use_fares),
+                "python_function": partial.calc_updated_perceived_headway(
+                    _duration, use_fares=self.config.use_fares
+                ),
             },
             "assignment_period": _duration,
         }
-        # TODO add all this to config
+
         _stop_criteria = {
-            "max_iterations": self.config.ccr_stop_criteria.max_iterations, #max_ccr_iterations,
-            "relative_difference": self.config.ccr_stop_criteria.relative_difference, # 0.01,
-            "percent_segments_over_capacity": self.config.ccr_stop_criteria.percent_segments_over_capacity, #0.01,
+            "max_iterations": self.config.ccr_stop_criteria.max_iterations,
+            "relative_difference": self.config.ccr_stop_criteria.relative_difference,
+            "percent_segments_over_capacity": self.config.ccr_stop_criteria.percent_segments_over_capacity,
         }
         assign_transit(
             _tclass_specs,
@@ -375,14 +411,21 @@ class TransitAssignment(Component):
             scenario=_emme_scenario,
             log_worksheets=False,
         )
+
+        # question - why do we need to do this between iterations AND ALSO give it to the EMME cost function? Does EMME not use it?
         self._calc_segment_ccr_penalties(time_period)
 
-    def _run_extended_assign(self, time_period):
+    def _run_extended_assign(self, time_period: str) -> None:
+        """Run transit assignment without CCR.
+
+        Args:
+            time_period (_type_): time period name
+        """
         assign_transit = self.controller.emme_manager.tool(
             "inro.emme.transit_assignment.extended_transit_assignment"
         )
         _emme_scenario = self.emmebank.scenario(time_period)
-        _add_volumes = False
+
         # Question for INRO: Why are we only adding subsequent volumes shouldn't it assume to be
         #   zero to begin with?
         # Question for INRO: Can this function be distributed across machines? If so, how would
@@ -391,12 +434,22 @@ class TransitAssignment(Component):
             assign_transit(
                 tclass.emme_transit_spec,
                 class_name=tclass.name,
-                add_volumes=_add_volumes,
+                add_volumes=False,
                 scenario=_emme_scenario,
             )
             add_volumes = True
 
-    def _get_network_with_boardings(self, emme_scenario):
+    def _get_network_with_boardings(
+        self, emme_scenario: "EmmeScenario"
+    ) -> "EmmeNetwork":
+        """Get networkw ith transit boardings by line and segment.
+
+        Args:
+            emme_scenario (_type_):
+
+        Returns:
+            EmmeNetwork: with transit boardings by line and segment.
+        """
         network = emme_scenario.get_partial_network(
             ["TRANSIT_LINE", "TRANSIT_SEGMENT"], include_attributes=False
         )
@@ -408,8 +461,12 @@ class TransitAssignment(Component):
         _emme_manager.copy_attribute_values(emme_scenario, network, _attributes)
         return network
 
-    def _export_boardings_by_line(self, time_period):
-        """Export total boardings by line to config.transit.output_transit_boardings_file."""
+    def _export_boardings_by_line(self, time_period: str) -> None:
+        """Export total boardings by line to config.transit.output_transit_boardings_file.
+
+        args:
+            time_period (str): time period abbreviation
+        """
         _emme_scenario = self.emmebank.scenario(time_period)
         _network = self._get_network_with_boardings(_emme_scenario)
 
@@ -418,6 +475,7 @@ class TransitAssignment(Component):
         )
 
         os.makedirs(os.path.dirname(output_transit_boardings_file), exist_ok=True)
+
         with open(output_transit_boardings_file, "w", encoding="utf8") as out_file:
             out_file.write("line_name, description, total_boardings, mode, line_mode\n")
             for line in _network.transit_lines():
@@ -428,9 +486,17 @@ class TransitAssignment(Component):
                 )
 
     def _calc_connector_flows(
-        self, time_period
+        self, time_period: str
     ) -> Tuple["EmmeNetwork", Dict[str, str]]:
-        """Calculate boardings and alightings by assignment class."""
+        """Calculate boardings and alightings by assignment class.
+
+        args:
+            time_period (str): time period abbreviation
+
+        returns:
+            EmmeNetwork with aux_transit_volumes
+            transit class stop attributes: {<transit_class_name>: @aux_volume_<transit_class_name>...}
+        """
         _emme_manager = self.controller.emme_manager
         _emme_scenario = self.emmebank.scenario(time_period)
         network_results = _emme_manager.tool(
@@ -457,12 +523,17 @@ class TransitAssignment(Component):
             "NODE": ["@taz_id", "#node_id"],
         }
         _emme_manager.copy_attribute_values(self._scenario, network, attributes)
-        return network, class_stop_attrs
+        return network, tclass_stop_attrs
 
     def _export_connector_flows(
         self, network: EmmeNetwork, class_stop_attrs: Dict[str, str]
     ):
-        """Export boardings and alightings by assignment class, stop(connector) and TAZ."""
+        """Export boardings and alightings by assignment class, stop(connector) and TAZ.
+
+        args:
+            network: network to use
+            class_stop_attrs: list of attributes to export
+        """
         path_tmplt = self.get_abs_path(self.config.output_stop_usage_path)
         os.makedirs(os.path.dirname(path_tmplt), exist_ok=True)
         with open(
@@ -489,11 +560,11 @@ class TransitAssignment(Component):
                             f"{name}, {taz_id}, {stop_id}, 0.0, {link[attr_name]}\n"
                         )
 
-    def _add_ccr_vars_to_scenario(self, emme_scenario) -> None:
+    def _add_ccr_vars_to_scenario(self, emme_scenario: "EmmeScenario") -> None:
         """Add Extra Added Wait Time and Capacity Penalty to emme scenario.
 
         Args:
-            emme_scenario (_type_): _description_
+            emme_scenario : EmmeScenario
         """
         create_extra = self.emme_manager.tool(
             "inro.emme.data.extra_attribute.create_extra_attribute"
@@ -542,36 +613,24 @@ class TransitAssignment(Component):
         """Calculate extra average wait time (@eawt) and @capacity_penalty on the segments.
 
         TODO: INRO Please document
+
+
         """
         _emme_scenario = self.emmebank.scenario(time_period)
         _network = self._get_network_with_ccr_scenario_attributes(_emme_scenario)
 
-        _mode_name = ".mode.id"
-        if self.config.use_fares:
-            _mode_name = '["#src_mode"]'
-
         _duration = self.time_period_duration[time_period]
         for line in _network.transit_lines():
-            line.capacity = (
-                60.0 * _duration * line.vehicle.total_capacity / line.headway
+            line.capacity = time_period_capacity(
+                line.vehicle.total_capacity, line.headway, _duration
             )
 
-        enclosing_scope = {"network": _network, "scenario": _emme_scenario}
-        # TODO This is really jenky...I think we need to fix it so we aren't sending funcaitons as text
-        code = compile(
-            _HEADWAY_COST_FUNCTION.format(_mode_name),
-            "headway_cost_function",
-            "exec",
-        )
-        # Yes pylint, I know exec is being used here
-        # pylint: disable=W0122
-        exec(code, enclosing_scope)
-        calc_eawt = enclosing_scope["calc_eawt"]
         # QUESTION: document origin of this param.
         _hdwy_fraction = 0.5  # fixed in assignment spec
         for segment in _network.transit_segments():
-            vcr = segment.transit_volume / segment.line.capacity
-            segment["@eawt"] = calc_eawt(segment, vcr, segment.line.headway)
+            segment["@eawt"] = calc_extra_wait_time(
+                segment, segment.line.capacity, use_fares=self.config.use_fares
+            )
             segment["@capacity_penalty"] = (
                 max(segment["@phdwy"] - segment["@eawt"] - segment.line.headway, 0)
                 * _hdwy_fraction

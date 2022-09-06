@@ -698,7 +698,15 @@
     #input_connector_egress_times_path = "inputs\\trn\\estimated_taz_egress_connectors.csv"
     #output_stop_usage_path = "inputs\\trn\\stop_usage_{period}.csv"
     use_ccr = false
-    # max_ccr_iterations = 3
+    ccr_stop_criteria.max_iterations = 3
+    ccr_stop_criteria.relative_difference = 0.01
+    ccr_stop_criteria.percent_segments_over_capacity = 0.01
+    ccr_weights.min_seat = 1.0
+    ccr_weights.max_seat = 1.4
+    ccr_weights.power_seat = 2.2
+    ccr_weights.min_stand = 1.4
+    ccr_weights.max_stand = 1.6
+    ccr_weights.power_stand = 3.4
     [[transit.classes]]
         skim_set_id = "SET1"
         name = "BUS"
