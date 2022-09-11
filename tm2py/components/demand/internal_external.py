@@ -5,7 +5,7 @@ from __future__ import annotations
 import itertools
 import os
 from collections import defaultdict
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
 
 import numpy as np
 import openmatrix as _omx
@@ -17,6 +17,9 @@ from tm2py.emme.matrix import OMXManager
 from tm2py.logger import LogStartEnd
 from tm2py.matrix import create_matrix_factors
 from tm2py.omx import omx_to_dict
+
+if TYPE_CHECKING:
+    from tm2py.controller import RunController
 
 NumpyArray = np.array
 
@@ -40,13 +43,13 @@ class InternalExternal(Component):
         special_gateway_adjust: Optional[List[MatrixFactorConfig]]
     """
 
-    def __init__(self, controller: "RunController"):
+    def __init__(self, controller: RunController):
         super().__init__(controller)
         self.config = self.controller.config.internal_external
 
         self.sub_components = {
             "demand forecast": ExternalDemand(controller, self),
-            "time of day": TimePeriodSplit(controller, self, self.config.time_of_day),
+            "time of day": TimePeriodSplit(controller, self, self.config.time_of_day.classes[0].time_period_split),
             "toll choice": ExternalTollChoice(controller, self),
         }
 
@@ -64,19 +67,24 @@ class InternalExternal(Component):
         """Run internal/external travel demand component."""
 
         daily_demand = self.sub_components["demand forecast"].run()
-        period_demand = self.sub_components["time_of_day"].run(daily_demand)
+        period_demand = self.sub_components["time of day"].run(daily_demand)
         class_demands = self.sub_components["toll choice"].run(period_demand)
         self._export_results(class_demands)
 
     @LogStartEnd()
     def _export_results(self, demand: Dict[str, Dict[str, NumpyArray]]):
         """Export assignable class demands to OMX files by time-of-day."""
-        path_tmplt = self.get_abs_path(
-            self.config.internal_external.highway_demand_file
+        outdir = self.get_abs_path(
+            self.config.output_trip_table_directory
         )
-        os.makedirs(os.path.dirname(path_tmplt), exist_ok=True)
+        os.makedirs(outdir, exist_ok=True)
         for period, matrices in demand.items():
-            with OMXManager(path_tmplt.format(period=period), "w") as output_file:
+            with OMXManager(
+                os.path.join(
+                    outdir, self.config.outfile_trip_table_tmp.format(period=period)
+                ), 
+                "w"
+            ) as output_file:
                 for name, data in matrices.items():
                     output_file.write_array(data, name)
 
@@ -154,7 +162,7 @@ class ExternalDemand(Subcomponent):
         _mx_name_tmpl = self.config.input_demand_matrixname_tmpl
         _matrices = {m: _mx_name_tmpl.format(mode=m.upper()) for m in self.modes}
 
-        self.base_demand = omx_to_dict(self.input_demand_file, matrices=_matrices)
+        self._base_demand = omx_to_dict(self.input_demand_file, matrices=_matrices)
 
     def run(self, base_demand: Dict[str, NumpyArray] = None) -> Dict[str, NumpyArray]:
         """Calculate adjusted demand based on scenario year and growth rates.
@@ -178,14 +186,14 @@ class ExternalDemand(Subcomponent):
         _adj_matrix = np.ones(base_demand["da"].shape)
 
         _adj_matrix = create_matrix_factors(
-            _adj_matrix,
-            self.config.special_factor_adjust,
+            default_matrix = _adj_matrix,
+            matrix_factors = self.config.special_gateway_adjust,
         )
 
         _adj_matrix = create_matrix_factors(
-            _adj_matrix,
-            self.config.annual_growth_rate,
-            periods=_num_years,
+            default_matrix = _adj_matrix,
+            matrix_factors = self.config.annual_growth_rate,
+            periods = _num_years,
         )
 
         daily_prod_attract = dict(
@@ -278,11 +286,25 @@ class ExternalTollChoice(Subcomponent):
             self.time_period_names, self.component.classes
         )
 
-        class_demands = defaultdict()
+        class_demands = defaultdict(dict)
         for _time_period, _class in _time_class_combos:
 
-            _split_demand = self._toll_choice.run(period_demand, _class, _time_period)
+            if _time_period in period_demand.keys():
+                None
+            elif _time_period.lower() in period_demand.keys():
+                _time_period = _time_period.lower()
+            elif _time_period.upper() in period_demand.keys():
+                _time_period = _time_period.upper()
+            else:
+                raise ValueError(
+                    f"Period {_time_period} not an available time period.\
+                    Available periods are:  {period_demand.keys()}"
+                )
 
-            class_demands[_time_period][_class] = _split_demand["no toll"]
-            class_demands[_time_period][f"{_class}toll"] = _split_demand["no toll"]
+            _split_demand = self._toll_choice.run(
+                period_demand[_time_period][_class], _class, _time_period
+            )
+
+            class_demands[_time_period][_class] = _split_demand["non toll"]
+            class_demands[_time_period][f"{_class}toll"] = _split_demand["toll"]
         return class_demands

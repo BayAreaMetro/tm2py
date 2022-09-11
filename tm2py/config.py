@@ -359,7 +359,7 @@ class MatrixFactorConfig(ConfigItem):
             "j_factor" not in values.keys()
         ), "Found both `factor` and\
             `j_factor` in MatrixFactorConfig. Should be one or the other."
-
+        return value
 
 @dataclass(frozen=True)
 class CoefficientConfig(ConfigItem):
@@ -394,6 +394,7 @@ class ChoiceClassConfig(ConfigItem):
 
     name: str
     skim_mode: Optional[str] = Field(default="da")
+    veh_group_name: Optional[str] = Field(default="")
     property_factors: Optional[List[CoefficientConfig]] = Field(default=None)
 
 
@@ -702,6 +703,7 @@ class HighwayClassConfig(ConfigItem):
     """
 
     name: str = Field(min_length=1, max_length=10)
+    veh_group_name: str = Field(min_length=1, max_length=10)
     description: Optional[str] = Field(default="")
     mode_code: str = Field(min_length=1, max_length=1)
     value_of_time: float = Field(gt=0)

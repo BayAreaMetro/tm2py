@@ -1,6 +1,7 @@
 """Module with helpful matrix helper functions."""
 
 from typing import Collection, Dict, Mapping, Optional, Union
+from unicodedata import decimal
 
 import numpy as np
 import pandas as pd
@@ -29,17 +30,30 @@ class TimePeriodSplit(Subcomponent):
 
     @staticmethod
     def split_matrix(matrix, split_config: TimeSplitConfig):
-        if split_config.productions and split_config.attractions:
-            prod, attract = 0.5 * split_config.production, 0.5 * split_config.attraction
-            _split_demand = prod * matrix + attract * matrix.T
+        if isinstance(matrix, dict):
+            _split_demand = {}
+            for key, value in matrix.items():
+                if split_config.production and split_config.attraction:
+                    prod, attract = 0.5 * split_config.production, 0.5 * split_config.attraction
+                    _split_demand[key] = prod * value + attract * value.T
+                else:
+                    _split_demand[key] = split_config.od * value
+                
+                _split_demand[key] = np.around(_split_demand[key], decimals=2)
         else:
-            _split_demand = split_config.od * matrix
+            if split_config.production and split_config.attraction:
+                prod, attract = 0.5 * split_config.production, 0.5 * split_config.attraction
+                _split_demand = prod * matrix + attract * matrix.T
+            else:
+                _split_demand = split_config.od * matrix
+            
+            _split_demand = np.around(_split_demand, decimals=2)
 
-        return np.around(_split_demand, decimals=2)
+        return _split_demand
 
     @LogStartEnd()
     def run(
-        demand: NumpyArray, split_configs: Collection[TimeSplitConfig]
+        self, demand: NumpyArray
     ) -> Dict[str, NumpyArray]:
         """Split a demand matrix according to a TimeOfDaySplitConfig.
 
@@ -55,7 +69,7 @@ class TimePeriodSplit(Subcomponent):
             Dict[str, NumpyArray]: _description_
         """
         matrix_dict = {}
-        for _split in split_configs:
+        for _split in self.split_configs:
             matrix_dict[_split.time_period] = TimePeriodSplit.split_matrix(
                 demand, _split
             )
