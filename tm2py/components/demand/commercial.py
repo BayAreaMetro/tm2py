@@ -401,7 +401,7 @@ class CommercialVehicleTripGeneration(Subcomponent):
                 c for c in tripends_df.columns if c.endswith(f"_{_trk_class}_{_pa}")
             ]
             agg_tripends_df[f"{_trk_class}_{_pa}"] = pd.Series(
-                tripends_df[_sum_cols].sum().sum()
+                tripends_df[_sum_cols].sum(axis = 1)
             )
 
         agg_tripends_df.round(decimals=7)
@@ -507,15 +507,28 @@ class CommercialVehicleTripDistribution(Subcomponent):
             NumpyArray: Zone-to-zone values of truck K factors.
 
         """
-        return zonal_csv_to_matrices(
+        """return zonal_csv_to_matrices(
             self.get_abs_path(self.config.k_factors_file),
             i_column="I_taz_tm2_v2_2",
             j_column="J_taz_tm2_v2_2",
             value_columns="truck_k",
             fill_zones=True,
             default_value=0,
-            max_zone=max(self._scenario.zone_numbers),
-        )["truck_k"].values
+            max_zone=max(self.component.emme_scenario.zone_numbers),
+        )["truck_k"].values"""
+        data = pd.read_csv(self.get_abs_path(self.config.k_factors_file))
+        zones = np.unique(data["I_taz_tm2_v2_2"])
+        num_data_zones = len(zones)
+        row_index = np.searchsorted(zones, data["I_taz_tm2_v2_2"])
+        col_index = np.searchsorted(zones, data["J_taz_tm2_v2_2"])
+        k_factors = np.zeros((num_data_zones, num_data_zones))
+        k_factors[row_index, col_index] = data["truck_k"]
+        num_zones = len(self.component.emme_scenario.zone_numbers)
+        padding = ((0, num_zones - num_data_zones), (0, num_zones - num_data_zones))
+        k_factors = np.pad(k_factors, padding)
+
+        return k_factors
+
 
     def blended_skims(self, mode: str):
         """Get blended skim. Creates it if doesn't already exist.
@@ -554,6 +567,7 @@ class CommercialVehicleTripDistribution(Subcomponent):
             ] = self._calculate_friction_factor_matrix(
                 trk_class,
                 self.class_config[trk_class].impedance,
+                self.k_factors,
                 self.class_config[trk_class].use_k_factors,
             )
 
@@ -565,6 +579,7 @@ class CommercialVehicleTripDistribution(Subcomponent):
         segment_name,
         blended_skim_name: str,
         k_factors: Union[None, NumpyArray] = None,
+        use_k_factors: bool = False,
     ):
         """Calculates friction matrix by interpolating time; optionally multiplying by k_factors.
 
@@ -582,8 +597,9 @@ class CommercialVehicleTripDistribution(Subcomponent):
             self.friction_factors[segment_name],
         )
 
-        if k_factors is not None:
-            _friction_matrix = _friction_matrix * k_factors
+        if use_k_factors:
+            if k_factors is not None:
+                _friction_matrix = _friction_matrix * k_factors
 
         return _friction_matrix
 
@@ -896,16 +912,16 @@ class CommercialVehicleTollChoice(Subcomponent):
         Uses OMX skims output from highway assignment: traffic_skims_{period}.omx"""
 
         _tclass_time_combos = itertools.product(
-            self.time_period_names, self.component.classes
+            self.time_period_names, self.config.classes
         )
 
-        class_demands = defaultdict()
+        class_demands = defaultdict(dict)
         for _time_period, _tclass in _tclass_time_combos:
 
             _split_demand = self._toll_choice.run(
-                trkclass_tp_demand_dict[_tclass][_time_period], _tclass, _time_period
+                trkclass_tp_demand_dict[_tclass.name][_time_period], _tclass.name, _time_period
             )
 
-            class_demands[_time_period][_tclass] = _split_demand["no toll"]
-            class_demands[_time_period][f"{_tclass}toll"] = _split_demand["no toll"]
+            class_demands[_time_period][_tclass.name] = _split_demand["non toll"]
+            class_demands[_time_period][f"{_tclass.name}toll"] = _split_demand["toll"]
         return class_demands
