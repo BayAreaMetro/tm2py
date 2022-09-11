@@ -742,7 +742,7 @@ class CommercialVehicleTripDistribution(Subcomponent):
             "type": "MATRIX_BALANCING",
         }
         matrix_balancing(spec, scenario=self.component.emme_scenario)
-        """
+        
         matrix_round(
             _result_emme_mx_name,
             _result_emme_mx_name,
@@ -750,7 +750,7 @@ class CommercialVehicleTripDistribution(Subcomponent):
             values_to_round="ALL_NON_ZERO",
             scenario=self.component.emme_scenario,
         )
-        """
+        
         return self.component.matrix_cache.get_data(_result_emme_mx_name)
 
 
