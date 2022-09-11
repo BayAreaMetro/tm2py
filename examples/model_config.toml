@@ -124,15 +124,18 @@
         [[internal_external.toll_choice.classes]]
             name = "da"
             skim_mode = "da"
+            veh_group_name = "da"
         [[internal_external.toll_choice.classes]]
             name = "sr2"
             skim_mode = "sr2"
+            veh_group_name = "sr2"
             [[internal_external.toll_choice.classes.property_factors]]
                 property = "toll"
                 coeff = 0.5714285714285714
         [[internal_external.toll_choice.classes]]
             name = "sr3"
             skim_mode = "sr3"
+            veh_group_name = "sr3"
             [[internal_external.toll_choice.classes.property_factors]]
                 property = "toll"
                 coeff = 0.4
@@ -143,8 +146,8 @@
             coeff = -0.088
 
 [truck]
-    output_trip_table_directory = "demand_matrices/highway/household"
-    outfile_trip_table_tmp = "TAZ_Demand_{period}.omx"
+    output_trip_table_directory = "demand_matrices/highway/commercial"
+    outfile_trip_table_tmp = "tripstrk{period}.omx"
     [[truck.classes]]
         name = "vsmtrk"
         description = "very small truck"
@@ -171,7 +174,7 @@
             "MD" = 0.6666666667
     [truck.trip_dist]
         k_factors_file = "inputs/nonres/truck_kfactors_taz.csv"
-        friction_factors_file = "inputs/nonres/truckFF.dat"
+        friction_factors_file = "inputs/nonres/truckFF.csv"
         max_balance_iterations = 999
         max_balance_relative_error = 0.0001
     [[truck.trip_dist.classes]]
@@ -402,11 +405,21 @@
         value_of_time = 18.93
         operating_cost_per_mile = 17.23
         [[truck.toll_choice.classes]]
-            name = "trk"
+            name = "vsmtrk"
             skim_mode = "trk"
+            veh_group_name = "vsm"
         [[truck.toll_choice.classes]]
-            name = "lgstrk"
+            name = "smltrk"
+            skim_mode = "trk"
+            veh_group_name = "sml"
+        [[truck.toll_choice.classes]]
+            name = "medtrk"
+            skim_mode = "trk"
+            veh_group_name = "med"
+        [[truck.toll_choice.classes]]
+            name = "lrgtrk"
             skim_mode = "lrgtrk"
+            veh_group_name = "lrg"
         [[truck.toll_choice.utility]]
             property = "time"
             coeff = -0.088
@@ -493,6 +506,7 @@
 
     [[highway.classes]]
         name = "da"
+        veh_group_name = "da"
         description = "drive alone"
         mode_code = "d"
         excluded_links = [ "is_toll_da", "is_sr",]
@@ -511,6 +525,7 @@
             name = "da"
     [[highway.classes]]
         name = "sr2"
+        veh_group_name = "sr2"
         description = "shared ride 2"
         mode_code = "e"
         excluded_links = [ "is_toll_sr2", "is_sr3",]
@@ -535,6 +550,7 @@
             name = "sr2"
     [[highway.classes]]
         name = "sr3"
+        veh_group_name = "sr3"
         description = "shared ride 3+"
         mode_code = "f"
         excluded_links = [ "is_toll_sr3",]
@@ -559,6 +575,7 @@
             name = "sr3"
     [[highway.classes]]
         name = "trk"
+        veh_group_name = "trk"
         description = "truck"
         mode_code = "t"
         excluded_links = [ "is_toll_vsm", "is_toll_sml", "is_toll_med", "is_sr",]
@@ -577,6 +594,7 @@
             name = "medtrk"
     [[highway.classes]]
         name = "lrgtrk"
+        veh_group_name = "lrgtrk"
         description = "large truck"
         mode_code = "l"
         excluded_links = [ "is_toll_lrg", "is_auto_only",]
@@ -591,6 +609,7 @@
             factor = 2.0
     [[highway.classes]]
         name = "datoll"
+        veh_group_name = "da"
         description = "drive alone toll"
         mode_code = "D"
         excluded_links = [ "is_sr",]
@@ -606,6 +625,7 @@
             name = "datoll"
     [[highway.classes]]
         name = "sr2toll"
+        veh_group_name = "sr2"
         description = "shared ride 2 toll"
         mode_code = "E"
         excluded_links = [ "is_sr3",]
@@ -623,6 +643,7 @@
             name = "sr2toll"
     [[highway.classes]]
         name = "sr3toll"
+        veh_group_name = "sr3"
         description = "shared ride 3+ toll"
         mode_code = "F"
         excluded_links = []
@@ -640,6 +661,7 @@
             name = "sr3toll"
     [[highway.classes]]
         name = "trktoll"
+        veh_group_name = "trk"
         description = "truck toll"
         mode_code = "T"
         excluded_links = [ "is_sr",]
@@ -658,6 +680,7 @@
             name = "medtrktoll"
     [[highway.classes]]
         name = "lrgtrktoll"
+        veh_group_name = "lrgtrk"
         description = "large truck toll"
         mode_code = "L"
         excluded_links = [ "is_auto_only", "is_sr",]
