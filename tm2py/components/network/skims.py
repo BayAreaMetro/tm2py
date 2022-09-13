@@ -42,7 +42,9 @@ def get_summed_skims(
     _mode_prop = itertools.product(mode, property)
 
     _mx_list = [
-        get_omx_skim_as_numpy(controller, mode, veh_group_name, time_period, prop, omx_manager)
+        get_omx_skim_as_numpy(
+            controller, mode, veh_group_name, time_period, prop, omx_manager
+        )
         for mode, prop in _mode_prop
     ]
 
@@ -123,7 +125,9 @@ def get_omx_skim_as_numpy(
             )
             if os.path.basename(omx_manager._file_path) != _filename:
                 omx_manager.close()
-                omx_manager._file_path = controller.run_dir / _config.output_skim_path / _filename
+                omx_manager._file_path = (
+                    controller.run_dir / _config.output_skim_path / _filename
+                )
                 omx_manager.open()
         return omx_manager.read(_matrix_name)
 
@@ -158,7 +162,7 @@ def get_blended_skim(
     _scaled_times = []
     for _tp, _multiplier in blend.items():
         _scaled_times.append(
-            get_omx_skim_as_numpy(controller, mode, '', _tp, property) * _multiplier
+            get_omx_skim_as_numpy(controller, mode, "", _tp, property) * _multiplier
         )
 
     _blended_time = sum(_scaled_times)

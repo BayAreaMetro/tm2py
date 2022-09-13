@@ -226,13 +226,16 @@ class TollChoiceCalculator(Subcomponent):
             self.property_to_skim_toll,
             self.class_config[class_name],
             time_period,
-            toll = True
+            toll=True,
         )
 
         prob_nontoll = e_util_nontoll / (e_util_toll + e_util_nontoll)
 
         prob_nontoll = self.mask_non_available(
-            prob_nontoll, time_period, self.class_config[class_name].skim_mode, self.class_config[class_name].veh_group_name
+            prob_nontoll,
+            time_period,
+            self.class_config[class_name].skim_mode,
+            self.class_config[class_name].veh_group_name,
         )
 
         return prob_nontoll
@@ -242,7 +245,7 @@ class TollChoiceCalculator(Subcomponent):
         prop_to_skim: Mapping[str, Collection[str]],
         choice_class_config: ChoiceClassConfig,
         time_period: str,
-        toll: Optional[bool] = False
+        toll: Optional[bool] = False,
     ) -> NumpyArray:
         """Calculate the exp(utils) for the time, distance and costs skims.
 
@@ -260,7 +263,9 @@ class TollChoiceCalculator(Subcomponent):
         _util_sum = []
         property_factors = {}
         if choice_class_config.property_factors is not None:
-            property_factors = {x.property: x.coeff for x in choice_class_config.property_factors}
+            property_factors = {
+                x.property: x.coeff for x in choice_class_config.property_factors
+            }
         for prop, skim_prop_list in prop_to_skim.items():
             if not toll:
                 _skim_values = get_summed_skims(
@@ -275,16 +280,12 @@ class TollChoiceCalculator(Subcomponent):
                 _skim_values = get_summed_skims(
                     self.controller,
                     property=skim_prop_list,
-                    mode=choice_class_config.skim_mode+"toll",
+                    mode=choice_class_config.skim_mode + "toll",
                     veh_group_name=choice_class_config.veh_group_name,
                     time_period=time_period,
                     omx_manager=self._omx_manager,
                 )
-            _util = (
-                self.utility[prop]
-                * _skim_values
-                * property_factors.get(prop, 1)
-            )
+            _util = self.utility[prop] * _skim_values * property_factors.get(prop, 1)
             _util_sum.append(_util)
 
         return np.exp(np.add(*_util_sum))
@@ -321,7 +322,7 @@ class TollChoiceCalculator(Subcomponent):
 
         toll_tollcost = get_omx_skim_as_numpy(
             self.controller,
-            skim_mode+'toll',
+            skim_mode + "toll",
             veh_group_name,
             time_period,
             prop_toll_cost,

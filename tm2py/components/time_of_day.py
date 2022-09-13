@@ -34,27 +34,31 @@ class TimePeriodSplit(Subcomponent):
             _split_demand = {}
             for key, value in matrix.items():
                 if split_config.production and split_config.attraction:
-                    prod, attract = 0.5 * split_config.production, 0.5 * split_config.attraction
+                    prod, attract = (
+                        0.5 * split_config.production,
+                        0.5 * split_config.attraction,
+                    )
                     _split_demand[key] = prod * value + attract * value.T
                 else:
                     _split_demand[key] = split_config.od * value
-                
+
                 _split_demand[key] = np.around(_split_demand[key], decimals=2)
         else:
             if split_config.production and split_config.attraction:
-                prod, attract = 0.5 * split_config.production, 0.5 * split_config.attraction
+                prod, attract = (
+                    0.5 * split_config.production,
+                    0.5 * split_config.attraction,
+                )
                 _split_demand = prod * matrix + attract * matrix.T
             else:
                 _split_demand = split_config.od * matrix
-            
+
             _split_demand = np.around(_split_demand, decimals=2)
 
         return _split_demand
 
     @LogStartEnd()
-    def run(
-        self, demand: NumpyArray
-    ) -> Dict[str, NumpyArray]:
+    def run(self, demand: NumpyArray) -> Dict[str, NumpyArray]:
         """Split a demand matrix according to a TimeOfDaySplitConfig.
 
         Right now supports simple factoring of demand. If TimeOfDaySplitConfig has productions

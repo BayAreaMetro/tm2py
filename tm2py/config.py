@@ -361,6 +361,7 @@ class MatrixFactorConfig(ConfigItem):
             `j_factor` in MatrixFactorConfig. Should be one or the other."
         return value
 
+
 @dataclass(frozen=True)
 class CoefficientConfig(ConfigItem):
     """Coefficient and properties to be used in utility or regression."""

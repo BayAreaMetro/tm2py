@@ -49,7 +49,9 @@ class InternalExternal(Component):
 
         self.sub_components = {
             "demand forecast": ExternalDemand(controller, self),
-            "time of day": TimePeriodSplit(controller, self, self.config.time_of_day.classes[0].time_period_split),
+            "time of day": TimePeriodSplit(
+                controller, self, self.config.time_of_day.classes[0].time_period_split
+            ),
             "toll choice": ExternalTollChoice(controller, self),
         }
 
@@ -74,16 +76,14 @@ class InternalExternal(Component):
     @LogStartEnd()
     def _export_results(self, demand: Dict[str, Dict[str, NumpyArray]]):
         """Export assignable class demands to OMX files by time-of-day."""
-        outdir = self.get_abs_path(
-            self.config.output_trip_table_directory
-        )
+        outdir = self.get_abs_path(self.config.output_trip_table_directory)
         os.makedirs(outdir, exist_ok=True)
         for period, matrices in demand.items():
             with OMXManager(
                 os.path.join(
                     outdir, self.config.outfile_trip_table_tmp.format(period=period)
-                ), 
-                "w"
+                ),
+                "w",
             ) as output_file:
                 for name, data in matrices.items():
                     output_file.write_array(data, name)
@@ -186,14 +186,14 @@ class ExternalDemand(Subcomponent):
         _adj_matrix = np.ones(base_demand["da"].shape)
 
         _adj_matrix = create_matrix_factors(
-            default_matrix = _adj_matrix,
-            matrix_factors = self.config.special_gateway_adjust,
+            default_matrix=_adj_matrix,
+            matrix_factors=self.config.special_gateway_adjust,
         )
 
         _adj_matrix = create_matrix_factors(
-            default_matrix = _adj_matrix,
-            matrix_factors = self.config.annual_growth_rate,
-            periods = _num_years,
+            default_matrix=_adj_matrix,
+            matrix_factors=self.config.annual_growth_rate,
+            periods=_num_years,
         )
 
         daily_prod_attract = dict(

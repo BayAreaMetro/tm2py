@@ -401,7 +401,7 @@ class CommercialVehicleTripGeneration(Subcomponent):
                 c for c in tripends_df.columns if c.endswith(f"_{_trk_class}_{_pa}")
             ]
             agg_tripends_df[f"{_trk_class}_{_pa}"] = pd.Series(
-                tripends_df[_sum_cols].sum(axis = 1)
+                tripends_df[_sum_cols].sum(axis=1)
             )
 
         agg_tripends_df.round(decimals=7)
@@ -528,7 +528,6 @@ class CommercialVehicleTripDistribution(Subcomponent):
         k_factors = np.pad(k_factors, padding)
 
         return k_factors
-
 
     def blended_skims(self, mode: str):
         """Get blended skim. Creates it if doesn't already exist.
@@ -742,7 +741,7 @@ class CommercialVehicleTripDistribution(Subcomponent):
             "type": "MATRIX_BALANCING",
         }
         matrix_balancing(spec, scenario=self.component.emme_scenario)
-        
+
         matrix_round(
             _result_emme_mx_name,
             _result_emme_mx_name,
@@ -750,7 +749,7 @@ class CommercialVehicleTripDistribution(Subcomponent):
             values_to_round="ALL_NON_ZERO",
             scenario=self.component.emme_scenario,
         )
-        
+
         return self.component.matrix_cache.get_data(_result_emme_mx_name)
 
 
@@ -919,7 +918,9 @@ class CommercialVehicleTollChoice(Subcomponent):
         for _time_period, _tclass in _tclass_time_combos:
 
             _split_demand = self._toll_choice.run(
-                trkclass_tp_demand_dict[_tclass.name][_time_period], _tclass.name, _time_period
+                trkclass_tp_demand_dict[_tclass.name][_time_period],
+                _tclass.name,
+                _time_period,
             )
 
             class_demands[_time_period][_tclass.name] = _split_demand["non toll"]
