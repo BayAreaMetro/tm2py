@@ -7,6 +7,7 @@ from conftest import inro_context
 from tools import assert_csv_equal, diff_omx
 
 
+@pytest.mark.skipif(inro_context != "inro", reason="requires full inro context")
 def test_prepare_highway_network(examples_dir):
     "Tests that prepare highway network component can be run."
     from tools import test_component
