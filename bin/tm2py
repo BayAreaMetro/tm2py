@@ -7,6 +7,7 @@ import gdal
 
 from tm2py import RunController
 
+
 def usage():
     print("tm2py -s scenario.toml -m model.toml -r run_dir")
 

@@ -11,7 +11,11 @@ print("CONFTEST LOADED")
 @pytest.fixture(scope="session")
 def root_dir():
     """Root tm2py directory."""
-    return Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    d = os.path.dirname(os.path.abspath(__file__))
+    for i in range(3):
+        if "examples" in os.listdir(d):
+            return Path(d)
+        d = os.path.dirname(d)
 
 
 @pytest.fixture(scope="session")
