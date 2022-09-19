@@ -19,7 +19,7 @@ def create_matrix_factors(
 
     adj_matrix = default_matrix
     for adj in matrix_factors:
-        if adj.factor:
+        if adj.factor is not None:
             _i_factor = adj.factor / 2.00
             _j_factor = adj.factor / 2.00
         else:
@@ -34,8 +34,9 @@ def create_matrix_factors(
             adj_matrix *= _i_factor
             adj_matrix *= _j_factor
         else:
-            adj_matrix[adj.zone_index, :] *= _i_factor
-            adj_matrix[:, adj.zone_index] *= _j_factor
+            zone_index = [z for z in adj.zone_index if z < adj_matrix.shape[0]]
+            adj_matrix[zone_index, :] *= _i_factor
+            adj_matrix[:, zone_index] *= _j_factor
 
     return adj_matrix
 

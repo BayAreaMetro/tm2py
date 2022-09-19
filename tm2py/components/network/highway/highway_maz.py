@@ -202,7 +202,7 @@ class AssignMAZSPDemand(Component):
         report = net_calc(
             "@link_cost", f"{time_attr} + 0.6 / {vot} * (length * {op_cost})"
         )
-        self.logger.log_time("Link cost calculation report", level="TRACE")
+        self.logger.log("Link cost calculation report", level="TRACE")
         self.logger.log_dict(report, level="TRACE")
         self._network = self.controller.emme_manager.get_network(
             self._scenario, {"NODE": ["@maz_id", "x", "y", "#node_county"], "LINK": []}
@@ -222,7 +222,7 @@ class AssignMAZSPDemand(Component):
         Returns:
             List of MAZ nodes (Emme Node) which are in these counties.
         """
-        self.logger.log_time(
+        self.logger.log(
             f"Processing county MAZs for {', '.join(counties)}", level="DETAIL"
         )
         network = self._network
@@ -251,7 +251,7 @@ class AssignMAZSPDemand(Component):
             maz_ids: indexed list of MAZ ID nodes for the county group
                 (active counties for this demand file)
         """
-        self.logger.log_time(
+        self.logger.log(
             f"Process demand for time period {time} index {index}", level="DETAIL"
         )
         data = self._read_demand_array(time, index)
@@ -312,7 +312,7 @@ class AssignMAZSPDemand(Component):
                 {"orig": EmmeNode, "dest": EmmeNode, "dem": float (demand value)}
 
         """
-        self.logger.log_time("Grouping demand in distance buckets", level="DETAIL")
+        self.logger.log("Grouping demand in distance buckets", level="DETAIL")
         # group demand from same origin into distance bins by furthest
         # distance destination to limit shortest path search radius
         bin_edges = self._bin_edges[:]
@@ -475,10 +475,8 @@ class AssignMAZSPDemand(Component):
                 link["temp_flow"] += dem
                 i_node = j_node
             assigned += dem
-        self.logger.log_time(
-            f"ASSIGN bin {bin_no}: total: {len(demand)}", level="DEBUG"
-        )
-        self.logger.log_time(
+        self.logger.log(f"ASSIGN bin {bin_no}: total: {len(demand)}", level="DEBUG")
+        self.logger.log(
             f"assigned: {assigned}, not assigned: {not_assigned}", level="DEBUG"
         )
 
@@ -548,7 +546,7 @@ class AssignMAZSPDemand(Component):
             {"LINK": ["temp_flow"]},
             {"LINK": ["@maz_flow"]},
         )
-        self.logger.log_time(
+        self.logger.log(
             f"ASSIGN bin {bin_no}, total {len(demand)}, assign "
             f"{assigned}, not assign {not_assigned}, bytes {bytes_read}",
             level="DEBUG",
@@ -647,11 +645,13 @@ class SkimMAZCosts(Component):
         self._scenario = None
         self._network = None
 
-        @property
-        def scenario(self):
-            if self._scenario is None:
-                self._scenario = self.highway_emmebank.scenario(self.ref_period)
-            return self._scenario
+    @property
+    def scenario(self):
+        if self._scenario is None:
+            self._scenario = self.get_emme_scenario(
+                self.controller.config.emme.highway_database_path, self.ref_period_name
+            )
+        return self._scenario
 
     def validate_inputs(self):
         """Validate inputs files are correct, raise if an error is found."""
@@ -708,7 +708,7 @@ class SkimMAZCosts(Component):
             ("NODE", "@maz_root", "selected roots (origins)"),
         ]
         with self.controller.emme_manager.temp_attributes_and_restore(
-            self._scenario, attributes
+            self.scenario, attributes
         ):
             try:
                 yield
@@ -724,7 +724,7 @@ class SkimMAZCosts(Component):
         else:
             time_attr = "@free_flow_time"
         self.logger.log(f"Time attribute {time_attr}", level="DEBUG")
-        vot = self.config.maz_to_maz.value_of_time
+        vot = self.config.value_of_time
         op_cost = self.config.operating_cost_per_mile
         net_calc("@link_cost", f"{time_attr} + 0.6 / {vot} * (length * {op_cost})")
         self._network = self.controller.emme_manager.get_network(

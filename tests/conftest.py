@@ -11,7 +11,11 @@ print("CONFTEST LOADED")
 @pytest.fixture(scope="session")
 def root_dir():
     """Root tm2py directory."""
-    return Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    d = os.path.dirname(os.path.abspath(__file__))
+    for i in range(3):
+        if "examples" in os.listdir(d):
+            return Path(d)
+        d = os.path.dirname(d)
 
 
 @pytest.fixture(scope="session")
@@ -26,6 +30,8 @@ def bin_dir(root_dir):
     return root_dir / "bin"
 
 
+# todo: why not use the existing tmp_path fixture?
+# https://docs.pytest.org/en/7.1.x/how-to/tmp_path.html
 @pytest.fixture()
 def temp_dir():
     """Create a temporary directory and clean it up upon test completion.

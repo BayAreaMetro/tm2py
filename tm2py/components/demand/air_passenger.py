@@ -214,7 +214,9 @@ class AirPassenger(Component):
             airport=airport, year=year, direction=direction
         )
 
-        return self.get_abs_path(self.config.input_demand_folder) / _file_name
+        return os.path.join(
+            self.get_abs_path(self.config.input_demand_folder), _file_name
+        )
 
     def _get_air_demand_for_year(self, year) -> pd.DataFrame:
         """Creates a dataframe of concatenated data from CSVs for all airport x direction combos.
@@ -269,8 +271,8 @@ class AirPassenger(Component):
         os.makedirs(os.path.dirname(path_tmplt), exist_ok=True)
 
         for _period in self.time_period_names:
-            _file_path = path_tmplt / self.config.outfile_trip_table_tmp.format(
-                period=_period
+            _file_path = os.path.join(
+                path_tmplt, self.config.outfile_trip_table_tmp.format(period=_period)
             )
             df_to_omx(
                 demand_df,

@@ -35,7 +35,8 @@ def test_config_read(examples_dir, inro_context):
     assert my_config.highway.maz_to_maz.operating_cost_per_mile == 18.93
     assert len(my_config.time_periods) == 5
     assert my_config.highway.classes[0].description == "drive alone"
-    assert my_config.logging.log_file_path == "log_detail.txt"
+    assert my_config.logging.log_file_path.startswith("tm2py_debug_")
+    assert my_config.logging.log_file_path.endswith(".log")
     assert my_config.logging.display_level == "STATUS"
 
 
