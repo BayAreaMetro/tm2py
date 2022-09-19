@@ -2,6 +2,9 @@
 
 import argparse
 
+# this is mysterious but appears to resolve DLL load errors that otherwise occur
+import gdal
+
 from tm2py import RunController
 
 

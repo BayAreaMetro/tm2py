@@ -47,7 +47,7 @@ import numpy as np
 
 from tm2py import tools
 from tm2py.components.component import Component
-from tm2py.components.demand.demand import PrepareHighwayDemand
+from tm2py.components.demand.prepare_demand import PrepareHighwayDemand
 from tm2py.emme.manager import EmmeScenario
 from tm2py.emme.matrix import MatrixCache, OMXManager
 from tm2py.emme.network import NetworkCalculator
@@ -96,11 +96,25 @@ class HighwayAssignment(Component):
             controller (RunController): Reference to current run controller.
         """
         super().__init__(controller)
-        self._num_processors = tools.parse_num_processors(
-            self.config.emme.num_processors
-        )
+
+        self.config = self.controller.config.highway
+
         self._matrix_cache = None
         self._skim_matrices = []
+        self._class_config = None
+
+    @property
+    def classes(self):
+        # self.hwy_classes
+        return [c.name for c in self.config.classes]
+
+    @property
+    def class_config(self):
+        # self.hwy_class_configs
+        if not self._class_config:
+            self._class_config = {c.name: c for c in self.config.classes}
+
+        return self._class_config
 
     def validate_inputs(self):
         """Validate inputs files are correct, raise if an error is found."""
@@ -111,17 +125,16 @@ class HighwayAssignment(Component):
     def run(self):
         """Run highway assignment."""
         demand = PrepareHighwayDemand(self.controller)
-        if self.controller.iteration > 0:
+        if self.controller.iteration >= 1:
             demand.run()
-        for time in self.time_period_names():
+        for time in self.time_period_names:
             scenario = self.get_emme_scenario(
-                self.config.emme.highway_database_path, time
+                self.controller.config.emme.highway_database_path, time
             )
             with self._setup(scenario, time):
                 iteration = self.controller.iteration
                 assign_classes = [
-                    AssignmentClass(c, time, iteration)
-                    for c in self.config.highway.classes
+                    AssignmentClass(c, time, iteration) for c in self.config.classes
                 ]
                 if iteration > 0:
                     self._copy_maz_flow(scenario)
@@ -142,7 +155,7 @@ class HighwayAssignment(Component):
                 for emme_class_spec in assign_spec["classes"]:
                     self._calc_time_skim(emme_class_spec)
                 # Set intra-zonal for time and dist to be 1/2 nearest neighbour
-                for class_config in self.config.highway.classes:
+                for class_config in self.config.classes:
                     self._set_intrazonal_values(
                         time,
                         class_config["name"],
@@ -177,7 +190,7 @@ class HighwayAssignment(Component):
         Args:
             scenario: Emme scenario object
         """
-        self.logger.log_time(
+        self.logger.log(
             "Copy @maz_flow to ul1 for background traffic", indent=True, level="DETAIL"
         )
         net_calc = NetworkCalculator(scenario)
@@ -189,7 +202,7 @@ class HighwayAssignment(Component):
         Args:
             scenario: Emme scenario object
         """
-        self.logger.log_time(
+        self.logger.log(
             "Set ul1 to 0 for background traffic", indent=True, level="DETAIL"
         )
         net_calc = NetworkCalculator(scenario)
@@ -235,8 +248,8 @@ class HighwayAssignment(Component):
             Emme specification for SOLA traffic assignment
 
         """
-        relative_gap = self.config.highway.relative_gap
-        max_iterations = self.config.highway.max_iterations
+        relative_gap = self.config.relative_gap
+        max_iterations = self.config.max_iterations
         # NOTE: mazmazvol as background traffic in link.data1 ("ul1")
         base_spec = {
             "type": "SOLA_TRAFFIC_ASSIGNMENT",
@@ -252,7 +265,9 @@ class HighwayAssignment(Component):
                 "relative_gap": relative_gap,
                 "normalized_gap": 0.0,
             },
-            "performance_settings": {"number_of_processors": self._num_processors},
+            "performance_settings": {
+                "number_of_processors": self.controller.num_processors
+            },
         }
         return base_spec
 
@@ -303,8 +318,14 @@ class HighwayAssignment(Component):
             time_period: time period name
         """
         # NOTE: skims in separate file by period
+        self.logger.debug(
+            "_export_skims: self.config.output_skim_path:{}".format(
+                self.config.output_skim_path
+            )
+        )
         omx_file_path = self.get_abs_path(
-            self.config.highway.output_skim_path.format(period=time_period)
+            self.config.output_skim_path
+            / self.config.output_skim_filename_tmpl.format(time_period=time_period)
         )
         self.logger.debug(
             f"export {len(self._skim_matrices)} skim matrices to {omx_file_path}"
