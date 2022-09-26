@@ -131,7 +131,13 @@ def calc_offs_thru_segment(segment) -> float:
     return total_offs_thru_this_seg
 
 
-def calc_extra_wait_time(segment, segment_capacity: float, eawt_weights, mode_config: dict, use_fares: bool = False):
+def calc_extra_wait_time(
+    segment,
+    segment_capacity: float,
+    eawt_weights,
+    mode_config: dict,
+    use_fares: bool = False,
+):
     """Calculate extra added wait time based on...
 
     # TODO document fully.
@@ -155,10 +161,10 @@ def calc_extra_wait_time(segment, segment_capacity: float, eawt_weights, mode_co
 
     # TODO Document and add params to config. Have no idea what source is here.
     eawt = (
-        eawt_weights.constant \
-        + eawt_weights.weight_inverse_headway* (1 / _headway) \
-        + eawt_weights.vcr * (_transit_volume / segment_capacity) \
-        + eawt_weights.exit_proportion * (_offs_thru_segment / _total_offs) \
+        eawt_weights.constant
+        + eawt_weights.weight_inverse_headway * (1 / _headway)
+        + eawt_weights.vcr * (_transit_volume / segment_capacity)
+        + eawt_weights.exit_proportion * (_offs_thru_segment / _total_offs)
     )
 
     eawt_factor = mode_config[segment.line["#src_mode"]].eawt_factor
@@ -202,7 +208,11 @@ def calc_adjusted_headway(segment, segment_capacity: float) -> float:
 
 
 def calc_updated_perceived_headway(
-    time_period_duration: float,  eawt_weights, mode_config, segment, use_fares: bool = False
+    time_period_duration: float,
+    eawt_weights,
+    mode_config,
+    segment,
+    use_fares: bool = False,
 ):
     """Calculate perceived (???) headway updated by ... and extra added wait time.
 
@@ -211,8 +221,8 @@ def calc_updated_perceived_headway(
     Args:
         time_period_duration(float): time period duration in minutes
         segment: Emme Transit segment object
-        eawt_weights: 
-        mode_config: 
+        eawt_weights:
+        mode_config:
         use_fares (bool): if true, will use fares
 
     Returns:
@@ -226,7 +236,13 @@ def calc_updated_perceived_headway(
         segment.line.headway, segment.line.vehicle.total_capacity, time_period_duration
     )
 
-    _extra_added_wait_time = calc_extra_wait_time(segment, _segment_capacity, eawt_weights, mode_config, use_fares,)
+    _extra_added_wait_time = calc_extra_wait_time(
+        segment,
+        _segment_capacity,
+        eawt_weights,
+        mode_config,
+        use_fares,
+    )
 
     _adjusted_headway = calc_adjusted_headway(
         segment,
@@ -355,7 +371,9 @@ class TransitAssignment(Component):
         _duration = self.time_period_duration[time_period]
         _ccr_weights = self.config.ccr_weights
         _eawt_weights = self.config.eawt_weights
-        _mode_config = { mode_config.mode_id: mode_config for mode_config in self.config.modes}
+        _mode_config = {
+            mode_config.mode_id: mode_config for mode_config in self.config.modes
+        }
         _emme_scenario = self.emmebank.scenario(time_period)
         transit_classes = self._transit_classes
 
@@ -389,7 +407,10 @@ class TransitAssignment(Component):
             "headway": {
                 "type": "CUSTOM",
                 "python_function": partial.calc_updated_perceived_headway(
-                    _duration, _eawt_weights, _mode_config, use_fares=self.config.use_fares
+                    _duration,
+                    _eawt_weights,
+                    _mode_config,
+                    use_fares=self.config.use_fares,
                 ),
             },
             "assignment_period": _duration,

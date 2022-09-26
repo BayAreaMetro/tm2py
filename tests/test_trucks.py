@@ -7,6 +7,7 @@ from conftest import inro_context
 
 from tm2py.examples import get_example
 
+
 @pytest.mark.skip_by_context()
 def test_commercial_vehicle(examples_dir, root_dir):
     "Tests that commercial vehicle component can be run."
