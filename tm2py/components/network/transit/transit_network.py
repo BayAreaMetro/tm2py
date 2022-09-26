@@ -28,10 +28,12 @@ class PrepareTransitNetwork(Component):
         """
         super().__init__(controller)
         self.config = self.controller.config.transit
-        self.emme_manager = self.controller.emme_manager
+        self._emme_manager = self.controller.emme_manager
         self._transit_emmebank = None
         self._transit_networks = None
         self._transit_scenarios = None
+        self._highway_emmebank = None
+        self._highway_scenarios = None
         self._auto_emmebank = None
         self._auto_networks = None
         self._auto_scenarios = None
@@ -52,20 +54,20 @@ class PrepareTransitNetwork(Component):
             if self.config.override_connector_times:
                 self._update_connector_times(time_period)
 
+    def validate_inputs(self):
+        """Validate the inputs."""
+        # TODO
+
     @property
     def transit_emmebank(self):
         if not self._transit_emmebank:
-            self._transit_emmebank = self.controller.emme_manager.emmebank(
-                self.get_abs_path(self.controller.config.emme.transit_database_path)
-            )
+            self._transit_emmebank = self.controller.emme_manager.transit_emmebank
         return self._transit_emmebank
 
     @property
     def highway_emmebank(self):
         if not self._highway_emmebank:
-            self._highway_emmebank = self.controller.emme_manager.emmebank(
-                self.get_abs_path(self.controller.config.emme.highway_database_path)
-            )
+            self._highway_emmebank = self.controller.emme_manager.highway_emmebank
         return self._highway_emmebank
 
     @property
@@ -82,13 +84,13 @@ class PrepareTransitNetwork(Component):
             self._highway_scenarios = {
                 tp: self.highway_emmebank.scenario(tp) for tp in self.time_period_names
             }
-        return self.highway_scenarios
+        return self._highway_scenarios
 
     @property
     def transit_networks(self):
         if self._transit_networks is None:
             self._transit_networks = {
-                tp: self.transit_scenario[tp].get_partial_network(
+                tp: self.transit_scenarios[tp].get_partial_network(
                     ["TRANSIT_SEGMENT"], include_attributes=False
                 )
                 for tp in self.time_period_names
@@ -97,17 +99,17 @@ class PrepareTransitNetwork(Component):
 
     @property
     def access_connector_df(self):
-        if not self._access_connector_df:
+        if self._access_connector_df is None:
             self._access_connector_df = pd.read_csv(
-                self.config.input_connector_access_times_path
+                self.get_abs_path(self.config.input_connector_access_times_path)
             )
         return self._access_connector_df
 
     @property
     def egress_connector_df(self):
-        if not self._egress_connector_df:
+        if self._egress_connector_df is None:
             self._egress_connector_df = pd.read_csv(
-                self.config.input_connector_egress_times_path
+                self.get_abs_path(self.config.input_connector_egress_times_path)
             )
         return self._egress_connector_df
 
@@ -156,8 +158,8 @@ class PrepareTransitNetwork(Component):
             network (_type_): _description_
             attre_name (_type_): _description_
         """
-        _network = self.networks[time_period]
-        _scenario = self.scenarios[time_period]
+        _network = self._transit_networks[time_period]
+        _scenario = self._transit_scenarios[time_period]
         if _scenario.extra_attribute(attr_name) is None:
             _scenario.create_extra_attribute("LINK", attr_name)
         if attr_name in _network.attributes("LINK"):
@@ -188,7 +190,7 @@ class PrepareTransitNetwork(Component):
 
         _transit_class_attr_map = {
             _tclass.skim_set_id: f"@walk_time_{_tclass.name.lower()}"
-            for _tclass in self.config.transit.classes
+            for _tclass in self.config.classes
         }
 
         for attr_name in _transit_class_attr_map.values():

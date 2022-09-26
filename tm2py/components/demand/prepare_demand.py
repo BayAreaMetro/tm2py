@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import itertools
 from abc import ABC
-from collections import product
 from typing import TYPE_CHECKING, Dict, List, Union
 
 import numpy as np
@@ -107,7 +107,7 @@ def avg_matrix_msa(
     return result_matrix
 
 
-class PrepareHighwayDemand(PrepareDemand):
+class PrepareHighwayDemand(EmmeDemand):
     """Import and average highway demand.
 
     Demand is imported from OMX files based on reference file paths and OMX
@@ -212,7 +212,9 @@ class PrepareTransitDemand(Component):
         """Open combined demand OMX files from demand models and prepare for assignment."""
         self._source_ref_key = "transit_demand_file"
         self.transit_emmebank.zero_matrix()
-        _time_period_tclass = product(self.time_period_names, self.config.classes)
+        _time_period_tclass = itertools.product(
+            self.time_period_names, self.config.classes
+        )
         for _time_period, _tclass in _time_period_tclass:
             self._prepare_demand(
                 _tclass.skim_set_id, _tclass.description, _tclass.demand, _time_period
