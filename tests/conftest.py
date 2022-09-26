@@ -58,3 +58,8 @@ def inro_context():
     except ModuleNotFoundError:
         mocked_inro_context()
         yield "mocked"
+
+@pytest.fixture(autouse=True)
+def skip_by_context(inro_context):
+    if inro_context != "inro":
+        pytest.skip('skipped without full inro: {}'.format(inro_context))   
