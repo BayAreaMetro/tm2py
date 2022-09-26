@@ -97,7 +97,7 @@ class Component(ABC):
     def get_abs_path(self, path: Union[Path, str]) -> str:
         """Convenince method to get absolute path from run directory."""
         if not os.path.isabs(path):
-            return self.controller.get_abs_path(path).__str__
+            return self.controller.get_abs_path(path).__str__()
         else:
             return path
 
