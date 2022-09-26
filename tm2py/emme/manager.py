@@ -15,6 +15,7 @@ from contextlib import contextmanager as _context
 from pathlib import Path
 from socket import error as _socket_error
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing_extensions import Literal
 
 from ..tools import emme_context
 
@@ -33,6 +34,8 @@ if TYPE_CHECKING:
 # the Emme API import are centralized within tm2py
 from inro.emme.database.emmebank import Emmebank
 from inro.emme.database.matrix import Matrix as EmmeMatrix  # pylint: disable=W0611
+from inro.emme.database.scenario import Scenario as EmmeScenario
+from inro.emme.network import Network as EmmeNetwork
 from inro.emme.network.link import Link as EmmeLink  # pylint: disable=W0611
 from inro.emme.network.mode import Mode as EmmeMode  # pylint: disable=W0611
 from inro.emme.network.node import Node as EmmeNode  # pylint: disable=W0611
@@ -53,7 +56,7 @@ class EmmeBank:
 
     def __init__(self, emme_manager, path: Union[str, Path]):
         self.emme_manager = emme_manager
-        self.controller = self.emme_project.controller
+        self.controller = self.emme_manager.controller
         self._path = Path(path)
         self._emmebank = None
         self._zero_matrix = None
@@ -74,7 +77,7 @@ class EmmeBank:
             self._path = self.get_abs_path(self._path)
         if not self._path.exists():
             raise (FileNotFoundError(f"Emmebank not found: {self._path}"))
-        if not self._path.endswith("emmebank"):
+        if not self._path.__str__().endswith("emmebank"):
             self._path = os.path.join(self._path, "emmebank")
         return self._path
 
@@ -165,7 +168,7 @@ class EmmeManager:
         self._active_south_emmebank = None
 
         # Initialize Modeller to use Emme assignment tools and other APIs
-        self._emme_manager.modeller(self.project)
+        self._modeller = self.modeller
 
     def close(self):
         """Close all open cached Emme project(s).
