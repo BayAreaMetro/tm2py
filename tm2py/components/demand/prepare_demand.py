@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Dict, List, Union
 
 import numpy as np
 
-from tm2py.components.component import Component
+from tm2py.components.component import Component, Subcomponent
 from tm2py.emme.manager import Emmebank
 from tm2py.emme.matrix import OMXManager
 from tm2py.logger import LogStartEnd
@@ -178,7 +178,7 @@ class PrepareHighwayDemand(EmmeDemand):
         self._save_demand(demand_name, demand, description, apply_msa=True)
 
 
-class PrepareTransitDemand(Component):
+class PrepareTransitDemand(Subcomponent):
     """Import transit demand.
 
     Demand is imported from OMX files based on reference file paths and OMX
@@ -189,15 +189,19 @@ class PrepareTransitDemand(Component):
 
     """
 
-    def __init__(self, controller: "RunController"):
+    def __init__(self, controller: "RunController", component: Component):
         """Constructor for PrepareTransitDemand.
 
         Args:
             controller: RunController object.
         """
-        super().__init__(controller)
+        super().__init__(controller, component)
         self.config = self.controller.config.transit
         self._transit_emmebank = None
+
+    def validate_inputs(self):
+        """Validate the inputs."""
+        # TODO
 
     @property
     def transit_emmebank(self):

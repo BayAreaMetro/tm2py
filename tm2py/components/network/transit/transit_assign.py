@@ -287,19 +287,19 @@ class TransitAssignment(Component):
             "prepare transit demand": PrepareTransitDemand(self.controller, self),
         }
         self.demand = None  # FIXME
-        self._num_processors = tools.parse_num_processors(
-            self.config.emme.num_processors
-        )
+        self._num_processors = self.controller.emme_manager.num_processors
         self._time_period = None
         self._scenario = None
         self._transit_emmebank = None
 
+    def validate_inputs(self):
+        """Validate the inputs."""
+        # TODO
+
     @property
     def transit_emmebank(self):
         if not self._transit_emmebank:
-            self._transit_emmebank = self.controller.emme_manager.emmebank(
-                self.get_abs_path(self.controller.config.emme.transit_database_path)
-            )
+            self._transit_emmebank = self.controller.emme_manager.transit_emmebank
         return self._transit_emmebank
 
     @LogStartEnd("Transit assignments")
@@ -312,7 +312,7 @@ class TransitAssignment(Component):
 
             self.demand.run()
         else:
-            self.transit_emmebank.zero_matrix()
+            self.transit_emmebank.zero_matrix
         for time_period in self.time_period_names:
             self.run_transit_assign(time_period, use_ccr)
 
@@ -332,7 +332,7 @@ class TransitAssignment(Component):
     @property
     def _transit_classes(self) -> List[TransitAssignmentClass]:
         emme_manager = self.controller.emme_manager
-        if self.config.transit.use_fares:
+        if self.config.use_fares:
             fare_modes = _defaultdict(lambda: set([]))
             network = self._scenario.get_partial_network(
                 ["TRANSIT_LINE"], include_attributes=False
@@ -345,14 +345,14 @@ class TransitAssignment(Component):
         else:
             fare_modes = None
         spec_dir = os.path.join(
-            os.path.dirname(self.config.emme.project_path), "Specifications"
+            os.path.dirname(self.controller.config.emme.project_path), "Specifications"
         )
         transit_classes = []
-        for class_config in self.config.transit.classes:
+        for class_config in self.config.classes:
             transit_classes.append(
                 TransitAssignmentClass(
                     class_config,
-                    self.config.transit,
+                    self.config,
                     self._time_period,
                     self.controller.iteration,
                     self._num_processors,
@@ -439,10 +439,10 @@ class TransitAssignment(Component):
         Args:
             time_period (_type_): time period name
         """
-        assign_transit = self.controller.emme_manager.tool(
+        assign_transit = self.controller.emme_manager.modeller.tool(
             "inro.emme.transit_assignment.extended_transit_assignment"
         )
-        _emme_scenario = self.emmebank.scenario(time_period)
+        _emme_scenario = self.transit_emmebank.scenario(time_period)
 
         # Question for INRO: Why are we only adding subsequent volumes shouldn't it assume to be
         #   zero to begin with?
@@ -787,7 +787,7 @@ class TransitAssignmentClass:
     def _demand_matrix(self) -> str:
         if self._iteration < 1:
             return 'ms"zero"'  # zero demand matrix
-        return f'mf"TRN_{self._tclass_config.skim_set_id}_{self._time_period}"'
+        return f'mf"TRN_{self._class_config.skim_set_id}_{self._time_period}"'
 
     def _get_used_mode_ids(self, modes: List[TransitModeConfig]) -> List[str]:
         """Get list of assignment Mode IDs from input list of Emme mode objects.
@@ -810,14 +810,14 @@ class TransitAssignmentClass:
     def _modes(self) -> List[str]:
         """List of modes IDs (str) to use in assignment for this class."""
         all_modes = self._config.modes
-        mode_types = self._tclass_config.mode_types
+        mode_types = self._class_config.mode_types
         modes = [mode for mode in all_modes if mode.type in mode_types]
         return self._get_used_mode_ids(modes)
 
     @property
     def _transit_modes(self) -> List[str]:
         """List of transit modes IDs (str) to use in assignment for this class."""
-        all_modes = self._transit_config.modes
+        all_modes = self._config.modes
         mode_types = self._class_config.mode_types
         modes = [
             mode
