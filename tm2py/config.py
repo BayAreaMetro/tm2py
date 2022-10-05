@@ -104,7 +104,7 @@ class RunConfig(ConfigItem):
         """Validate end_iteration greater than start_iteration."""
         if values.get("start_iteration"):
             assert (
-                value > values["start_iteration"]
+                value >= values["start_iteration"]
             ), f"'end_iteration' ({value}) must be greater than 'start_iteration'\
                 ({values['start_iteration']})"
         return value
@@ -1026,7 +1026,7 @@ class TransitClassConfig(ConfigItem):
     description: str
     mode_types: Tuple[str, ...]
     demand: Tuple[ClassDemandConfig, ...]
-    required_mode_combo: Optional[List[str]] = Field(default=None)
+    required_mode_combo: Optional[Tuple[str, ...]] = Field(default=None)
 
 
 @dataclass(frozen=True)
