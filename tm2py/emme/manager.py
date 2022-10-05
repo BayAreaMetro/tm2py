@@ -254,19 +254,19 @@ class EmmeManager:
         Returns:
             Corresponding Tool object, see Emme Help for full details.
         """
-        return self.modeller().tool(namespace)
+        return self.modeller.tool(namespace)
 
     @property
     def matrix_calculator(self):
         "Shortcut to matrix calculator."
-        return self.controller.emme_manager.tool(
+        return self.controller.emme_manager.modeller.tool(
             "inro.emme.matrix_calculation.matrix_calculator"
         )
 
     @property
     def matrix_results(self):
         "Shortcut to matrix results."
-        return self.controller.emme_manager.tool(
+        return self.controller.emme_manager.modeller.tool(
             "inro.emme.transit_assignment.extended.matrix_results"
         )
 
