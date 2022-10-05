@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import json as _json
 import os
 from collections import defaultdict as _defaultdict
@@ -284,9 +285,9 @@ class TransitAssignment(Component):
         super().__init__(controller)
         self.config = self.controller.config.transit
         self.sub_components = {
-            "prepare transit demand": PrepareTransitDemand(self.controller, self),
+            "prepare transit demand": PrepareTransitDemand(controller),
         }
-        self.demand = None  # FIXME
+        self._demand_matrix = None  # FIXME
         self._num_processors = self.controller.emme_manager.num_processors
         self._time_period = None
         self._scenario = None
@@ -308,9 +309,9 @@ class TransitAssignment(Component):
 
         use_ccr = False
         if self.controller.iteration >= 1:
-            use_ccr = self.config.transit.use_ccr
+            use_ccr = self.config.use_ccr
 
-            self.demand.run()
+            self.sub_components["prepare transit demand"].run()
         else:
             self.transit_emmebank.zero_matrix
         for time_period in self.time_period_names:
@@ -329,8 +330,7 @@ class TransitAssignment(Component):
         if self.config.output_transit_boardings_path is not None:
             self._export_boardings_by_line()
 
-    @property
-    def _transit_classes(self) -> List[TransitAssignmentClass]:
+    def _transit_classes(self, time_period) -> List[TransitAssignmentClass]:
         emme_manager = self.controller.emme_manager
         if self.config.use_fares:
             fare_modes = _defaultdict(lambda: set([]))
@@ -353,7 +353,7 @@ class TransitAssignment(Component):
                 TransitAssignmentClass(
                     class_config,
                     self.config,
-                    self._time_period,
+                    time_period,
                     self.controller.iteration,
                     self._num_processors,
                     fare_modes,
@@ -368,14 +368,14 @@ class TransitAssignment(Component):
         Args:
             time_period: time period name
         """
-        _duration = self.time_period_duration[time_period]
+        _duration = self.time_period_durations[time_period.lower()]
         _ccr_weights = self.config.ccr_weights
         _eawt_weights = self.config.eawt_weights
         _mode_config = {
             mode_config.mode_id: mode_config for mode_config in self.config.modes
         }
-        _emme_scenario = self.emmebank.scenario(time_period)
-        transit_classes = self._transit_classes
+        _emme_scenario = self.transit_emmebank.scenario(time_period)
+        transit_classes = self._transit_classes(time_period)
 
         assign_transit = self.controller.emme_manager.tool(
             "inro.emme.transit_assignment.capacitated_transit_assignment"
@@ -398,19 +398,22 @@ class TransitAssignment(Component):
         _cost_func = {
             "segment": {
                 "type": "CUSTOM",
-                "python_function": partial.crowded_segment_cost(
-                    _duration, _ccr_weights
+                "python_function": inspect.getsource(
+                    partial(crowded_segment_cost, _duration, _ccr_weights)
                 ),
                 "congestion_attribute": "us3",
                 "orig_func": False,
             },
             "headway": {
                 "type": "CUSTOM",
-                "python_function": partial.calc_updated_perceived_headway(
-                    _duration,
-                    _eawt_weights,
-                    _mode_config,
-                    use_fares=self.config.use_fares,
+                "python_function": inspect.getsource(
+                    partial(
+                        calc_updated_perceived_headway,
+                        _duration,
+                        _eawt_weights,
+                        _mode_config,
+                        use_fares=self.config.use_fares,
+                    )
                 ),
             },
             "assignment_period": _duration,
@@ -448,7 +451,7 @@ class TransitAssignment(Component):
         #   zero to begin with?
         # Question for INRO: Can this function be distributed across machines? If so, how would
         #   that be structured?
-        for tclass in self._transit_classes:
+        for tclass in self._transit_classes(time_period):
             assign_transit(
                 tclass.emme_transit_spec,
                 class_name=tclass.name,
