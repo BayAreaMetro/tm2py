@@ -29,12 +29,19 @@ class EmmeDemand:
         Args:
             controller (RunController): Run controller for the current run.
         """
-        super().__init__(controller)
+        self.controller = controller
         self._emmebank = None
         self._scenario = None
         self._source_ref_key = None
 
-    def _read(self, path: str, name: str, factor: float = None) -> NumpyArray:
+    @property
+    def logger(self):
+        """Reference to logger."""
+        return self.controller.logger
+
+    def _read(
+        self, path: str, name: str, num_zones, factor: float = None
+    ) -> NumpyArray:
         """Read matrix array from OMX file at path with name, and multiple by factor (if specified).
 
         Args:
@@ -46,8 +53,23 @@ class EmmeDemand:
             demand = omx_file.read(name)
         if factor is not None:
             demand = factor * demand
-        demand = self._redim_demand(demand)
+        demand = self._redim_demand(demand, num_zones)
         # self.logger.log(f"{name} sum: {demand.sum()}", level=3)
+        return demand
+
+    @staticmethod
+    def _redim_demand(demand, num_zones):
+        _shape = demand.shape
+        if _shape < (num_zones, num_zones):
+            demand = np.pad(
+                demand, ((0, num_zones - _shape[0]), (0, num_zones - _shape[1]))
+            )
+        elif _shape > (num_zones, num_zones):
+            ValueError(
+                f"Provided demand matrix is larger ({_shape}) than the \
+                specified number of zones: {num_zones}"
+            )
+
         return demand
 
     def _save_demand(
@@ -68,12 +90,12 @@ class EmmeDemand:
             apply_msa: bool, default False: use MSA on matrix with current array
                 values if model is on iteration >= 1
         """
-        matrix = self.emmebank.matrix(f'mf"{name}"')
+        matrix = self._emmebank.emmebank.matrix(f'mf"{name}"')
         msa_iteration = self.controller.iteration
         if not apply_msa or msa_iteration <= 1:
             if not matrix:
-                ident = self._emmebank.available_matrix_identifier("FULL")
-                matrix = self._emmebank.create_matrix(ident)
+                ident = self._emmebank.emmebank.available_matrix_identifier("FULL")
+                matrix = self._emmebank.emmebank.create_matrix(ident)
                 matrix.name = name
                 if description is not None:
                     matrix.description = description
@@ -178,7 +200,7 @@ class PrepareHighwayDemand(EmmeDemand):
         self._save_demand(demand_name, demand, description, apply_msa=True)
 
 
-class PrepareTransitDemand(Subcomponent):
+class PrepareTransitDemand(EmmeDemand):
     """Import transit demand.
 
     Demand is imported from OMX files based on reference file paths and OMX
@@ -189,13 +211,14 @@ class PrepareTransitDemand(Subcomponent):
 
     """
 
-    def __init__(self, controller: "RunController", component: Component):
+    def __init__(self, controller: "RunController"):
         """Constructor for PrepareTransitDemand.
 
         Args:
             controller: RunController object.
         """
-        super().__init__(controller, component)
+        super().__init__(controller)
+        self.controller = controller
         self.config = self.controller.config.transit
         self._transit_emmebank = None
 
@@ -206,18 +229,17 @@ class PrepareTransitDemand(Subcomponent):
     @property
     def transit_emmebank(self):
         if not self._transit_emmebank:
-            self._transit_emmebank = self.controller.emme_manager.emmebank(
-                self.get_abs_path(self.controller.config.emme.transit_database_path)
-            )
+            self._transit_emmebank = self.controller.emme_manager.transit_emmebank
+            self._emmebank = self._transit_emmebank
         return self._transit_emmebank
 
     @LogStartEnd("Prepare transit demand")
     def run(self):
         """Open combined demand OMX files from demand models and prepare for assignment."""
         self._source_ref_key = "transit_demand_file"
-        self.transit_emmebank.zero_matrix()
+        self.transit_emmebank.zero_matrix
         _time_period_tclass = itertools.product(
-            self.time_period_names, self.config.classes
+            self.controller.time_period_names, self.config.classes
         )
         for _time_period, _tclass in _time_period_tclass:
             self._prepare_demand(
@@ -245,12 +267,26 @@ class PrepareTransitDemand(Subcomponent):
                  "factor": <factor to apply to demand in this file>}
             time_period (str): the time _time_period ID (name)
         """
-        self._scenario = self.emmebank.scenario(time_period)
-        str_format = {"period": time_period.upper(), "skim_set_id": name}
-        demand = self._read_demand(demand_config[0], str_format)
+        self._scenario = self.transit_emmebank.scenario(time_period)
+        num_zones = len(self._scenario.zone_numbers)
+        demand = self._read_demand(demand_config[0], time_period, name, num_zones)
         for file_config in demand_config[1:]:
-            demand = demand + self._read_demand(file_config, str_format)
+            demand = demand + self._read_demand(
+                file_config, time_period, name, num_zones
+            )
         demand_name = f"TRN_{name}_{time_period}"
         description = f"{time_period} {description} demand"
-        apply_msa = self.config.transit.apply_msa_demand
+        apply_msa = self.config.apply_msa_demand
         self._save_demand(demand_name, demand, description, apply_msa=apply_msa)
+
+    def _read_demand(self, file_config, time_period, skim_set, num_zones):
+        # Load demand from cross-referenced source file,
+        # the named demand model component under the key highway_demand_file
+        source = file_config["source"]
+        name = file_config["name"].format(period=time_period.upper())
+        path = self.controller.get_abs_path(
+            self.controller.config[source].transit_demand_file
+        ).__str__()
+        return self._read(
+            path.format(period=time_period, set=skim_set), name, num_zones
+        )
