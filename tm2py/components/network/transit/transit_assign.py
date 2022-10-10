@@ -424,14 +424,17 @@ class TransitAssignment(Component):
             "relative_difference": self.config.ccr_stop_criteria.relative_difference,
             "percent_segments_over_capacity": self.config.ccr_stop_criteria.percent_segments_over_capacity,
         }
+        add_volumes = False
         assign_transit(
             _tclass_specs,
             congestion_function=_cost_func,
             stopping_criteria=_stop_criteria,
             class_names=_tclass_names,
+            add_volumes=add_volumes,
             scenario=_emme_scenario,
             log_worksheets=False,
         )
+        add_volumes = True
 
         # question - why do we need to do this between iterations AND ALSO give it to the EMME cost function? Does EMME not use it?
         self._calc_segment_ccr_penalties(time_period)
@@ -451,11 +454,12 @@ class TransitAssignment(Component):
         #   zero to begin with?
         # Question for INRO: Can this function be distributed across machines? If so, how would
         #   that be structured?
+        add_volumes = False
         for tclass in self._transit_classes(time_period):
             assign_transit(
                 tclass.emme_transit_spec,
                 class_name=tclass.name,
-                add_volumes=False,
+                add_volumes=add_volumes,
                 scenario=_emme_scenario,
             )
             add_volumes = True
