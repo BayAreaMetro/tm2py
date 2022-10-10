@@ -6,6 +6,7 @@ import itertools
 import os
 from collections import defaultdict, namedtuple
 from contextlib import contextmanager as _context
+from math import inf
 from typing import TYPE_CHECKING, Collection, Dict, List, Tuple, Union
 
 import numpy as np
@@ -38,16 +39,15 @@ class TransitSkim(Component):
         self._networks = None
         self._scenarios = None
         self._matrix_cache = None
+        self._skim_properties = None
         self._skim_matrices = {
             k: None
             for k in itertools.product(
                 self.time_period_names,
-                self.config.transit.classes,
+                self.config.classes,
                 self.skim_properties,
             )
         }
-
-        self._skim_properties = None
 
     def validate_inputs(self):
         """Validate inputs."""
@@ -57,23 +57,22 @@ class TransitSkim(Component):
     @property
     def emmebank(self):
         if not self._emmebank:
-            emmebank_path = self.get_abs_path(
-                self.controller.config.emme.transit_database_path
-            )
-            self._emmebank = self.controller.emme_manager.emmebank(emmebank_path)
+            self._emmebank = self.controller.emme_manager.transit_emmebank
         return self._emmebank
 
     @property
     def scenarios(self):
         if self._scenarios is None:
-            self._scenarios = {tp: self.emmebamk(tp) for tp in self.time_period_names}
+            self._scenarios = {
+                tp: self.emmebank.scenario(tp) for tp in self.time_period_names
+            }
         return self._scenarios
 
     @property
     def networks(self):
         if self._networks is None:
             self._networks = {
-                tp: self.scenario[tp].get_partial_network(
+                tp: self.scenarios[tp].get_partial_network(
                     ["TRANSIT_SEGMENT"], include_attributes=False
                 )
                 for tp in self.time_period_names
@@ -84,22 +83,24 @@ class TransitSkim(Component):
     def matrix_cache(self):
         if self._matrix_cache is None:
             self._matrix_cache = {
-                tp: MatrixCache(self.scenario[tp]) for tp in self.time_period_names
+                tp: MatrixCache(self.scenarios[tp]) for tp in self.time_period_names
             }
         return self._matrix_cache
 
     @LogStartEnd("Transit skims")
     def run(self):
         """Run transit skims."""
-        self._initialize_skim_matrices()
-        with self.logger.log_start_end(f"period {self._time_period}"):
+        self.emmebank_skim_matrices(
+            self.time_period_names, self.config.classes, self.skim_properties
+        )
+        with self.logger.log_start_end(f"period transit skims"):
             for _time_period in self.time_period_names:
                 with self.controller.emme_manager.logbook_trace(
                     f"Transit skims for period {_time_period}"
                 ):
-                    for _transit_class in self.config.transit.classes:
+                    for _transit_class in self.config.classes:
                         self.run_skim_set(_time_period, _transit_class)
-                    self._export_skims()
+                    self._export_skims(_time_period)
 
     @property
     def skim_matrices(self):
@@ -130,7 +131,7 @@ class TransitSkim(Component):
             self._skim_properties += [
                 Skimproperty(_name, _desc) for _name, _desc in _basic_skims
             ]
-            for mode in self.config.transit.modes:
+            for mode in self.config.modes:
                 if mode.assign_type == "TRANSIT":
                     desc = mode.description or mode.name
                     self._skim_properties.append(
@@ -139,7 +140,7 @@ class TransitSkim(Component):
                             f"{desc} in-vehicle travel time"[:40],
                         )
                     )
-            if self.config.transit.use_ccr:
+            if self.config.use_ccr:
                 self._skim_properties.extend(
                     [
                         Skimproperty("LINKREL", "Link reliability"),
@@ -150,7 +151,7 @@ class TransitSkim(Component):
                 )
         return self._skim_properties
 
-    def emmebamk_skim_matrices(
+    def emmebank_skim_matrices(
         self,
         time_periods: List[str] = None,
         transit_classes=None,
@@ -162,21 +163,21 @@ class TransitSkim(Component):
         )
         if time_periods is None:
             time_periods = self.time_period_names
-        if not set(time_periods).is_subset(set(self.time_period_names)):
+        if not set(time_periods).issubset(set(self.time_period_names)):
             raise ValueError(
                 f"time_periods ({time_periods}) must be subset of time_period_names ({self.time_period_names})."
             )
 
         if transit_classes is None:
-            transit_classes = self.config.transit_classes
-        if not set(transit_classes).is_subset(set(self.config.transit_classes)):
+            transit_classes = self.config.classes
+        if not set(transit_classes).issubset(set(self.config.classes)):
             raise ValueError(
                 f"time_periods ({transit_classes}) must be subset of time_period_names ({self.config.transit_classes})."
             )
 
         if skim_properties is None:
             skim_properties = self.skim_properties
-        if not set(skim_properties).is_subset(set(self.skim_properties)):
+        if not set(skim_properties).issubset(set(self.skim_properties)):
             raise ValueError(
                 f"time_periods ({skim_properties}) must be subset of time_period_names ({self.skim_properties})."
             )
@@ -184,20 +185,28 @@ class TransitSkim(Component):
         _tp_tclass_skprop = itertools.product(
             time_periods, transit_classes, skim_properties
         )
+        _tp_tclass_skprop_list = []
 
         for _tp, _tclass, _skprop in _tp_tclass_skprop:
-            if not self._skim_matrices[(_tp, _tclass, _skprop)]:
-                _name = f"{_tp}_{_tclass.name}_{_skprop.name}"
-                _desc = f"{_tp} {_tclass.description}: {_skprop.desc}"
-                _matrix = self.scenarios[_tp].emmebank.matrix(f'mf"{_name}"')
-                if not _matrix:
-                    _matrix = create_matrix(
-                        "mf", _name, _desc, scenario=self.scenarios[_tp], overwrite=True
-                    )
-                else:
-                    _matrix.description = _desc
-                self._skim_matrices[(_tp, _tclass, _skprop)] = _matrix
-        return {k: v for k, v in self._skim_matrices.items() if k in _tp_tclass_skprop}
+            a = 1
+            _name = f"{_tp}_{_tclass.name}_{_skprop.name}"
+            _desc = f"{_tp} {_tclass.description}: {_skprop.desc}"
+            _matrix = self.scenarios[_tp].emmebank.matrix(f'mf"{_name}"')
+            if not _matrix:
+                _matrix = create_matrix(
+                    "mf", _name, _desc, scenario=self.scenarios[_tp], overwrite=True
+                )
+            else:
+                _matrix.description = _desc
+            self._skim_matrices[_name] = _matrix
+            _tp_tclass_skprop_list.append(_name)
+
+        skim_matrices = {
+            k: v
+            for k, v in self._skim_matrices.items()
+            if k in list(_tp_tclass_skprop_list)
+        }
+        return skim_matrices
 
     def run_skim_set(self, time_period: str, transit_class: str):
         """Run the transit skim calculations for a given time period and assignment class.
@@ -213,12 +222,12 @@ class TransitSkim(Component):
         """
         use_ccr = False
         if self.controller.iteration >= 1:
-            use_ccr = self.config.transit.use_ccr
+            use_ccr = self.config.use_ccr
         with self.controller.emme_manager.logbook_trace(
             "First and total wait time, number of boardings, "
             "fares, and total and transfer walk time"
         ):
-            self._skim_walk_wait_boards_fares(time_period, transit_class)
+            self.skim_walk_wait_boards_fares(time_period, transit_class)
         with self.controller.emme_manager.logbook_trace("In-vehicle time by mode"):
             self.skim_invehicle_time_by_mode(time_period, transit_class, use_ccr)
         if use_ccr:
@@ -259,13 +268,13 @@ class TransitSkim(Component):
         self.controller.emme_manager.matrix_results(
             spec,
             class_name=transit_class.name,
-            scenario=self.scenario[time_period],
+            scenario=self.scenarios[time_period],
             num_processors=self.controller.num_processors,
         )
 
         self._calc_xfer_wait(time_period, transit_class.name)
         self._calc_boardings(time_period, transit_class.name)
-        if self.config.transit.use_fares:
+        if self.config.use_fares:
             self._calc_fares(time_period, transit_class.name)
 
     def _calc_xfer_walk(self, time_period, transit_class_name):
@@ -316,20 +325,20 @@ class TransitSkim(Component):
 
         TODO convert this type of calculation to numpy
         """
-        _tp_tclass = f"m{time_period}_{transit_class_name}"
+        _tp_tclass = f"{time_period}_{transit_class_name}"
         spec = {
             "type": "MATRIX_CALCULATION",
             "constraint": {
                 "by_value": {
-                    "od_values": f"m{_tp_tclass}_XFERS",
+                    "od_values": f'mf"{_tp_tclass}_XFERS"',
                     "interval_min": 0,
                     "interval_max": 9999999,
                     "condition": "INCLUDE",
                 }
             },
             # CHECK should this be BOARDS or similar, not xfers?
-            "result": f"m{_tp_tclass}_XFERS",
-            "expression": f'("m{_tp_tclass}_XFERS", - 1).max.0',
+            "result": f'mf"{_tp_tclass}_XFERS"',
+            "expression": f'(mf"{_tp_tclass}_XFERS" - 1).max.0',
         }
 
         self.controller.emme_manager.matrix_calculator(
@@ -343,7 +352,7 @@ class TransitSkim(Component):
 
         TODO convert this type of calculation to numpy
         """
-        _tp_tclass = f"m{time_period}_{transit_class_name}"
+        _tp_tclass = f"{time_period}_{transit_class_name}"
         spec = {
             "type": "MATRIX_CALCULATION",
             "constraint": None,
@@ -454,7 +463,7 @@ class TransitSkim(Component):
                 Defaults to False
 
         """
-        mode_combinations = self._get_emme_mode_ids()
+        mode_combinations = self._get_emme_mode_ids(transit_class)
         if use_ccr:
             total_ivtt_expr = self._invehicle_time_by_mode_ccr(
                 time_period, transit_class, mode_combinations
@@ -485,10 +494,12 @@ class TransitSkim(Component):
         }
 
         self.controller.emme_manager.matrix_calculator(
-            spec, scenario=self._scenario, num_processors=self.controller.num_processors
+            spec,
+            scenario=self.scenarios[time_period],
+            num_processors=self.controller.num_processors,
         )
 
-    def _get_emme_mode_ids(self) -> List[Tuple[str, List[str]]]:
+    def _get_emme_mode_ids(self, transit_class) -> List[Tuple[str, List[str]]]:
         """Get the Emme mode IDs used in the assignment.
 
         Loads the #src_mode attribute on lines if fares are used, and the
@@ -501,21 +512,20 @@ class TransitSkim(Component):
             modes used in the journey levels mode-to-mode transfer table
             generated from Apply fares.
         """
-        if self.config.transit.use_fares:
+        if self.config.use_fares:
             self.controller.emme_manager.copy_attribute_values(
                 self._scenario, self._network, {"TRANSIT_LINE": ["#src_mode"]}
             )
-        if self.config.transit.use_ccr:
+        if self.config.use_ccr:
             self.controller.emme_manager.copy_attribute_values(
                 self._scenario, self._network, {"TRANSIT_SEGMENT": ["@base_timtr"]}
             )
         valid_modes = [
             mode
-            for mode in self.config.transit.modes
-            if mode.type in self._assign_class.mode_types
-            and mode.assign_type == "TRANSIT"
+            for mode in self.config.modes
+            if mode.type in transit_class.mode_types and mode.assign_type == "TRANSIT"
         ]
-        if self.config.transit.use_fares:
+        if self.config.use_fares:
             # map to used modes in apply fares case
             fare_modes = defaultdict(lambda: set([]))
             for line in self._network.transit_lines():
@@ -612,15 +622,26 @@ class TransitSkim(Component):
         if not transit_class.required_mode_combo:
             return
 
-        _ivt_skims = [
-            self.matrix_cache[time_period].get_data(
-                f'mf"{time_period}_{transit_class.name}_{mode.name}IVTT"'
-            )
-            for mode in transit_class.required_mode_combo
-        ]
+        _ivt_skims = {}
+        for mode in transit_class.required_mode_combo:
+            transit_modes = [m for m in self.config.modes if m.type == mode]
+            for transit_mode in transit_modes:
+                if mode not in _ivt_skims.keys():
+                    _ivt_skims[mode] = self.matrix_cache[time_period].get_data(
+                        f'mf"{time_period}_{transit_class.name}_{transit_mode.name}IVTT"'
+                    )
+                else:
+                    _ivt_skims[mode] += self.matrix_cache[time_period].get_data(
+                        f'mf"{time_period}_{transit_class.name}_{transit_mode.name}IVTT"'
+                    )
 
         # multiply all IVT skims together and see if they are greater than zero
-        has_all = np.prod(np.vstack(_ivt_skims), axis=0)
+        has_all = None
+        for key, value in _ivt_skims.items():
+            if has_all is not None:
+                has_all = np.multiply(has_all, value)
+            else:
+                has_all = value
 
         self._mask_skim_set(time_period, transit_class, has_all)
 
@@ -631,7 +652,7 @@ class TransitSkim(Component):
             time_period (str): Time period name abbreviation
             transit_class (_type_): _description_
         """
-        max_transfers = self.config.transit.max_transfers
+        max_transfers = self.config.max_transfers
         xfers = self.matrix_cache[time_period].get_data(
             f'mf"{time_period}_{transit_class.name}_XFERS"'
         )
@@ -651,32 +672,32 @@ class TransitSkim(Component):
             mask_array (NumpyArray): _description_
         """
         mask_array = np.greater(mask_array, 0)
-        for skim_name in self.emmebamk_skim_matrices(
-            time_periods=time_period, transit_class=transit_class
-        ):
-            skim_data = self.matrix_cache[time_period].get_data(skim_name)
-            self.matrix_cache[time_period].set_data(skim_name, skim_data * mask_array)
+        mask_array = np.less(mask_array, inf)
+        for skim_key, skim in self.emmebank_skim_matrices(
+            time_periods=[time_period], transit_classes=[transit_class]
+        ).items():
+            skim_data = self.matrix_cache[time_period].get_data(skim.name)
+            self.matrix_cache[time_period].set_data(skim.name, skim_data * mask_array)
 
     def _export_skims(self, time_period):
         """Export skims to OMX files by period."""
         # NOTE: skims in separate file by period
         omx_file_path = self.get_abs_path(
-            self.config.transit.output_skim_path.format(period=self._time_period)
+            self.config.output_skim_path.__str__().format(period=time_period)
         )
         os.makedirs(os.path.dirname(omx_file_path), exist_ok=True)
+        matrices = self.emmebank_skim_matrices(time_periods=[time_period])
         with OMXManager(
             omx_file_path,
             "w",
-            self._scenario,
+            self.scenarios[time_period],
             matrix_cache=self.matrix_cache[time_period],
             mask_max_value=1e7,
         ) as omx_file:
-            omx_file.write_matrices(
-                self.emmebank_skim_matrices(time_period=time_period)
-            )
+            omx_file.write_matrices(matrices)
 
     def _debug_report(self):
-        num_zones = len(self._scenario.zone_numbers)
+        num_zones = len(self.scenarios[time_period].zone_numbers)
         num_cells = num_zones * num_zones
         self.logger.log(
             f"Transit impedance summary for period {self._time_period}", level="DEBUG"
