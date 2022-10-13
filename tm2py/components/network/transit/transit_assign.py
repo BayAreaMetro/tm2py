@@ -11,8 +11,6 @@ from functools import partial
 from msilib.schema import SelfReg
 from typing import TYPE_CHECKING, Dict, List, Set, Tuple, Union
 
-import dill
-
 from tm2py import tools
 from tm2py.components.component import Component
 from tm2py.components.demand.prepare_demand import PrepareTransitDemand
@@ -583,13 +581,13 @@ class TransitAssignment(Component):
                     use_fares=self.config.use_fares,
                 )
                 + "\n"
-                + dill.source.getsource(calc_extra_wait_time)
+                + textwrap.dedent(inspect.getsource(calc_extra_wait_time))
                 + "\n"
-                + dill.source.getsource(calc_adjusted_headway)
+                + textwrap.dedent(inspect.getsource(calc_adjusted_headway))
                 + "\n"
-                + dill.source.getsource(calc_total_offs)
+                + textwrap.dedent(inspect.getsource(calc_total_offs))
                 + "\n"
-                + dill.source.getsource(calc_offs_thru_segment),
+                + textwrap.dedent(inspect.getsource(calc_offs_thru_segment)),
             },
             "assignment_period": _duration,
         }
