@@ -7,6 +7,7 @@ import os
 from collections import defaultdict, namedtuple
 from contextlib import contextmanager as _context
 from math import inf
+from time import time
 from typing import TYPE_CHECKING, Collection, Dict, List, Tuple, Union
 
 import numpy as np
@@ -400,8 +401,9 @@ class TransitSkim(Component):
                 _li_segs_with_mode = TransitSkim._segments_with_modes(_network, _modes)
                 # set temp attribute @mode_timtr to contain the non-congested in-vehicle
                 # times for segments of the mode of interest
-                for segment in _li_segs_with_mode:
-                    segment["@mode_timtr"] = segment["@base_timtr"]
+                for line_segment in _li_segs_with_mode:
+                    for segment in line_segment:
+                        segment["@mode_timtr"] = segment["@base_timtr"]
                 # not sure why we to copy this if we are deleting it in next line? - ES
                 self.controller.emme_manager.copy_attribute_values(
                     self.networks[time_period],
@@ -414,7 +416,10 @@ class TransitSkim(Component):
                 _ivtt_matrix_name = f'mf"{_tp_tclass}_{_mode_name}IVTT"'
                 _total_ivtt_expr.append(_ivtt_matrix_name)
                 self._run_strategy_analysis(
-                    {"in_vehicle": "@mode_timtr"}, _ivtt_matrix_name
+                    time_period,
+                    transit_class,
+                    {"in_vehicle": "@mode_timtr"},
+                    f"{_mode_name}IVTT",
                 )
         return _total_ivtt_expr
 
@@ -463,7 +468,7 @@ class TransitSkim(Component):
                 Defaults to False
 
         """
-        mode_combinations = self._get_emme_mode_ids(transit_class)
+        mode_combinations = self._get_emme_mode_ids(transit_class, time_period)
         if use_ccr:
             total_ivtt_expr = self._invehicle_time_by_mode_ccr(
                 time_period, transit_class, mode_combinations
@@ -499,7 +504,9 @@ class TransitSkim(Component):
             num_processors=self.controller.num_processors,
         )
 
-    def _get_emme_mode_ids(self, transit_class) -> List[Tuple[str, List[str]]]:
+    def _get_emme_mode_ids(
+        self, transit_class, time_period
+    ) -> List[Tuple[str, List[str]]]:
         """Get the Emme mode IDs used in the assignment.
 
         Loads the #src_mode attribute on lines if fares are used, and the
@@ -514,11 +521,15 @@ class TransitSkim(Component):
         """
         if self.config.use_fares:
             self.controller.emme_manager.copy_attribute_values(
-                self._scenario, self._network, {"TRANSIT_LINE": ["#src_mode"]}
+                self.scenarios[time_period],
+                self.networks[time_period],
+                {"TRANSIT_LINE": ["#src_mode"]},
             )
         if self.config.use_ccr:
             self.controller.emme_manager.copy_attribute_values(
-                self._scenario, self._network, {"TRANSIT_SEGMENT": ["@base_timtr"]}
+                self.scenarios[time_period],
+                self.networks[time_period],
+                {"TRANSIT_SEGMENT": ["@base_timtr"]},
             )
         valid_modes = [
             mode
@@ -528,7 +539,7 @@ class TransitSkim(Component):
         if self.config.use_fares:
             # map to used modes in apply fares case
             fare_modes = defaultdict(lambda: set([]))
-            for line in self._network.transit_lines():
+            for line in self.networks[time_period].transit_lines():
                 fare_modes[line["#src_mode"]].add(line.mode.id)
             emme_mode_ids = [
                 (mode.name, list(fare_modes[mode.mode_id])) for mode in valid_modes
@@ -555,7 +566,7 @@ class TransitSkim(Component):
 
         # Link unreliability
         self._run_strategy_analysis(
-            time_period, transit_class, {"in_vehicle": "@ul1"}, "LINKREL"
+            time_period, transit_class, {"in_vehicle": "ul1"}, "LINKREL"
         )
         # Crowding penalty
         self._run_strategy_analysis(
