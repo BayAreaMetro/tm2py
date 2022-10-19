@@ -487,18 +487,23 @@ class TransitAssignment(Component):
         emme_manager = self.controller.emme_manager
         if self.config.use_fares:
             fare_modes = _defaultdict(lambda: set([]))
-            network = self._scenario.get_partial_network(
+            network = self.transit_emmebank.scenario(time_period).get_partial_network(
                 ["TRANSIT_LINE"], include_attributes=False
             )
             emme_manager.copy_attribute_values(
-                self._scenario, network, {"TRANSIT_LINE": ["#src_mode"]}
+                self.transit_emmebank.scenario(time_period),
+                network,
+                {"TRANSIT_LINE": ["#src_mode"]},
             )
             for line in network.transit_lines():
                 fare_modes[line["#src_mode"]].add(line.mode.id)
         else:
             fare_modes = None
         spec_dir = os.path.join(
-            os.path.dirname(self.controller.config.emme.project_path), "Specifications"
+            self.get_abs_path(
+                os.path.dirname(self.controller.config.emme.project_path)
+            ),
+            "Specifications",
         )
         transit_classes = []
         for class_config in self.config.classes:
@@ -664,11 +669,11 @@ class TransitAssignment(Component):
         args:
             time_period (str): time period abbreviation
         """
-        _emme_scenario = self.emmebank.scenario(time_period)
+        _emme_scenario = self.transit_emmebank.scenario(time_period)
         _network = self._get_network_with_boardings(_emme_scenario)
 
         output_transit_boardings_file = self.get_abs_path(
-            self.config.transit.output_transit_boardings_file
+            self.config.output_transit_boardings_file
         )
 
         os.makedirs(os.path.dirname(output_transit_boardings_file), exist_ok=True)
@@ -695,7 +700,7 @@ class TransitAssignment(Component):
             transit class stop attributes: {<transit_class_name>: @aux_volume_<transit_class_name>...}
         """
         _emme_manager = self.controller.emme_manager
-        _emme_scenario = self.emmebank.scenario(time_period)
+        _emme_scenario = self.transit_emmebank.scenario(time_period)
         network_results = _emme_manager.tool(
             "inro.emme.transit_assignment.extended.network_results"
         )
@@ -714,7 +719,7 @@ class TransitAssignment(Component):
             tclass_stop_attrs[tclass.name] = attr_name
 
         # optimization: partial network to only load links and certain attributes
-        network = self._scenario.get_partial_network(["LINK"], include_attributes=False)
+        network = _emme_scenario.get_partial_network(["LINK"], include_attributes=True)
         attributes = {
             "LINK": tclass_stop_attrs.values(),
             "NODE": ["@taz_id", "#node_id"],
@@ -763,7 +768,7 @@ class TransitAssignment(Component):
         Args:
             emme_scenario : EmmeScenario
         """
-        create_extra = self.emme_manager.tool(
+        create_extra = self.controller.emme_manager.tool(
             "inro.emme.data.extra_attribute.create_extra_attribute"
         )
         create_extra(
@@ -1032,7 +1037,7 @@ class TransitAssignmentClass:
             fare_perception = self.fare_perception
             file_name = f"{self._time_period}_{self.name}_journey_levels.ems"
             with open(
-                os.path.join(self._spec_dir, file_name), "r", encoding="ut8"
+                os.path.join(self._spec_dir, file_name), "r", encoding="utf8"
             ) as jl_spec:
                 journey_levels = _json.load(jl_spec)["journey_levels"]
             # add transfer wait perception penalty
