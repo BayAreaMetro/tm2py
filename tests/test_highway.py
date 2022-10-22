@@ -3,12 +3,10 @@ import glob
 import os
 
 import pytest
-from conftest import inro_context
 from tools import assert_csv_equal, diff_omx
 
 
-@pytest.mark.skipif(inro_context != "inro", reason="requires full inro context")
-def test_prepare_highway_network(examples_dir):
+def test_prepare_highway_network(inro_context, examples_dir):
     "Tests that prepare highway network component can be run."
     from tools import test_component
 
@@ -18,8 +16,7 @@ def test_prepare_highway_network(examples_dir):
     # TODO write assert
 
 
-@pytest.mark.skipif(inro_context != "inro", reason="requires full inro context")
-def test_highway_assign(examples_dir):
+def test_highway_assign(inro_context, examples_dir):
     "Tests that highway network assignment component can be run."
     from tools import test_component
 
@@ -29,8 +26,7 @@ def test_highway_assign(examples_dir):
     # TODO write assert
 
 
-@pytest.mark.skipif(inro_context != "inro", reason="requires full inro context")
-def test_highway_maz_assign(examples_dir):
+def test_highway_maz_assign(inro_context, examples_dir):
     "Tests that highway MAZ network assignment component can be run."
     from tools import test_component
 
@@ -40,8 +36,7 @@ def test_highway_maz_assign(examples_dir):
     # TODO write assert
 
 
-@pytest.mark.skipif(inro_context != "inro", reason="requires full inro context")
-def test_highway_maz_skim(examples_dir):
+def test_highway_maz_skim(inro_context, examples_dir):
     "Tests that highway MAZ network skimming component can be run."
     from tools import test_component
 
@@ -51,8 +46,7 @@ def test_highway_maz_skim(examples_dir):
     # TODO write assert
 
 
-@pytest.mark.skipif(inro_context != "inro", reason="requires full inro context")
-def test_highway_skims(union_city):
+def test_highway_skims(inro_context, union_city):
     """Test that the OMX highway skims match the reference."""
     run_dir = union_city.run_dir
 
@@ -83,8 +77,7 @@ def test_highway_skims(union_city):
     assert len(different_skims) == 0, f"Different skims: {different_skims}"
 
 
-@pytest.mark.skipif(inro_context != "inro", reason="requires full inro context")
-def test_maz_da_skims(union_city):
+def test_maz_da_skims(inro_context, union_city):
     """Test that the DA MAZ skims match the reference."""
     run_dir = union_city.run_dir
 
