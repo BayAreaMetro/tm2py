@@ -46,8 +46,10 @@ pip-delete-this-directory.txt
 !examples/**/*.log
 
 # dowloaded example files
+examples/example_union_test_highway.zip
 examples/UnionCity/demand_matrices/
 examples/UnionCity/emme_project/
+examples/UnionCity/inputs/
 examples/UnionCity/ref_skim_matrices/
 examples/UnionCity/skim_matrices
 
@@ -125,3 +127,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+*.log

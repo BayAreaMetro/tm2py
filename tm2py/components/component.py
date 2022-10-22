@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import os
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, List
+from pathlib import Path
+from typing import TYPE_CHECKING, List, Union
 
 from tm2py.emme.manager import EmmeScenario
 
@@ -26,7 +27,35 @@ class FileFormatError(Exception):
 
 
 class Component(ABC):
-    """Base component class for tm2py top-level inheritance.
+    """Template for Component class with several built-in methods.
+
+    A component is a piece of the model that can be run independently (of other components) given
+    the required input data and configuration.  It communicates information to other components via
+    disk I/O (including the emmebank).
+
+    Note: if the component needs data that is not written to disk, it would be considered a
+    subcomponent.
+
+    Abstract Methods – Each component class must have the following methods:
+        __init___: constructor, which associates the RunController with the instantiated object
+        run: run the component without any arguments
+        validate_inputs: validate the inputs to the component
+        report_progress: report progress to the user
+        verify: verify the component's output
+        write_top_sheet: write outputs to topsheet
+        test_component: test the component
+
+    Template Class methods - component classes inherit:
+        get_abs_path: convenience method to get absolute path of the run directory
+        get_emme_scenario: ....
+
+    Template Class Properties - component classes inherit:
+        controller: RunController object
+        config: Config object
+        time_period_names: convenience property
+        top_sheet: topsheet object
+        logger: logger object
+        trace: trace object
 
     Example:
     ::
@@ -61,9 +90,9 @@ class Component(ABC):
         """Parent controller."""
         return self._controller
 
-    def get_abs_path(self, rel_path: str):
-        """Get the absolute path from the root run directory given a relative path."""
-        return os.path.join(self.controller.run_dir, rel_path)
+    def get_abs_path(self, path: Union[Path, str]) -> str:
+        """Convenince method to get absolute path from run directory."""
+        return self.controller.get_abs_path(path).__str__()
 
     def get_emme_scenario(self, emmebank_path: str, time_period: str) -> EmmeScenario:
         """Get the Emme scenario object from the Emmebank at emmebank_path for the time_period ID.
@@ -78,15 +107,20 @@ class Component(ABC):
         if not os.path.isabs(emmebank_path):
             emmebank_path = self.get_abs_path(emmebank_path)
         emmebank = self.controller.emme_manager.emmebank(emmebank_path)
-        scenario_id = {tp.name: tp.emme_scenario_id for tp in self.config.time_periods}[
-            time_period
-        ]
+        scenario_id = {
+            tp.name: tp.emme_scenario_id for tp in self.controller.config.time_periods
+        }[time_period.lower()]
         return emmebank.scenario(scenario_id)
 
     @property
-    def config(self):
-        """Reference to configuration settings loaded from config files."""
-        return self.controller.config
+    def time_period_names(self) -> List[str]:
+        """Return input time_period name or names and return list of time_period names.
+
+        Implemented here for easy access for all components.
+
+        Returns: list of uppercased string names of time periods
+        """
+        return self.controller.time_period_names
 
     @property
     def top_sheet(self):
@@ -111,21 +145,46 @@ class Component(ABC):
     def run(self):
         """Run model component."""
 
+    # @abstractmethod
     def report_progress(self):
         """Write progress to log file."""
 
-    def test_component(self):
-        """Run stand-alone component test."""
-
-    def write_top_sheet(self):
-        """Write key outputs to the model top sheet."""
-
+    # @abstractmethod
     def verify(self):
         """Verify component outputs / results."""
 
-    def time_period_names(self) -> List[str]:
-        """Return input time_period name or names and return list of time_period names.
+    # @abstractmethod
+    def write_top_sheet(self):
+        """Write key outputs to the model top sheet."""
 
-        Returns: list of string names of time periods
+
+class Subcomponent(Component):
+    """Template for sub-component class.
+
+    A sub-component is a more loosly defined component that allows for input into the run()
+    method.  It is used to break-up larger processes into smaller chunks which can be:
+    (1) re-used across components (i.e toll choice)
+    (2) updated/subbed in to a parent component(s) run method based on the expected API
+    (3) easier to test, understand and debug.
+    (4) more consistent with the algorithms we understand from transportation planning 101
+    """
+
+    def __init__(self, controller: RunController, component: Component):
+        """Constructor for model sub-component abstract base class.
+
+        Only calls the super class constructor.
+
+        Args:
+            controller (RunController): Reference to the run controller object.
+            component (Component): Reference to the parent component object.
         """
-        return [time.name for time in self.config.time_periods]
+        super().__init__(controller)
+        self.component = component
+
+    @abstractmethod
+    def run(self, *args, **kwargs):
+        """Run sub-component, allowing for multiple inputs.
+
+        Allowing for inputs to the run() method is what differentiates a sub-component from
+        a component.
+        """

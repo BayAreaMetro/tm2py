@@ -29,56 +29,400 @@
     emme_scenario_id = 15
 
 [logging]
-    display_level = "STATUS"
-    run_file_path  = "log_run.txt"
-    run_file_level = "STATUS"
-    log_file_path = "log_detail.txt"
-    log_file_level = "DETAIL"
+    # Use default log configuration
     log_on_error_file_path = "log_error.txt"
     notify_slack = false
     use_emme_logbook = true
 
 [household]
-    highway_demand_file = "demand_matrices\\highway\\household\\TAZ_Demand_{period}.omx"
-    transit_demand_file = "demand_matrices\\transit\\TAP_Demand_{set}_{period}.omx"
+    highway_demand_file = "demand_matrices/highway/household/TAZ_Demand_{period}.omx"
+    transit_demand_file = "demand_matrices/transit/TAP_Demand_{set}_{period}.omx"
 
 [air_passenger]
-    highway_demand_file = "demand_matrices\\highway\\air_passenger\\tripsAirPax{period}.omx"
-    input_demand_folder = "inputs\\nonres"
+    output_trip_table_directory = "demand_matrices/highway/air_passenger"
+    outfile_trip_table_tmp = "tripsAirPax{period}.omx"
+    input_demand_folder = "inputs/nonres"
+    input_demand_filename_tmpl = "{year}_{direction}{airport}.csv"
     reference_start_year = "2007"
     reference_end_year = "2035"
+    airport_names = [ "SFO", "OAK", "SJC",]
     [[air_passenger.demand_aggregation]]
-        result_class_name = "da"
-        src_group_name = "DA"
+        name = "DA"
+        mode = "da"
         access_modes = [ "ES", "PK", "RN", "TX", "LI",]
     [[air_passenger.demand_aggregation]]
-        result_class_name = "sr2"
-        src_group_name = "S2"
+        name = "S2"
+        mode = "sr2"
         access_modes = [ "ES", "PK", "RN", "TX", "LI",]
     [[air_passenger.demand_aggregation]]
-        result_class_name = "sr3"
-        src_group_name = "S3"
+        name = "S3"
+        mode = "sr3"
         access_modes = [ "ES", "PK", "RN", "TX", "LI", "VN", "HT", "CH",]
 
 [internal_external]
-    highway_demand_file = "demand_matrices\\highway\\internal_external\\tripsIx{period}.omx"
-    input_demand_file = "inputs\\nonres\\IXDaily2006x4.may2208.new.omx"
-    reference_year = 2005
-    toll_choice_time_coefficient = -0.088
-    value_of_time = 18.93
-    shared_ride_2_toll_factor = 0.5714285714285714
-    shared_ride_3_toll_factor = 0.4
-    operating_cost_per_mile = 17.23
+    output_trip_table_directory = "demand_matrices/highway/internal_external"
+    outfile_trip_table_tmp = "tripsIx{period}.omx"
+    modes = ["da","sr2","sr3"]
+    [internal_external.demand]
+        input_demand_file = "inputs/nonres/IXDaily2006x4.may2208.new.omx"
+        input_demand_matrixname_tmpl = "IX_Daily_{mode}"
+        reference_year = 2005
+    # Union city compatible test with 43 zones
+    [[internal_external.demand.annual_growth_rate]]
+        zone_index = [41, 42, 4688, 4689, 4690, 4691, 4692, 4704, 4705, 4706, 4707, 4708]
+        factor = 1.05
+        as_growth_rate = true
+    [[internal_external.demand.annual_growth_rate]]
+        zone_index = [4693, 4694,4695, 4696, 4698, 4699,  4701, 4702, 4703]
+        factor = 1.010
+        as_growth_rate = true
+    [[internal_external.demand.annual_growth_rate]]
+        zone_index = [4697]
+        factor = 0
+    [[internal_external.demand.annual_growth_rate]]
+        zone_index = 4700
+        factor = 1.015
+        as_growth_rate = true
+    [[internal_external.demand.special_gateway_adjust]]
+        zone_index = 4693
+        factor = 1.020228
+    [[internal_external.demand.special_gateway_adjust]]
+        zone_index = 4695
+        factor = 1.242555
+    [[internal_external.demand.special_gateway_adjust]]
+        zone_index = 4696
+        factor = 0.848518
+    [[internal_external.demand.special_gateway_adjust]]
+        zone_index = 4698
+        factor = 1.673817
+    [internal_external.time_of_day]
+        [[internal_external.time_of_day.classes]]
+            name = "internal_external"
+            [[internal_external.time_of_day.classes.time_period_split]]
+                time_period = "ea"
+                production = 0.15329
+                attraction = 0.06440
+            [[internal_external.time_of_day.classes.time_period_split]]
+                time_period = "am"
+                production = 0.26441
+                attraction = 0.17540
+            [[internal_external.time_of_day.classes.time_period_split]]
+                time_period = "md"
+                production = 0.25720
+                attraction = 0.26950
+            [[internal_external.time_of_day.classes.time_period_split]]
+                time_period = "pm"
+                production = 0.21490
+                attraction = 0.29824
+            [[internal_external.time_of_day.classes.time_period_split]]
+                time_period = "ev"
+                production = 0.11020
+                attraction = 0.19246
+    [internal_external.toll_choice]
+        value_of_time = 18.93
+        operating_cost_per_mile = 17.23
+        [[internal_external.toll_choice.classes]]
+            name = "da"
+            skim_mode = "da"
+            veh_group_name = "da"
+        [[internal_external.toll_choice.classes]]
+            name = "sr2"
+            skim_mode = "sr2"
+            veh_group_name = "sr2"
+            [[internal_external.toll_choice.classes.property_factors]]
+                property = "toll"
+                coeff = 0.5714285714285714
+        [[internal_external.toll_choice.classes]]
+            name = "sr3"
+            skim_mode = "sr3"
+            veh_group_name = "sr3"
+            [[internal_external.toll_choice.classes.property_factors]]
+                property = "toll"
+                coeff = 0.4
+        [[internal_external.toll_choice.utility]]
+            # The in-vehicle time coefficient is taken from the work trip mode choice model.
+            # coefficient for in-vehicle time = -0.0220/0.25 = -0.088
+            property = "time"
+            coeff = -0.088
 
 [truck]
-    highway_demand_file = "demand_matrices\\highway\\commercial\\tripstrk{period}.omx"
-    k_factors_file = "inputs\\nonres\\truck_kfactors_taz.csv"
-    friction_factors_file = "inputs\\nonres\\truckFF.dat"
-    value_of_time = 37.87
-    operating_cost_per_mile = 31.28
-    toll_choice_time_coefficient = -0.088
-    max_balance_iterations = 999
-    max_balance_relative_error = 0.0001
+    output_trip_table_directory = "demand_matrices/highway/commercial"
+    outfile_trip_table_tmp = "tripstrk{period}.omx"
+    [[truck.classes]]
+        name = "vsmtrk"
+        description = "very small truck"
+    [[truck.classes]]
+        name = "smltrk"
+        description = "small truck"
+    [[truck.classes]]
+        name = "medtrk"
+        description = "medium truck"
+    [[truck.classes]]
+        name = "lrgtrk"
+        description = "large truck"
+    [[truck.impedances]]
+        name = "trk"
+        skim_mode = "trk"
+        [truck.impedances.time_blend]
+            "AM" = 0.3333333333
+            "MD" = 0.6666666667
+    [[truck.impedances]]
+        name = "lrgtrk"
+        skim_mode = "lrgtrk"
+        [truck.impedances.time_blend]
+            "AM" = 0.3333333333
+            "MD" = 0.6666666667
+    [truck.trip_dist]
+        k_factors_file = "inputs/nonres/truck_kfactors_taz.csv"
+        friction_factors_file = "inputs/nonres/truckFF.csv"
+        max_balance_iterations = 999
+        max_balance_relative_error = 0.0001
+    [[truck.trip_dist.classes]]
+        name = "vsmtrk"
+        impedance = "trk"
+        use_k_factors = false
+    [[truck.trip_dist.classes]]
+        name = "smltrk"
+        impedance = "trk"
+        use_k_factors = true
+    [[truck.trip_dist.classes]]
+        name = "medtrk"
+        impedance = "trk"
+        use_k_factors = true
+    [[truck.trip_dist.classes]]
+        name = "lrgtrk"
+        impedance = "lrgtrk"
+        use_k_factors = true
+    [[truck.trip_gen.classes]]
+        name = "vsmtrk"
+        purpose = "linked"
+        balance_to = "productions"
+        [truck.trip_gen.classes.production_formula]
+            constant = 0
+            multiplier = 0.96
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'RETEMPN'
+                coeff = 0.95409
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'FPSEMPN'
+                coeff = 0.54333
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'HEREMPN'
+                coeff = 0.50769
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'OTHEMPN'
+                coeff = 0.63558
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'AGREMPN'
+                coeff = 1.10181
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'MWTEMPN'
+                coeff = 0.81576
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'TOTHH'
+                coeff = 0.26565
+    [[truck.trip_gen.classes]]
+        name = "smltrk"
+        purpose = "linked"
+        balance_to = "productions"
+        [truck.trip_gen.classes.production_formula]
+            constant = 0
+            multiplier = 1
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+            property = 'TOTEMP'
+            coeff = 0.0324
+    [[truck.trip_gen.classes]]
+        name = "smltrk"
+        purpose = "garage"
+        balance_to = "productions"
+        [truck.trip_gen.classes.production_formula]
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'RETEMPN'
+                coeff = 0.02146
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'FPSEMPN'
+                coeff = 0.02424
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'HEREMPN'
+                coeff = 0.01320
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'OTHEMPN'
+                coeff = 0.04325
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'AGREMPN'
+                coeff = 0.05021
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'MWTEMPN'
+                coeff = 0.01960
+        [truck.trip_gen.classes.attraction_formula]
+            [[truck.trip_gen.classes.attraction_formula.land_use_rates]]
+                property = 'TOTEMP'
+                coeff = 0.0234
+    [[truck.trip_gen.classes]]
+        name = "medtrk"
+        purpose = "linked"
+        balance_to = "productions"
+        [truck.trip_gen.classes.production_formula]
+            constant = 0
+            multiplier =  1
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'TOTEMP'
+                coeff = 0.0039
+    [[truck.trip_gen.classes]]
+        name = "medtrk"
+        purpose = "garage"
+        balance_to = "productions"
+        [truck.trip_gen.classes.production_formula]
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'RETEMPN'
+                coeff = 0.00102
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'FPSEMPN'
+                coeff = 0.00147
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'HEREMPN'
+                coeff = 0.00025
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'OTHEMPN'
+                coeff = 0.00331
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'AGREMPN'
+                coeff = 0.00445
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'MWTEMPN'
+                coeff = 0.00165
+        [truck.trip_gen.classes.attraction_formula]
+            [[truck.trip_gen.classes.attraction_formula.land_use_rates]]
+                property = 'TOTEMP'
+                coeff = 0.0046
+    [[truck.trip_gen.classes]]
+        name = "lrgtrk"
+        purpose = "linked"
+        balance_to = "productions"
+        [truck.trip_gen.classes.production_formula]
+            constant = 0
+            multiplier =  1
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+            property = 'TOTEMP'
+            coeff = 0.0073
+    [[truck.trip_gen.classes]]
+        name  = "lrgtrk"
+        purpose = "garage"
+        balance_to = "productions"
+        [truck.trip_gen.classes.production_formula]
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'RETEMPN'
+                coeff = 0.00183
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'FPSEMPN'
+                coeff = 0.00482
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'HEREMPN'
+                coeff = 0.00274
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'OTHEMPN'
+                coeff = 0.00795
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'AGREMPN'
+                coeff = 0.01125
+            [[truck.trip_gen.classes.production_formula.land_use_rates]]
+                property = 'MWTEMPN'
+                coeff = 0.00486
+        [truck.trip_gen.classes.attraction_formula]
+            [[truck.trip_gen.classes.attraction_formula.land_use_rates]]
+                property = 'TOTEMP'
+                coeff = 0.0136
+        [truck.time_of_day]
+        [[truck.time_of_day.classes]]
+            name = "vsmtrk"
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "ea"
+                od = 0.0235
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "am"
+                od = 0.0700
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "md"
+                od = 0.6360
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "pm"
+                od = 0.1000
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "ev"
+                od = 0.1705
+        [[truck.time_of_day.classes]]
+            name = "smltrk"
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "ea"
+                od = 0.0765
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "am"
+                od = 0.2440
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "md"
+                od = 0.3710
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "pm"
+                od= 0.2180
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "ev"
+                od = 0.0905
+        [[truck.time_of_day.classes]]
+            name = "medtrk"
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "ea"
+                od = 0.0665
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "am"
+                od = 0.2930
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "md"
+                od = 0.3935
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "pm"
+                od = 0.1730
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "ev"
+                od = 0.0740
+        [[truck.time_of_day.classes]]
+            name = "lrgtrk"
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "ea"
+                od = 0.1430
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "am"
+                od = 0.2320
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "md"
+                od = 0.3315
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "pm"
+                od = 0.1750
+            [[truck.time_of_day.classes.time_period_split]]
+                time_period = "ev"
+                od = 0.1185
+    [truck.toll_choice]
+        value_of_time = 18.93
+        operating_cost_per_mile = 17.23
+        [[truck.toll_choice.classes]]
+            name = "vsmtrk"
+            skim_mode = "trk"
+            veh_group_name = "vsm"
+        [[truck.toll_choice.classes]]
+            name = "smltrk"
+            skim_mode = "trk"
+            veh_group_name = "sml"
+        [[truck.toll_choice.classes]]
+            name = "medtrk"
+            skim_mode = "trk"
+            veh_group_name = "med"
+        [[truck.toll_choice.classes]]
+            name = "lrgtrk"
+            skim_mode = "lrgtrk"
+            veh_group_name = "lrg"
+        [[truck.toll_choice.utility]]
+            property = "time"
+            coeff = -0.088
 
 [active_modes]
     emme_scenario_id = 1
@@ -87,39 +431,41 @@
         roots = "MAZ"
         leaves = "MAZ"
         max_dist_miles = 3
-        output = "skim_matrices\\non_motorized\\ped_distance_maz_maz.txt"
+        output = "skim_matrices/non_motorized/ped_distance_maz_maz.txt"
     [[active_modes.shortest_path_skims]]
         mode = "walk"
         roots = "MAZ"
         leaves = "TAP"
         max_dist_miles = 0.5
-        output = "skim_matrices\\non_motorized\\ped_distance_maz_tap.txt"
+        output = "skim_matrices/non_motorized/ped_distance_maz_tap.txt"
     [[active_modes.shortest_path_skims]]
         mode = "bike"
         roots = "MAZ"
         leaves = "MAZ"
         max_dist_miles = 3
-        output = "skim_matrices\\non_motorized\\bike_distance_maz_maz.txt"
+        output = "skim_matrices/non_motorized/bike_distance_maz_maz.txt"
     [[active_modes.shortest_path_skims]]
         mode = "bike"
         roots = "MAZ"
         leaves = "TAP"
         max_dist_miles = 3
-        output = "skim_matrices\\non_motorized\\bike_distance_maz_tap.txt"
+        output = "skim_matrices/non_motorized/bike_distance_maz_tap.txt"
     [[active_modes.shortest_path_skims]]
         mode = "bike"
         roots = "TAZ"
         leaves = "TAZ"
-        output = "skim_matrices\\non_motorized\\bike_distance_taz_taz.txt"
+        output = "skim_matrices/non_motorized/bike_distance_taz_taz.txt"
     [[active_modes.shortest_path_skims]]
         mode = "walk"
         roots = "TAP"
         leaves = "TAP"
         max_dist_miles = 0.5
-        output = "skim_matrices\\non_motorized\\ped_distance_tap_tap.txt"
+        output = "skim_matrices/non_motorized/ped_distance_tap_tap.txt"
 
 [highway]
-    output_skim_path = "skim_matrices\\highway\\HWYSKM{period}_taz.omx"
+    output_skim_path = "skim_matrices/highway"
+    output_skim_filename_tmpl = "HWYSKM{time_period}_taz.omx"
+    output_skim_matrixname_tmpl = "{time_period}_{mode}_{property}"
     relative_gap = 0.0005
     max_iterations = 100
     # labels entire highway network (any of the classes) + MAZ connectors
@@ -127,7 +473,7 @@
     # include other MAZs to estimate density (pop+jobs*2.5)/acres for each MAZ
     area_type_buffer_dist_miles = 0.5
     [highway.tolls]
-        file_path = "inputs\\hwy\\tolls.csv"
+        file_path = "inputs/hwy/tolls.csv"
         src_vehicle_group_names = ["da", "s2",  "s3",  "vsm", "sml", "med", "lrg"]
         # the dst_vehicle_group_names is used in the class group suffix for the
         # highway.classes toll attribute name and the skims name, "bridgetoll_{}"
@@ -141,13 +487,13 @@
         excluded_links = [ "is_toll_da", "is_sr",]
         operating_cost_per_mile = 18.93
         value_of_time = 17.23
-        output_skim_file = "skim_matrices\\highway\\HWYSKIM_MAZMAZ_DA.csv"
+        output_skim_file = "skim_matrices/highway/HWYSKIM_MAZMAZ_DA.csv"
         skim_period = "md"
         max_skim_cost = 11.0
             # based on ~= 5 miles @ 40 mph = 11
             #           = time + (0.6 / vot) * (dist * opcost)
             #           = 5 / 40 * 60 + (0.6 / 17.23) * (5 * 18.93)
-        demand_file = "demand_matrices\\highway\\maz_demand\\auto_{period}_MAZ_AUTO_{number}_{period}.omx"
+        demand_file = "demand_matrices/highway/maz_demand/auto_{period}_MAZ_AUTO_{number}_{period}.omx"
         [[highway.maz_to_maz.demand_county_groups]]
             number = 1
             counties = ["San Francisco", "San Mateo", "Santa Clara"]
@@ -160,12 +506,13 @@
 
     [[highway.classes]]
         name = "da"
+        veh_group_name = "da"
         description = "drive alone"
         mode_code = "d"
         excluded_links = [ "is_toll_da", "is_sr",]
         value_of_time = 18.93
         operating_cost_per_mile = 17.23
-        toll = ["@bridgetoll_da"]
+        toll = [ "@bridgetoll_da" ]
         skims = [ "time", "dist", "freeflowtime", "bridgetoll_da",]
         [[highway.classes.demand]]
             source = "household"
@@ -178,6 +525,7 @@
             name = "da"
     [[highway.classes]]
         name = "sr2"
+        veh_group_name = "sr2"
         description = "shared ride 2"
         mode_code = "e"
         excluded_links = [ "is_toll_sr2", "is_sr3",]
@@ -202,6 +550,7 @@
             name = "sr2"
     [[highway.classes]]
         name = "sr3"
+        veh_group_name = "sr3"
         description = "shared ride 3+"
         mode_code = "f"
         excluded_links = [ "is_toll_sr3",]
@@ -226,6 +575,7 @@
             name = "sr3"
     [[highway.classes]]
         name = "trk"
+        veh_group_name = "trk"
         description = "truck"
         mode_code = "t"
         excluded_links = [ "is_toll_vsm", "is_toll_sml", "is_toll_med", "is_sr",]
@@ -244,6 +594,7 @@
             name = "medtrk"
     [[highway.classes]]
         name = "lrgtrk"
+        veh_group_name = "lrgtrk"
         description = "large truck"
         mode_code = "l"
         excluded_links = [ "is_toll_lrg", "is_auto_only",]
@@ -258,6 +609,7 @@
             factor = 2.0
     [[highway.classes]]
         name = "datoll"
+        veh_group_name = "da"
         description = "drive alone toll"
         mode_code = "D"
         excluded_links = [ "is_sr",]
@@ -273,6 +625,7 @@
             name = "datoll"
     [[highway.classes]]
         name = "sr2toll"
+        veh_group_name = "sr2"
         description = "shared ride 2 toll"
         mode_code = "E"
         excluded_links = [ "is_sr3",]
@@ -290,6 +643,7 @@
             name = "sr2toll"
     [[highway.classes]]
         name = "sr3toll"
+        veh_group_name = "sr3"
         description = "shared ride 3+ toll"
         mode_code = "F"
         excluded_links = []
@@ -307,6 +661,7 @@
             name = "sr3toll"
     [[highway.classes]]
         name = "trktoll"
+        veh_group_name = "trk"
         description = "truck toll"
         mode_code = "T"
         excluded_links = [ "is_sr",]
@@ -325,6 +680,7 @@
             name = "medtrktoll"
     [[highway.classes]]
         name = "lrgtrktoll"
+        veh_group_name = "lrgtrk"
         description = "large truck toll"
         mode_code = "L"
         excluded_links = [ "is_auto_only", "is_sr",]
@@ -349,25 +705,25 @@
     initial_boarding_penalty = 10
     transfer_boarding_penalty = 10
     max_transfers = 3
-    output_skim_path = "skim_matrices\\transit\\transit_skims_{period}.omx"
-    fares_path = "inputs\\trn\\fares.far"
-    fare_matrix_path = "inputs\\trn\\fareMatrix.txt"
+    output_skim_path = "skim_matrices/transit/transit_skims_{period}.omx"
+    fares_path = "inputs/trn/fares.far"
+    fare_matrix_path = "inputs/trn/fareMatrix.txt"
     # max expected transfer distance for mode-to-mode transfer fare table generation
     fare_max_transfer_distance_miles = 3.0
     use_fares = false
     # for TAZ instead of TAPs
     override_connector_times = false
-    #input_connector_access_times_path = "inputs\\trn\\estimated_taz_access_connectors.csv"
-    #input_connector_egress_times_path = "inputs\\trn\\estimated_taz_egress_connectors.csv"
-    #output_stop_usage_path = "inputs\\trn\\stop_usage_{period}.csv"
+    #input_connector_access_times_path = "inputs/trn/estimated_taz_access_connectors.csv"
+    #input_connector_egress_times_path = "inputs/trn/estimated_taz_egress_connectors.csv"
+    #output_stop_usage_path = "inputs/trn/stop_usage_{period}.csv"
 
 [emme]
-    num_processors = "max-1"
+    num_processors = "MAX-1"
     all_day_scenario_id = 1
-    project_path = "emme_project\\mtc_emme.emp"
-    highway_database_path = "emme_project\\Database_highway\\emmebank"
-    active_database_paths = [ "emme_project\\Database_maz\\emmebank", ]
-    transit_database_path = "emme_project\\Database_transit\\emmebank"
+    project_path = "emme_project/mtc_emme.emp"
+    highway_database_path = "emme_project/Database_highway/emmebank"
+    active_database_paths = [ "emme_project/Database_active_south/emmebank", "emme_project/Database_active_north/emmebank" ]
+    transit_database_path = "emme_project/Database_transit_taz/emmebank"
 
 
 [[highway.capclass_lookup]]
