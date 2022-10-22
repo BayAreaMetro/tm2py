@@ -2,7 +2,6 @@
 import os
 import sys
 from pathlib import Path
-
 import pytest
 
 print("CONFTEST LOADED")
@@ -46,12 +45,33 @@ def temp_dir():
     tf.cleanup()
 
 
+def pytest_addoption(parser):
+    """Parse command line arguments."""
+    parser.addoption("--inro", action="store", default="notmock")
+    print('pytest_addoption')
+
+
+def mocked_inro_context():
+    import unittest.mock
+    """Mocking of modules which need to be mocked for tests."""
+    sys.modules["inro.emme.database.emmebank"]  = unittest.mock.MagicMock()
+    sys.modules["inro.emme.network"]            = unittest.mock.MagicMock()
+    sys.modules["inro.emme.database.scenario"]  = unittest.mock.MagicMock()
+    sys.modules["inro.emme.database.matrix"]    = unittest.mock.MagicMock()
+    sys.modules["inro.emme.network.node"]       = unittest.mock.MagicMock()
+    sys.modules["inro.emme.desktop.app"]        = unittest.mock.MagicMock()
+    sys.modules["inro"]                         = unittest.mock.MagicMock()
+    sys.modules["inro.modeller"]                = unittest.mock.MagicMock()
+
+
 @pytest.fixture(scope="session")
 def inro_context(pytestconfig):
     """Mocks necessary inro modules if they aren't successfully imported."""
 
     try:
+        # obey command line option
         _inro = pytestconfig.getoption("inro")
+        print('_inro = [{}]'.format(_inro))
         if _inro.lower() == "mock":
             print("Mocking inro environment.")
             mocked_inro_context()
@@ -59,7 +79,12 @@ def inro_context(pytestconfig):
             import inro.emme.database.emmebank
 
             print("Using inro environment.")
-    except:
+    except Exception as inst: 
+        print(type(inst))    # the exception instance
+        print(inst.args)     # arguments stored in .args
+        print(inst)          # __str__ allows args to be printed directly,
+
+        # if commandline option fails, try using Emme and then failing that, using Mock
         try:
             import inro.emme.database.emmebank
 
