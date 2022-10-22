@@ -1,15 +1,11 @@
 "Test commercial vehicle model."
 
 import os
-
 import pytest
-from conftest import inro_context
-
 from tm2py.examples import get_example
 
 
-@pytest.mark.skipif(inro_context != "inro", reason="requires full inro context")
-def test_commercial_vehicle(examples_dir, root_dir):
+def test_commercial_vehicle(inro_context, examples_dir, root_dir):
     "Tests that commercial vehicle component can be run."
     from tools import test_component
 
