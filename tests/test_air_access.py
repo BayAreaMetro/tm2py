@@ -8,7 +8,7 @@ from tm2py.examples import get_example
 
 
 @pytest.mark.menow
-def test_air_pax_model(examples_dir, root_dir):
+def test_air_pax_model(inro_context, examples_dir, root_dir):
     "Tests that airport access model be run."
     from tools import test_component
 
