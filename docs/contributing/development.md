@@ -160,7 +160,7 @@ Confirm tests run:
     If you have Emme installed but want to force running the tests with the Mock:
 
     ```sh
-    pytest -inro mock
+    pytest --inro mock
     ```
 
 ### Update/address other failing tests
