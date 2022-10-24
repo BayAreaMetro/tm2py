@@ -145,6 +145,24 @@ General notes about code style:
 - Expicit over implicit
 - Add comments for non-obvious code where it would take a user a while to figure out
 
+Confirm tests run:
+
+=== "With Emme"
+
+    If you have Emme installed, it will automatically run the tests with Emme environment.
+
+    ```sh
+    pytest -s
+    ```
+
+=== "Using Mocked Emme Environment"
+
+    If you have Emme installed but want to force running the tests with the Mock:
+
+    ```sh
+    pytest --inro mock
+    ```
+
 ### Update/address other failing tests
 
 Update your branch with the most recent version of the develop
