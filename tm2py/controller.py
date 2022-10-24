@@ -30,7 +30,8 @@ from tm2py.components.demand.commercial import CommercialVehicleModel
 from tm2py.components.demand.household import HouseholdModel
 from tm2py.components.demand.internal_external import InternalExternal
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
-from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, SkimMAZCosts
+from tm2py.components.network.highway.highway_maz import (AssignMAZSPDemand,
+                                                          SkimMAZCosts)
 from tm2py.components.network.highway.highway_network import PrepareNetwork
 from tm2py.config import Configuration
 from tm2py.emme.manager import EmmeManager

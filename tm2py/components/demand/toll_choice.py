@@ -10,7 +10,8 @@ import openmatrix as _omx
 import pandas as pd
 
 from tm2py.components.component import Component, Subcomponent
-from tm2py.components.network.skims import get_omx_skim_as_numpy, get_summed_skims
+from tm2py.components.network.skims import (get_omx_skim_as_numpy,
+                                            get_summed_skims)
 from tm2py.config import ChoiceClassConfig, TollChoiceConfig
 from tm2py.emme.matrix import OMXManager
 from tm2py.logger import LogStartEnd
