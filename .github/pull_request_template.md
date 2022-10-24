@@ -9,7 +9,7 @@
 
 ## Code formatting
 
-*Code should be PEP8 compliant before merging by running a package like [`black`](https://pypi.org/project/black/)*
+*Code should be pass pre-commit checks `[pre-commit](https://github.com/pre-commit/pre-commit-hooks) run --all-files`
 
 - [ ] Code linted
 
