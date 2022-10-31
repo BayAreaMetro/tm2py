@@ -128,6 +128,7 @@ class TransitSkim(Component):
                 ("TOTALWALK", "total walk time"),
                 ("TOTALIVTT", "total in-vehicle time"),
                 ("FARE", "fare"),
+                ("IN_VEHICLE_COST", "in-vehicle cost"),
             ]
             self._skim_properties += [
                 Skimproperty(_name, _desc) for _name, _desc in _basic_skims
@@ -358,7 +359,7 @@ class TransitSkim(Component):
             "type": "MATRIX_CALCULATION",
             "constraint": None,
             "result": f'mf"{_tp_tclass}_FARE"',
-            "expression": f'(mf"{_tp_tclass}_FARE" + mf"{_tp_tclass}_IN_VEHICLE_COST)"',
+            "expression": f'(mf"{_tp_tclass}_FARE" + mf"{_tp_tclass}_IN_VEHICLE_COST")',
         }
 
         self.controller.emme_manager.matrix_calculator(
@@ -542,7 +543,9 @@ class TransitSkim(Component):
             for line in self.networks[time_period].transit_lines():
                 fare_modes[line["#src_mode"]].add(line.mode.id)
             emme_mode_ids = [
-                (mode.name, list(fare_modes[mode.mode_id])) for mode in valid_modes
+                (mode.name, list(fare_modes[mode.mode_id]))
+                for mode in valid_modes
+                if len(list(fare_modes[mode.mode_id])) > 0
             ]
         else:
             emme_mode_ids = [(mode.name, [mode.mode_id]) for mode in valid_modes]
