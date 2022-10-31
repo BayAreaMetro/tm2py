@@ -102,6 +102,8 @@ class TransitSkim(Component):
                     for _transit_class in self.config.classes:
                         self.run_skim_set(_time_period, _transit_class)
                     self._export_skims(_time_period)
+                    if self.logger.debug_enabled:
+                        self._log_debug_report(_time_period)
 
     @property
     def skim_matrices(self):
@@ -710,11 +712,11 @@ class TransitSkim(Component):
         ) as omx_file:
             omx_file.write_matrices(matrices)
 
-    def _debug_report(self):
-        num_zones = len(self.scenarios[time_period].zone_numbers)
+    def _log_debug_report(self, _time_period):
+        num_zones = len(self.scenarios[_time_period].zone_numbers)
         num_cells = num_zones * num_zones
         self.logger.log(
-            f"Transit impedance summary for period {self._time_period}", level="DEBUG"
+            f"Transit impedance summary for period {_time_period}", level="DEBUG"
         )
         self.logger.log(
             f"Number of zones: {num_zones}. Number of O-D pairs: {num_cells}. "
@@ -726,9 +728,11 @@ class TransitSkim(Component):
             level="DEBUG",
         )
 
-        for time_period, transit_class, skim_property in self._skim_matrices.keys():
-            matrix_name = f'mf"{time_period}_{transit_class.name}_{skim_property}"'
-            values = self.matrix_cache[time_period].get_data(matrix_name)
+        temp = self.emmebank_skim_matrices(time_periods=[_time_period])
+
+        for matrix_name in temp.keys():
+            matrix_name = f'mf"{matrix_name}"'
+            values = self.matrix_cache[_time_period].get_data(matrix_name)
             data = np.ma.masked_outside(values, -9999999, 9999999)
             stats = (
                 f"{matrix_name:25} {data.min():9.4g} {data.max():9.4g} "
