@@ -726,6 +726,7 @@
     ccr_weights.min_stand = 1.4
     ccr_weights.max_stand = 1.6
     ccr_weights.power_stand = 3.4
+    eawt_weights.constant = 0.259625
     [[transit.classes]]
         skim_set_id = "SET1"
         name = "BUS"
@@ -777,7 +778,7 @@
     highway_database_path = "emme_project/Database_highway/emmebank"
     active_north_database_path = "emme_project/Database_active_south/emmebank"
     active_south_database_path = "emme_project/Database_active_south/emmebank"
-    transit_database_path = "emme_project/Database_transit_taz/emmebank"
+    transit_database_path = "emme_project/Database_transit/emmebank"
 
 
 [[highway.capclass_lookup]]
@@ -1413,7 +1414,7 @@
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
-    eawt_factor = 0.2
+    eawt_factor = 0.4
 [[transit.modes]]
     mode_id = "h"
     description = "heavy_rail"
