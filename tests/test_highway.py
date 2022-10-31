@@ -27,6 +27,7 @@ def test_highway_assign(inro_context, examples_dir):
 
     #------Below this line, need Inro's Emme installed-----
     if inro_context != "inro": return
+    print("!!!!!!!INRO CONTEXT ",inro_context)
 
     my_run.run_next()
 
@@ -56,7 +57,7 @@ def test_highway_maz_skim(inro_context, examples_dir):
 
     # TODO write assert
 
-
+@pytest.mark.menow
 def test_highway_skims(inro_context, union_city):
     """Test that the OMX highway skims match the reference."""
     #------Below this line, need Inro's Emme installed-----
@@ -90,7 +91,7 @@ def test_highway_skims(inro_context, union_city):
     assert len(missing_skims) == 0, f"Missing skims: {missing_skims}"
     assert len(different_skims) == 0, f"Different skims: {different_skims}"
 
-
+@pytest.mark.menow
 def test_maz_da_skims(inro_context, union_city):
     """Test that the DA MAZ skims match the reference."""
     #------Below this line, need Inro's Emme installed-----
