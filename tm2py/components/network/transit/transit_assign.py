@@ -8,7 +8,6 @@ import os
 import textwrap
 from collections import defaultdict as _defaultdict
 from functools import partial
-from msilib.schema import SelfReg
 from typing import TYPE_CHECKING, Dict, List, Set, Tuple, Union
 
 from tm2py import tools
