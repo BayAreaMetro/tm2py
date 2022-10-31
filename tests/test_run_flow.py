@@ -42,27 +42,6 @@ def test_example_download(examples_dir, root_dir, inro_context):
     assert not (os.path.exists(os.path.join(example_root, "test_data.zip")))
 
 
-@pytest.fixture(scope="session")
-def union_city(examples_dir, root_dir, inro_context):
-    """Union City model run testing fixture."""
-    from tm2py.controller import RunController
-    from tm2py.examples import get_example
-
-    EXAMPLE = "UnionCity"
-    _example_root = os.path.join(examples_dir, EXAMPLE)
-
-    get_example(example_name="UnionCity", root_dir=root_dir)
-    controller = RunController(
-        [
-            os.path.join(examples_dir, "scenario_config.toml"),
-            os.path.join(examples_dir, "model_config.toml"),
-        ],
-        run_dir=_example_root,
-    )
-    controller.run()
-    return controller
-
-
 def test_validate_input_fail(examples_dir, inro_context, temp_dir):
     """Test that validate_input fails when required inputs are missing."""
     import toml

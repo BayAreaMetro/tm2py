@@ -12,3 +12,8 @@ def test_get_blended_skim(inro_context):
 
     # TODO
     pass
+
+
+    #------Below this line, need Inro's Emme installed-----
+    if inro_context != "inro": return
+    
