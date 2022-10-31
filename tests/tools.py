@@ -54,7 +54,11 @@ def test_component(examples_dir, component, example_name="UnionCity"):
         examples_dir / "model_config.toml",
         examples_dir / "scenario_config.toml",
     ]
-    my_components = [component]
+
+    if isinstance(component, list):
+        my_components = component
+    else:
+        my_components = [component]
     print(f"TESTING COMPONENTS: {my_components}")
     my_run = RunController(
         base_configs, run_dir=examples_dir / example_name, run_components=my_components
