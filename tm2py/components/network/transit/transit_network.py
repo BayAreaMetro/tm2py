@@ -8,7 +8,6 @@ import time as _time
 import traceback as _traceback
 from collections import defaultdict as _defaultdict
 from copy import deepcopy as _copy
-from msilib import init_database
 from typing import Dict
 
 import pandas as pd
