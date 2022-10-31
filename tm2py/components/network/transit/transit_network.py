@@ -14,10 +14,12 @@ from typing import Dict
 import pandas as pd
 import shapely.geometry as _geom
 from inro.modeller import PageBuilder
+from scipy.optimize import nnls as _nnls
 from typing_extensions import TYPE_CHECKING, Literal
 
 from tm2py.components.component import Component
 from tm2py.emme.manager import EmmeLink, EmmeNetwork, EmmeScenario
+from tm2py.emme.network import NoPathFound, find_path
 from tm2py.logger import LogStartEnd
 
 if TYPE_CHECKING:
@@ -964,6 +966,7 @@ class ApplyFares(Component):
                 for seg in line.segments(include_hidden=True)
                 if (seg.allow_alightings or seg.allow_boardings)
             ]
+            prev_seg = None
             for i, seg in enumerate(stop_segments):
                 farezone = int(seg.i_node["@farezone"])
                 if farezone not in valid_farezones:

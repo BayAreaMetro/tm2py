@@ -3,13 +3,19 @@
 Contains NetworkCalculator class to generate Emme format specifications for
 the Network calculator.
 """
+import heapq
+from collections import defaultdict as _defaultdict
+from typing import Any, Callable, Dict, List, Union
 
-from typing import Dict, List, Union
+from inro.emme.network.link import Link as EmmeNetworkLink
+from inro.emme.network.node import Node as EmmeNetworkNode
 
 import tm2py.emme.manager as _manager
 
 EmmeScenario = _manager.EmmeScenario
 EmmeNetworkCalcSpecification = Dict[str, Union[str, Dict[str, str]]]
+
+_INF = 1e400
 
 
 class NetworkCalculator:
@@ -113,3 +119,69 @@ class NetworkCalculator:
         else:
             spec["selections"] = {"link": "all"}
         return spec
+
+
+def find_path(
+    orig_node: EmmeNetworkNode,
+    dest_node: EmmeNetworkNode,
+    filter_func: Callable,
+    cost_func: Callable,
+) -> List[EmmeNetworkLink]:
+    """Find and return the shortest path (sequence of links) between two nodes in Emme network.
+    Args:
+        orig_node: origin Emme node object
+        dest_node: desination Emme node object
+        filter_func: callable function which accepts an Emme network link and returns True if included and False
+            if excluded. E.g. lambda link: mode in link.modes
+        cost_func: callable function which accepts an Emme network link and returns the cost value for the link.
+    """
+    visited = set([])
+    visited_add = visited.add
+    costs = _defaultdict(lambda: _INF)
+    back_links = {}
+    heap = []
+    pop, push = heapq.heappop, heapq.heappush
+    outgoing = None
+    link_found = False
+    for outgoing in orig_node.outgoing_links():
+        if filter_func(outgoing):
+            back_links[outgoing] = None
+            if outgoing.j_node == dest_node:
+                link_found = True
+                break
+            cost_to_link = cost_func(outgoing)
+            costs[outgoing] = cost_to_link
+            push(heap, (cost_to_link, outgoing))
+    try:
+        while not link_found:
+            cost_to_link, link = pop(heap)
+            if link in visited:
+                continue
+            visited_add(link)
+            for outgoing in link.j_node.outgoing_links():
+                if not filter_func(outgoing):
+                    continue
+                if outgoing in visited:
+                    continue
+                outgoing_cost = cost_to_link + cost_func(outgoing)
+                if outgoing_cost < costs[outgoing]:
+                    back_links[outgoing] = link
+                    costs[outgoing] = outgoing_cost
+                    push(heap, (outgoing_cost, outgoing))
+                if outgoing.j_node == dest_node:
+                    link_found = True
+                    break
+    except IndexError:
+        pass  # IndexError if heap is empty
+    if not link_found or outgoing is None:
+        raise NoPathFound("No path found between %s and %s" % (orig_node, dest_node))
+    prev_link = outgoing
+    route = []
+    while prev_link:
+        route.append(prev_link)
+        prev_link = back_links[prev_link]
+    return list(reversed(route))
+
+
+class NoPathFound(Exception):
+    pass

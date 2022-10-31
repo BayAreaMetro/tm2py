@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Dict, List, Set, Tuple, Union
 from tm2py import tools
 from tm2py.components.component import Component
 from tm2py.components.demand.prepare_demand import PrepareTransitDemand
-from tm2py.emme.manager import EmmeNetwork
+from tm2py.emme.manager import EmmeNetwork, EmmeScenario
 from tm2py.logger import LogStartEnd
 
 if TYPE_CHECKING:
