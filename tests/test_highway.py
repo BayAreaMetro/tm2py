@@ -11,6 +11,9 @@ def test_prepare_highway_network(inro_context, examples_dir):
     from tools import test_component
 
     my_run = test_component(examples_dir, "prepare_network_highway")
+
+    #------Below this line, need Inro's Emme installed-----
+    if inro_context != "inro": return
     my_run.run_next()
 
     # TODO write assert
@@ -21,6 +24,11 @@ def test_highway_assign(inro_context, examples_dir):
     from tools import test_component
 
     my_run = test_component(examples_dir, "highway")
+
+    #------Below this line, need Inro's Emme installed-----
+    if inro_context != "inro": return
+    print("!!!!!!!INRO CONTEXT ",inro_context)
+
     my_run.run_next()
 
     # TODO write assert
@@ -31,6 +39,10 @@ def test_highway_maz_assign(inro_context, examples_dir):
     from tools import test_component
 
     my_run = test_component(examples_dir, "highway_maz_assign")
+
+    #------Below this line, need Inro's Emme installed-----
+    if inro_context != "inro": return
+
     my_run.run_next()
 
     # TODO write assert
@@ -45,9 +57,12 @@ def test_highway_maz_skim(inro_context, examples_dir):
 
     # TODO write assert
 
-
+@pytest.mark.menow
 def test_highway_skims(inro_context, union_city):
     """Test that the OMX highway skims match the reference."""
+    #------Below this line, need Inro's Emme installed-----
+    if inro_context != "inro": return
+
     run_dir = union_city.run_dir
 
     ref_dir_hwy_skims = os.path.join(run_dir, "ref_skim_matrices", "highway")
@@ -76,9 +91,12 @@ def test_highway_skims(inro_context, union_city):
     assert len(missing_skims) == 0, f"Missing skims: {missing_skims}"
     assert len(different_skims) == 0, f"Different skims: {different_skims}"
 
-
+@pytest.mark.menow
 def test_maz_da_skims(inro_context, union_city):
     """Test that the DA MAZ skims match the reference."""
+    #------Below this line, need Inro's Emme installed-----
+    if inro_context != "inro": return
+
     run_dir = union_city.run_dir
 
     ref_dir_hwy_skims = os.path.join(run_dir, "ref_skim_matrices", "highway")

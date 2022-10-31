@@ -15,7 +15,7 @@ mkdocs-awesome-pages-plugin
 mkdocs-jupyter
 mkdocs-macros-plugin
 mkdocs-material
-mkdocstrings
+mkdocstrings >= 0.18
 mkdocstrings-python
 notebook
 numpy
