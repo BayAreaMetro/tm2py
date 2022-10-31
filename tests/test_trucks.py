@@ -1,7 +1,9 @@
 "Test commercial vehicle model."
 
 import os
+
 import pytest
+
 from tm2py.examples import get_example
 
 
