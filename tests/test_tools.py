@@ -2,6 +2,7 @@
 
 import os
 import sys
+import tempfile
 from unittest.mock import MagicMock
 
 import pytest
@@ -106,6 +107,7 @@ def test_omx_to_dict(inro_context):
 def test_csv_to_dfs(inro_context):
     """Test zonal_csv_to_matrices."""
     from tm2py.tools import zonal_csv_to_matrices
+    from tm2py.tools import _download, _unzip
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_file = os.path.join(temp_dir, "test_download.zip")
