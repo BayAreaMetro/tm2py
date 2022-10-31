@@ -28,6 +28,7 @@ pyproj > 2.2.0
 pywin32==224 ; sys_platform == 'win32'
 pyyaml
 rtree
+scipy
 shapely
 tables
 toml
