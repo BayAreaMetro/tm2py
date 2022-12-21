@@ -41,6 +41,7 @@
 [air_passenger]
     output_trip_table_directory = "demand_matrices/highway/air_passenger"
     outfile_trip_table_tmp = "tripsAirPax{period}.omx"
+    highway_demand_file = "demand_matrices/highway/air_passenger/tripsAirPax{period}.omx"
     input_demand_folder = "inputs/nonres"
     input_demand_filename_tmpl = "{year}_{direction}{airport}.csv"
     reference_start_year = "2007"
@@ -62,6 +63,7 @@
 [internal_external]
     output_trip_table_directory = "demand_matrices/highway/internal_external"
     outfile_trip_table_tmp = "tripsIx{period}.omx"
+    highway_demand_file = "demand_matrices/highway/internal_external/tripsIx{period}.omx"
     modes = ["da","sr2","sr3"]
     [internal_external.demand]
         input_demand_file = "inputs/nonres/IXDaily2006x4.may2208.new.omx"
@@ -148,6 +150,7 @@
 [truck]
     output_trip_table_directory = "demand_matrices/highway/commercial"
     outfile_trip_table_tmp = "tripstrk{period}.omx"
+    highway_demand_file = "demand_matrices/highway/commercial/tripstrk{period}.omx"
     [[truck.classes]]
         name = "vsmtrk"
         description = "very small truck"

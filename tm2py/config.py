@@ -309,6 +309,7 @@ class AirPassengerConfig(ConfigItem):
     outfile_trip_table_tmp: str
     input_demand_folder: pathlib.Path
     input_demand_filename_tmpl: str
+    highway_demand_file: str
     reference_start_year: str
     reference_end_year: str
     airport_names: List[str]
@@ -443,6 +444,7 @@ class InternalExternalConfig(ConfigItem):
 
     output_trip_table_directory: pathlib.Path
     outfile_trip_table_tmp: str
+    highway_demand_file: str
     modes: List[str]
     demand: DemandGrowth
     time_of_day: TimeOfDayConfig
@@ -547,6 +549,7 @@ class TruckConfig(ConfigItem):
     toll_choice: TollChoiceConfig
     output_trip_table_directory: pathlib.Path
     outfile_trip_table_tmp: str
+    highway_demand_file: str
 
     """
     @validator("classes")
