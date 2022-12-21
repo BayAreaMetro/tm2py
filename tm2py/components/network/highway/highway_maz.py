@@ -83,7 +83,7 @@ class AssignMAZSPDemand(Component):
         self._bin_edges = _default_bin_edges
 
         # Lazily-loaded Emme Properties
-        self._emmebank = None
+        self._highway_emmebank = None
         self._eb_dir = None
 
         # Internal attributes to track data through the sequence of steps
@@ -96,17 +96,15 @@ class AssignMAZSPDemand(Component):
         self._leaf_index = None
 
     @property
-    def emmebank(self):
-        if self._emmebank is None:
-            self._emmebank = self.controller.emme_manager.emmebank(
-                self.get_abs_path(self.controller.config.emme.highway_database_path)
-            )
-        return self._emmebank
+    def highway_emmebank(self):
+        if self._highway_emmebank is None:
+            self._highway_emmebank = self.controller.emme_manager.highway_emmebank
+        return self._highway_emmebank
 
     @property
     def eb_dir(self):
         if self._eb_dir is None:
-            self._eb_dir = os.path.dirname(self.emmebank.path)
+            self._eb_dir = os.path.dirname(self.highway_emmebank.path)
         return self._eb_dir
 
     def validate_inputs(self):
@@ -122,7 +120,7 @@ class AssignMAZSPDemand(Component):
         for group in self.config.demand_county_groups:
             county_groups[group.number] = group.counties
         for time in self.time_period_names:
-            self._scenario = self.emmebank.scenario(time)
+            self._scenario = self.highway_emmebank.scenario(time)
             with self._setup(time):
                 self._prepare_network()
                 for i, names in county_groups.items():
@@ -178,9 +176,7 @@ class AssignMAZSPDemand(Component):
                     self._leaf_index = None
                     # delete sp path files
                     for bin_no in range(len(self._bin_edges)):
-                        file_path = os.path.join(
-                            self._eb_dir, f"sp_{time}_{bin_no}.ebp"
-                        )
+                        file_path = os.path.join(self.eb_dir, f"sp_{time}_{bin_no}.ebp")
                         if os.path.exists(file_path):
                             os.remove(file_path)
 
@@ -196,9 +192,9 @@ class AssignMAZSPDemand(Component):
         else:
             time_attr = "@free_flow_time"
         self.logger.log(f"Calculating link costs using time {time_attr}", level="DEBUG")
-        vot = self.config.highway.maz_to_maz.value_of_time
-        op_cost = self.config.highway.maz_to_maz.operating_cost_per_mile
-        net_calc = NetworkCalculator(self._scenario)
+        vot = self.config.value_of_time
+        op_cost = self.config.operating_cost_per_mile
+        net_calc = NetworkCalculator(self.controller, self._scenario)
         report = net_calc(
             "@link_cost", f"{time_attr} + 0.6 / {vot} * (length * {op_cost})"
         )
@@ -375,7 +371,7 @@ class AssignMAZSPDemand(Component):
         """
         # forbid egress from MAZ nodes which are not demand roots /
         #        access to MAZ nodes which are not demand leafs
-        net_calc = NetworkCalculator(self._scenario)
+        net_calc = NetworkCalculator(self.controller, self._scenario)
         net_calc.add_calc("@link_cost_maz", "@link_cost")
         net_calc.add_calc("@link_cost_maz", "1e20", "@maz_root=0 and !@maz_id=0")
         net_calc.add_calc("@link_cost_maz", "1e20", "@maz_leafj=0 and !@maz_idj=0")
@@ -419,7 +415,7 @@ class AssignMAZSPDemand(Component):
                 },
                 "path_output": {
                     "format": "BINARY" if _USE_BINARY else "TEXT",
-                    "file": os.path.join(self._eb_dir, file_name),
+                    "file": os.path.join(self.eb_dir, file_name),
                 },
             },
             "performance_settings": {
@@ -495,7 +491,7 @@ class AssignMAZSPDemand(Component):
         """
         paths = _defaultdict(lambda: {})
         with open(
-            os.path.join(self._eb_dir, f"sp_{time}_{bin_no}.txt"),
+            os.path.join(self.eb_dir, f"sp_{time}_{bin_no}.txt"),
             "r",
             encoding="utf8",
         ) as paths_file:
@@ -520,7 +516,7 @@ class AssignMAZSPDemand(Component):
                 {"orig": EmmeNode, "dest": EmmeNode, "dem": float (demand value)}
         """
         file_name = f"sp_{time}_{bin_no}.ebp"
-        with open(os.path.join(self._eb_dir, file_name), "rb") as paths_file:
+        with open(os.path.join(self.eb_dir, file_name), "rb") as paths_file:
             # read set of path pointers by Orig-Dest sequence from file
             offset, leaves_nb, path_indicies = self._get_path_indices(paths_file)
             assigned = 0
@@ -640,17 +636,21 @@ class SkimMAZCosts(Component):
         """
         super().__init__(controller)
         self.config = self.controller.config.highway.maz_to_maz
-        self.ref_period_name = self.config.skim_period
         # TODO add config requirement that most be a valid time period
         self._scenario = None
         self._network = None
+        self._highway_emmebank = None
+
+    @property
+    def highway_emmebank(self):
+        if self._highway_emmebank is None:
+            self._highway_emmebank = self.controller.emme_manager.highway_emmebank
+        return self._highway_emmebank
 
     @property
     def scenario(self):
         if self._scenario is None:
-            self._scenario = self.get_emme_scenario(
-                self.controller.config.emme.highway_database_path, self.ref_period_name
-            )
+            self._scenario = self.highway_emmebank.scenario(self.config.skim_period)
         return self._scenario
 
     def validate_inputs(self):
@@ -718,7 +718,7 @@ class SkimMAZCosts(Component):
     @LogStartEnd(level="DEBUG")
     def _prepare_network(self):
         """Calculates the link cost in @link_cost and loads the network to self._network."""
-        net_calc = NetworkCalculator(self._scenario)
+        net_calc = NetworkCalculator(self.controller, self._scenario)
         if self._scenario.has_traffic_results:
             time_attr = "(@free_flow_time.max.timau)"
         else:
