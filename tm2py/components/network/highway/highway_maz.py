@@ -476,6 +476,10 @@ class AssignMAZSPDemand(Component):
             f"assigned: {assigned}, not assigned: {not_assigned}", level="DEBUG"
         )
 
+        self.controller.emme_manager.copy_attribute_values(
+            self._network, self._scenario, {"LINK": ["temp_flow"]}, {"LINK": ["data1"]}
+        )
+
     def _load_text_format_paths(
         self, time: str, bin_no: int
     ) -> Dict[int, Dict[int, List[int]]]:
