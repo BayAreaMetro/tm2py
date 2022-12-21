@@ -148,25 +148,28 @@ class PrepareHighwayDemand(EmmeDemand):
             controller (RunController): Reference to run controller object.
         """
         super().__init__(controller)
-        self._emmebank = None
+        self.controller = controller
+        self.config = self.controller.config.highway
+        self._highway_emmebank = None
 
     def validate_inputs(self):
         # TODO
         pass
 
     @property
-    def emmebank(self):
-        if self._emmebank == None:
-            self._emmebank = self.emme_manager.highway_emmebank
-        return self._emmebank
+    def highway_emmebank(self):
+        if self._highway_emmebank == None:
+            self._highway_emmebank = self.controller.emme_manager.highway_emmebank
+            self._emmebank = self._highway_emmebank
+        return self._highway_emmebank
 
     # @LogStartEnd("prepare highway demand")
     def run(self):
         """Open combined demand OMX files from demand models and prepare for assignment."""
 
-        self._create_zero_matrix()
-        for time in self.time_period_names:
-            for klass in self.config.highway.classes:
+        self.highway_emmebank.zero_matrix
+        for time in self.controller.time_period_names:
+            for klass in self.config.classes:
                 self._prepare_demand(klass.name, klass.description, klass.demand, time)
 
     def _prepare_demand(
@@ -189,15 +192,24 @@ class PrepareHighwayDemand(EmmeDemand):
                  "factor": <factor to apply to demand in this file>}
             time_period (str): the time time_period ID (name)
         """
-        _scenario = self._emmebank.scenario(time_period)
-        demand = self._read_demand(demand_config[0], {"period": time_period.upper()})
+        self._scenario = self.highway_emmebank.scenario(time_period)
+        num_zones = len(self._scenario.zone_numbers)
+        demand = self._read_demand(demand_config[0], time_period, num_zones)
         for file_config in demand_config[1:]:
-            demand = demand + self._read_demand(
-                file_config, {"period": time_period.upper()}
-            )
+            demand = demand + self._read_demand(file_config, time_period, num_zones)
         demand_name = f"{time_period}_{name}"
         description = f"{time_period} {description} demand"
         self._save_demand(demand_name, demand, description, apply_msa=True)
+
+    def _read_demand(self, file_config, time_period, num_zones):
+        # Load demand from cross-referenced source file,
+        # the named demand model component under the key highway_demand_file
+        source = file_config["source"]
+        name = file_config["name"].format(period=time_period.upper())
+        path = self.controller.get_abs_path(
+            self.controller.config[source].highway_demand_file
+        ).__str__()
+        return self._read(path.format(period=time_period), name, num_zones)
 
 
 class PrepareTransitDemand(EmmeDemand):
