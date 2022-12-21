@@ -68,6 +68,9 @@ class PrepareNetwork(Component):
         """
         super().__init__(controller)
         self.config = self.controller.config.highway
+        self._emme_manager = self.controller.emme_manager
+        self._highway_emmebank = None
+        self._highway_scenarios = None
 
     @LogStartEnd("Prepare network attributes and modes")
     def run(self):
@@ -76,7 +79,7 @@ class PrepareNetwork(Component):
             with self.controller.emme_manager.logbook_trace(
                 f"prepare for highway assignment {time}"
             ):
-                scenario = self.emmebank.scenario(time)
+                scenario = self.highway_emmebank.scenario(time)
                 self._create_class_attributes(scenario, time)
                 network = scenario.get_network()
                 self._set_tolls(network, time)
@@ -85,6 +88,20 @@ class PrepareNetwork(Component):
                 self._calc_link_skim_lengths(network)
                 self._calc_link_class_costs(network)
                 scenario.publish_network(network)
+
+    @property
+    def highway_emmebank(self):
+        if not self._highway_emmebank:
+            self._highway_emmebank = self.controller.emme_manager.highway_emmebank
+        return self._highway_emmebank
+
+    @property
+    def highway_scenarios(self):
+        if self._highway_scenarios is None:
+            self._highway_scenarios = {
+                tp: self.highway_emmebank.scenario(tp) for tp in self.time_period_names
+            }
+        return self._highway_scenarios
 
     def validate_inputs(self):
         """Validate inputs files are correct, raise if an error is found."""
