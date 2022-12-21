@@ -29,16 +29,14 @@ class NetworkCalculator:
         scenario: Emme scenario object
     """
 
-    def __init__(self, scenario: EmmeScenario):
+    def __init__(self, controller, scenario: EmmeScenario):
         """Constructor for NetworkCalculator class.
 
         Args:
             scenario (EmmeScenario): Reference EmmeScenario object
         """
         self._scenario = scenario
-        emme_manager = _manager.EmmeManager()
-        modeller = emme_manager.modeller()
-        self._network_calc = modeller.tool(
+        self._network_calc = controller.emme_manager.modeller.tool(
             "inro.emme.network_calculation.network_calculator"
         )
         self._specs = []
