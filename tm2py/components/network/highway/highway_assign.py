@@ -438,9 +438,10 @@ class AssignmentClass:
                 continue
             if "_" in skim_type:
                 skim_type, group = skim_type.split("_")
+                matrix_name = f"mf{self.time_period}_{self.name}_{skim_type}_{group}"
             else:
                 group = ""
-            matrix_name = f"mf{self.time_period}_{self.name}_{skim_type}{group}"
+                matrix_name = f"mf{self.time_period}_{self.name}_{skim_type}"
             class_analysis.append(
                 self.emme_analysis_spec(
                     self.skim_analysis_link_attribute(skim_type, group),
@@ -465,9 +466,10 @@ class AssignmentClass:
                 continue
             if "_" in skim_type:
                 skim_type, group = skim_type.split("_")
+                skim_matrices.append(f"{self.time_period}_{self.name}_{skim_type}_{group}")
             else:
                 group = ""
-            skim_matrices.append(f"{self.time_period}_{self.name}_{skim_type}{group}")
+                skim_matrices.append(f"{self.time_period}_{self.name}_{skim_type}")
         return skim_matrices
 
     @staticmethod
