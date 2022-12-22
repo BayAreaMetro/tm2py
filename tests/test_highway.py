@@ -3,7 +3,6 @@ import glob
 import os
 
 import pytest
-from conftest import inro_context
 from tools import assert_csv_equal, diff_omx
 
 from tm2py.examples import get_example

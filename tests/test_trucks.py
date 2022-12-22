@@ -1,10 +1,7 @@
 "Test commercial vehicle model."
 
 import os
-
 import pytest
-from conftest import inro_context
-
 from tm2py.examples import get_example
 
 
