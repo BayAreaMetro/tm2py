@@ -9,7 +9,7 @@ from tm2py.examples import get_example
 
 
 @pytest.mark.menow
-def test_transit(inro_context, examples_dir, root_dir):
+def test_transit(examples_dir, root_dir):
     "Tests that internal/external travel component can be run."
     from tools import test_component
 
@@ -19,8 +19,6 @@ def test_transit(inro_context, examples_dir, root_dir):
         examples_dir, ["prepare_network_transit", "transit_assign", "transit_skim"]
     )
 
-    if inro_context != "inro":
-        return
     my_run.run()
 
     # TODO write assert

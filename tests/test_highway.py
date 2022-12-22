@@ -9,16 +9,13 @@ from tools import assert_csv_equal, diff_omx
 from tm2py.examples import get_example
 
 
-def test_highway(inro_context, examples_dir, root_dir):
+def test_highway(examples_dir, root_dir):
     "Tests that prepare highway network component can be run."
     from tools import test_component
 
     get_example(example_name="UnionCity", root_dir=root_dir)
 
     my_run = test_component(examples_dir, ["prepare_network_highway", "highway"])
-
-    if inro_context != "inro":
-        return
     my_run.run()
 
     # TODO write assert
