@@ -4,6 +4,7 @@ geopandas > 0.8.0
 fiona
 folium
 fontawesome_markdown
+geopandas
 jinja2 < 3.1.0
 jsonschema
 jupyter
