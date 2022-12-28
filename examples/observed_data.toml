@@ -1,0 +1,10 @@
+####################################
+#   OBSERVED DATA CONFIGURATION    #
+####################################
+
+[remote_io]
+    folder_root = "~/Box Sync/"
+
+[transit]
+    on_board_survey_file = "Survey_Database_122717/survey.csv"
+    reduced_summaries_file = "Survey_Database_122717/acceptance-criteria-reductions.csv"
