@@ -2,6 +2,7 @@
 
 from typing import Union, List
 
+import numpy as np
 import os
 import geopandas as gpd
 import pandas as pd
@@ -10,25 +11,18 @@ import toml
 
 class Acceptance:
 
-    def _load_configs(self):
-         
-        with open(self.scenario_file, "r", encoding="utf-8") as toml_file:
-            self.scenario_dict = toml.load(toml_file)
-         
-        with open(self.observed_file, "r", encoding="utf-8") as toml_file:
-            self.observed_dict = toml.load(toml_file)
-            
-        return
-
-    def __init__(self, scenario_file: str, observed_file: str) -> None:
-        self.scenario_file = scenario_file
-        self.observed_file = observed_file
-        self._load_configs()
-
     scenario_dict: dict
     observed_dict: dict
 
-    reduced_on_board_survey_df: pd.DataFrame
+    reduced_transit_on_board_df = pd.DataFrame(
+        {
+            "survey_tech": pd.Series(dtype="str"),
+            "operator": pd.Series(dtype="str"),
+            "route": pd.Series(dtype="str"),
+            "time_period": pd.Series(dtype="str"),
+            "weight": pd.Series(dtype="float"),
+        }
+    )
 
     tableau_projection = 4326
 
@@ -75,21 +69,34 @@ class Acceptance:
         }
     )
 
-    def make_acceptance(self):
+    def _load_configs(self):
 
+        with open(self.scenario_file, "r", encoding="utf-8") as toml_file:
+            self.scenario_dict = toml.load(toml_file)
+
+        with open(self.observed_file, "r", encoding="utf-8") as toml_file:
+            self.observed_dict = toml.load(toml_file)
+
+        return
+
+    def __init__(self, scenario_file: str, observed_file: str) -> None:
+        self.scenario_file = scenario_file
+        self.observed_file = observed_file
         self._load_configs()
 
-        # _validate() method to validate the scenario and observed data to fail fast
+    def make_acceptance(self):
+
+        self._validate()
         # _make_roadway_network_comparisons() method to build roadway network comparisons
         # _make_transit_network_comparisons()
         # _make_other_comparisons()
 
         return
 
-    def _validate():
+    def _validate(self):
 
         # _validate_scenario()
-        # _validate_observed()
+        self._validate_observed()
 
         return
 
@@ -105,10 +112,8 @@ class Acceptance:
         # are all the key files present?
         # do time period names align with the scenario config?
 
-        if self.reduced_on_board_survey_df is None:
-            self._reduce_on_board_survey_df()
-
-
+        if self.reduced_transit_on_board_df.empty:
+            self._reduce_on_board_survey()
 
         return
 
@@ -158,15 +163,34 @@ class Acceptance:
 
     def _reduce_on_board_survey(self):
 
-        file_root = self.observed_dict["folder_root"]
+        file_root = self.observed_dict["remote_io"]["folder_root"]
         in_file = self.observed_dict["transit"]["on_board_survey_file"]
         out_file = self.observed_dict["transit"]["reduced_summaries_file"]
 
         if os.path.isfile(out_file):
-            self.reduced_on_board_survey_df = pd.read_csv(os.path.join(file_root, out_file))
+            self.reduced_transit_on_board_df = pd.read_csv(
+                os.path.join(file_root, out_file),
+                dtype=self.reduced_transit_on_board_df.dtypes.to_dict(),
+            )
         else:
-            in_df = pd.read_csv(os.path.join(file_root, in_file))
-            out_df = in_df.groupby(["operator", "route", "time_period"])["boarding_weight"].sum().reset_index()
+            in_df = pd.read_feather(os.path.join(file_root, in_file))
+            out_df = in_df.loc[in_df["weekpart"] == "WEEKDAY"]
+            out_df = out_df.loc[
+                out_df["day_part"].isin(
+                    ["EARLY AM", "AM PEAK", "MIDDAY", "PM PEAK", "EVENING", "NIGHT"]
+                )
+            ]
+            out_df["time_period"] = np.where(
+                out_df["day_part"] == "EVENING", "NIGHT", out_df["day_part"]
+            )
+            out_df = (
+                out_df.groupby(["survey_tech", "operator", "route", "time_period"])[
+                    "weight"
+                ]
+                .sum()
+                .reset_index()
+            )
             out_df.to_csv(os.path.join(file_root, out_file))
+            self.reduced_transit_on_board_df = out_df
 
         return

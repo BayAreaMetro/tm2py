@@ -20,6 +20,7 @@ osmnx >= 0.12
 notebook
 numpy
 pandas > 1.0
+pyarrow
 pydantic
 pyproj > 2.2.0 
 pyyaml
