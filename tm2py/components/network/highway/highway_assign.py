@@ -466,7 +466,9 @@ class AssignmentClass:
                 continue
             if "_" in skim_type:
                 skim_type, group = skim_type.split("_")
-                skim_matrices.append(f"{self.time_period}_{self.name}_{skim_type}_{group}")
+                skim_matrices.append(
+                    f"{self.time_period}_{self.name}_{skim_type}_{group}"
+                )
             else:
                 group = ""
                 skim_matrices.append(f"{self.time_period}_{self.name}_{skim_type}")
