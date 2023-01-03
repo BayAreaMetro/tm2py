@@ -19,6 +19,13 @@ class Acceptance:
 
     model_time_periods = []
 
+    simulated_boardings_df: pd.DataFrame
+
+    florida_transit_guidelines_df = pd.DataFrame(
+        [[0,1.50],[1000,1.00],[2000,0.65],[5000,0.35],[10000,0.25],[20000,0.20]],
+        columns=["boardings","threshold"]
+    )
+
     # Reduced data specs
     reduced_transit_on_board_df = pd.DataFrame(
         {
@@ -26,7 +33,7 @@ class Acceptance:
             "operator": pd.Series(dtype="str"),
             "route": pd.Series(dtype="str"),
             "time_period": pd.Series(dtype="str"),
-            "weight": pd.Series(dtype="float"),
+            "boarding_weight": pd.Series(dtype="float"),
         }
     )
 
@@ -106,6 +113,7 @@ class Acceptance:
     def make_acceptance(self):
 
         self._validate()
+        self._make_transit_network_comparisons()
         # _make_roadway_network_comparisons() method to build roadway network comparisons
         # _make_transit_network_comparisons()
         # _make_other_comparisons()
@@ -114,15 +122,19 @@ class Acceptance:
 
     def _validate(self):
 
-        # _validate_scenario()
         self._validate_observed()
+        self._validate_scenario()
 
         return
 
-    def _validate_scenario():
+    def _validate_scenario(self):
+
+        self._reduce_simulated_transit_boardings()
 
         # is the model run complete?
         # are the key files present?
+        
+        
 
         return
 
@@ -146,6 +158,9 @@ class Acceptance:
         return
 
     def _write_roadway_network():
+        """_summary_
+        Method to set the geometry of the geopandas object and write the file to disk.
+        """
 
         # set the geometry
         # make sure it is in the right projection
@@ -181,6 +196,11 @@ class Acceptance:
 
     def _make_transit_network_comparisons():
 
+        # join boardings
+        #  -- need to align the modes with the mode code
+        # join shapes
+
+
         return
 
     def _make_other_comparisons():
@@ -189,13 +209,55 @@ class Acceptance:
 
         return
 
+    def _join_standard_route_id(self, input_df):
+
+        file_root = self.observed_dict["remote_io"]["crosswalk_folder_root"]
+        in_file = self.observed_dict["crosswalks"]["crosswalk_standard_survey_file"]
+
+        df = pd.read_csv(os.path.join(file_root, in_file))
+
+        df = df[["survey_agency", "survey_route", "standard_route_id", "standard_line_name", "canonical_operator", "standard_route_short_name"]]
+
+        return_df = pd.merge(
+            input_df,
+            df,
+            how="outer",
+            left_on=["operator", "route"],
+            right_on=["survey_agency", "survey_route"],
+        )
+
+        return return_df
+
+    def _join_florida_thresholds(self, input_df):
+
+        df = self.florida_transit_guidelines_df.copy()
+        df["high"] = df["boardings"].shift(-1)
+        df["low"] = df["boardings"]
+        df = df.drop(["boardings"], axis="columns")
+        df = df.rename(columns={"threshold": "florida_threshold"})
+
+        vals = input_df.boarding_weight.values
+        high = df.high.values
+        low = df.low.values
+        
+        i, j = np.where((vals[:, None] >= low) & (vals[:, None] <= high))
+        
+        return_df = pd.concat([
+            input_df.loc[i, :].reset_index(drop=True),
+            df.loc[j, :].reset_index(drop=True)
+            ], axis=1)
+
+        return_df = return_df.drop(["high", "low"], axis="columns")
+
+        return return_df
+
     def reduce_on_board_survey(self):
         """Reduces the on-board survey, summarizing boardings by technology, operator, route, and time of day. 
         Result is stored in the reduced_transit_on_board_df DataFrame and written to disk in the `reduced_summaries_file`
         in the observed configuration.
         """
 
-        file_root = self.observed_dict["remote_io"]["folder_root"]
+        file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["transit"]["on_board_survey_file"]
         out_file = self.observed_dict["transit"]["reduced_summaries_file"]
 
@@ -214,21 +276,37 @@ class Acceptance:
                 "NIGHT": "ev",
             }
             in_df = pd.read_feather(os.path.join(file_root, in_file))
-            out_df = in_df.loc[in_df["weekpart"] == "WEEKDAY"]
-            out_df = out_df.loc[
-                out_df["day_part"].isin(
-                    ["EARLY AM", "AM PEAK", "MIDDAY", "PM PEAK", "EVENING", "NIGHT"]
-                )
-            ]
+            out_df = in_df.loc[in_df["weekpart"] == "WEEKDAY"].copy()
             out_df["time_period"] = out_df["day_part"].map(time_period_dict)
+            rail_operators_vector = ["BART", "Caltrain", "ACE"]
+            out_df["route"] = np.where(out_df["operator"].isin(rail_operators_vector), out_df["operator"], out_df["route"])
             out_df = (
                 out_df.groupby(["survey_tech", "operator", "route", "time_period"])[
-                    "weight"
+                    "boarding_weight"
                 ]
                 .sum()
                 .reset_index()
             )
+
+            out_df = self._join_florida_thresholds(out_df)
+            out_df = self._join_standard_route_id(out_df)
             out_df.to_csv(os.path.join(file_root, out_file))
             self.reduced_transit_on_board_df = out_df
 
         return
+
+    def _reduce_simulated_transit_boardings(self):
+
+        file_prefix = "boardings_by_line_"
+        file_root = self.scenario_dict["scenario"]["root_dir"]
+
+        return_df = pd.DataFrame()
+        for time_period in self.model_time_periods:
+
+            df = pd.read_csv(os.path.join(file_root, file_prefix + time_period + ".csv"))
+            df["time_period"] = time_period
+            return_df = return_df.append(df)
+
+        self.simulated_boardings_df = return_df
+
+        return 

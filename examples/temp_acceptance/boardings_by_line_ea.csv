@@ -1,0 +1,635 @@
+line_name,description,total_boarding,tm2_mode,line_mode,headway,fare_system,vehicle_mode
+10_573_198_EA_d0_s491,Hollis,0,12,d,60.0,99,d
+10_573_201_EA_d0_s490,Shellmound/Powell,1.1199707984924316,12,d,60.0,99,d
+12_247_481_EA_d0_s1416,1,0,49,f,60.0,34,f
+12_247_481_EA_d1_s1425,1,0,49,f,60.0,34,f
+12_247_482_EA_d1_s1444,2,0,49,f,60.0,34,f
+12_247_483_EA_d1_s1441,3,0,49,f,30.0,34,f
+12_247_490_EA_d1_s1426,78,9.114999771118164,91,s,60.0,35,s
+12_247_491_EA_d0_s1415,80,4.573934555053711,91,s,60.0,35,s
+12_247_491_EA_d1_s1437,80,1.4424799680709839,91,s,20.0,35,s
+12_247_492_EA_d0_s1449,85,0,49,s,3.0,35,s
+13_5_301_EA_d0_s786,nan,0,52,f,60.0,5,f
+15__163_EA_d0_s422,Rossmoor/Shadelands,0,42,m,60.0,15,m
+15__167_EA_d0_s430,BART Walnut Creek/San Ramon,0,42,m,60.0,15,m
+15__169_EA_d0_s434,BART North Concord/Martinez,0,42,m,60.0,15,m
+15__169_EA_d1_s435,BART North Concord/Martinez,0,42,m,60.0,15,m
+15__171_EA_d0_s437,BART Concord/Clayton,0,42,m,60.0,15,m
+15__171_EA_d1_s438,BART Concord/Clayton,0,42,m,30.0,15,m
+15__175_EA_d0_s445,Creekside/BART Walnut Creek,0,42,n,60.0,17,n
+15__176_EA_d1_s448,Lafayette/Moraga/Orinda,0,42,m,60.0,15,m
+15__179_EA_d0_s453,DVC/BART Walnut Creek,0,42,m,60.0,15,m
+15__181_EA_d0_s456,ACE Express,0,86,n,60.0,16,n
+15__182_EA_d1_s459,Kirker Pass Express,13.436079978942871,86,n,20.0,16,n
+15__184_EA_d0_s462,BART Walnut Creek/Bishop Ranch,0.5199999809265137,86,n,30.0,16,n
+15__186_EA_d0_s466,Martinez/BART Walnut Creek,11.975782871246338,86,n,60.0,16,n
+15__187_EA_d1_s469,Monument Blvd,4.557499885559082,42,m,60.0,15,m
+15__188_EA_d0_s470,Treat Blvd,4.557499885559082,42,m,60.0,15,m
+15__188_EA_d1_s471,Treat Blvd,5.9665913581848145,42,m,60.0,15,m
+15__189_EA_d1_s473,AMTRAK/BART Concord,0,42,m,30.0,15,m
+15__191_EA_d0_s476,AMTRAK/BART Pleasant Hill,7.320228099822998,42,m,60.0,15,m
+17_alliance_707_EA_d0_s2149,So. San Francisco-Oyster Pt Caltrain,0,14,m,60.0,46,m
+17_alliance_710_EA_d1_s2155,So. San Francisco-Utah/Grand Caltrain,0,14,m,60.0,46,m
+17_alliance_712_EA_d0_s2132,Brisbane-Bayshore Caltrain,0,14,m,60.0,46,m
+17_alliance_716_EA_d0_s2130,Brisbane-Crocker Park BART/Caltrain,0,14,m,60.0,46,m
+17_caltrain-ca-us_193_EA_d0_s484,Bullet,61.66073656082153,130,h,60.0,3,h
+17_caltrain-ca-us_194_EA_d0_s485,Limited,122.7727040052414,130,h,60.0,3,h
+17_caltrain-ca-us_195_EA_d0_s484,Local,410.42339420318604,130,h,30.0,3,h
+17_caltrain-ca-us_195_EA_d1_s482,Local,192.5324375629425,130,h,30.0,3,h
+19_175_495_EA_d1_s1490,Russian River Area_ Forestville_ Sebastopol_ Santa,0,63,m,60.0,7,m
+19_175_498_EA_d0_s1488,Santa Rosa_ Sonoma Valley,0,63,m,60.0,7,m
+19_175_498_EA_d1_s1536,Santa Rosa_ Sonoma Valley,9.490196228027344,63,m,60.0,7,m
+19_175_499_EA_d1_s1566,Sonoma Valley_ San Rafael,0,63,m,60.0,7,m
+19_175_502_EA_d0_s1568,Petaluma JC_ SSU_ Santa Rosa,0,63,m,60.0,7,m
+19_175_505_EA_d1_s1533,Cloverdale_ Healdsburg_ Windsor_ Santa Rosa,15.377778053283691,63,m,60.0,7,m
+20__257_EA_d1_s669,Larkspur - San Francisco Ferry,21.82714080810547,101,k,60.0,19,k
+22_SFMTA_302_EA_d0_s798,Clement,43.03030449151993,20,q,30.0,25,q
+22_SFMTA_302_EA_d1_s800,Clement,153.64601230621338,20,q,20.0,25,q
+22_SFMTA_304_EA_d0_s803,FULTON,3.6521739959716797,20,q,15.0,25,q
+22_SFMTA_304_EA_d1_s811,FULTON,234.25541162490845,20,q,15.0,25,q
+22_SFMTA_305_EA_d1_s819,PARNASSUS,129.01374435424805,20,q,30.0,25,q
+22_SFMTA_306_EA_d0_s841,Townsend,0,20,q,60.0,25,q
+22_SFMTA_306_EA_d1_s845,Townsend,276.7990915775299,20,q,20.0,25,q
+22_SFMTA_307_EA_d1_s846,FOLSOM/PACIFIC,84.342524766922,20,q,30.0,25,q
+22_SFMTA_308_EA_d0_s900,19TH AVENUE,82.48428273200989,20,q,20.0,25,q
+22_SFMTA_308_EA_d1_s904,19TH AVENUE,75.81545341014862,20,q,30.0,25,q
+22_SFMTA_310_EA_d0_s918,STOCKTON,0,20,q,8.0,25,q
+22_SFMTA_310_EA_d1_s928,STOCKTON,392.17086589336395,20,q,10.0,25,q
+22_SFMTA_317_EA_d0_s924,STOCKTON - UNION,0,20,q,20.0,25,q
+22_SFMTA_317_EA_d1_s933,STOCKTON - UNION,193.16964030265808,20,q,20.0,25,q
+22_SFMTA_319_EA_d0_s1018,nan,0,21,s,60.0,26,s
+22_SFMTA_319_EA_d1_s1022,nan,0,21,s,60.0,26,s
+22_SFMTA_320_EA_d0_s1020,nan,0,21,s,30.0,26,s
+22_SFMTA_320_EA_d1_s1026,nan,2.679795026779175,21,s,60.0,26,s
+22_SFMTA_321_EA_d1_s820,HAIGHT - NORIEGA,229.01996088027954,20,q,30.0,25,q
+22_SFMTA_323_EA_d0_s792,CALIFORNIA,25.523738861083984,20,q,15.0,25,q
+22_SFMTA_323_EA_d1_s796,CALIFORNIA,594.087487578392,20,q,15.0,25,q
+22_SFMTA_324_EA_d0_s847,MISSION,287.900923371315,20,q,8.0,25,q
+22_SFMTA_324_EA_d1_s854,MISSION,1760.8087539672852,20,q,8.0,25,q
+22_SFMTA_327_EA_d0_s860,46TH AVENUE,0,20,q,60.0,25,q
+22_SFMTA_327_EA_d1_s861,46TH AVENUE,60.00802302360535,20,q,30.0,25,q
+22_SFMTA_328_EA_d0_s862,POLK,40.573620438575745,20,q,30.0,25,q
+22_SFMTA_328_EA_d1_s863,POLK,129.4645917415619,20,q,30.0,25,q
+22_SFMTA_329_EA_d0_s864,HAYES,67.12825059890747,20,q,30.0,25,q
+22_SFMTA_329_EA_d1_s866,HAYES,55.31769943237305,20,q,20.0,25,q
+22_SFMTA_330_EA_d0_s869,FILLMORE,0,20,q,12.0,25,q
+22_SFMTA_330_EA_d1_s876,FILLMORE,319.8554484844208,20,q,12.0,25,q
+22_SFMTA_331_EA_d0_s878,MONTEREY,260.53325539827347,20,q,20.0,25,q
+22_SFMTA_331_EA_d1_s880,MONTEREY,0,20,q,20.0,25,q
+22_SFMTA_332_EA_d0_s884,DIVISADERO,107.55607223510742,20,q,20.0,25,q
+22_SFMTA_332_EA_d1_s892,DIVISADERO,303.68740022182465,20,q,20.0,25,q
+22_SFMTA_333_EA_d0_s897,BRYANT,35.5048189163208,20,q,30.0,25,q
+22_SFMTA_333_EA_d1_s898,BRYANT,0,20,q,20.0,25,q
+22_SFMTA_334_EA_d0_s906,SUNSET,50.407997846603394,20,q,60.0,25,q
+22_SFMTA_334_EA_d1_s910,SUNSET,127.09314489364624,20,q,30.0,25,q
+22_SFMTA_335_EA_d0_s934,BALBOA,41.65782165527344,20,q,15.0,25,q
+22_SFMTA_335_EA_d1_s938,BALBOA,438.53142857551575,20,q,12.0,25,q
+22_SFMTA_336_EA_d0_s939,ASHBURY-18TH,0,20,q,60.0,25,q
+22_SFMTA_336_EA_d1_s944,ASHBURY-18TH,67.9388997554779,20,q,20.0,25,q
+22_SFMTA_338_EA_d1_s949,TERESITA,6.140625,20,q,60.0,25,q
+22_SFMTA_340_EA_d0_s958,GEARY,824.5568610429764,20,q,15.0,25,q
+22_SFMTA_340_EA_d1_s960,GEARY,316.53816270828247,20,q,12.0,25,q
+22_SFMTA_342_EA_d0_s969,UNION,0,20,q,60.0,25,q
+22_SFMTA_342_EA_d1_s972,UNION,105.69296598434448,20,q,30.0,25,q
+22_SFMTA_343_EA_d0_s976,MASONIC,111.81893002986908,20,q,20.0,25,q
+22_SFMTA_343_EA_d1_s978,MASONIC,304.0866541862488,20,q,20.0,25,q
+22_SFMTA_344_EA_d0_s980,O'SHAUGHNESSY,59.281001329422,20,q,60.0,25,q
+22_SFMTA_344_EA_d1_s985,O'SHAUGHNESSY,194.15151822566986,20,q,20.0,25,q
+22_SFMTA_345_EA_d0_s990,VAN NESS,40.67837131023407,20,q,30.0,25,q
+22_SFMTA_346_EA_d0_s992,24TH STREET,40.46350413560867,20,q,30.0,25,q
+22_SFMTA_347_EA_d0_s999,VAN NESS-MISSION,45.638251304626465,20,q,12.0,25,q
+22_SFMTA_347_EA_d1_s1005,VAN NESS-MISSION,472.8898993730545,20,q,15.0,25,q
+22_SFMTA_349_EA_d0_s1008,FELTON,0.6546725034713745,20,q,60.0,25,q
+22_SFMTA_349_EA_d1_s1010,FELTON,0,20,q,30.0,25,q
+22_SFMTA_350_EA_d1_s1013,16TH STREET,0,20,q,60.0,25,q
+22_SFMTA_352_EA_d0_s1027,nan,0,21,s,60.0,26,s
+22_SFMTA_352_EA_d1_s1030,nan,0,21,s,60.0,26,s
+22_SFMTA_353_EA_d0_s1031,QUINTARA,0,20,q,60.0,25,q
+22_SFMTA_358_EA_d0_s1043,SAN BRUNO OWL,34.29426455497742,20,q,60.0,25,q
+22_SFMTA_358_EA_d1_s1044,SAN BRUNO OWL,314.2908797264099,20,q,15.0,25,q
+22_SFMTA_359_EA_d0_s1046,3RD/19TH AVE OWL,1444.2141089737415,20,q,15.0,25,q
+22_SFMTA_359_EA_d1_s1048,3RD/19TH AVE OWL,906.4101178646088,20,q,20.0,25,q
+22_SFMTA_361_EA_d0_s1059,MARKET & WHARVES,18.86069118976593,110,r,12.0,25,r
+22_SFMTA_361_EA_d1_s1061,MARKET & WHARVES,57.09582567214966,110,r,12.0,25,r
+22_SFMTA_362_EA_d0_s1075,TREASURE ISLAND,229.50502014160156,20,q,30.0,25,q
+22_SFMTA_362_EA_d1_s1076,TREASURE ISLAND,100.74537658691406,20,q,30.0,25,q
+22_SFMTA_368_EA_d0_s1127,JUDAH,453.56903886795044,110,r,10.0,25,r
+22_SFMTA_368_EA_d1_s1134,JUDAH,617.1955745816231,110,r,12.0,25,r
+22_SFMTA_369_EA_d0_s1123,CHURCH,296.3865089416504,110,r,20.0,25,r
+22_SFMTA_369_EA_d1_s1131,CHURCH,370.4544355869293,110,r,15.0,25,r
+22_SFMTA_371_EA_d0_s1049,nan,6.894108772277832,20,q,60.0,25,q
+22_SFMTA_371_EA_d1_s1053,nan,17.82928156852722,20,q,60.0,25,q
+22_SFMTA_372_EA_d0_s1050,nan,0,20,q,20.0,25,q
+22_SFMTA_372_EA_d1_s1054,nan,71.31712627410889,20,q,15.0,25,q
+22_SFMTA_373_EA_d0_s1052,nan,7.780602931976318,20,q,20.0,25,q
+22_SFMTA_373_EA_d1_s1055,nan,94.12964200973511,20,q,15.0,25,q
+22_SFMTA_376_EA_d0_s824,BAYSHORE,305.488958761096,20,q,20.0,25,q
+22_SFMTA_376_EA_d1_s828,BAYSHORE,777.8178551793098,20,q,10.0,25,q
+22_SFMTA_377_EA_d0_s1092,INGLESIDE/THIRD,3.6131811141967773,110,r,7.0,25,r
+22_SFMTA_377_EA_d1_s1108,INGLESIDE/THIRD,0,110,r,30.0,25,r
+22_SFMTA_379_EA_d0_s1101,TARAVAL,173.34990763664246,110,r,12.0,25,r
+22_SFMTA_379_EA_d1_s1117,TARAVAL,784.7347424030304,110,r,15.0,25,r
+22_SFMTA_380_EA_d0_s1103,OCEAN VIEW,214.2471215724945,110,r,20.0,25,r
+22_SFMTA_380_EA_d1_s1119,OCEAN VIEW,557.4102261066437,110,r,15.0,25,r
+22_SFMTA_381_EA_d0_s830,San Bruno,49.98237419128418,20,q,30.0,25,q
+22_SFMTA_381_EA_d1_s836,San Bruno,251.29514169692993,20,q,15.0,25,q
+23_AM_196_EA_d0_s487,nan,0,131,j,60.0,4,j
+23_AM_196_EA_d1_s486,nan,15.348730027675629,131,j,60.0,4,j
+24_LAVTA_641_EA_d0_s2034,E. BART - Pleasanton - Livermore,0,17,d,15.0,99,d
+24_LAVTA_641_EA_d1_s2036,E. BART - Pleasanton - Livermore,16.55313491821289,17,d,30.0,99,d
+24_LAVTA_646_EA_d0_s1965,Livermore Livermore Transit Center - Springtown - ,0,17,d,30.0,99,d
+24_LAVTA_649_EA_d1_s1975,E. BART - Mall - West Dublin - E. BART,0,17,d,60.0,99,d
+24_LAVTA_657_EA_d0_s1992,Pleasanton ACE Station - W.BART,0,17,d,60.0,99,d
+24_LAVTA_670_EA_d0_s2025,E BART - Pleasant Hill BART,0,17,d,60.0,99,d
+24_LAVTA_675_EA_d0_s2039,Livermore - BART -  Mall,99.76637268066406,17,d,20.0,99,d
+25_SB_386_EA_d0_s1151,Vallejo - San Francisco,8.75822925567627,101,t,60.0,29,t
+26_BART_154_EA_d0_s404,Pittsburg/Bay Point - SFIA/Millbrae,1098.9418826326728,120,g,15.0,2,g
+26_BART_154_EA_d1_s405,Pittsburg/Bay Point - SFIA/Millbrae,168.5201826095581,120,g,15.0,2,g
+26_BART_155_EA_d0_s407,Fremont - Richmond,204.10410404205322,120,g,15.0,2,g
+26_BART_155_EA_d1_s406,Fremont - Richmond,126.53298223018646,120,g,15.0,2,g
+26_BART_156_EA_d1_s408,Fremont - Daly City,678.9150810241699,120,g,15.0,2,g
+26_BART_157_EA_d0_s410,Richmond - Daly City/Millbrae,707.2217803224921,120,g,15.0,2,g
+26_BART_157_EA_d1_s411,Richmond - Daly City/Millbrae,210.509153932333,120,g,20.0,2,g
+26_BART_158_EA_d0_s412,Dublin/Pleasanton - Daly City,731.7087669372559,120,g,15.0,2,g
+26_BART_158_EA_d1_s413,Dublin/Pleasanton - Daly City,165.29707451164722,120,g,15.0,2,g
+26_BART_159_EA_d0_s414,Coliseum - Oakland Int'l Airport,29.770000457763672,120,g,20.0,2,g
+26_BART_159_EA_d1_s415,Coliseum - Oakland Int'l Airport,0,120,g,20.0,2,g
+28_36_207_EA_d0_s538,WC/PH BART - Vacaville/Fairfield,0,92,f,60.0,10,f
+28_36_208_EA_d0_s512,FTC/El Cerrito Del Norte BART/Suisun City Amtrak,13.267707824707031,92,f,20.0,10,f
+28_36_208_EA_d1_s539,FTC/El Cerrito Del Norte BART/Suisun City Amtrak,0,92,f,30.0,10,f
+28_36_210_EA_d1_s516,Rodriguez High School,0,52,f,60.0,10,f
+30_AC Transit_100_EA_d0_s274,Eastmont T.C. - Oakland Airport,10.889683842658997,30,o,30.0,9,o
+30_AC Transit_100_EA_d1_s275,Eastmont T.C. - Oakland Airport,0,30,o,30.0,9,o
+30_AC Transit_101_EA_d0_s277,CCC/Richmond BART/Ford Pt.,5.939119279384613,30,o,30.0,9,o
+30_AC Transit_102_EA_d0_s279,Bayfair Bart-Washington Manor-S. L. Bart,9.43908166885376,30,o,60.0,9,o
+30_AC Transit_103_EA_d0_s280,Hilltop Mall - CCC - del Norte BART,29.197041451931,30,o,30.0,9,o
+30_AC Transit_103_EA_d1_s281,Hilltop Mall - CCC - del Norte BART,14.258570671081543,30,o,30.0,9,o
+30_AC Transit_104_EA_d0_s285,OWL-DTN.OAKLAND/RICHMOND,7.125517427921295,30,o,60.0,9,o
+30_AC Transit_104_EA_d1_s287,OWL-DTN.OAKLAND/RICHMOND,50.08682233467698,30,o,30.0,9,o
+30_AC Transit_105_EA_d0_s289,OWL-DTN.OAKLAND/FREMONT BART,49.19466972351074,30,o,30.0,9,o
+30_AC Transit_105_EA_d1_s288,OWL-DTN.OAKLAND/FREMONT BART,69.5483587384224,30,o,30.0,9,o
+30_AC Transit_106_EA_d0_s292,OWL- Berkeley-Emeryville/Dnt-Oak,33.18589782714844,30,o,30.0,9,o
+30_AC Transit_106_EA_d1_s290,OWL- Berkeley-Emeryville/Dnt-Oak,4.795124441385269,30,o,60.0,9,o
+30_AC Transit_107_EA_d0_s297,OWL-Dtn. Oakland - Oakland  Airport,25.67644453048706,30,o,60.0,9,o
+30_AC Transit_107_EA_d1_s293,OWL-Dtn. Oakland - Oakland  Airport,102.82390111684799,30,o,30.0,9,o
+30_AC Transit_108_EA_d0_s298,Hayward BART - S. Hayward BART,27.09793496131897,30,o,60.0,9,o
+30_AC Transit_108_EA_d1_s299,Hayward BART - S. Hayward BART,2.130246140062809,30,o,60.0,9,o
+30_AC Transit_109_EA_d0_s300,OWL-Dtn. Oakland - Eastmont T. C.,0.61090087890625,30,o,60.0,9,o
+30_AC Transit_109_EA_d1_s301,OWL-Dtn. Oakland - Eastmont T. C.,20.757500529289246,30,o,60.0,9,o
+30_AC Transit_111_EA_d0_s304,OWL - ALAMEDA/DNT BERK,81.55505147576332,30,o,30.0,9,o
+30_AC Transit_111_EA_d1_s305,OWL - ALAMEDA/DNT BERK,77.84989115595818,30,o,30.0,9,o
+30_AC Transit_112_EA_d0_s306,Hayward BART - S. Hayward BART,0,30,o,60.0,9,o
+30_AC Transit_112_EA_d1_s307,Hayward BART - S. Hayward BART,0,30,o,60.0,9,o
+30_AC Transit_113_EA_d0_s312,Berkeley BART - Downtown Oakland,45.701290130615234,30,o,20.0,9,o
+30_AC Transit_113_EA_d1_s313,Berkeley BART - Downtown Oakland,6.233456373214722,30,o,30.0,9,o
+30_AC Transit_114_EA_d0_s314,San Leandro Bart-S. L. Marina-Bayfair Bart,12.593382835388184,30,o,30.0,9,o
+30_AC Transit_114_EA_d1_s315,San Leandro Bart-S. L. Marina-Bayfair Bart,0,30,o,60.0,9,o
+30_AC Transit_115_EA_d0_s317,Hayward Bart-Bayfair Bart-San Lorenzo,2.258333683013916,30,o,60.0,9,o
+30_AC Transit_115_EA_d1_s316,Hayward Bart-Bayfair Bart-San Lorenzo,4.351945698261261,30,o,60.0,9,o
+30_AC Transit_116_EA_d0_s318,Hayward Bart-Hayward Hills,0.8706250190734863,30,o,60.0,9,o
+30_AC Transit_116_EA_d1_s319,Hayward Bart-Hayward Hills,23.377012252807617,30,o,60.0,9,o
+30_AC Transit_117_EA_d0_s320,Kelly Hill - Hayward BART,0,30,o,60.0,9,o
+30_AC Transit_117_EA_d1_s323,Kelly Hill - Hayward BART,0,30,o,60.0,9,o
+30_AC Transit_118_EA_d0_s325,Union City BART - Hesperian Blvd.,1.602189540863037,30,o,30.0,9,o
+30_AC Transit_118_EA_d1_s326,Union City BART - Hesperian Blvd.,2.2336983624845743,30,o,60.0,9,o
+30_AC Transit_119_EA_d1_s328,Coliseum Bart - 98th Ave.,18.61065673828125,30,o,60.0,9,o
+30_AC Transit_11_EA_d0_s24,Union Landing - Frmt. Blvd. - Ohlone,0,30,o,60.0,9,o
+30_AC Transit_11_EA_d1_s25,Union Landing - Frmt. Blvd. - Ohlone,14.66871428489685,30,o,30.0,9,o
+30_AC Transit_120_EA_d0_s329,Bayfair Bart - Hwd.BART- UC  Bart - Fmt Bart,25.42989683151245,30,o,20.0,9,o
+30_AC Transit_120_EA_d1_s330,Bayfair Bart - Hwd.BART- UC  Bart - Fmt Bart,24.12197083234787,30,o,20.0,9,o
+30_AC Transit_124_EA_d1_s340,San Francisco - Piedmont,18.825256824493408,84,p,60.0,9,p
+30_AC Transit_126_EA_d1_s344,Dumbarton Express,37.119833111763,84,p,30.0,9,p
+30_AC Transit_127_EA_d1_s348,Dumbarton Express,81.55193829536438,84,p,30.0,9,p
+30_AC Transit_129_EA_d1_s356,San Francisco - Berkeley,46.68310695886612,84,o,30.0,9,o
+30_AC Transit_131_EA_d1_s359,San Francisco - El Cerrito,4.3165596425533295,84,p,60.0,9,p
+30_AC Transit_133_EA_d1_s363,Berkeley - San Francisco,0,84,o,60.0,9,o
+30_AC Transit_134_EA_d1_s365,San Francisco - El Sobrante,48.01683688163757,84,p,30.0,9,p
+30_AC Transit_135_EA_d1_s367,San Francisco - El Sobrante,0,84,o,30.0,9,o
+30_AC Transit_137_EA_d1_s375,Hayward BART- Hillsdale Mall- Oracle,2.0682499408721924,84,p,60.0,9,p
+30_AC Transit_138_EA_d1_s376,San Francisco - Eastmont T.C.,98.16919195652008,84,o,30.0,9,o
+30_AC Transit_139_EA_d1_s378,East Oakland - San Francisco,24.361320704221725,84,o,60.0,9,o
+30_AC Transit_142_EA_d1_s381,San Francisco - San Leandro,10.003576278686523,84,o,60.0,9,o
+30_AC Transit_143_EA_d1_s383,San Francisco - Castro Valley,3.707982063293457,84,o,60.0,9,o
+30_AC Transit_145_EA_d1_s387,San Francisco - Alameda - Fruitvale Bart,6.438875675201416,84,o,30.0,9,o
+30_AC Transit_146_EA_d1_s388,San Francisco - Alameda - Bay Farm Is.,0,84,o,60.0,9,o
+30_AC Transit_148_EA_d1_s392,San Francisco - San Lorenzo- Hayward,18.986311435699463,84,p,60.0,9,p
+30_AC Transit_149_EA_d1_s394,San Francisco - Hayward - Newark,0,84,o,60.0,9,o
+30_AC Transit_150_EA_d1_s397,Frmt. BART- Stanford University,16.895134449005127,84,p,60.0,9,p
+30_AC Transit_151_EA_d1_s398,San Francisco - Montclair,0.36708521842956543,84,p,60.0,9,p
+30_AC Transit_152_EA_d1_s400,San Francisco - Alameda,2.8528983294963837,84,p,60.0,9,p
+30_AC Transit_15_EA_d0_s42,Frmt BART - Mission - Milpitas - Alder,4.328109264373779,30,o,30.0,9,o
+30_AC Transit_15_EA_d1_s43,Frmt BART - Mission - Milpitas - Alder,2.740902900695801,30,o,30.0,9,o
+30_AC Transit_16_EA_d0_s45,Hayward Bart -South Hayward Bart - Chabot,24.236515045166016,30,o,60.0,9,o
+30_AC Transit_17_EA_d0_s46,Fremont BART-U.C. BART-Mission-Ohlone Newark,0.5873568654060364,30,o,60.0,9,o
+30_AC Transit_17_EA_d1_s47,Fremont BART-U.C. BART-Mission-Ohlone Newark,0,30,o,60.0,9,o
+30_AC Transit_18_EA_d0_s48,Fremont BART-Warm Springs,0,30,o,60.0,9,o
+30_AC Transit_18_EA_d1_s49,Fremont BART-Warm Springs,1.706072211265564,30,o,60.0,9,o
+30_AC Transit_21_EA_d0_s54,Emeryville/14th Bdwy/lLakeshore,12.809683710336685,30,o,60.0,9,o
+30_AC Transit_21_EA_d1_s58,Emeryville/14th Bdwy/lLakeshore,3.1267032623291016,30,o,60.0,9,o
+30_AC Transit_23_EA_d0_s61,Alameda Point/ W. Oakland/MACA BART,8.768714666366577,30,o,60.0,9,o
+30_AC Transit_23_EA_d1_s62,Alameda Point/ W. Oakland/MACA BART,1.4550956636667252,30,o,60.0,9,o
+30_AC Transit_24_EA_d0_s63,Hayward Bart-C.V. Bart-Hwd. Bart-Cherryland,0.8670449806377292,30,o,60.0,9,o
+30_AC Transit_24_EA_d1_s64,Hayward Bart-C.V. Bart-Hwd. Bart-Cherryland,1.567489500157535,30,o,60.0,9,o
+30_AC Transit_27_EA_d1_s70,HWD. BART-WHITMAN-SO. HWD. BART,0,30,o,60.0,9,o
+30_AC Transit_2_EA_d0_s5,Bayfair Bart- Dtn. Berkeley,172.5486503127031,30,o,15.0,9,o
+30_AC Transit_2_EA_d1_s3,Bayfair Bart- Dtn. Berkeley,135.55226773023605,30,o,20.0,9,o
+30_AC Transit_30_EA_d0_s75,Dtn. Oakland - Bayfair Bart,34.377318382263184,30,o,30.0,9,o
+30_AC Transit_30_EA_d1_s77,Dtn. Oakland - Bayfair Bart,21.24373948574066,30,o,60.0,9,o
+30_AC Transit_31_EA_d1_s80,Eastmont T. C. - Foothill Sq.,0,30,o,30.0,9,o
+30_AC Transit_32_EA_d0_s82,Coliseum Bart - Knowland Zoo,0,30,o,60.0,9,o
+30_AC Transit_34_EA_d0_s87,Fruitvale Bart - Maxwell Park,0,30,o,60.0,9,o
+30_AC Transit_36_EA_d0_s92,Rockridge Bart / Dwight S.P.,6.211418271064758,30,o,60.0,9,o
+30_AC Transit_37_EA_d0_s94,RockRidge to FBBA,128.30471885204315,30,o,10.0,9,o
+30_AC Transit_37_EA_d1_s95,RockRidge to FBBA,102.69824075698853,30,o,20.0,9,o
+30_AC Transit_38_EA_d0_s97,RockRidge - 3RUN,17.943130493164062,30,o,20.0,9,o
+30_AC Transit_38_EA_d1_s99,RockRidge - 3RUN,68.80740147829056,30,o,15.0,9,o
+30_AC Transit_39_EA_d0_s101,U.C. Village - U.C. Campus,0,30,o,60.0,9,o
+30_AC Transit_39_EA_d1_s103,U.C. Village - U.C. Campus,2.762387275695801,30,o,60.0,9,o
+30_AC Transit_3_EA_d1_s9,Piedmont - Fruitvale Ave.,12.99138531088829,30,o,60.0,9,o
+30_AC Transit_40_EA_d1_s105,Fruitvale BART - Merritt College,3.3840506076812744,30,o,60.0,9,o
+30_AC Transit_41_EA_d0_s107,San Pablo Ave to Foothill Sq,6.914676189422607,30,o,60.0,9,o
+30_AC Transit_41_EA_d1_s106,San Pablo Ave to Foothill Sq,34.22441464662552,30,o,30.0,9,o
+30_AC Transit_43_EA_d0_s111,CSUEB / HAYWARD BART SHUTTLE,2.611875057220459,30,o,20.0,9,o
+30_AC Transit_43_EA_d1_s110,CSUEB / HAYWARD BART SHUTTLE,0,30,o,30.0,9,o
+30_AC Transit_49_EA_d0_s123,West  Oakland - Fruitvale Bart,0,30,o,60.0,9,o
+30_AC Transit_49_EA_d1_s126,West  Oakland - Fruitvale Bart,2.181535005569458,30,o,30.0,9,o
+30_AC Transit_5_EA_d0_s13,11th Jefferson - Fruitvale Bart,10.836290717124939,30,o,60.0,9,o
+30_AC Transit_5_EA_d1_s12,11th Jefferson - Fruitvale Bart,93.76322650909424,30,o,20.0,9,o
+30_AC Transit_66_EA_d0_s181,Spruce St. - Euclid Ave.,0,30,o,60.0,9,o
+30_AC Transit_6_EA_d0_s14,San Pablo & Monroe - Moraga & Mountain,51.23345148563385,30,o,20.0,9,o
+30_AC Transit_6_EA_d1_s15,San Pablo & Monroe - Moraga & Mountain,79.79817299544811,30,o,20.0,9,o
+30_AC Transit_7_EA_d0_s17,Univ/Calif - BYBA,58.74962268769741,30,o,30.0,9,o
+30_AC Transit_8_EA_d0_s20,Fruitvale ave - Alameda - 11th Jefferson,35.25741785764694,30,o,30.0,9,o
+30_AC Transit_8_EA_d1_s22,Fruitvale ave - Alameda - 11th Jefferson,62.36067461967468,30,o,20.0,9,o
+30_AC Transit_94_EA_d0_s257,D.NORTE BART/BERKELEY BART,0,30,o,60.0,9,o
+30_AC Transit_96_EA_d0_s259,Richmond Pkwy TC - El Cerrito Plaza BART,19.15036842226982,30,o,30.0,9,o
+30_AC Transit_96_EA_d1_s261,Richmond Pkwy TC - El Cerrito Plaza BART,5.239636957645416,30,o,60.0,9,o
+30_AC Transit_97_EA_d0_s265,Richmond - Downtown Oakland,56.78478419780731,30,o,30.0,9,o
+30_AC Transit_97_EA_d1_s266,Richmond - Downtown Oakland,32.89682957530022,30,o,60.0,9,o
+30_AC Transit_98_EA_d0_s268,Richmond - Downtown Oakland,23.882750868797302,30,o,60.0,9,o
+30_AC Transit_98_EA_d1_s271,Richmond - Downtown Oakland,42.57023438811302,30,o,30.0,9,o
+30_AC Transit_9_EA_d1_s19,Union City BART-Newpark Mall-Fremont BART,9.71108227968216,30,o,60.0,9,o
+31_VTA_547_EA_d0_s1626,SANTA CLARA TRANSIT- METRO AIRPORT,0,28,d,30.0,99,d
+31_VTA_547_EA_d1_s1627,SANTA CLARA TRANSIT- METRO AIRPORT,0,28,d,30.0,99,d
+31_VTA_549_EA_d0_s1620,SOUTH SAN JOSE - PALO ALTO,26.280067443847656,81,d,30.0,99,d
+31_VTA_550_EA_d1_s1623,EASTRIDGE - PALO ALTO,0,81,d,30.0,99,d
+31_VTA_551_EA_d1_s1625,PENITENCIA TRANS CTR - PALO ALTO,0,81,d,60.0,99,d
+31_VTA_553_EA_d0_s1632,GILROY TRANS CTR - LOCKHEED MARTIN,0,81,d,20.0,99,d
+31_VTA_554_EA_d0_s1634,SOUTH SAN JOSE - LOCKHEED MARTIN,0,81,d,60.0,99,d
+31_VTA_559_EA_d0_s1642,GILROY TRANS CTR - SAN JOSE DIRIDON,6.8610618114471436,81,d,30.0,99,d
+31_VTA_562_EA_d0_s1654,GREAT MALL/MAIN - FREMONT BART,0,81,d,60.0,99,d
+31_VTA_562_EA_d1_s1657,GREAT MALL/MAIN - FREMONT BART,0,81,d,60.0,99,d
+31_VTA_563_EA_d0_s1658,SAN JOSE DIRIDON - FREMONT BART,24.56609344482422,81,d,60.0,99,d
+31_VTA_563_EA_d1_s1661,SAN JOSE DIRIDON - FREMONT BART,24.170753479003906,81,d,30.0,99,d
+31_VTA_565_EA_d1_s1671,GILROY TRANS CTR - WREN & MANTELLI,0,28,d,30.0,99,d
+31_VTA_568_EA_d0_s1677,PALO ALTO - EASTRIDGE,3.607473373413086,28,d,30.0,99,d
+31_VTA_568_EA_d1_s1679,PALO ALTO - EASTRIDGE,82.46719455718994,28,d,12.0,99,d
+31_VTA_569_EA_d0_s1681,DE ANZA COL - ALUM ROCK TRANS CTR,0,28,d,30.0,99,d
+31_VTA_569_EA_d1_s1685,DE ANZA COL - ALUM ROCK TRANS CTR,0,28,d,20.0,99,d
+31_VTA_570_EA_d0_s1686,DE ANZA COL - ALUM ROCK TRANS CTR,0,28,d,60.0,99,d
+31_VTA_570_EA_d1_s1690,DE ANZA COL - ALUM ROCK TRANS CTR,0,28,d,30.0,99,d
+31_VTA_571_EA_d0_s1692,SUNNYVALE/LOCKHEED - EASTRIDGE,0,28,d,60.0,99,d
+31_VTA_571_EA_d1_s1695,SUNNYVALE/LOCKHEED - EASTRIDGE,0,28,d,30.0,99,d
+31_VTA_572_EA_d1_s1699,GOOD SAM HOSP - KAISER SAN JOSE,0,28,d,60.0,99,d
+31_VTA_573_EA_d0_s1700,S. SAN JOSE - SUNNYVALE TRANS CTR,12.267739295959473,28,d,60.0,99,d
+31_VTA_575_EA_d1_s1715,SN ANTONIO SHOP CTR - STA CLARA TC,0,28,d,60.0,99,d
+31_VTA_581_EA_d1_s1722,DNTN MTN VIEW - STANFORD SHOP CTR,0,28,d,60.0,99,d
+31_VTA_587_EA_d1_s1747,GREAT MALL - MILPITAS HIGH SCHOOL,0,28,d,60.0,99,d
+31_VTA_593_EA_d0_s1778,PALO ALTO - EASTRIDGE,3.607473373413086,28,d,30.0,99,d
+31_VTA_593_EA_d1_s1779,PALO ALTO - EASTRIDGE,29.390904307365417,28,d,20.0,99,d
+31_VTA_596_EA_d0_s1792,DE ANZA COLLEGE - GREAT AMERICA,0,28,d,60.0,99,d
+31_VTA_596_EA_d1_s1798,DE ANZA COLLEGE - GREAT AMERICA,0,28,d,60.0,99,d
+31_VTA_597_EA_d0_s1805,WEST VALLEY COLL - GREAT AMERICA,0,28,d,60.0,99,d
+31_VTA_598_EA_d0_s1809,WEST VALLEY COLLEGE - ALVISO,0,28,d,60.0,99,d
+31_VTA_599_EA_d0_s1814,WINCHESTER  TC - GT AMERICA,0,28,d,60.0,99,d
+31_VTA_600_EA_d0_s1819,GOOD SAM HOSP - SIERRA & PIEDMONT,0,28,d,60.0,99,d
+31_VTA_600_EA_d1_s1822,GOOD SAM HOSP - SIERRA & PIEDMONT,0,28,d,60.0,99,d
+31_VTA_601_EA_d1_s1824,GOOD SAM HOSP - SIERRA & PIEDMONT,0,28,d,60.0,99,d
+31_VTA_603_EA_d0_s1828,ALMADEN LRT - MCKEE & WHITE,0,28,d,60.0,99,d
+31_VTA_603_EA_d1_s1832,ALMADEN LRT - MCKEE & WHITE,12.467053413391113,28,d,60.0,99,d
+31_VTA_605_EA_d0_s1839,KAISER SAN JOSE - MILPITAS/DIXON,2.9200074672698975,28,d,30.0,99,d
+31_VTA_605_EA_d1_s1840,KAISER SAN JOSE - MILPITAS/DIXON,1.0898442268371582,28,d,30.0,99,d
+31_VTA_606_EA_d0_s1846,GILROY TC - SAN JOSE DIRIDON,19.562138557434082,28,d,15.0,99,d
+31_VTA_606_EA_d1_s1848,GILROY TC - SAN JOSE DIRIDON,1.0898442268371582,28,d,30.0,99,d
+31_VTA_607_EA_d0_s1852,CAPITOL LRT STN - GREAT MALL/MAIN,0,28,d,60.0,99,d
+31_VTA_607_EA_d1_s1855,CAPITOL LRT STN - GREAT MALL/MAIN,0,28,d,30.0,99,d
+31_VTA_608_EA_d0_s1857,EASTRIDGE- GREAT MALL/MAIN,0,28,d,60.0,99,d
+31_VTA_608_EA_d1_s1858,EASTRIDGE- GREAT MALL/MAIN,0,28,d,60.0,99,d
+31_VTA_609_EA_d0_s1859,SENTER/MONTEREY - DOWNTOWN SAN JOSE,0,28,d,30.0,99,d
+31_VTA_610_EA_d0_s1861,SNELL & CAPITOL - DOWNTWN SAN JOSE,0,28,d,60.0,99,d
+31_VTA_611_EA_d0_s1865,EASTRIDGE - GREAT MALL/MAIN,0,28,d,60.0,99,d
+31_VTA_613_EA_d0_s1886,WESTGATE - DOWNTOWN SAN JOSE,0,28,d,60.0,99,d
+31_VTA_625_EA_d0_s1908,ALUM ROCK-SANTA TERESA VIA BAYPOINT,40.00418663024902,111,d,20.0,99,d
+31_VTA_625_EA_d1_s1917,ALUM ROCK-SANTA TERESA VIA BAYPOINT,0,111,d,20.0,99,d
+31_VTA_626_EA_d0_s1924,MOUNTAIN VIEW - WINCHESTER,18.398020267486572,111,d,15.0,99,d
+31_VTA_626_EA_d1_s1930,MOUNTAIN VIEW - WINCHESTER,0.5837571620941162,111,d,20.0,99,d
+35__222_EA_d0_s547,Santa Rosa - San Francisco,40.509344696998596,87,n,60.0,8,n
+35__222_EA_d1_s549,Santa Rosa - San Francisco,34.37268769741058,87,n,60.0,8,n
+35__224_EA_d1_s553,San Rafael - Sausalito,19.4135799407959,70,n,60.0,8,n
+35__225_EA_d1_s556,College of Marin - San Francisco,11.000389814376831,87,n,60.0,8,n
+35__227_EA_d1_s560,San Rafael - Marin City,0,70,n,60.0,8,n
+35__228_EA_d1_s565,San Rafael/Canal - Fairfax/Manor,0,70,n,60.0,8,n
+35__229_EA_d1_s567,Fairfax/Manor - San Francisco,99.9470055103302,87,n,30.0,8,n
+35__231_EA_d1_s580,San Anselmo - San Francisco,3.44362735748291,87,n,60.0,8,n
+35__234_EA_d0_s592,Canal - San Rafael Transit Center,0,70,n,60.0,8,n
+35__234_EA_d1_s593,Canal - San Rafael Transit Center,0,70,n,60.0,8,n
+35__238_EA_d1_s604,Mill Valley - San Francisco,18.0,87,n,60.0,8,n
+35__240_EA_d0_s616,Del Norte BART Station - San Rafael,0,87,n,60.0,8,n
+35__240_EA_d1_s615,Del Norte BART Station - San Rafael,18.40000057220459,87,n,60.0,8,n
+35__244_EA_d1_s625,Novato/San Marin - San Francisco,9.91435170173645,87,n,60.0,8,n
+35__245_EA_d1_s636,San Marin - San Francisco via Broadway Tunnel,18.68055534362793,87,n,60.0,8,n
+35__247_EA_d0_s639,Novato - San Francisco,52.95805203914642,87,n,60.0,8,n
+35__247_EA_d1_s643,Novato - San Francisco,142.28792881965637,87,n,30.0,8,n
+35__249_EA_d1_s649,Santa Rosa - San Francisco,65.601806640625,87,n,30.0,8,n
+35__250_EA_d1_s652,Santa Rosa - San Francisco,15.747992038726807,87,n,30.0,8,n
+35__251_EA_d1_s654,Santa Rosa - San Francisco,67.21762561798096,70,n,20.0,8,n
+35__252_EA_d1_s658,East Petaluma - San Francisco,38.43478298187256,87,n,20.0,8,n
+35__255_EA_d1_s665,Golden Gate Bridge Toll Plaza - San Francisco,19.981080651283264,70,n,60.0,8,n
+35__256_EA_d1_s667,Larkspur Ferry Terminal - San Francisco,0,70,n,60.0,8,n
+36_UCT_538_EA_d0_s1608,Delores,14.86450982093811,38,d,30.0,99,d
+36_UCT_539_EA_d0_s1610,Whipple,6.431904911994934,38,d,60.0,99,d
+36_UCT_540_EA_d0_s1609,Whipple Short,5.863750219345093,38,d,60.0,99,d
+36_UCT_543_EA_d0_s1613,Dyer,14.374363660812378,38,d,30.0,99,d
+36_UCT_545_EA_d0_s1615,Alvarado-Niles,0.4901461601257324,38,d,60.0,99,d
+37_392_692_EA_d0_s2122,Crockett - Rodeo - Hercules,2.6716668605804443,46,u,60.0,49,u
+37_392_693_EA_d0_s2098,Trees and Flowers,0,46,u,60.0,49,u
+37_392_693_EA_d1_s2083,Trees and Flowers,0,46,u,60.0,49,u
+37_392_694_EA_d0_s2110,Rodeo - Hercules (Viewpointe/North Shore Business ,2.6716668605804443,46,u,60.0,49,u
+37_392_695_EA_d0_s2097,Pinole Valley - Old Town Pinole - Richmond Parkway,0,46,u,30.0,49,u
+37_392_695_EA_d1_s2085,Pinole Valley - Old Town Pinole - Richmond Parkway,0,46,u,30.0,49,u
+37_392_697_EA_d1_s2080,Tara Hills - Richmond Parkway Transit Center - Hil,0,46,u,60.0,49,u
+37_392_699_EA_d0_s2072,Rodeo/Hercules/San Francisco Transbay Terminal,2.6716668605804443,90,l,60.0,50,l
+37_392_699_EA_d1_s2075,Rodeo/Hercules/San Francisco Transbay Terminal,0.32396724820137024,90,l,20.0,50,l
+37_392_700_EA_d0_s2103,Hercules Transit Center - Pinole - Richmond - BART,0,90,v,20.0,49,v
+37_392_700_EA_d1_s2100,Hercules Transit Center - Pinole - Richmond - BART,0,90,v,30.0,49,v
+37_392_701_EA_d0_s2078,Hercules Transit Center - Pinole - Richmond - BART,0,90,v,60.0,49,v
+37_392_701_EA_d1_s2086,Hercules Transit Center - Pinole - Richmond - BART,0,90,v,30.0,49,v
+37_392_702_EA_d0_s2120,Hercules Transit Center - El Cerrito del Norte BAR,5.343333721160889,90,v,30.0,49,v
+37_392_702_EA_d1_s2102,Hercules Transit Center - El Cerrito del Norte BAR,1.2049717903137207,90,v,20.0,49,v
+37_392_703_EA_d0_s2089,Hercules Transit Center - El Cerrito del Norte BAR,2.6716668605804443,90,v,60.0,49,v
+37_392_703_EA_d1_s2074,Hercules Transit Center - El Cerrito del Norte BAR,1.2049717903137207,90,v,20.0,49,v
+38_362_627_EA_d0_s1934,Route 10,12.578344345092773,60,f,30.0,42,f
+38_362_633_EA_d0_s1941,Route 21,0,60,m,60.0,44,m
+38_362_635_EA_d0_s1945,Route 29,0,94,s,60.0,43,s
+38_362_635_EA_d1_s1946,Route 29,9.147869110107422,94,s,30.0,43,s
+38_362_637_EA_d1_s1950,Route 11,0,60,f,60.0,42,f
+4_tri-delta_525_EA_d0_s1601,Pittsburg BART / Kaiser Deer Valley,3.3333332538604736,44,f,60.0,37,f
+4_tri-delta_525_EA_d1_s1602,Pittsburg BART / Kaiser Deer Valley,10.0,44,f,30.0,37,f
+4_tri-delta_527_EA_d0_s1603,Pittsburg BART / Bay Point,10.929949223995209,44,f,60.0,37,f
+4_tri-delta_530_EA_d1_s1582,Express Bart / Brentwood,0,44,i,20.0,36,i
+4_tri-delta_531_EA_d0_s1585,Pittsburg BART / Antioch,11.5,44,f,30.0,37,f
+4_tri-delta_531_EA_d1_s1588,Pittsburg BART / Antioch,34.50000047683716,44,f,30.0,37,f
+4_tri-delta_533_EA_d0_s1606,Pittsburg BART / Brentwood,0,44,f,60.0,37,f
+4_tri-delta_533_EA_d1_s1607,Pittsburg BART / Brentwood,0,44,f,30.0,37,f
+4_tri-delta_535_EA_d1_s1600,Pittsburg BART / Antioch,0,44,f,60.0,37,f
+4_tri-delta_536_EA_d1_s1605,Pittsburg BART / Antioch,0,44,f,30.0,37,f
+4_tri-delta_537_EA_d1_s1580,Pittsburg / Concord BART,1.8598984479904175,44,i,30.0,36,i
+5_CE_1_EA_d0_s1,nan,0,133,b,60.0,1,b
+6_samtrans-ca-us_390_EA_d0_s1158,Daly City BART - Linda Mar Park & Ride,0,24,f,60.0,6,f
+6_samtrans-ca-us_391_EA_d0_s1163,Colma BART - Linda Mar Park & Ride,0,24,f,60.0,6,f
+6_samtrans-ca-us_392_EA_d1_s1166,Linda Mar Park & Ride - Colma BART,0,24,f,60.0,6,f
+6_samtrans-ca-us_393_EA_d0_s1169,Colma BART - Brunswick/Templeton,82.13586015999317,24,f,30.0,6,f
+6_samtrans-ca-us_393_EA_d1_s1168,Colma BART - Brunswick/Templeton,13.959184635430574,24,f,30.0,6,f
+6_samtrans-ca-us_394_EA_d0_s1170,Lowell/Hanover - Skyline College,8.817702174186707,24,f,60.0,6,f
+6_samtrans-ca-us_394_EA_d1_s1171,Lowell/Hanover - Skyline College,13.48121577501297,24,f,60.0,6,f
+6_samtrans-ca-us_395_EA_d0_s1177,South SF BART - Stonestown/SF State,5.836362361907959,24,f,30.0,6,f
+6_samtrans-ca-us_396_EA_d0_s1180,Daly City BART - Colma BART,14.421398162841797,24,f,20.0,6,f
+6_samtrans-ca-us_397_EA_d0_s1184,Airport/Linden - Serramonte Center,0,24,f,60.0,6,f
+6_samtrans-ca-us_397_EA_d1_s1183,Airport/Linden - Serramonte Center,10.812814712524414,24,f,20.0,6,f
+6_samtrans-ca-us_400_EA_d0_s1190,Airtrain - West Manor/Palmetto,8.600000381469727,24,f,60.0,6,f
+6_samtrans-ca-us_403_EA_d0_s1208,Linda Mar Park & Ride - Pescadero,0,24,f,60.0,6,f
+6_samtrans-ca-us_403_EA_d1_s1213,Linda Mar Park & Ride - Pescadero,0,24,f,60.0,6,f
+6_samtrans-ca-us_407_EA_d0_s1230,5th/El Camino - College of San Mateo,0,24,f,60.0,6,f
+6_samtrans-ca-us_411_EA_d0_s1244,San Carlos Caltrain - College of San Mateo,17.115379333496094,24,f,60.0,6,f
+6_samtrans-ca-us_418_EA_d1_s1268,Purdue/Fordham - Stanford Mall,0.513103187084198,24,f,60.0,6,f
+6_samtrans-ca-us_419_EA_d0_s1274,Onetta Harris Ctr - Stanford Mall,0,24,f,60.0,6,f
+6_samtrans-ca-us_422_EA_d0_s1284,San Francisco - SFO - Hillsdale Mall,65.4587922245264,24,f,30.0,6,f
+6_samtrans-ca-us_422_EA_d1_s1282,San Francisco - SFO - Hillsdale Mall,102.71398585103452,24,f,30.0,6,f
+6_samtrans-ca-us_423_EA_d1_s1287,SM Med Ctr - Hillsdale - CSM - Half Moon Bay,0,24,f,60.0,6,f
+6_samtrans-ca-us_424_EA_d1_s1291,San Mateo Caltrain - San Carlos Caltrain,0,24,f,60.0,6,f
+6_samtrans-ca-us_425_EA_d0_s1293,Redwood City Transit Cente - Bayshore/Donohoe,23.937894344329834,24,f,20.0,6,f
+6_samtrans-ca-us_426_EA_d0_s1294,Redwood City Transit Ctr - Palo Alto Transit Ctr,3.830538272857666,24,f,30.0,6,f
+6_samtrans-ca-us_431_EA_d1_s1310,San Francisco - Palo Alto Transit Ctr,190.18422200344503,24,f,30.0,6,f
+6_samtrans-ca-us_432_EA_d1_s1313,San Bruno BART - Redwood City Transit Ctr,0,24,f,60.0,6,f
+6_samtrans-ca-us_459_EA_d0_s1377,Daly City BART - Palo Alto Transit Ctr,327.817017538473,24,f,15.0,6,f
+6_samtrans-ca-us_459_EA_d1_s1379,Daly City BART - Palo Alto Transit Ctr,183.9152317047119,24,f,12.0,6,f
+6_samtrans-ca-us_462_EA_d0_s1395,SF - SFO - Redwood City Transit Ctr EXPPRESS,9.582241136115044,80,f,60.0,6,f
+7__266_EA_d0_s703,Medical Center,14.426110237836838,13,d,15.0,99,d
+7__270_EA_d0_s686,Line AE-F,80.79158592224121,13,d,20.0,99,d
+7__272_EA_d0_s697,Line C,0,13,d,60.0,99,d
+7__279_EA_d0_s704,Medical Center: Holiday,6.665498733520508,13,d,30.0,99,d
+7__280_EA_d0_s737,Line X - Express Service,0,13,d,60.0,99,d
+7__284_EA_d0_s700,East Bay Express,12.955606460571289,13,d,60.0,99,d
+7__287_EA_d0_s702,Hospital: Direct,43.39701294898987,13,d,6.0,99,d
+pnr_Alameda Main_SF Ferry_acc_EA,Alameda Main_SF Ferry,0,11,d,2.0,99,d
+pnr_Alameda Main_SF Ferry_egr_EA,Alameda Main_SF Ferry,0,11,d,2.0,99,d
+pnr_Alder_SCVTA LRT_acc_EA,Alder_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Alder_SCVTA LRT_egr_EA,Alder_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Alum Rock_SCVTA LRT_acc_EA,Alum Rock_SCVTA LRT,8.760022163391113,11,d,1.0,99,d
+pnr_Alum Rock_SCVTA LRT_egr_EA,Alum Rock_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Ashby_BART_acc_EA,Ashby_BART,9.791269302368164,11,x,1.0,96,x
+pnr_Ashby_BART_egr_EA,Ashby_BART,2.1599791049957275,11,d,1.0,99,d
+pnr_Bascom_SCVTA LRT_acc_EA,Bascom_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Bascom_SCVTA LRT_egr_EA,Bascom_SCVTA LRT,0,11,d,1.0,99,d
+pnr_BayFair_BART_acc_EA,BayFair_BART,43.25185775756836,11,x,1.0,96,x
+pnr_BayFair_BART_egr_EA,BayFair_BART,2.139582395553589,11,d,1.0,99,d
+pnr_Bayshore_Caltrain_acc_EA,Bayshore_Caltrain,7.403706073760986,11,z,1.0,98,z
+pnr_Bayshore_Caltrain_egr_EA,Bayshore_Caltrain,111.78597259521484,11,d,1.0,99,d
+pnr_Belmont_Caltrain_acc_EA,Belmont_Caltrain,11.361425399780273,11,z,1.0,98,z
+pnr_Belmont_Caltrain_egr_EA,Belmont_Caltrain,4.43312406539917,11,d,1.0,99,d
+pnr_Berkeley_Capitol_acc_EA,Berkeley_Capitol,0,11,d,1.0,99,d
+pnr_Berkeley_Capitol_egr_EA,Berkeley_Capitol,0,11,d,1.0,99,d
+pnr_Blossom Hill_Caltrain_acc_EA,Blossom Hill_Caltrain,0,11,z,1.0,98,z
+pnr_Blossom Hill_Caltrain_egr_EA,Blossom Hill_Caltrain,0,11,d,1.0,99,d
+pnr_Blossom Hill_SCVTA LRT_acc_EA,Blossom Hill_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Blossom Hill_SCVTA LRT_egr_EA,Blossom Hill_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Branham_SCVTA LRT_acc_EA,Branham_SCVTA LRT,0,11,d,2.0,99,d
+pnr_Branham_SCVTA LRT_egr_EA,Branham_SCVTA LRT,0,11,d,2.0,99,d
+pnr_Burlingame_Caltrain_acc_EA,Burlingame_Caltrain,0,11,z,1.0,98,z
+pnr_Burlingame_Caltrain_egr_EA,Burlingame_Caltrain,0,11,d,1.0,99,d
+pnr_California Ave_Caltrain_acc_EA,California Ave_Caltrain,0,11,z,2.0,98,z
+pnr_California Ave_Caltrain_egr_EA,California Ave_Caltrain,7.403706073760986,11,d,2.0,99,d
+pnr_Capitol_Caltrain_acc_EA,Capitol_Caltrain,0,11,z,1.0,98,z
+pnr_Capitol_Caltrain_egr_EA,Capitol_Caltrain,0,11,d,1.0,99,d
+pnr_Capitol_SCVTA LRT_acc_EA,Capitol_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Capitol_SCVTA LRT_egr_EA,Capitol_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Castro Valley_BART_acc_EA,Castro Valley_BART,17.868309020996094,11,x,2.0,96,x
+pnr_Castro Valley_BART_egr_EA,Castro Valley_BART,5.702056884765625,11,d,2.0,99,d
+pnr_Coliseum_BART_acc_EA,Coliseum_BART,0,11,x,1.0,96,x
+pnr_Coliseum_BART_egr_EA,Coliseum_BART,9.655275344848633,11,d,1.0,99,d
+pnr_Coliseum_Capitol_acc_EA,Coliseum_Capitol,202.33010864257812,11,d,2.0,99,d
+pnr_Coliseum_Capitol_egr_EA,Coliseum_Capitol,0,11,d,2.0,99,d
+pnr_Colma_BART_acc_EA,Colma_BART,29.58277130126953,11,x,2.0,96,x
+pnr_Colma_BART_egr_EA,Colma_BART,29.715648651123047,11,d,2.0,99,d
+pnr_Concord_BART_acc_EA,Concord_BART,47.793636322021484,11,x,1.0,96,x
+pnr_Concord_BART_egr_EA,Concord_BART,0,11,d,1.0,99,d
+pnr_Cottle_SCVTA LRT_acc_EA,Cottle_SCVTA LRT,0,11,d,2.0,99,d
+pnr_Cottle_SCVTA LRT_egr_EA,Cottle_SCVTA LRT,0,11,d,2.0,99,d
+pnr_Curtner_SCVTA LRT_acc_EA,Curtner_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Curtner_SCVTA LRT_egr_EA,Curtner_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Daly City_BART_acc_EA,Daly City_BART,38.93098449707031,11,x,2.0,96,x
+pnr_Daly City_BART_egr_EA,Daly City_BART,6.627344608306885,11,d,2.0,99,d
+pnr_Dublin/Pleasanton_BART_acc_EA,Dublin/Pleasanton_BART,34.76573181152344,11,x,2.0,96,x
+pnr_Dublin/Pleasanton_BART_egr_EA,Dublin/Pleasanton_BART,0.027968397364020348,11,d,2.0,99,d
+pnr_El Cerrito Plaza_BART_acc_EA,El Cerrito Plaza_BART,13.745594024658203,11,x,1.0,96,x
+pnr_El Cerrito Plaza_BART_egr_EA,El Cerrito Plaza_BART,0,11,d,1.0,99,d
+pnr_El Cerrito del Norte_BART_acc_EA,El Cerrito del Norte_BART,72.71395111083984,11,x,1.0,96,x
+pnr_El Cerrito del Norte_BART_egr_EA,El Cerrito del Norte_BART,0.4824548363685608,11,d,1.0,99,d
+pnr_Emeryville_Capitol_acc_EA,Emeryville_Capitol,0,11,d,1.0,99,d
+pnr_Emeryville_Capitol_egr_EA,Emeryville_Capitol,0.8390519022941589,11,d,1.0,99,d
+pnr_Fremont_ACE_acc_EA,Fremont_ACE,0,11,d,2.0,99,d
+pnr_Fremont_ACE_egr_EA,Fremont_ACE,0.3379514515399933,11,d,2.0,99,d
+pnr_Fremont_BART_acc_EA,Fremont_BART,28.011747360229492,11,x,1.0,96,x
+pnr_Fremont_BART_egr_EA,Fremont_BART,1.7759932279586792,11,d,1.0,99,d
+pnr_Fremont_Capitol_acc_EA,Fremont_Capitol,52.248958587646484,11,d,1.0,99,d
+pnr_Fremont_Capitol_egr_EA,Fremont_Capitol,0.6759029030799866,11,d,1.0,99,d
+pnr_Fruitvale_BART_acc_EA,Fruitvale_BART,0,11,x,1.0,96,x
+pnr_Fruitvale_BART_egr_EA,Fruitvale_BART,9.35268783569336,11,d,1.0,99,d
+pnr_Gilroy_Caltrain_acc_EA,Gilroy_Caltrain,8.315446853637695,11,z,1.0,98,z
+pnr_Gilroy_Caltrain_egr_EA,Gilroy_Caltrain,0,11,d,1.0,99,d
+pnr_Glen Park_BART_acc_EA,Glen Park_BART,4.416229724884033,11,x,1.0,96,x
+pnr_Glen Park_BART_egr_EA,Glen Park_BART,241.71678161621094,11,d,1.0,99,d
+pnr_Great America_ACE_acc_EA,Great America_ACE,0,11,d,1.0,99,d
+pnr_Great America_ACE_egr_EA,Great America_ACE,0.34610891342163086,11,d,1.0,99,d
+pnr_Great America_Capitol_acc_EA,Great America_Capitol,3.8270089626312256,11,d,1.0,99,d
+pnr_Great America_Capitol_egr_EA,Great America_Capitol,0.34610891342163086,11,d,1.0,99,d
+pnr_Great Mall_SCVTA LRT_acc_EA,Great Mall_SCVTA LRT,4.328109264373779,11,d,1.0,99,d
+pnr_Great Mall_SCVTA LRT_egr_EA,Great Mall_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Harbor Bay_SF Ferry_acc_EA,Harbor Bay_SF Ferry,0,11,d,1.0,99,d
+pnr_Harbor Bay_SF Ferry_egr_EA,Harbor Bay_SF Ferry,0,11,d,1.0,99,d
+pnr_Hayward Park_Caltrain_acc_EA,Hayward Park_Caltrain,3.9575281143188477,11,z,1.0,98,z
+pnr_Hayward Park_Caltrain_egr_EA,Hayward Park_Caltrain,0,11,d,1.0,99,d
+pnr_Hayward_BART_acc_EA,Hayward_BART,22.734477996826172,11,x,1.0,96,x
+pnr_Hayward_BART_egr_EA,Hayward_BART,6.569077014923096,11,d,1.0,99,d
+pnr_Hayward_Capitol_acc_EA,Hayward_Capitol,39.9705696105957,11,d,1.0,99,d
+pnr_Hayward_Capitol_egr_EA,Hayward_Capitol,0,11,d,1.0,99,d
+pnr_Hillsdale_Caltrain_acc_EA,Hillsdale_Caltrain,31.5849552154541,11,z,1.0,98,z
+pnr_Hillsdale_Caltrain_egr_EA,Hillsdale_Caltrain,4.43312406539917,11,d,1.0,99,d
+pnr_Hostetter_SCVTA LRT_acc_EA,Hostetter_SCVTA LRT,0,11,d,2.0,99,d
+pnr_Hostetter_SCVTA LRT_egr_EA,Hostetter_SCVTA LRT,0,11,d,2.0,99,d
+pnr_Jack London Square_Capitol_acc_EA,Jack London Square_Capitol,19.174667358398438,11,d,1.0,99,d
+pnr_Jack London Square_Capitol_egr_EA,Jack London Square_Capitol,0.3775733411312103,11,d,1.0,99,d
+pnr_Lafayette_BART_acc_EA,Lafayette_BART,49.095237731933594,11,x,1.0,96,x
+pnr_Lafayette_BART_egr_EA,Lafayette_BART,0.17398419976234436,11,d,1.0,99,d
+pnr_Lake Merritt_BART_acc_EA,Lake Merritt_BART,91.1473388671875,11,x,1.0,96,x
+pnr_Lake Merritt_BART_egr_EA,Lake Merritt_BART,37.18793869018555,11,d,1.0,99,d
+pnr_Larkspur_SMART_acc_EA,Larkspur_SMART,87.38858032226562,11,d,2.0,99,d
+pnr_Larkspur_SMART_egr_EA,Larkspur_SMART,0,11,d,2.0,99,d
+pnr_Lawrence_Caltrain_acc_EA,Lawrence_Caltrain,0,11,z,1.0,98,z
+pnr_Lawrence_Caltrain_egr_EA,Lawrence_Caltrain,6.699999809265137,11,d,1.0,99,d
+pnr_Livermore_ACE_acc_EA,Livermore_ACE,57.107261657714844,11,d,1.0,99,d
+pnr_Livermore_ACE_egr_EA,Livermore_ACE,1.4124040603637695,11,d,1.0,99,d
+pnr_MacArthur_BART_acc_EA,MacArthur_BART,9.432341575622559,11,x,2.0,96,x
+pnr_MacArthur_BART_egr_EA,MacArthur_BART,0,11,d,2.0,99,d
+pnr_Martinez_Capitol_acc_EA,Martinez_Capitol,16.493362426757812,11,d,1.0,99,d
+pnr_Martinez_Capitol_egr_EA,Martinez_Capitol,0,11,d,1.0,99,d
+pnr_Menlo Park_Caltrain_acc_EA,Menlo Park_Caltrain,21.455707550048828,11,z,1.0,98,z
+pnr_Menlo Park_Caltrain_egr_EA,Menlo Park_Caltrain,26.258831024169922,11,d,1.0,99,d
+pnr_Millbrae_BART_acc_EA,Millbrae_BART,69.734130859375,11,x,2.0,96,x
+pnr_Millbrae_BART_egr_EA,Millbrae_BART,0,11,d,2.0,99,d
+pnr_Millbrae_Caltrain_acc_EA,Millbrae_Caltrain,0,11,z,1.0,98,z
+pnr_Millbrae_Caltrain_egr_EA,Millbrae_Caltrain,0,11,d,1.0,99,d
+pnr_Milpitas_SCVTA LRT_acc_EA,Milpitas_SCVTA LRT,0,11,d,2.0,99,d
+pnr_Milpitas_SCVTA LRT_egr_EA,Milpitas_SCVTA LRT,0,11,d,2.0,99,d
+pnr_Moffett Park_SCVTA LRT_acc_EA,Moffett Park_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Moffett Park_SCVTA LRT_egr_EA,Moffett Park_SCVTA LRT,7.982776165008545,11,d,1.0,99,d
+pnr_Morgan Hill_Caltrain_acc_EA,Morgan Hill_Caltrain,0,11,z,1.0,98,z
+pnr_Morgan Hill_Caltrain_egr_EA,Morgan Hill_Caltrain,0,11,d,1.0,99,d
+pnr_Mountain View_Caltrain_acc_EA,Mountain View_Caltrain,0,11,z,1.0,98,z
+pnr_Mountain View_Caltrain_egr_EA,Mountain View_Caltrain,9.331670761108398,11,d,1.0,99,d
+pnr_Mountain View_SCVTA LRT_acc_EA,Mountain View_SCVTA LRT,70.72994232177734,11,d,1.0,99,d
+pnr_Mountain View_SCVTA LRT_egr_EA,Mountain View_SCVTA LRT,0,11,d,1.0,99,d
+pnr_North Berkeley_BART_acc_EA,North Berkeley_BART,3.968515634536743,11,x,1.0,96,x
+pnr_North Berkeley_BART_egr_EA,North Berkeley_BART,0,11,d,1.0,99,d
+pnr_North Concord/Martinez_BART_acc_EA,North Concord/Martinez_BART,5.789458274841309,11,x,3.0,96,x
+pnr_North Concord/Martinez_BART_egr_EA,North Concord/Martinez_BART,4.479604721069336,11,d,3.0,99,d
+pnr_Oakland Terminal_SF Ferry_acc_EA,Oakland Terminal_SF Ferry,0,11,d,1.0,99,d
+pnr_Oakland Terminal_SF Ferry_egr_EA,Oakland Terminal_SF Ferry,0,11,d,1.0,99,d
+pnr_Ohlone/Chynoweth_SCVTA_acc_EA,Ohlone/Chynoweth_SCVTA,58.79832077026367,11,d,1.0,99,d
+pnr_Ohlone/Chynoweth_SCVTA_egr_EA,Ohlone/Chynoweth_SCVTA,0,11,d,1.0,99,d
+pnr_Orinda_BART_acc_EA,Orinda_BART,16.507116317749023,11,x,2.0,96,x
+pnr_Orinda_BART_egr_EA,Orinda_BART,0,11,d,2.0,99,d
+pnr_Palo Alto_Caltrain_acc_EA,Palo Alto_Caltrain,11.576229095458984,11,z,1.0,98,z
+pnr_Palo Alto_Caltrain_egr_EA,Palo Alto_Caltrain,52.229637145996094,11,d,1.0,99,d
+pnr_Penitencia Creek_SCVTA LRT_acc_EA,Penitencia Creek_SCVTA LRT,0,11,d,2.0,99,d
+pnr_Penitencia Creek_SCVTA LRT_egr_EA,Penitencia Creek_SCVTA LRT,0,11,d,2.0,99,d
+pnr_Pittsburg/Bay Point_BART_acc_EA,Pittsburg/Bay Point_BART,130.14356994628906,11,x,3.0,96,x
+pnr_Pittsburg/Bay Point_BART_egr_EA,Pittsburg/Bay Point_BART,0,11,d,3.0,99,d
+pnr_Pleasant Hill_BART_acc_EA,Pleasant Hill_BART,19.965473175048828,11,x,2.0,96,x
+pnr_Pleasant Hill_BART_egr_EA,Pleasant Hill_BART,0.03496049717068672,11,d,2.0,99,d
+pnr_Plesanton_ACE_acc_EA,Plesanton_ACE,0,11,d,2.0,99,d
+pnr_Plesanton_ACE_egr_EA,Plesanton_ACE,0,11,d,2.0,99,d
+pnr_Redwood City_Caltrain_acc_EA,Redwood City_Caltrain,43.965972900390625,11,z,1.0,98,z
+pnr_Redwood City_Caltrain_egr_EA,Redwood City_Caltrain,8.546452522277832,11,d,1.0,99,d
+pnr_Richmond_BART_acc_EA,Richmond_BART,0,11,x,2.0,96,x
+pnr_Richmond_BART_egr_EA,Richmond_BART,2.41926646232605,11,d,2.0,99,d
+pnr_Richmond_Capitol_acc_EA,Richmond_Capitol,77.01876068115234,11,d,2.0,99,d
+pnr_Richmond_Capitol_egr_EA,Richmond_Capitol,0,11,d,2.0,99,d
+pnr_Rockridge_BART_acc_EA,Rockridge_BART,10.0458984375,11,x,1.0,96,x
+pnr_Rockridge_BART_egr_EA,Rockridge_BART,15.151470184326172,11,d,1.0,99,d
+pnr_San Antonio_Caltrain_acc_EA,San Antonio_Caltrain,0,11,z,1.0,98,z
+pnr_San Antonio_Caltrain_egr_EA,San Antonio_Caltrain,6.127069473266602,11,d,1.0,99,d
+pnr_San Bruno_BART_acc_EA,San Bruno_BART,0,11,x,2.0,96,x
+pnr_San Bruno_BART_egr_EA,San Bruno_BART,0,11,d,2.0,99,d
+pnr_San Bruno_Caltrain_acc_EA,San Bruno_Caltrain,0,11,z,1.0,98,z
+pnr_San Bruno_Caltrain_egr_EA,San Bruno_Caltrain,0,11,d,1.0,99,d
+pnr_San Carlos_Caltrain_acc_EA,San Carlos_Caltrain,0,11,z,1.0,98,z
+pnr_San Carlos_Caltrain_egr_EA,San Carlos_Caltrain,0,11,d,1.0,99,d
+pnr_San Jose Diridon_ACE_acc_EA,San Jose Diridon_ACE,22.93366241455078,11,d,1.0,99,d
+pnr_San Jose Diridon_ACE_egr_EA,San Jose Diridon_ACE,0,11,d,1.0,99,d
+pnr_San Jose Diridon_Caltrain_acc_EA,San Jose Diridon_Caltrain,0,11,z,1.0,98,z
+pnr_San Jose Diridon_Caltrain_egr_EA,San Jose Diridon_Caltrain,0,11,d,1.0,99,d
+pnr_San Jose Diridon_Capitol_acc_EA,San Jose Diridon_Capitol,38.63425827026367,11,d,1.0,99,d
+pnr_San Jose Diridon_Capitol_egr_EA,San Jose Diridon_Capitol,0,11,d,1.0,99,d
+pnr_San Jose Diridon_SCVTA LRT_acc_EA,San Jose Diridon_SCVTA LRT,0,11,d,1.0,99,d
+pnr_San Jose Diridon_SCVTA LRT_egr_EA,San Jose Diridon_SCVTA LRT,7.823422908782959,11,d,1.0,99,d
+pnr_San Leandro_BART_acc_EA,San Leandro_BART,0,11,x,1.0,96,x
+pnr_San Leandro_BART_egr_EA,San Leandro_BART,10.755955696105957,11,d,1.0,99,d
+pnr_San Martin_Caltrain_acc_EA,San Martin_Caltrain,12.267739295959473,11,z,1.0,98,z
+pnr_San Martin_Caltrain_egr_EA,San Martin_Caltrain,0,11,d,1.0,99,d
+pnr_San Mateo_Caltrain_acc_EA,San Mateo_Caltrain,0,11,z,2.0,98,z
+pnr_San Mateo_Caltrain_egr_EA,San Mateo_Caltrain,0,11,d,2.0,99,d
+pnr_Santa Clara Uni_Capitol_acc_EA,Santa Clara Uni_Capitol,0,11,d,1.0,99,d
+pnr_Santa Clara Uni_Capitol_egr_EA,Santa Clara Uni_Capitol,0,11,d,1.0,99,d
+pnr_Santa Clara_ACE_acc_EA,Santa Clara_ACE,17.65165138244629,11,d,1.0,99,d
+pnr_Santa Clara_ACE_egr_EA,Santa Clara_ACE,0,11,d,1.0,99,d
+pnr_Santa Clara_Caltrain_acc_EA,Santa Clara_Caltrain,0,11,z,1.0,98,z
+pnr_Santa Clara_Caltrain_egr_EA,Santa Clara_Caltrain,0,11,d,1.0,99,d
+pnr_Santa Teresa_SCVTA LRT_acc_EA,Santa Teresa_SCVTA LRT,0,11,d,2.0,99,d
+pnr_Santa Teresa_SCVTA LRT_egr_EA,Santa Teresa_SCVTA LRT,0,11,d,2.0,99,d
+pnr_Sausilito_Golden Gate Ferry_acc_EA,Sausilito_Golden Gate Ferry,0,11,d,1.0,99,d
+pnr_Sausilito_Golden Gate Ferry_egr_EA,Sausilito_Golden Gate Ferry,0,11,d,1.0,99,d
+pnr_Snell_SCVTA LRT_acc_EA,Snell_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Snell_SCVTA LRT_egr_EA,Snell_SCVTA LRT,0,11,d,1.0,99,d
+pnr_South Hayward_BART_acc_EA,South Hayward_BART,22.90658187866211,11,x,1.0,96,x
+pnr_South Hayward_BART_egr_EA,South Hayward_BART,0,11,d,1.0,99,d
+pnr_South San Francisco_BART_acc_EA,South San Francisco_BART,2.125598192214966,11,x,1.0,96,x
+pnr_South San Francisco_BART_egr_EA,South San Francisco_BART,0,11,d,1.0,99,d
+pnr_South San Francisco_Caltrain_acc_EA,South San Francisco_Caltrain,0,11,z,2.0,98,z
+pnr_South San Francisco_Caltrain_egr_EA,South San Francisco_Caltrain,0,11,d,2.0,99,d
+pnr_South San Francisco_SF Ferry_acc_EA,South San Francisco_SF Ferry,0,11,d,1.0,99,d
+pnr_South San Francisco_SF Ferry_egr_EA,South San Francisco_SF Ferry,0,11,d,1.0,99,d
+pnr_Suisun-Fairfield_Capitol_acc_EA,Suisun-Fairfield_Capitol,1.5382617712020874,11,d,1.0,99,d
+pnr_Suisun-Fairfield_Capitol_egr_EA,Suisun-Fairfield_Capitol,0,11,d,1.0,99,d
+pnr_Sunnyvale_Caltrain_acc_EA,Sunnyvale_Caltrain,0,11,z,1.0,98,z
+pnr_Sunnyvale_Caltrain_egr_EA,Sunnyvale_Caltrain,0,11,d,1.0,99,d
+pnr_Tamien_Caltrain_acc_EA,Tamien_Caltrain,0,11,z,2.0,98,z
+pnr_Tamien_Caltrain_egr_EA,Tamien_Caltrain,0,11,d,2.0,99,d
+pnr_Tamien_SCVTA LRT_acc_EA,Tamien_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Tamien_SCVTA LRT_egr_EA,Tamien_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Union City_BART_acc_EA,Union City_BART,57.670833587646484,11,x,1.0,96,x
+pnr_Union City_BART_egr_EA,Union City_BART,8.879965782165527,11,d,1.0,99,d
+pnr_Vallejo Terminal_SF Ferry_acc_EA,Vallejo Terminal_SF Ferry,22.48003387451172,11,d,1.0,99,d
+pnr_Vallejo Terminal_SF Ferry_egr_EA,Vallejo Terminal_SF Ferry,1.4424799680709839,11,d,1.0,99,d
+pnr_Vasco Road_ACE_acc_EA,Vasco Road_ACE,0,11,d,2.0,99,d
+pnr_Vasco Road_ACE_egr_EA,Vasco Road_ACE,0,11,d,2.0,99,d
+pnr_Walnut Creek_BART_acc_EA,Walnut Creek_BART,231.5347900390625,11,x,2.0,96,x
+pnr_Walnut Creek_BART_egr_EA,Walnut Creek_BART,2.0137245655059814,11,d,2.0,99,d
+pnr_West Dublin/Plesanton_BART_acc_EA,West Dublin/Plesanton_BART,86.8684310913086,11,x,3.0,96,x
+pnr_West Dublin/Plesanton_BART_egr_EA,West Dublin/Plesanton_BART,3.0091872215270996,11,d,3.0,99,d
+pnr_West Oakland_BART_acc_EA,West Oakland_BART,0,11,y,1.0,97,y
+pnr_West Oakland_BART_egr_EA,West Oakland_BART,48.35236358642578,11,d,1.0,99,d
+pnr_Whiseman_SCVTA LRT_acc_EA,Whiseman_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Whiseman_SCVTA LRT_egr_EA,Whiseman_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Winchester_SCVTA LRT_acc_EA,Winchester_SCVTA LRT,0,11,d,1.0,99,d
+pnr_Winchester_SCVTA LRT_egr_EA,Winchester_SCVTA LRT,0,11,d,1.0,99,d

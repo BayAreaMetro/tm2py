@@ -3,8 +3,10 @@
 ####################################
 
 [remote_io]
-    folder_root = "~/Box Sync/"
-
+    obs_folder_root = "~/Box Sync/"
+    crosswalk_folder_root = "~/Documents/GitHub/tm2py/examples/temp_acceptance/"
 [transit]
-    on_board_survey_file = "Survey_Database_122717/survey.feather"
+    on_board_survey_file = "Survey_Database_122717/onboard-survey-trip-list.feather"
     reduced_summaries_file = "Survey_Database_122717/acceptance-criteria-reductions.csv"
+[crosswalks]
+    crosswalk_standard_survey_file = "transit-standard-2015-to-survey-crosswalk.csv"
