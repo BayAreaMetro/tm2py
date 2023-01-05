@@ -53,6 +53,7 @@ scratch/*
 *.bak
 .cache
 .hubstorinfo
+examples/temp_acceptance/*
 
 # Unit test / coverage reports
 htmlcov/
@@ -121,3 +122,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+examples/temp_acceptance/boardings_by_line_am.csv
