@@ -27,6 +27,8 @@ class Acceptance:
 
     simulated_transit_segments_gdf: gpd.GeoDataFrame
 
+    rail_operators_vector = ["BART", "Caltrain", "ACE"]
+
     florida_transit_guidelines_df = pd.DataFrame(
         [
             [0, 1.50],
@@ -34,7 +36,7 @@ class Acceptance:
             [2000, 0.65],
             [5000, 0.35],
             [10000, 0.25],
-            [20000, 0.20],
+            [np.inf, 0.20],
         ],
         columns=["boardings", "threshold"],
     )
@@ -212,13 +214,32 @@ class Acceptance:
 
     def _make_transit_network_comparisons(self):
 
-        df = pd.merge(
-            self.simulated_boardings_df,
-            self.reduced_transit_on_board_df,
+        # outer merge for rail operators (whose route names are station to station)
+        a_df = pd.merge(
+            self.simulated_boardings_df[(self.simulated_boardings_df["operator"].isin(self.rail_operators_vector) )],
+            self.reduced_transit_on_board_df[(self.reduced_transit_on_board_df["survey_operator"].isin(self.rail_operators_vector) )],
+            how="outer",
+            left_on=["line_name", "time_period"],
+            right_on=["standard_line_name", "time_period"],
+        )
+
+        # inner merge for non-rail operators (whose route names should be aligned see _join_standard_route_id)
+        b_df = pd.merge(
+            self.simulated_boardings_df[(~self.simulated_boardings_df["operator"].isin(self.rail_operators_vector) )],
+            self.reduced_transit_on_board_df[(~self.reduced_transit_on_board_df["survey_operator"].isin(self.rail_operators_vector) )],
             how="left",
             left_on=["line_name", "time_period"],
             right_on=["standard_line_name", "time_period"],
         )
+
+        # observed boardings are joined in both directions, need to divide by two 
+        # TODO: remove this after summing over direction and shape
+        b_df["survey_boardings"] = b_df["survey_boardings"] / 2
+
+        df = pd.concat([a_df, b_df])
+
+        df["operator"] = np.where(df["operator"].isnull(), df["survey_operator"], df["operator"])
+        df["technology"] = np.where(df["technology"].isnull(), df["survey_tech"], df["technology"])
 
         g_df = pd.merge(
             df,
@@ -241,7 +262,7 @@ class Acceptance:
             }
         )
 
-        # only attach boardings to first link
+        # only attach route-level boardings to first link
         g_df["route_simulated_boardings"] = np.where(
             g_df["first_row_in_line"], g_df["route_simulated_boardings"], 0
         )
@@ -249,10 +270,13 @@ class Acceptance:
             g_df["first_row_in_line"], g_df["route_observed_boardings"], 0
         )
 
+        # g_df = self._fix_technology_labels(g_df, "technology")
+
         g_df = g_df[
             [
                 "model_link_id",
                 "operator",
+                "technology",
                 "route_short_name",
                 "route_long_name",
                 "trip_headsign",
@@ -368,11 +392,12 @@ class Acceptance:
                 "NIGHT": "ev",
             }
             in_df = pd.read_feather(os.path.join(file_root, in_file))
-            out_df = in_df[(in_df["weekpart"].isna()) | (in_df["weekpart"]!="WEEKEND")].copy()
+            out_df = in_df[
+                (in_df["weekpart"].isna()) | (in_df["weekpart"] != "WEEKEND")
+            ].copy()
             out_df["time_period"] = out_df["day_part"].map(time_period_dict)
-            rail_operators_vector = ["BART", "Caltrain", "ACE"]
             out_df["route"] = np.where(
-                out_df["operator"].isin(rail_operators_vector),
+                out_df["operator"].isin(self.rail_operators_vector),
                 out_df["operator"],
                 out_df["route"],
             )
@@ -413,7 +438,11 @@ class Acceptance:
             df["time_period"] = time_period
             return_df = return_df.append(df)
 
+        # TODO: sum across direction and shape by parsing the line name
+        # TODO: none of the criteria are specific to time of day. Start be suppressing that as well. 
+
         return_df = self._join_tm2_mode_codes(return_df)
+        return_df = self._fix_agency_names(return_df, "operator")
 
         self.simulated_boardings_df = return_df
 
@@ -475,8 +504,16 @@ class Acceptance:
         a_df["temp"] = df["canonical_name"]
         a_dict = a_df.set_index("temp").to_dict()["canonical_name"]
 
-        b_dict = df[(df["alternate_01"].notna())][["canonical_name", "alternate_01"]].set_index("alternate_01").to_dict()["canonical_name"]
-        c_dict = df[(df["alternate_02"].notna())][["canonical_name", "alternate_02"]].set_index("alternate_02").to_dict()["canonical_name"]
+        b_dict = (
+            df[(df["alternate_01"].notna())][["canonical_name", "alternate_01"]]
+            .set_index("alternate_01")
+            .to_dict()["canonical_name"]
+        )
+        c_dict = (
+            df[(df["alternate_02"].notna())][["canonical_name", "alternate_02"]]
+            .set_index("alternate_02")
+            .to_dict()["canonical_name"]
+        )
 
         self.canonical_agency_names_dict = {**a_dict, **b_dict, **c_dict}
 
@@ -493,4 +530,15 @@ class Acceptance:
         )
 
         return return_df
+
+    def _fix_technology_labels(self, input_df, column_name):
+        
+        assert column_name in input_df.columns
+
+        r_df = input_df.copy()
+
+        r_df[column_name] = np.where(r_df["column_name"].str.lower().str.contains("local").any(), "Local Bus", r_df[column_name])
+        r_df[column_name] = np.where(r_df["column_name"].str.lower().str.contains("heavy").any(), "Heavy Rail", r_df[column_name])
+
+        return r_df
 
