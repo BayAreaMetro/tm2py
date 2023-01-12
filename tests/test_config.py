@@ -29,7 +29,9 @@ def test_config_read(examples_dir, inro_context):
         "prepare_network_highway",
         "highway",
         "highway_maz_skim",
-        # "transit",
+        "prepare_network_transit",
+        "transit_assign",
+        "transit_skim",
     )
     assert my_config.time_periods[1].name == "am"
     assert my_config.highway.maz_to_maz.operating_cost_per_mile == 18.93

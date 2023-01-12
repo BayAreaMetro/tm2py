@@ -102,6 +102,14 @@ class HighwayAssignment(Component):
         self._matrix_cache = None
         self._skim_matrices = []
         self._class_config = None
+        self._scenario = None
+        self._highway_emmebank = None
+
+    @property
+    def highway_emmebank(self):
+        if not self._highway_emmebank:
+            self._highway_emmebank = self.controller.emme_manager.highway_emmebank
+        return self._highway_emmebank
 
     @property
     def classes(self):
@@ -127,14 +135,15 @@ class HighwayAssignment(Component):
         demand = PrepareHighwayDemand(self.controller)
         if self.controller.iteration >= 1:
             demand.run()
+        else:
+            self.highway_emmebank.zero_matrix
         for time in self.time_period_names:
-            scenario = self.get_emme_scenario(
-                self.controller.config.emme.highway_database_path, time
-            )
+            scenario = self.highway_emmebank.scenario(time)
             with self._setup(scenario, time):
                 iteration = self.controller.iteration
                 assign_classes = [
-                    AssignmentClass(c, time, iteration) for c in self.config.classes
+                    AssignmentClass(c, time.lower(), iteration)
+                    for c in self.config.classes
                 ]
                 if iteration > 0:
                     self._copy_maz_flow(scenario)
@@ -193,7 +202,7 @@ class HighwayAssignment(Component):
         self.logger.log(
             "Copy @maz_flow to ul1 for background traffic", indent=True, level="DETAIL"
         )
-        net_calc = NetworkCalculator(scenario)
+        net_calc = NetworkCalculator(self.controller, scenario)
         net_calc("ul1", "@maz_flow")
 
     def _reset_background_traffic(self, scenario: EmmeScenario):
@@ -205,7 +214,7 @@ class HighwayAssignment(Component):
         self.logger.log(
             "Set ul1 to 0 for background traffic", indent=True, level="DETAIL"
         )
-        net_calc = NetworkCalculator(scenario)
+        net_calc = NetworkCalculator(self.controller, scenario)
         net_calc("ul1", "0")
 
     def _create_skim_matrices(
@@ -302,7 +311,7 @@ class HighwayAssignment(Component):
         """
         for skim_name in skims:
             if skim_name in ["time", "distance", "freeflowtime", "hovdist", "tolldist"]:
-                matrix_name = f"mf{time_period}_{class_name}_{skim_name}"
+                matrix_name = f"mf{time_period.lower()}_{class_name}_{skim_name}"
                 self.logger.debug(f"Setting intrazonals to 0.5*min for {matrix_name}")
                 data = self._matrix_cache.get_data(matrix_name)
                 # NOTE: sets values for external zones as well
@@ -429,9 +438,10 @@ class AssignmentClass:
                 continue
             if "_" in skim_type:
                 skim_type, group = skim_type.split("_")
+                matrix_name = f"mf{self.time_period}_{self.name}_{skim_type}_{group}"
             else:
                 group = ""
-            matrix_name = f"mf{self.time_period}_{self.name}_{skim_type}{group}"
+                matrix_name = f"mf{self.time_period}_{self.name}_{skim_type}"
             class_analysis.append(
                 self.emme_analysis_spec(
                     self.skim_analysis_link_attribute(skim_type, group),
@@ -456,9 +466,12 @@ class AssignmentClass:
                 continue
             if "_" in skim_type:
                 skim_type, group = skim_type.split("_")
+                skim_matrices.append(
+                    f"{self.time_period}_{self.name}_{skim_type}_{group}"
+                )
             else:
                 group = ""
-            skim_matrices.append(f"{self.time_period}_{self.name}_{skim_type}{group}")
+                skim_matrices.append(f"{self.time_period}_{self.name}_{skim_type}")
         return skim_matrices
 
     @staticmethod

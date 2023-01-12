@@ -144,9 +144,8 @@ class CommercialVehicleModel(Component):
             This should really be in the controller?
             Or part of network.skims?
         """
-        return self.controller.emme_manager.emmebank(
-            self.get_abs_path(self.controller.config.emme.highway_database_path)
-        )
+        self._emmebank = self.controller.emme_manager.highway_emmebank
+        return self._emmebank
 
     @property
     def emme_scenario(self):
@@ -158,8 +157,8 @@ class CommercialVehicleModel(Component):
             This should really be in the controller?
             Or part of network.skims?
         """
-        _ref_scenario_id = self.controller.config.time_periods[0].emme_scenario_id
-        return self.emmebank.scenario(_ref_scenario_id)
+        _ref_scenario_name = self.controller.config.time_periods[0].name
+        return self.emmebank.scenario(_ref_scenario_name)
 
     @property
     def matrix_cache(self):
@@ -699,10 +698,10 @@ class CommercialVehicleTripDistribution(Subcomponent):
 
 
         """
-        matrix_balancing = self.controller.emme_manager.tool(
+        matrix_balancing = self.controller.emme_manager.modeller.tool(
             "inro.emme.matrix_calculation.matrix_balancing"
         )
-        matrix_round = self.controller.emme_manager.tool(
+        matrix_round = self.controller.emme_manager.modeller.tool(
             "inro.emme.matrix_calculation.matrix_controlled_rounding"
         )
 

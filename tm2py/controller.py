@@ -32,6 +32,9 @@ from tm2py.components.demand.internal_external import InternalExternal
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
 from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, SkimMAZCosts
 from tm2py.components.network.highway.highway_network import PrepareNetwork
+from tm2py.components.network.transit.transit_assign import TransitAssignment
+from tm2py.components.network.transit.transit_network import PrepareTransitNetwork
+from tm2py.components.network.transit.transit_skim import TransitSkim
 from tm2py.config import Configuration
 from tm2py.emme.manager import EmmeManager
 from tm2py.logger import Logger
@@ -44,6 +47,9 @@ component_cls_map = {
     "highway": HighwayAssignment,
     "highway_maz_assign": AssignMAZSPDemand,
     "highway_maz_skim": SkimMAZCosts,
+    "prepare_network_transit": PrepareTransitNetwork,
+    "transit_assign": TransitAssignment,
+    "transit_skim": TransitSkim,
     "air_passenger": AirPassenger,
     "internal_external": InternalExternal,
     "truck": CommercialVehicleModel,
@@ -109,17 +115,17 @@ class RunController:
         self.trace = None
         self.completed_components = []
 
-        # mapping from defined names referenced in config to Component objects
-        self._component_map = {
-            k: v(self) for k, v in component_cls_map.items() if k in run_components
-        }
         self._validated_components = set()
         self._emme_manager = None
-        self._num_processors = None
         self._iteration = None
         self._component = None
         self._component_name = None
         self._queued_components = deque()
+
+        # mapping from defined names referenced in config to Component objects
+        self._component_map = {
+            k: v(self) for k, v in component_cls_map.items() if k in run_components
+        }
 
         self._queue_components(run_components=run_components)
 
@@ -156,14 +162,13 @@ class RunController:
         return [time.name.upper() for time in self.config.time_periods]
 
     @property
-    def num_processors(self) -> int:
-        """Number of processors available for parallel processing."""
-        if self._num_processors is None:
-            self._num_processors = self._calculate_num_processors(
-                multiprocessing.cpu_count()
-            )
+    def time_period_durations(self) -> dict:
+        """Return mapping of time periods to durations in hours."""
+        return dict((p.name, p.length_hours) for p in self.config.time_periods)
 
-        return self._num_processors
+    @property
+    def num_processors(self) -> int:
+        return self.emme_manager.num_processors
 
     @property
     def iteration(self) -> int:
@@ -189,7 +194,7 @@ class RunController:
         """Cached Emme Manager object."""
         if self._emme_manager is None:
             if self.has_emme:
-                self._init_emme_manager()
+                self._emme_manager = EmmeManager(self, self.config.emme)
             else:
                 self.logger.log("Emme not found, skipping Emme-related components")
                 # TODO: All of the Emme-related components need to be handled "in place" rather
@@ -198,15 +203,6 @@ class RunController:
 
                 self._emme_manager = MagicMock()
         return self._emme_manager
-
-    def _init_emme_manager(self):
-        """Initialize Emme manager, start Emme desktop App, and initialize Modeller."""
-        self._emme_manager = EmmeManager()
-        project = self._emme_manager.project(
-            os.path.join(self.run_dir, self.config.emme.project_path)
-        )
-        # Initialize Modeller to use Emme assignment tools and other APIs
-        self._emme_manager.modeller(project)
 
     def get_abs_path(self, rel_path: Union[Path, str]) -> Path:
         """Get the absolute path from the root run directory given a relative path."""
@@ -304,35 +300,3 @@ class RunController:
             _component.validate_inputs()
             self._validated_components.add(component_name)
         self._queued_components.append((iteration, component_name, _component))
-
-    def _calculate_num_processors(self, cpu_processors: int):
-        """Convert input value (parse if string) to number of processors.
-
-        nt or string as 'MAX-X'
-
-        Args:
-            cpu_processors (int): number of processors on current CPU
-        Returns:
-            An int of the number of processors to use
-
-        Raises:
-            Exception: Input value exceeds number of available processors
-            Exception: Input value less than 1 processors
-        """
-        _config_value = self.config.emme.num_processors
-        num_processors = 0
-        if isinstance(_config_value, str):
-            if _config_value.upper() == "MAX":
-                num_processors = cpu_processors
-            elif re.match("^[0-9]+$", _config_value):
-                num_processors = int(_config_value)
-            else:
-                _processor_range = re.split(r"^MAX[/s]*-[/s]*", _config_value.upper())
-                num_processors = max(cpu_processors - int(_processor_range[1]), 1)
-        else:
-            num_processors = int(_config_value)
-
-        num_processors = min(cpu_processors, num_processors)
-        num_processors = max(1, num_processors)
-
-        return num_processors

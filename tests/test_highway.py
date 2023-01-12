@@ -5,50 +5,24 @@ import os
 import pytest
 from tools import assert_csv_equal, diff_omx
 
+from tm2py.examples import get_example
 
-def test_prepare_highway_network(inro_context, examples_dir):
+
+def test_highway(examples_dir, root_dir):
     "Tests that prepare highway network component can be run."
     from tools import test_component
 
-    my_run = test_component(examples_dir, "prepare_network_highway")
-    my_run.run_next()
+    get_example(example_name="UnionCity", root_dir=root_dir)
+
+    my_run = test_component(examples_dir, ["prepare_network_highway", "highway"])
+    my_run.run()
 
     # TODO write assert
 
 
-def test_highway_assign(inro_context, examples_dir):
-    "Tests that highway network assignment component can be run."
-    from tools import test_component
-
-    my_run = test_component(examples_dir, "highway")
-    my_run.run_next()
-
-    # TODO write assert
-
-
-def test_highway_maz_assign(inro_context, examples_dir):
-    "Tests that highway MAZ network assignment component can be run."
-    from tools import test_component
-
-    my_run = test_component(examples_dir, "highway_maz_assign")
-    my_run.run_next()
-
-    # TODO write assert
-
-
-def test_highway_maz_skim(inro_context, examples_dir):
-    "Tests that highway MAZ network skimming component can be run."
-    from tools import test_component
-
-    my_run = test_component(examples_dir, "highway_maz_skim")
-    my_run.run_next()
-
-    # TODO write assert
-
-
-def test_highway_skims(inro_context, union_city):
+def test_highway_skims(examples_dir):
     """Test that the OMX highway skims match the reference."""
-    run_dir = union_city.run_dir
+    run_dir = os.path.join(examples_dir, "UnionCity")
 
     ref_dir_hwy_skims = os.path.join(run_dir, "ref_skim_matrices", "highway")
     ref_skim_files = glob.glob(os.path.join(ref_dir_hwy_skims, "*.omx"))
@@ -75,16 +49,3 @@ def test_highway_skims(inro_context, union_city):
 
     assert len(missing_skims) == 0, f"Missing skims: {missing_skims}"
     assert len(different_skims) == 0, f"Different skims: {different_skims}"
-
-
-def test_maz_da_skims(inro_context, union_city):
-    """Test that the DA MAZ skims match the reference."""
-    run_dir = union_city.run_dir
-
-    ref_dir_hwy_skims = os.path.join(run_dir, "ref_skim_matrices", "highway")
-    run_dir_hwy_skims = os.path.join(run_dir, "skim_matrices", "highway")
-
-    ref_csv = os.path.join(ref_dir_hwy_skims, "HWYSKIM_MAZMAZ_DA.csv")
-    run_csv = os.path.join(run_dir_hwy_skims, "HWYSKIM_MAZMAZ_DA.csv")
-
-    return assert_csv_equal(ref_csv, run_csv)

@@ -257,6 +257,9 @@ def mocked_inro_context():
 
     sys.modules["inro.emme.database.emmebank"] = MagicMock()
     sys.modules["inro.emme.database.emmebank.path"] = MagicMock(return_value=".")
+    sys.modules["inro.emme.network.link"] = MagicMock()
+    sys.modules["inro.emme.network.mode"] = MagicMock()
+    sys.modules["inro.emme.network.node"] = MagicMock()
     sys.modules["inro.emme.network"] = MagicMock()
     sys.modules["inro.emme.database.scenario"] = MagicMock()
     sys.modules["inro.emme.database.matrix"] = MagicMock()
@@ -266,6 +269,7 @@ def mocked_inro_context():
     sys.modules["inro.modeller"] = MagicMock()
     sys.modules["tm2py.emme.manager.EmmeManager.project"] = MagicMock()
     sys.modules["tm2py.emme.manager.EmmeManager.emmebank"] = MagicMock()
+    sys.modules["tm2py.emme.manager"] = MagicMock()
 
 
 def emme_context():

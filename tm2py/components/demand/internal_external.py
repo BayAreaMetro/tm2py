@@ -43,7 +43,7 @@ class InternalExternal(Component):
         special_gateway_adjust: Optional[List[MatrixFactorConfig]]
     """
 
-    def __init__(self, controller: RunController):
+    def __init__(self, controller: "RunController"):
         super().__init__(controller)
         self.config = self.controller.config.internal_external
 

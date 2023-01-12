@@ -2,6 +2,7 @@
 
 import os
 import sys
+import tempfile
 from unittest.mock import MagicMock
 
 import pytest
@@ -105,6 +106,25 @@ def test_omx_to_dict(inro_context):
 
 def test_csv_to_dfs(inro_context):
     """Test zonal_csv_to_matrices."""
-    from tm2py.tools import zonal_csv_to_matrices
+    from tm2py.tools import _download, _unzip, zonal_csv_to_matrices
 
-    # TODO
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_file = os.path.join(temp_dir, "test_download.zip")
+        unzip_directory = os.path.join(temp_dir, "test_download")
+        _download(_EXAMPLE_URL, temp_file)
+        assert os.path.getsize(temp_file) > 0, "download failed"
+
+        _unzip(temp_file, unzip_directory)
+        assert os.path.exists(unzip_directory), "unzip failed, no directory"
+        assert os.path.getsize(unzip_directory) > 0, "unzip failed, empty directory"
+        files_to_check = [
+            os.path.join("inputs", "hwy", "tolls.csv"),
+            os.path.join("inputs", "nonres", "2035_fromOAK.csv"),
+            os.path.join("inputs", "landuse", "maz_data.csv"),
+            os.path.join("emme_project", "mtc_emme.emp"),
+            os.path.join("emme_project", "Database_highway", "emmebank"),
+        ]
+        for file_name in files_to_check:
+            assert os.path.exists(
+                os.path.join(unzip_directory, file_name)
+            ), f"unzip failed, missing {file_name}"

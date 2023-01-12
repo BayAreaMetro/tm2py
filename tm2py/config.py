@@ -64,7 +64,9 @@ ComponentNames = Literal[
     "highway_maz_assign",
     "highway",
     "highway_maz_skim",
-    "transit",
+    "prepare_network_transit",
+    "transit_assign",
+    "transit_skim",
     "household",
     "visitor",
     "internal_external",
@@ -102,7 +104,7 @@ class RunConfig(ConfigItem):
         """Validate end_iteration greater than start_iteration."""
         if values.get("start_iteration"):
             assert (
-                value > values["start_iteration"]
+                value >= values["start_iteration"]
             ), f"'end_iteration' ({value}) must be greater than 'start_iteration'\
                 ({values['start_iteration']})"
         return value
@@ -241,7 +243,7 @@ class TimeSplitConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class TimeOfDayClassConfig(ConfigItem):
-    """Configuraiton for a class of time of day model."""
+    """Configuration for a class of time of day model."""
 
     name: str
     time_period_split: List[TimeSplitConfig]
@@ -307,6 +309,7 @@ class AirPassengerConfig(ConfigItem):
     outfile_trip_table_tmp: str
     input_demand_folder: pathlib.Path
     input_demand_filename_tmpl: str
+    highway_demand_file: str
     reference_start_year: str
     reference_end_year: str
     airport_names: List[str]
@@ -441,6 +444,7 @@ class InternalExternalConfig(ConfigItem):
 
     output_trip_table_directory: pathlib.Path
     outfile_trip_table_tmp: str
+    highway_demand_file: str
     modes: List[str]
     demand: DemandGrowth
     time_of_day: TimeOfDayConfig
@@ -545,6 +549,7 @@ class TruckConfig(ConfigItem):
     toll_choice: TollChoiceConfig
     output_trip_table_directory: pathlib.Path
     outfile_trip_table_tmp: str
+    highway_demand_file: str
 
     """
     @validator("classes")
@@ -615,15 +620,16 @@ class HighwayCapClassConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
-class HighwayClassDemandConfig(ConfigItem):
-    """Highway class input source for demand.
+class ClassDemandConfig(ConfigItem):
+    """Input source for demand for highway or transit assignment class.
 
     Used to specify where to find related demand file for this
-    highway class. Multiple
+    highway or transit class.
 
     Properties:
         source: reference name of the component section for the
-                source "highway_demand_file" location, one of:
+                source "highway_demand_file" (for a highway class)
+                or "transit_demand_file" (for a transit class), one of:
                 "household", "air_passenger", "internal_external", "truck"
         name: name of matrix in the OMX file, can include "{period}"
                 placeholder
@@ -677,7 +683,7 @@ class HighwayClassConfig(ConfigItem):
         value_of_time: value of time for this class in $ / hr
         operating_cost_per_mile: vehicle operating cost in cents / mile
         demand: list of OMX file and matrix keyname references,
-            see HighwayClassDemandConfig
+            see ClassDemandConfig
         excluded_links: list of keywords to identify links to exclude from
             this class' available subnetwork (generate link.modes)
             Options are:
@@ -716,7 +722,7 @@ class HighwayClassConfig(ConfigItem):
     skims: Tuple[str, ...] = Field()
     toll: Tuple[str, ...] = Field()
     toll_factor: Optional[float] = Field(default=None, gt=0)
-    demand: Tuple[HighwayClassDemandConfig, ...] = Field()
+    demand: Tuple[ClassDemandConfig, ...] = Field()
 
 
 @dataclass(frozen=True)
@@ -747,7 +753,7 @@ class HighwayTollsConfig(ConfigItem):
     dst_vehicle_group_names: Tuple[str, ...] = Field()
 
     @validator("dst_vehicle_group_names", always=True)
-    def dst_vehicle_group_names_length(value, values):
+    def dst_vehicle_group_names_length(cls, value, values):
         """Validate dst_vehicle_group_names has same length as src_vehicle_group_names."""
         if "src_vehicle_group_names" in values:
             assert len(value) == len(
@@ -823,7 +829,7 @@ class HighwayMazToMazConfig(ConfigItem):
     output_skim_file: pathlib.Path = Field()
 
     @validator("demand_county_groups")
-    def unique_group_numbers(value):
+    def unique_group_numbers(cls, value):
         """Validate list of demand_county_groups has unique .number values."""
         group_ids = [group.number for group in value]
         assert len(group_ids) == len(set(group_ids)), "-> number value must be unique"
@@ -894,7 +900,7 @@ class HighwayConfig(ConfigItem):
         return value
 
     @validator("capclass_lookup")
-    def unique_capclass_numbers(value):
+    def unique_capclass_numbers(cls, value):
         """Validate list of capclass_lookup has unique .capclass values."""
         capclass_ids = [i.capclass for i in value]
         error_msg = "-> capclass value must be unique in list"
@@ -902,7 +908,7 @@ class HighwayConfig(ConfigItem):
         return value
 
     @validator("classes", pre=True)
-    def unique_class_names(value):
+    def unique_class_names(cls, value):
         """Validate list of classes has unique .name values."""
         class_names = [highway_class["name"] for highway_class in value]
         error_msg = "-> name value must be unique in list"
@@ -910,7 +916,7 @@ class HighwayConfig(ConfigItem):
         return value
 
     @validator("classes")
-    def validate_class_mode_excluded_links(value, values):
+    def validate_class_mode_excluded_links(cls, value, values):
         """Validate list of classes has unique .mode_code or .excluded_links match."""
         # validate if any mode IDs are used twice, that they have the same excluded links sets
         mode_excluded_links = {values["generic_highway_mode_code"]: set([])}
@@ -933,7 +939,7 @@ class HighwayConfig(ConfigItem):
         return value
 
     @validator("classes")
-    def validate_class_keyword_lists(value, values):
+    def validate_class_keyword_lists(cls, value, values):
         """Validate classes .skims, .toll, and .excluded_links values."""
         if "tolls" not in values:
             return value
@@ -975,21 +981,30 @@ class TransitModeConfig(ConfigItem):
     assign_type: Literal["TRANSIT", "AUX_TRANSIT"]
     mode_id: str = Field(min_length=1, max_length=1)
     name: str = Field(max_length=10)
+    description: Optional[str] = ""
     in_vehicle_perception_factor: Optional[float] = Field(default=None, ge=0)
     speed_miles_per_hour: Optional[float] = Field(default=None, gt=0)
+    eawt_factor: Optional[float] = Field(default=1)
 
     @validator("in_vehicle_perception_factor", always=True)
-    def in_vehicle_perception_factor_valid(value, values):
+    def in_vehicle_perception_factor_valid(cls, value, values):
         """Validate in_vehicle_perception_factor exists if assign_type is TRANSIT."""
         if "assign_type" in values and values["assign_type"] == "TRANSIT":
             assert value is not None, "must be specified when assign_type==TRANSIT"
         return value
 
     @validator("speed_miles_per_hour", always=True)
-    def speed_miles_per_hour_valid(value, values):
+    def speed_miles_per_hour_valid(cls, value, values):
         """Validate speed_miles_per_hour exists if assign_type is AUX_TRANSIT."""
         if "assign_type" in values and values["assign_type"] == "AUX_TRANSIT":
             assert value is not None, "must be specified when assign_type==AUX_TRANSIT"
+        return value
+
+    @classmethod
+    @validator("speed_miles_per_hour")
+    def mode_id_valid(cls, value):
+        """Validate mode_id."""
+        assert len(value) == 1, "mode_id must be one character"
         return value
 
 
@@ -1006,13 +1021,53 @@ class TransitVehicleConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class TransitClassConfig(ConfigItem):
+    """Transit demand class definition."""
+
+    skim_set_id: str
+    name: str
+    description: str
+    mode_types: Tuple[str, ...]
+    demand: Tuple[ClassDemandConfig, ...]
+    required_mode_combo: Optional[Tuple[str, ...]] = Field(default=None)
+
+
+@dataclass(frozen=True)
+class AssignmentStoppingCriteriaConfig(ConfigItem):
+    "Assignment stop configuration parameters."
+    max_iterations: int
+    relative_difference: float
+    percent_segments_over_capacity: float
+
+
+@dataclass(frozen=True)
+class CcrWeightsConfig(ConfigItem):
+    "Weights for CCR Configuration."
+    min_seat: float = Field(default=1.0)
+    max_seat: float = Field(default=1.4)
+    power_seat: float = Field(default=2.2)
+    min_stand: float = Field(default=1.4)
+    max_stand: float = Field(default=1.6)
+    power_stand: float = Field(default=3.4)
+
+
+@dataclass(frozen=True)
+class EawtWeightsConfig(ConfigItem):
+    "Weights for calculating extra added wait time Configuration."
+    constant: float = Field(default=0.259625)
+    weight_inverse_headway: float = Field(default=1.612019)
+    vcr: float = Field(default=0.005274)
+    exit_proportion: float = Field(default=0.591765)
+    default_eawt_factor: float = Field(default=1)
+
+
+@dataclass(frozen=True)
 class TransitConfig(ConfigItem):
     """Transit assignment parameters."""
 
     modes: Tuple[TransitModeConfig, ...]
     vehicles: Tuple[TransitVehicleConfig, ...]
-
-    apply_msa_demand: bool
+    classes: Tuple[TransitClassConfig, ...]
     value_of_time: float
     effective_headway_source: str
     initial_wait_perception_factor: float
@@ -1026,10 +1081,18 @@ class TransitConfig(ConfigItem):
     fare_matrix_path: pathlib.Path
     fare_max_transfer_distance_miles: float
     use_fares: bool
+    use_ccr: bool
+    ccr_stop_criteria: Optional[AssignmentStoppingCriteriaConfig]
+    ccr_weights: CcrWeightsConfig
+    eawt_weights: EawtWeightsConfig
     override_connector_times: bool
-    input_connector_access_times_path: Optional[pathlib.Path] = Field(default=None)
-    input_connector_egress_times_path: Optional[pathlib.Path] = Field(default=None)
-    output_stop_usage_path: Optional[pathlib.Path] = Field(default=None)
+    apply_msa_demand: bool
+    max_ccr_iterations: float = None
+    split_connectors_to_prevent_walk: bool = True
+    input_connector_access_times_path: Optional[str] = Field(default=None)
+    input_connector_egress_times_path: Optional[str] = Field(default=None)
+    output_stop_usage_path: Optional[str] = Field(default=None)
+    output_transit_boardings_path: Optional[str] = Field(default=None)
 
 
 @dataclass(frozen=True)
@@ -1041,7 +1104,8 @@ class EmmeConfig(ConfigItem):
             (initial imported) scenario with all time period data
         project_path: relative path from run_dir to Emme desktop project (.emp)
         highway_database_path: relative path to highway Emmebank
-        active_database_paths: list of relative paths to active mode Emmebanks
+        active_north_database_path:  relative paths to active mode Emmebank for north bay
+        active_south_database_path:  relative paths to active mode Emmebank for south bay
         transit_database_path: relative path to transit Emmebank
         num_processors: the number of processors to use in Emme procedures,
             either as an integer, or value MAX, MAX-N. Typically recommend
@@ -1052,7 +1116,8 @@ class EmmeConfig(ConfigItem):
     all_day_scenario_id: int
     project_path: pathlib.Path
     highway_database_path: pathlib.Path
-    active_database_paths: Tuple[pathlib.Path, ...]
+    active_north_database_path: pathlib.Path
+    active_south_database_path: pathlib.Path
     transit_database_path: pathlib.Path
     num_processors: str = Field(regex=r"^MAX$|^MAX-\d+$|^\d+$")
 
@@ -1101,7 +1166,7 @@ class Configuration(ConfigItem):
         return cls(**data)
 
     @validator("highway")
-    def maz_skim_period_exists(value, values):
+    def maz_skim_period_exists(cls, value, values):
         """Validate highway.maz_to_maz.skim_period refers to a valid period."""
         if "time_periods" in values:
             time_period_names = set(time.name for time in values["time_periods"])
@@ -1111,7 +1176,7 @@ class Configuration(ConfigItem):
         return value
 
 
-def _load_toml(path: pathlib.Path) -> dict:
+def _load_toml(path: str) -> dict:
     """Load config from toml file at path."""
     with open(path, "r", encoding="utf-8") as toml_file:
         data = toml.load(toml_file)
