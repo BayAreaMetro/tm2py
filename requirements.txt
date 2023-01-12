@@ -1,6 +1,7 @@
 fiona
 folium
 fontawesome_markdown
+gdal
 geographiclib
 geojson
 geopandas > 0.8.0
