@@ -27,7 +27,12 @@ class Acceptance:
 
     simulated_transit_segments_gdf: gpd.GeoDataFrame
 
-    rail_operators_vector = ["BART", "Caltrain", "ACE"]
+    rail_operators_vector = [
+        "BART",
+        "Caltrain",
+        "ACE",
+        "Sonoma-Marin Area Rail Transit",
+    ]
 
     florida_transit_guidelines_df = pd.DataFrame(
         [
@@ -47,7 +52,6 @@ class Acceptance:
             "survey_tech": pd.Series(dtype="str"),
             "survey_operator": pd.Series(dtype="str"),
             "survey_route": pd.Series(dtype="str"),
-            "time_period": pd.Series(dtype="str"),
             "survey_boardings": pd.Series(dtype="float"),
         }
     )
@@ -73,10 +77,7 @@ class Acceptance:
             "model_link_id": pd.Series(dtype="int"),
             "operator": pd.Series(dtype="str"),
             "route_short_name": pd.Series(dtype="str"),
-            "trip_headsign": pd.Series(dtype="str"),
-            "line_name": pd.Series(dtype="str"),
-            "line_description": pd.Series(dtype="str"),
-            "time_period": pd.Series(dtype="str"),
+            "route_long_name": pd.Series(dtype="str"),
             "observed_boardings": pd.Series(dtype="float"),
             "simulated_boardings": pd.Series(dtype="float"),
             "florida_threshold": pd.Series(dtype="float"),
@@ -164,14 +165,6 @@ class Acceptance:
         if self.reduced_transit_on_board_df.empty:
             self.reduce_on_board_survey()
 
-        assert (
-            self.model_time_periods.sort()
-            is self.reduced_transit_on_board_df["time_period"]
-            .value_counts()
-            .tolist()
-            .sort()
-        )
-
         return
 
     def _write_roadway_network():
@@ -212,44 +205,60 @@ class Acceptance:
 
         return
 
+    def _make_combined_line_name(self, input_df, input_column_name):
+
+        df = input_df[input_column_name].str.split(pat="_", expand=True).copy()
+        df["combined_line_name"] = df[0] + "_" + df[1] + "_" + df[2]
+        return_df = pd.concat([input_df, df["combined_line_name"]], axis="columns")
+
+        return return_df
+
     def _make_transit_network_comparisons(self):
 
-        # outer merge for rail operators (whose route names are station to station)
-        a_df = pd.merge(
-            self.simulated_boardings_df[(self.simulated_boardings_df["operator"].isin(self.rail_operators_vector) )],
-            self.reduced_transit_on_board_df[(self.reduced_transit_on_board_df["survey_operator"].isin(self.rail_operators_vector) )],
+        # outer merge for rail operators
+        join_df = self.reduced_transit_on_board_df[self.reduced_transit_on_board_df["survey_operator"].isin(self.rail_operators_vector)]
+        join_df = join_df[["survey_tech", "survey_operator", "survey_route", "survey_boardings", "florida_threshold"]].rename(columns={ "survey_operator": "operator"})
+        join_df["combined_line_name"] = "Missing"
+
+        rail_df = pd.merge(
+            self.simulated_boardings_df[self.simulated_boardings_df["operator"].isin(self.rail_operators_vector)],
+            join_df,
             how="outer",
-            left_on=["line_name", "time_period"],
-            right_on=["standard_line_name", "time_period"],
+            on=["operator", "combined_line_name"],
         )
 
-        # inner merge for non-rail operators (whose route names should be aligned see _join_standard_route_id)
-        b_df = pd.merge(
-            self.simulated_boardings_df[(~self.simulated_boardings_df["operator"].isin(self.rail_operators_vector) )],
-            self.reduced_transit_on_board_df[(~self.reduced_transit_on_board_df["survey_operator"].isin(self.rail_operators_vector) )],
+        # left merge for non-rail operators
+        non_df = pd.merge(
+            self.simulated_boardings_df[~self.simulated_boardings_df["operator"].isin(self.rail_operators_vector)],
+            self.reduced_transit_on_board_df[~self.reduced_transit_on_board_df["survey_operator"].isin(self.rail_operators_vector)],
             how="left",
-            left_on=["line_name", "time_period"],
-            right_on=["standard_line_name", "time_period"],
+            on=["combined_line_name"],
         )
 
-        # observed boardings are joined in both directions, need to divide by two 
-        # TODO: remove this after summing over direction and shape
-        b_df["survey_boardings"] = b_df["survey_boardings"] / 2
+        both_df = pd.concat([rail_df, non_df])
 
-        df = pd.concat([a_df, b_df])
+        both_df["operator"] = np.where(
+            both_df["operator"].isnull(), both_df["survey_operator"], both_df["operator"]
+        )
+        both_df["technology"] = np.where(
+            both_df["technology"].isnull(), both_df["survey_tech"], both_df["technology"]
+        )
 
-        df["operator"] = np.where(df["operator"].isnull(), df["survey_operator"], df["operator"])
-        df["technology"] = np.where(df["technology"].isnull(), df["survey_tech"], df["technology"])
+        # join the shape
+        a_df = pd.DataFrame(self.simulated_transit_segments_gdf)
+        a_df = self._make_combined_line_name(a_df, "line")
+        b_df = a_df.groupby("combined_line_name").agg({"line": "first"}).reset_index()
+        c_df = pd.DataFrame(self.simulated_transit_segments_gdf[self.simulated_transit_segments_gdf["line"].isin(b_df["line"])].copy())
+        simple_shape_df = pd.merge(c_df, b_df, how="left", on="line")
 
-        g_df = pd.merge(
-            df,
-            self.simulated_transit_segments_gdf,
+        return_df = pd.merge(
+            both_df,
+            simple_shape_df,
             how="left",
-            left_on="line_name",
-            right_on="line",
+            on="combined_line_name",
         )
 
-        g_df = g_df.rename(
+        return_df = return_df.rename(
             columns={
                 "#link_id": "model_link_id",
                 "standard_route_short_name": "route_short_name",
@@ -263,26 +272,22 @@ class Acceptance:
         )
 
         # only attach route-level boardings to first link
-        g_df["route_simulated_boardings"] = np.where(
-            g_df["first_row_in_line"], g_df["route_simulated_boardings"], 0
+        return_df["route_simulated_boardings"] = np.where(
+            return_df["first_row_in_line"], return_df["route_simulated_boardings"], 0
         )
-        g_df["route_observed_boardings"] = np.where(
-            g_df["first_row_in_line"], g_df["route_observed_boardings"], 0
+        return_df["route_observed_boardings"] = np.where(
+            return_df["first_row_in_line"], return_df["route_observed_boardings"], 0
         )
 
-        # g_df = self._fix_technology_labels(g_df, "technology")
+        return_df = self._fix_technology_labels(return_df, "technology")
 
-        g_df = g_df[
+        return_df = return_df[
             [
                 "model_link_id",
                 "operator",
                 "technology",
                 "route_short_name",
                 "route_long_name",
-                "trip_headsign",
-                "line_name",
-                "line_description",
-                "time_period",
                 "route_observed_boardings",
                 "route_simulated_boardings",
                 "segment_simulated_boardings",
@@ -292,7 +297,7 @@ class Acceptance:
         ]
 
         self.transit_network_gdf = gpd.GeoDataFrame(
-            g_df, crs="EPSG:" + self.tableau_projection, geometry="geometry"
+            return_df, crs="EPSG:" + self.tableau_projection, geometry="geometry"
         )
 
         self._write_transit_network()
@@ -312,23 +317,16 @@ class Acceptance:
 
         df = pd.read_csv(os.path.join(file_root, in_file))
 
-        df = df[
-            [
-                "survey_agency",
-                "survey_route",
-                "standard_route_id",
-                "standard_line_name",
-                "standard_headsign",
-                "canonical_operator",
-                "standard_route_short_name",
-                "standard_route_long_name",
-            ]
-        ]
+        df = self._fix_agency_names(df, "survey_agency")
+        join_df = df[~df["survey_agency"].isin(self.rail_operators_vector)].copy()
+
+        join_df = self._make_combined_line_name(join_df, "standard_line_name")
+        join_df = join_df.groupby(["survey_agency", "survey_route", "standard_route_id", "combined_line_name", "canonical_operator", "standard_route_short_name"]).agg({"standard_route_long_name": "first"}).reset_index()
 
         return_df = pd.merge(
             input_df,
-            df,
-            how="outer",
+            join_df,
+            how="left",
             left_on=["survey_operator", "survey_route"],
             right_on=["survey_agency", "survey_route"],
         )
@@ -383,26 +381,17 @@ class Acceptance:
             if not self.canonical_agency_names_dict:
                 self._make_cononical_agency_names_dict()
 
-            time_period_dict = {
-                "EARLY AM": "ea",
-                "AM PEAK": "am",
-                "MIDDAY": "md",
-                "PM PEAK": "pm",
-                "EVENING": "ev",
-                "NIGHT": "ev",
-            }
             in_df = pd.read_feather(os.path.join(file_root, in_file))
             out_df = in_df[
                 (in_df["weekpart"].isna()) | (in_df["weekpart"] != "WEEKEND")
             ].copy()
-            out_df["time_period"] = out_df["day_part"].map(time_period_dict)
             out_df["route"] = np.where(
                 out_df["operator"].isin(self.rail_operators_vector),
                 out_df["operator"],
                 out_df["route"],
             )
             out_df = (
-                out_df.groupby(["survey_tech", "operator", "route", "time_period"])[
+                out_df.groupby(["survey_tech", "operator", "route"])[
                     "boarding_weight"
                 ]
                 .sum()
@@ -416,9 +405,10 @@ class Acceptance:
                     "boarding_weight": "survey_boardings",
                 }
             )
+            out_df = self._fix_agency_names(out_df, "survey_operator")
+            # out_df = self._fix_technology_labels(out_df, "survey_tech")
             out_df = self._join_florida_thresholds(out_df)
             out_df = self._join_standard_route_id(out_df)
-            out_df = self._fix_agency_names(out_df, "survey_operator")
             out_df.to_csv(os.path.join(file_root, out_file))
             self.reduced_transit_on_board_df = out_df
 
@@ -429,20 +419,32 @@ class Acceptance:
         file_prefix = "boardings_by_line_"
         file_root = self.scenario_dict["scenario"]["root_dir"]
 
-        return_df = pd.DataFrame()
+        c_df = pd.DataFrame()
         for time_period in self.model_time_periods:
 
             df = pd.read_csv(
                 os.path.join(file_root, file_prefix + time_period + ".csv")
             )
             df["time_period"] = time_period
-            return_df = return_df.append(df)
+            c_df = c_df.append(df)
 
-        # TODO: sum across direction and shape by parsing the line name
-        # TODO: none of the criteria are specific to time of day. Start be suppressing that as well. 
-
-        return_df = self._join_tm2_mode_codes(return_df)
-        return_df = self._fix_agency_names(return_df, "operator")
+        c_df = self._join_tm2_mode_codes(c_df)
+        c_df = self._fix_agency_names(c_df, "operator")
+        c_df = self._make_combined_line_name(c_df, "line_name")
+        return_df = (
+            c_df.groupby(
+                [
+                    "combined_line_name",
+                    "tm2_mode",
+                    "line_mode",
+                    "operator",
+                    "technology",
+                    "fare_system",
+                ]
+            )
+            .agg({"total_boarding": np.sum, "total_hour_cap": np.sum})
+            .reset_index()
+        )
 
         self.simulated_boardings_df = return_df
 
@@ -532,13 +534,20 @@ class Acceptance:
         return return_df
 
     def _fix_technology_labels(self, input_df, column_name):
-        
+
         assert column_name in input_df.columns
 
         r_df = input_df.copy()
 
-        r_df[column_name] = np.where(r_df["column_name"].str.lower().str.contains("local").any(), "Local Bus", r_df[column_name])
-        r_df[column_name] = np.where(r_df["column_name"].str.lower().str.contains("heavy").any(), "Heavy Rail", r_df[column_name])
+        r_df[column_name] = np.where(
+            r_df[column_name].str.lower().str.contains("local"),
+            "Local Bus",
+            r_df[column_name],
+        )
+        r_df[column_name] = np.where(
+            r_df[column_name].str.lower().str.contains("heavy"),
+            "Heavy Rail",
+            r_df[column_name],
+        )
 
         return r_df
-
