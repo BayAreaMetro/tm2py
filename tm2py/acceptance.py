@@ -216,12 +216,26 @@ class Acceptance:
     def _make_transit_network_comparisons(self):
 
         # outer merge for rail operators
-        join_df = self.reduced_transit_on_board_df[self.reduced_transit_on_board_df["survey_operator"].isin(self.rail_operators_vector)]
-        join_df = join_df[["survey_tech", "survey_operator", "survey_route", "survey_boardings", "florida_threshold"]].rename(columns={ "survey_operator": "operator"})
+        join_df = self.reduced_transit_on_board_df[
+            self.reduced_transit_on_board_df["survey_operator"].isin(
+                self.rail_operators_vector
+            )
+        ]
+        join_df = join_df[
+            [
+                "survey_tech",
+                "survey_operator",
+                "survey_route",
+                "survey_boardings",
+                "florida_threshold",
+            ]
+        ].rename(columns={"survey_operator": "operator"})
         join_df["combined_line_name"] = "Missing"
 
         rail_df = pd.merge(
-            self.simulated_boardings_df[self.simulated_boardings_df["operator"].isin(self.rail_operators_vector)],
+            self.simulated_boardings_df[
+                self.simulated_boardings_df["operator"].isin(self.rail_operators_vector)
+            ],
             join_df,
             how="outer",
             on=["operator", "combined_line_name"],
@@ -229,8 +243,16 @@ class Acceptance:
 
         # left merge for non-rail operators
         non_df = pd.merge(
-            self.simulated_boardings_df[~self.simulated_boardings_df["operator"].isin(self.rail_operators_vector)],
-            self.reduced_transit_on_board_df[~self.reduced_transit_on_board_df["survey_operator"].isin(self.rail_operators_vector)],
+            self.simulated_boardings_df[
+                ~self.simulated_boardings_df["operator"].isin(
+                    self.rail_operators_vector
+                )
+            ],
+            self.reduced_transit_on_board_df[
+                ~self.reduced_transit_on_board_df["survey_operator"].isin(
+                    self.rail_operators_vector
+                )
+            ],
             how="left",
             on=["combined_line_name"],
         )
@@ -238,17 +260,25 @@ class Acceptance:
         both_df = pd.concat([rail_df, non_df])
 
         both_df["operator"] = np.where(
-            both_df["operator"].isnull(), both_df["survey_operator"], both_df["operator"]
+            both_df["operator"].isnull(),
+            both_df["survey_operator"],
+            both_df["operator"],
         )
         both_df["technology"] = np.where(
-            both_df["technology"].isnull(), both_df["survey_tech"], both_df["technology"]
+            both_df["technology"].isnull(),
+            both_df["survey_tech"],
+            both_df["technology"],
         )
 
         # join the shape
         a_df = pd.DataFrame(self.simulated_transit_segments_gdf)
         a_df = self._make_combined_line_name(a_df, "line")
         b_df = a_df.groupby("combined_line_name").agg({"line": "first"}).reset_index()
-        c_df = pd.DataFrame(self.simulated_transit_segments_gdf[self.simulated_transit_segments_gdf["line"].isin(b_df["line"])].copy())
+        c_df = pd.DataFrame(
+            self.simulated_transit_segments_gdf[
+                self.simulated_transit_segments_gdf["line"].isin(b_df["line"])
+            ].copy()
+        )
         simple_shape_df = pd.merge(c_df, b_df, how="left", on="line")
 
         return_df = pd.merge(
@@ -321,7 +351,20 @@ class Acceptance:
         join_df = df[~df["survey_agency"].isin(self.rail_operators_vector)].copy()
 
         join_df = self._make_combined_line_name(join_df, "standard_line_name")
-        join_df = join_df.groupby(["survey_agency", "survey_route", "standard_route_id", "combined_line_name", "canonical_operator", "standard_route_short_name"]).agg({"standard_route_long_name": "first"}).reset_index()
+        join_df = (
+            join_df.groupby(
+                [
+                    "survey_agency",
+                    "survey_route",
+                    "standard_route_id",
+                    "combined_line_name",
+                    "canonical_operator",
+                    "standard_route_short_name",
+                ]
+            )
+            .agg({"standard_route_long_name": "first"})
+            .reset_index()
+        )
 
         return_df = pd.merge(
             input_df,
@@ -391,9 +434,7 @@ class Acceptance:
                 out_df["route"],
             )
             out_df = (
-                out_df.groupby(["survey_tech", "operator", "route"])[
-                    "boarding_weight"
-                ]
+                out_df.groupby(["survey_tech", "operator", "route"])["boarding_weight"]
                 .sum()
                 .reset_index()
             )
@@ -542,12 +583,27 @@ class Acceptance:
         r_df[column_name] = np.where(
             r_df[column_name].str.lower().str.contains("local"),
             "Local Bus",
-            r_df[column_name],
-        )
-        r_df[column_name] = np.where(
-            r_df[column_name].str.lower().str.contains("heavy"),
-            "Heavy Rail",
-            r_df[column_name],
+            np.where(
+                r_df[column_name].str.lower().str.contains("express"),
+                "Express Bus",
+                np.where(
+                    r_df[column_name].str.lower().str.contains("light"),
+                    "Light Rail",
+                    np.where(
+                        r_df[column_name].str.lower().str.contains("ferry"),
+                        "Ferry",
+                        np.where(
+                            r_df[column_name].str.lower().str.contains("heavy"),
+                            "Heavy Rail",
+                            np.where(
+                                r_df[column_name].str.lower().str.contains("commuter"),
+                                "Commuter Rail",
+                                "Missing",
+                            ),
+                        ),
+                    ),
+                ),
+            ),
         )
 
         return r_df
