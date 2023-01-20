@@ -123,3 +123,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 examples/temp_acceptance/boardings_by_line_am.csv
+notebooks/acceptance-transit-network.geojson
+notebooks/boardings_by_segment_am.geojson

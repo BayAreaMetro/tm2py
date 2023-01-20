@@ -9,6 +9,8 @@
 [transit]
     on_board_survey_file = "Survey_Database_122717/onboard-survey-trip-list.feather"
     reduced_summaries_file = "Survey_Database_122717/acceptance-criteria-reductions.csv"
+[census]
+    ctpp_2012_2016_file = "CTPP20122016/A302100 - Total Workers (1) (Workers 16 years and over).csv"
 [crosswalks]
     crosswalk_standard_survey_file = "transit-standard-2015-to-survey-crosswalk.csv"
     standard_to_tm2_modes_file = "gtfs_to_tm2_mode_crosswalk.csv"

@@ -19,13 +19,21 @@ class Acceptance:
 
     output_transit_filename = "acceptance-transit-network.geojson"
 
+    output_other_filename = "acceptance-other.csv"
+
     model_time_periods = []
 
     simulated_boardings_df: pd.DataFrame
 
+    ctpp_2012_2016_df: pd.DataFrame
+
+    simulated_home_work_flows_df: pd.DataFrame
+
     canonical_agency_names_dict = {}
 
     simulated_transit_segments_gdf: gpd.GeoDataFrame
+
+    simulated_maz_data_df: pd.DataFrame
 
     rail_operators_vector = [
         "BART",
@@ -34,9 +42,11 @@ class Acceptance:
         "Sonoma-Marin Area Rail Transit",
     ]
 
+    county_names_list = ["San Francisco", "San Mateo", "Santa Clara", "Alameda", "Contra Costa", "Solano", "Napa", "Sonoma", "Marin"]
+
     florida_transit_guidelines_df = pd.DataFrame(
         [
-            [0, 1.50],
+            [0, 1.50], # low end of volume range, maximum error as percentage
             [1000, 1.00],
             [2000, 0.65],
             [5000, 0.35],
@@ -129,13 +139,16 @@ class Acceptance:
         self._load_configs()
         self._get_model_time_periods()
 
-    def make_acceptance(self):
+    def make_acceptance(self, make_transit=True, make_roadway=True, make_other=False):
 
         self._validate()
-        self._make_transit_network_comparisons()
-        # _make_roadway_network_comparisons() method to build roadway network comparisons
-        # _make_transit_network_comparisons()
-        # _make_other_comparisons()
+        if make_roadway:
+            # self._make_roadway_acceptance()
+            pass
+        if make_transit:
+            self._make_transit_network_comparisons()
+        if make_other:
+            self._make_other_comparisons()
 
         return
 
@@ -150,9 +163,11 @@ class Acceptance:
 
         self._reduce_simulated_transit_boardings()
         self._reduce_simulated_transit_shapes()
+        self._make_simulated_maz_data()
+        self._reduce_simulated_home_work_flows()
 
-        # is the model run complete?
-        # are the key files present?
+        assert sorted(self.simulated_home_work_flows_df.residence_county.unique().tolist()) == sorted(self.county_names_list)
+        assert sorted(self.simulated_home_work_flows_df.work_county.unique().tolist()) == sorted(self.county_names_list)
 
         return
 
@@ -161,9 +176,14 @@ class Acceptance:
         if not self.canonical_agency_names_dict:
             self._make_canonical_agency_names_dict()
 
-        # transit on-board survey checks
         if self.reduced_transit_on_board_df.empty:
             self.reduce_on_board_survey()
+
+        self._reduce_ctpp_2012_2016()
+        self._make_simulated_maz_data()
+
+        assert sorted(self.ctpp_2012_2016_df.residence_county.unique().tolist()) == sorted(self.county_names_list)
+        assert sorted(self.ctpp_2012_2016_df.work_county.unique().tolist()) == sorted(self.county_names_list)
 
         return
 
@@ -189,12 +209,11 @@ class Acceptance:
 
         return
 
-    def _write_other_comparisons():
+    def _write_other_comparisons(self):
 
-        # set the geometry
-        # make sure it is in the right projection
-        # get the file location from the dictionary
-        # write to disk
+        file_root = self.observed_dict["remote_io"]["acceptance_output_folder_root"]
+        out_file = os.path.join(file_root, self.output_other_filename)
+        self.compare_gdf.to_csv(out_file)
 
         return
 
@@ -334,9 +353,13 @@ class Acceptance:
 
         return
 
-    def _make_other_comparisons():
+    def _make_other_comparisons(self):
 
-        # separate method for each one
+        df = self._make_home_work_flow_comparisons()
+
+        self.compare_gdf = df
+
+        self._write_other_comparisons()
 
         return
 
@@ -580,30 +603,127 @@ class Acceptance:
 
         r_df = input_df.copy()
 
-        r_df[column_name] = np.where(
-            r_df[column_name].str.lower().str.contains("local"),
-            "Local Bus",
-            np.where(
-                r_df[column_name].str.lower().str.contains("express"),
-                "Express Bus",
-                np.where(
-                    r_df[column_name].str.lower().str.contains("light"),
-                    "Light Rail",
-                    np.where(
-                        r_df[column_name].str.lower().str.contains("ferry"),
-                        "Ferry",
-                        np.where(
-                            r_df[column_name].str.lower().str.contains("heavy"),
-                            "Heavy Rail",
-                            np.where(
-                                r_df[column_name].str.lower().str.contains("commuter"),
-                                "Commuter Rail",
-                                "Missing",
-                            ),
-                        ),
-                    ),
-                ),
-            ),
-        )
+        fix_dict = {
+            "local": "Local Bus", 
+            "express": "Express Bus", 
+            "light": "Light Rail", 
+            "ferry": "Ferry", 
+            "heavy": "Heavy Rail", 
+            "commuter": "Commuter Rail"
+        }
+
+        for key, value in fix_dict.items():
+            r_df[column_name] = np.where(r_df[column_name].str.lower().str.contains(key), value, r_df[column_name])
 
         return r_df
+
+    def _reduce_ctpp_2012_2016(self):
+
+        file_root = self.observed_dict["remote_io"]["obs_folder_root"]
+        in_file = self.observed_dict["census"]["ctpp_2012_2016_file"]
+
+        df = pd.read_csv(os.path.join(file_root, in_file), skiprows=2)
+
+        a_df = df[(df["Output"] == "Estimate")].copy()
+        a_df = a_df.rename(columns={"RESIDENCE": "residence_county", "WORKPLACE": "work_county", "Workers 16 and Over": "observed_flow"})
+        a_df = a_df[["residence_county", "work_county", "observed_flow"]]
+        a_df["residence_county"] = a_df["residence_county"].str.replace(" County, California", "")
+        a_df["work_county"] = a_df["work_county"].str.replace(" County, California", "")
+        a_df["observed_flow"] = a_df["observed_flow"].str.replace(",", "").astype(int)
+
+        self.ctpp_2012_2016_df = a_df
+
+        return
+
+    def _reduce_simulated_home_work_flows(self):
+
+        # if self.simulated_maz_data_df.empty:
+        #    self._make_simulated_maz_data()
+
+        root_dir = self.scenario_dict["scenario"]["root_dir"]
+        in_file = os.path.join(root_dir, "ctramp_output", "wsLocResults_3.csv")
+
+        df = pd.read_csv(in_file)
+        a_df = df[["HHID", "HomeMGRA", "WorkLocation"]].copy()
+
+        z_df = self.simulated_maz_data_df.reset_index().copy()
+        z_df = z_df.rename(columns = {'index':'maz_index'})
+        zj_df = z_df[["maz_index", "CountyName"]].copy()
+
+        b_df = pd.merge(
+            a_df,
+            zj_df,
+            how="left",
+            left_on="HomeMGRA",
+            right_on="maz_index",
+        ).rename(columns={"CountyName": "residence_county"}).drop(columns=["maz_index"])
+
+        c_df = pd.merge(
+            b_df,
+            zj_df,
+            how="left",
+            left_on="WorkLocation",
+            right_on="maz_index",
+        ).rename(columns={"CountyName": "work_county"}).drop(columns=["maz_index"])
+
+        d_df = c_df.groupby(["residence_county", "work_county"]).size().reset_index().rename(columns={0: "simulated_flow"})
+
+        self.simulated_home_work_flows_df = d_df
+
+
+        return
+
+    def _make_simulated_maz_data(self):
+
+        root_dir = self.scenario_dict["scenario"]["root_dir"]
+        in_file = os.path.join(root_dir, "inputs", "landuse", "maz_data.csv")
+
+        df = pd.read_csv(in_file)
+
+        self.simulated_maz_data_df = df
+
+        return
+
+    def _make_home_work_flow_comparisons(self):
+
+        if self.ctpp_2012_2016_df.empty:
+            self._reduce_ctpp_2012_2016()
+
+        if self.simulated_home_work_flows_df.empty:
+            self._reduce_simulated_home_work_flows()
+
+        adjust_observed = self.simulated_home_work_flows_df.simulated_flow.sum() / self.ctpp_2012_2016_df.observed_flow.sum()
+        j_df = self.ctpp_2012_2016_df.copy()
+        j_df["observed_flow"] = j_df["observed_flow"] * adjust_observed
+
+        df = pd.merge(
+            self.simulated_home_work_flows_df,
+            j_df,
+            how="left",
+            on=["residence_county", "work_county"],
+        )
+
+        
+
+        df["criteria_number"] = 23
+        df["acceptance_threshold"] = "Less than 15 percent RMSE"
+        df["criteria_name"] = "Percent root mean square error in CTPP county-to-county worker flows"
+        df["dimension_01_name"] = "residence_county"
+        df["dimension_02_name"] = "work_county"
+        df = df.rename(columns={"residence_county": "dimension_01_value", "work_county": "dimension_02_value", "observed_flow": "observed_outcome", "simulated_flow": "simulated_outcome"})
+
+        return df
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
