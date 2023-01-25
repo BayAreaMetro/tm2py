@@ -42,11 +42,21 @@ class Acceptance:
         "Sonoma-Marin Area Rail Transit",
     ]
 
-    county_names_list = ["San Francisco", "San Mateo", "Santa Clara", "Alameda", "Contra Costa", "Solano", "Napa", "Sonoma", "Marin"]
+    county_names_list = [
+        "San Francisco",
+        "San Mateo",
+        "Santa Clara",
+        "Alameda",
+        "Contra Costa",
+        "Solano",
+        "Napa",
+        "Sonoma",
+        "Marin",
+    ]
 
     florida_transit_guidelines_df = pd.DataFrame(
         [
-            [0, 1.50], # low end of volume range, maximum error as percentage
+            [0, 1.50],  # low end of volume range, maximum error as percentage
             [1000, 1.00],
             [2000, 0.65],
             [5000, 0.35],
@@ -166,8 +176,12 @@ class Acceptance:
         self._make_simulated_maz_data()
         self._reduce_simulated_home_work_flows()
 
-        assert sorted(self.simulated_home_work_flows_df.residence_county.unique().tolist()) == sorted(self.county_names_list)
-        assert sorted(self.simulated_home_work_flows_df.work_county.unique().tolist()) == sorted(self.county_names_list)
+        assert sorted(
+            self.simulated_home_work_flows_df.residence_county.unique().tolist()
+        ) == sorted(self.county_names_list)
+        assert sorted(
+            self.simulated_home_work_flows_df.work_county.unique().tolist()
+        ) == sorted(self.county_names_list)
 
         return
 
@@ -182,8 +196,12 @@ class Acceptance:
         self._reduce_ctpp_2012_2016()
         self._make_simulated_maz_data()
 
-        assert sorted(self.ctpp_2012_2016_df.residence_county.unique().tolist()) == sorted(self.county_names_list)
-        assert sorted(self.ctpp_2012_2016_df.work_county.unique().tolist()) == sorted(self.county_names_list)
+        assert sorted(
+            self.ctpp_2012_2016_df.residence_county.unique().tolist()
+        ) == sorted(self.county_names_list)
+        assert sorted(self.ctpp_2012_2016_df.work_county.unique().tolist()) == sorted(
+            self.county_names_list
+        )
 
         return
 
@@ -604,16 +622,20 @@ class Acceptance:
         r_df = input_df.copy()
 
         fix_dict = {
-            "local": "Local Bus", 
-            "express": "Express Bus", 
-            "light": "Light Rail", 
-            "ferry": "Ferry", 
-            "heavy": "Heavy Rail", 
-            "commuter": "Commuter Rail"
+            "local": "Local Bus",
+            "express": "Express Bus",
+            "light": "Light Rail",
+            "ferry": "Ferry",
+            "heavy": "Heavy Rail",
+            "commuter": "Commuter Rail",
         }
 
         for key, value in fix_dict.items():
-            r_df[column_name] = np.where(r_df[column_name].str.lower().str.contains(key), value, r_df[column_name])
+            r_df[column_name] = np.where(
+                r_df[column_name].str.lower().str.contains(key),
+                value,
+                r_df[column_name],
+            )
 
         return r_df
 
@@ -625,9 +647,17 @@ class Acceptance:
         df = pd.read_csv(os.path.join(file_root, in_file), skiprows=2)
 
         a_df = df[(df["Output"] == "Estimate")].copy()
-        a_df = a_df.rename(columns={"RESIDENCE": "residence_county", "WORKPLACE": "work_county", "Workers 16 and Over": "observed_flow"})
+        a_df = a_df.rename(
+            columns={
+                "RESIDENCE": "residence_county",
+                "WORKPLACE": "work_county",
+                "Workers 16 and Over": "observed_flow",
+            }
+        )
         a_df = a_df[["residence_county", "work_county", "observed_flow"]]
-        a_df["residence_county"] = a_df["residence_county"].str.replace(" County, California", "")
+        a_df["residence_county"] = a_df["residence_county"].str.replace(
+            " County, California", ""
+        )
         a_df["work_county"] = a_df["work_county"].str.replace(" County, California", "")
         a_df["observed_flow"] = a_df["observed_flow"].str.replace(",", "").astype(int)
 
@@ -644,32 +674,39 @@ class Acceptance:
         in_file = os.path.join(root_dir, "ctramp_output", "wsLocResults_3.csv")
 
         df = pd.read_csv(in_file)
-        a_df = df[["HHID", "HomeMGRA", "WorkLocation"]].copy()
 
-        z_df = self.simulated_maz_data_df.reset_index().copy()
-        z_df = z_df.rename(columns = {'index':'maz_index'})
-        zj_df = z_df[["maz_index", "CountyName"]].copy()
+        b_df = (
+            pd.merge(
+                df[["HHID", "HomeMGRA", "WorkLocation"]].copy(),
+                self.simulated_maz_data_df[["MAZSEQ", "CountyName"]].copy(),
+                how="left",
+                left_on="HomeMGRA",
+                right_on="MAZSEQ",
+            )
+            .rename(columns={"CountyName": "residence_county"})
+            .drop(columns=["MAZSEQ"])
+        )
 
-        b_df = pd.merge(
-            a_df,
-            zj_df,
-            how="left",
-            left_on="HomeMGRA",
-            right_on="maz_index",
-        ).rename(columns={"CountyName": "residence_county"}).drop(columns=["maz_index"])
+        c_df = (
+            pd.merge(
+                b_df,
+                self.simulated_maz_data_df[["MAZSEQ", "CountyName"]].copy(),
+                how="left",
+                left_on="WorkLocation",
+                right_on="MAZSEQ",
+            )
+            .rename(columns={"CountyName": "work_county"})
+            .drop(columns=["MAZSEQ"])
+        )
 
-        c_df = pd.merge(
-            b_df,
-            zj_df,
-            how="left",
-            left_on="WorkLocation",
-            right_on="maz_index",
-        ).rename(columns={"CountyName": "work_county"}).drop(columns=["maz_index"])
-
-        d_df = c_df.groupby(["residence_county", "work_county"]).size().reset_index().rename(columns={0: "simulated_flow"})
+        d_df = (
+            c_df.groupby(["residence_county", "work_county"])
+            .size()
+            .reset_index()
+            .rename(columns={0: "simulated_flow"})
+        )
 
         self.simulated_home_work_flows_df = d_df
-
 
         return
 
@@ -680,7 +717,19 @@ class Acceptance:
 
         df = pd.read_csv(in_file)
 
-        self.simulated_maz_data_df = df
+        index_file = os.path.join(root_dir, "hwy", "mtc_final_network_zone_seq.csv")
+
+        index_df = pd.read_csv(index_file)
+        join_df = index_df.rename(columns={"N": "MAZ_ORIGINAL"})[
+            ["MAZ_ORIGINAL", "MAZSEQ"]
+        ].copy()
+
+        self.simulated_maz_data_df = pd.merge(
+            df,
+            join_df,
+            how="left",
+            on="MAZ_ORIGINAL",
+        )
 
         return
 
@@ -692,7 +741,10 @@ class Acceptance:
         if self.simulated_home_work_flows_df.empty:
             self._reduce_simulated_home_work_flows()
 
-        adjust_observed = self.simulated_home_work_flows_df.simulated_flow.sum() / self.ctpp_2012_2016_df.observed_flow.sum()
+        adjust_observed = (
+            self.simulated_home_work_flows_df.simulated_flow.sum()
+            / self.ctpp_2012_2016_df.observed_flow.sum()
+        )
         j_df = self.ctpp_2012_2016_df.copy()
         j_df["observed_flow"] = j_df["observed_flow"] * adjust_observed
 
@@ -703,27 +755,20 @@ class Acceptance:
             on=["residence_county", "work_county"],
         )
 
-        
-
         df["criteria_number"] = 23
         df["acceptance_threshold"] = "Less than 15 percent RMSE"
-        df["criteria_name"] = "Percent root mean square error in CTPP county-to-county worker flows"
+        df[
+            "criteria_name"
+        ] = "Percent root mean square error in CTPP county-to-county worker flows"
         df["dimension_01_name"] = "residence_county"
         df["dimension_02_name"] = "work_county"
-        df = df.rename(columns={"residence_county": "dimension_01_value", "work_county": "dimension_02_value", "observed_flow": "observed_outcome", "simulated_flow": "simulated_outcome"})
+        df = df.rename(
+            columns={
+                "residence_county": "dimension_01_value",
+                "work_county": "dimension_02_value",
+                "observed_flow": "observed_outcome",
+                "simulated_flow": "simulated_outcome",
+            }
+        )
 
         return df
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
