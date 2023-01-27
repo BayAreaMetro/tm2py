@@ -35,6 +35,8 @@ class Acceptance:
 
     simulated_maz_data_df: pd.DataFrame
 
+    model_morning_capacity_factor: float
+
     rail_operators_vector = [
         "BART",
         "Caltrain",
@@ -96,12 +98,20 @@ class Acceptance:
         {
             "model_link_id": pd.Series(dtype="int"),
             "operator": pd.Series(dtype="str"),
+            "technology": pd.Series(dtype="str"),
             "route_short_name": pd.Series(dtype="str"),
             "route_long_name": pd.Series(dtype="str"),
-            "observed_boardings": pd.Series(dtype="float"),
-            "simulated_boardings": pd.Series(dtype="float"),
+            "route_observed_boardings": pd.Series(dtype="float"),
+            "route_simulated_boardings": pd.Series(dtype="float"),
             "florida_threshold": pd.Series(dtype="float"),
-            "line_string": pd.Series(dtype="str"),
+            "am_segment_simulated_boardings": pd.Series(dtype="float"),
+            "am_segment_volume": pd.Series(dtype="float"),
+            "am_segment_capacity_total": pd.Series(dtype="float"),
+            "am_segment_vc_ratio_total": pd.Series(dtype="float"),
+            "am_segment_capacity_seated": pd.Series(dtype="float"),
+            "am_segment_vc_ratio_seated": pd.Series(dtype="float"),
+            "mean_am_segment_vc_ratio_total": pd.Series(dtype="float"),
+            "geometry": pd.Series(dtype="str"),
         }
     )
 
@@ -142,12 +152,22 @@ class Acceptance:
 
         return
 
+    def _get_morning_commute_capacity_factor(self):
+        for time_dict in self.model_dict["time_periods"]:
+            if time_dict["name"] == "am":
+                self.model_morning_capacity_factor = time_dict[
+                    "highway_capacity_factor"
+                ]
+
+        return
+
     def __init__(self, scenario_file: str, model_file: str, observed_file: str) -> None:
         self.scenario_file = scenario_file
         self.model_file = model_file
         self.observed_file = observed_file
         self._load_configs()
         self._get_model_time_periods()
+        self._get_morning_commute_capacity_factor()
 
     def make_acceptance(self, make_transit=True, make_roadway=True, make_other=False):
 
@@ -242,7 +262,7 @@ class Acceptance:
 
         return
 
-    def _make_combined_line_name(self, input_df, input_column_name):
+    def _aggregate_line_names_across_time_of_day(self, input_df, input_column_name):
 
         df = input_df[input_column_name].str.split(pat="_", expand=True).copy()
         df["combined_line_name"] = df[0] + "_" + df[1] + "_" + df[2]
@@ -309,8 +329,13 @@ class Acceptance:
 
         # join the shape
         a_df = pd.DataFrame(self.simulated_transit_segments_gdf)
-        a_df = self._make_combined_line_name(a_df, "line")
-        b_df = a_df.groupby("combined_line_name").agg({"line": "first"}).reset_index()
+        a_df = self._aggregate_line_names_across_time_of_day(a_df, "line")
+        b_df = (
+            a_df.groupby("combined_line_name")
+            .agg({"line": "first"})
+            .reset_index()
+            .copy()
+        )
         c_df = pd.DataFrame(
             self.simulated_transit_segments_gdf[
                 self.simulated_transit_segments_gdf["line"].isin(b_df["line"])
@@ -334,7 +359,7 @@ class Acceptance:
                 "description": "line_description",
                 "survey_boardings": "route_observed_boardings",
                 "total_boarding": "route_simulated_boardings",
-                "board": "segment_simulated_boardings",
+                "board": "am_segment_simulated_boardings",
             }
         )
 
@@ -348,20 +373,7 @@ class Acceptance:
 
         return_df = self._fix_technology_labels(return_df, "technology")
 
-        return_df = return_df[
-            [
-                "model_link_id",
-                "operator",
-                "technology",
-                "route_short_name",
-                "route_long_name",
-                "route_observed_boardings",
-                "route_simulated_boardings",
-                "segment_simulated_boardings",
-                "florida_threshold",
-                "geometry",
-            ]
-        ]
+        return_df = return_df[self.transit_network_gdf.columns]
 
         self.transit_network_gdf = gpd.GeoDataFrame(
             return_df, crs="EPSG:" + self.tableau_projection, geometry="geometry"
@@ -391,7 +403,9 @@ class Acceptance:
         df = self._fix_agency_names(df, "survey_agency")
         join_df = df[~df["survey_agency"].isin(self.rail_operators_vector)].copy()
 
-        join_df = self._make_combined_line_name(join_df, "standard_line_name")
+        join_df = self._aggregate_line_names_across_time_of_day(
+            join_df, "standard_line_name"
+        )
         join_df = (
             join_df.groupby(
                 [
@@ -512,7 +526,7 @@ class Acceptance:
 
         c_df = self._join_tm2_mode_codes(c_df)
         c_df = self._fix_agency_names(c_df, "operator")
-        c_df = self._make_combined_line_name(c_df, "line_name")
+        c_df = self._aggregate_line_names_across_time_of_day(c_df, "line_name")
         return_df = (
             c_df.groupby(
                 [
@@ -539,7 +553,6 @@ class Acceptance:
 
         # AM for now, just to get the shapes
         # TODO: problem with remote read in, use . for now
-        # TODO: pickle this for faster i/o and check for it on disk?
         file_root = "."
         time_period = "am"
         gdf = gpd.read_file(
@@ -548,7 +561,57 @@ class Acceptance:
 
         gdf["first_row_in_line"] = gdf.groupby("line").cumcount() == 0
 
-        self.simulated_transit_segments_gdf = gdf
+        # Compute v/c ratio, excluding pnr dummy routes
+        df = pd.DataFrame(gdf.drop(columns=["geometry"]))
+        a_df = df[~(df["line"].str.contains("pnr_"))].reset_index().copy()
+        a_df["am_segment_capacity_total"] = (
+            a_df["capt"] * self.model_morning_capacity_factor
+        )
+        a_df["am_segment_capacity_seated"] = (
+            a_df["caps"] * self.model_morning_capacity_factor
+        )
+        a_df["am_segment_vc_ratio_total"] = (
+            a_df["voltr"] / a_df["am_segment_capacity_total"]
+        )
+        a_df["am_segment_vc_ratio_seated"] = (
+            a_df["voltr"] / a_df["am_segment_capacity_seated"]
+        )
+        a_df = a_df.rename(columns={"voltr": "am_segment_volume"})
+
+        sum_df = (
+            a_df.groupby(["line"])
+            .agg({"am_segment_vc_ratio_total": "mean"})
+            .reset_index()
+        )
+        sum_df.columns = [
+            "line",
+            "mean_am_segment_vc_ratio_total",
+        ]
+
+        a_gdf = pd.merge(
+            gdf,
+            sum_df,
+            on="line",
+            how="left",
+        )
+
+        self.simulated_transit_segments_gdf = pd.merge(
+            a_gdf,
+            a_df[
+                [
+                    "line",
+                    "i_node",
+                    "j_node",
+                    "am_segment_volume",
+                    "am_segment_capacity_total",
+                    "am_segment_capacity_seated",
+                    "am_segment_vc_ratio_total",
+                    "am_segment_vc_ratio_seated",
+                ]
+            ],
+            on=["line", "i_node", "j_node"],
+            how="left",
+        )
 
         return
 
