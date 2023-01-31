@@ -11,8 +11,12 @@
     reduced_summaries_file = "Survey_Database_122717/acceptance-criteria-reductions.csv"
 [census]
     ctpp_2012_2016_file = "CTPP20122016/A302100 - Total Workers (1) (Workers 16 years and over).csv"
+    vehicles_by_block_group_file = "Census/ACSDT5Y2017.B08201-Data.csv"
 [crosswalks]
     crosswalk_standard_survey_file = "transit-standard-2015-to-survey-crosswalk.csv"
     standard_to_tm2_modes_file = "gtfs_to_tm2_mode_crosswalk.csv"
     canonical_agency_names_file = "canonical-agency-names.csv"
+    census_geographies_shapefile = "census/tl_2010_06_bg10.shp"
+    census_geographies_pickle = "census/tl_2010_06_bg10.pickle"
+    block_group_to_maz_url = "https://raw.githubusercontent.com/BayAreaMetro/travel-model-two/master/maz_taz/crosswalks/Census%202010%20hhs%20maz%20share%20of%20blockgroups_ACS2017.csv"
 

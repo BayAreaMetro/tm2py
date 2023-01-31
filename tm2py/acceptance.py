@@ -18,24 +18,24 @@ class Acceptance:
     observed_file: str
 
     output_transit_filename = "acceptance-transit-network.geojson"
-
-    output_other_filename = "acceptance-other.csv"
+    output_other_filename = "acceptance-other.geojson"
 
     model_time_periods = []
+    model_morning_capacity_factor: float
 
     simulated_boardings_df: pd.DataFrame
+    simulated_home_work_flows_df: pd.DataFrame
+    simulated_maz_data_df: pd.DataFrame
+    simulated_transit_segments_gdf: gpd.GeoDataFrame
+    simulated_zero_vehicle_hhs_df: pd.DataFrame
 
     ctpp_2012_2016_df: pd.DataFrame
-
-    simulated_home_work_flows_df: pd.DataFrame
+    census_2010_geo_df: pd.DataFrame
+    census_2017_zero_vehicle_hhs_df: pd.DataFrame
+    census_2010_to_maz_crosswalk_df: pd.DataFrame
+    census_tract_centroids_gdf: gpd.GeoDataFrame
 
     canonical_agency_names_dict = {}
-
-    simulated_transit_segments_gdf: gpd.GeoDataFrame
-
-    simulated_maz_data_df: pd.DataFrame
-
-    model_morning_capacity_factor: float
 
     rail_operators_vector = [
         "BART",
@@ -90,7 +90,7 @@ class Acceptance:
             "simulated_flow": pd.Series(dtype="float"),
             "odot_flow_category": pd.Series(dtype="int"),
             "odot_maximum_error": pd.Series(dtype="float"),
-            "line_string": pd.Series(dtype="str"),
+            "geometry": pd.Series(dtype="str"), # line
         }
     )
 
@@ -111,7 +111,7 @@ class Acceptance:
             "am_segment_capacity_seated": pd.Series(dtype="float"),
             "am_segment_vc_ratio_seated": pd.Series(dtype="float"),
             "mean_am_segment_vc_ratio_total": pd.Series(dtype="float"),
-            "geometry": pd.Series(dtype="str"),
+            "geometry": pd.Series(dtype="str"), # lines
         }
     )
 
@@ -128,7 +128,7 @@ class Acceptance:
             "observed_outcome": pd.Series(dtype="float"),
             "simulated_outcome": pd.Series(dtype="float"),
             "acceptance_threshold": pd.Series(dtype="float"),
-            "point_string": pd.Series(dtype="str"),
+            "geometry": pd.Series(dtype="str"), # point 
         }
     )
 
@@ -195,6 +195,7 @@ class Acceptance:
         self._reduce_simulated_transit_shapes()
         self._make_simulated_maz_data()
         self._reduce_simulated_home_work_flows()
+        self._reduce_simulated_zero_vehicle_households()
 
         assert sorted(
             self.simulated_home_work_flows_df.residence_county.unique().tolist()
@@ -214,6 +215,8 @@ class Acceptance:
             self.reduce_on_board_survey()
 
         self._reduce_ctpp_2012_2016()
+        self._reduce_census_zero_car_households()
+        self._make_census_maz_crosswalk()
         self._make_simulated_maz_data()
 
         assert sorted(
@@ -222,6 +225,8 @@ class Acceptance:
         assert sorted(self.ctpp_2012_2016_df.work_county.unique().tolist()) == sorted(
             self.county_names_list
         )
+
+        self._make_census_geo_crosswalk()
 
         return
 
@@ -250,8 +255,10 @@ class Acceptance:
     def _write_other_comparisons(self):
 
         file_root = self.observed_dict["remote_io"]["acceptance_output_folder_root"]
+        # TODO: figure out how to get remote write, use . for now
+        file_root = "."
         out_file = os.path.join(file_root, self.output_other_filename)
-        self.compare_gdf.to_csv(out_file)
+        self.compare_gdf.to_file(out_file, driver="GeoJSON")
 
         return
 
@@ -385,9 +392,10 @@ class Acceptance:
 
     def _make_other_comparisons(self):
 
-        df = self._make_home_work_flow_comparisons()
+        a_df = self._make_home_work_flow_comparisons()
+        b_gdf = self._make_zero_vehicle_household_comparisons()
 
-        self.compare_gdf = df
+        self.compare_gdf = gpd.GeoDataFrame(pd.concat([a_df, b_gdf]), geometry="geometry")
 
         self._write_other_comparisons()
 
@@ -835,3 +843,188 @@ class Acceptance:
         )
 
         return df
+
+    def _make_zero_vehicle_household_comparisons(self):
+
+        if self.census_2010_geo_df.empty:
+            self._make_census_geo_crosswalk()
+
+        if self.census_2017_zero_vehicle_hhs_df.empty:
+            self._reduce_census_zero_car_households()
+
+        if self.simulated_zero_vehicle_hhs_df.empty:
+            self._reduce_simulated_zero_vehicle_households()
+
+        # prepare simulated data
+        a_df = pd.merge(
+            self.simulated_zero_vehicle_hhs_df,
+            self.simulated_maz_data_df[["MAZ_ORIGINAL", "MAZSEQ"]],
+            left_on="maz",
+            right_on="MAZSEQ",
+            how="left",
+        ).drop(columns=["maz", "MAZSEQ"]).rename(columns={"MAZ_ORIGINAL": "maz"})
+
+        a_df = pd.merge(
+            a_df,
+            self.census_2010_to_maz_crosswalk_df,
+            how="left",
+            on="maz",
+        )
+
+        a_df["product"] = a_df["simulated_zero_vehicle_share"] * a_df["maz_share"]
+
+        b_df = a_df.groupby("blockgroup").agg({"product": "sum", "simulated_households": "sum"}).reset_index().rename(columns={"product": "simulated_zero_vehicle_share"})
+        b_df["tract"] = b_df["blockgroup"].astype("str").str.slice(stop=-1)
+        b_df["product"]= b_df["simulated_zero_vehicle_share"] * b_df["simulated_households"]
+
+        c_df = b_df.groupby("tract").agg({"product": "sum", "simulated_households": "sum"}).reset_index()
+        c_df["simulated_zero_vehicle_share"] = c_df["product"] / c_df["simulated_households"]
+
+        # prepare the observed data
+        join_df = self.census_2017_zero_vehicle_hhs_df.copy()
+        join_df["tract"] = join_df["geoid"].str.replace("1400000US0", "")
+        join_df = join_df[["tract", "observed_zero_vehicle_household_share"]].drop_duplicates()
+
+        df = pd.merge(
+            c_df[["tract", "simulated_zero_vehicle_share", "simulated_households"]],
+            join_df,
+            how="left",
+            on="tract",
+        )
+
+        df = pd.merge(
+            df, 
+            self.census_tract_centroids_gdf, 
+            how="left", 
+            on="tract"
+        )
+
+        df["criteria_number"] = 24
+        df["acceptance_threshold"] = "MTC's Assessment of Reasonableness"
+        df[
+            "criteria_name"
+        ] = "Spatial patters of observed and estimated zero vehicle households"
+        df["dimension_01_name"] = "residence_tract"
+        df["dimension_02_name"] = "simulated_households"
+        df = df.rename(
+            columns={
+                "tract": "dimension_01_value",
+                "simulated_households": "dimension_02_value",
+                "observed_zero_vehicle_household_share": "observed_outcome",
+                "simulated_zero_vehicle_share": "simulated_outcome",
+            }
+        )
+
+        gdf = gpd.GeoDataFrame(df, geometry="geometry")
+
+        return gdf
+
+    def _make_census_geo_crosswalk(self):
+
+        file_root = self.observed_dict["remote_io"]["crosswalk_folder_root"]
+        pickle_file = self.observed_dict["crosswalks"]["census_geographies_pickle"]
+
+        if os.path.exists(os.path.join(file_root, pickle_file)):
+            self.census_2010_geo_df = pd.read_pickle(
+                os.path.join(file_root, pickle_file)
+            )
+            return
+
+        else:
+            file_root = self.observed_dict["remote_io"]["crosswalk_folder_root"]
+            in_file = self.observed_dict["crosswalks"]["census_geographies_shapefile"]
+
+            # TODO: geopandas cannot read remote files, fix
+            temp_file_root = "."
+            in_file = "tl_2010_06_bg10.shp"
+
+            gdf = gpd.read_file(os.path.join(temp_file_root, in_file))
+
+            self._make_tract_centroids(gdf)
+
+            self.census_2010_geo_df = (
+                pd.DataFrame(gdf)
+                .rename(
+                    columns={
+                        "TRACTCE10": "tract",
+                        "COUNTYFP10": "county_fips",
+                        "STATEFP10": "state_fips",
+                        "GEOID10": "blockgroup",
+                    }
+                )[["state_fips", "county_fips", "tract", "blockgroup"]]
+                .copy()
+            )
+
+            self.census_2010_geo_df.to_pickle(os.path.join(file_root, pickle_file))
+
+            return
+
+    def _make_tract_centroids(self, input_gdf):
+
+        t_gdf = input_gdf.dissolve(by="TRACTCE10")
+        c_gdf = t_gdf.to_crs(3857).centroid.to_crs(4326).reset_index()
+        df = pd.DataFrame(t_gdf.reset_index())[["TRACTCE10", "COUNTYFP10", "STATEFP10"]]
+        df["tract"] = df["STATEFP10"] + df["COUNTYFP10"] + df["TRACTCE10"]
+        df["tract"] = df.tract.str.slice(start=1) # remove leading zero
+        r_df = c_gdf.merge(df, left_on="TRACTCE10", right_on="TRACTCE10")
+        return_df = r_df[["tract", 0]].rename(columns={0: "geometry"}).copy()
+        self.census_tract_centroids_gdf = gpd.GeoDataFrame(return_df, geometry="geometry")
+
+        return 
+
+
+    def _reduce_census_zero_car_households(self):
+
+        file_root = self.observed_dict["remote_io"]["obs_folder_root"]
+        in_file = self.observed_dict["census"]["vehicles_by_block_group_file"]
+
+        df = pd.read_csv(os.path.join(file_root, in_file), skiprows=1)
+
+        df = df[["Geography", "Estimate!!Total", "Estimate!!Total!!No vehicle available"]]
+        df = df.rename(
+            columns={
+                "Geography": "geoid",
+                "Estimate!!Total": "total_households",
+                "Estimate!!Total!!No vehicle available": "observed_zero_vehicle_households",
+            }
+        )
+
+        df["observed_zero_vehicle_household_share"] = df["observed_zero_vehicle_households"] / df["total_households"]
+
+        self.census_2017_zero_vehicle_hhs_df = df.copy()
+
+        return
+
+    def _reduce_simulated_zero_vehicle_households(self):
+
+        root_dir = self.scenario_dict["scenario"]["root_dir"]
+        in_file = os.path.join(root_dir, "ctramp_output", "householdData_3.csv")
+
+        df = pd.read_csv(in_file)
+
+        sum_df = df.groupby(["home_mgra", "autos"]).size().reset_index(name="count")
+        sum_df["vehicle_share"] = sum_df["count"] / sum_df.groupby("home_mgra")[
+            "count"
+        ].transform("sum")
+
+        self.simulated_zero_vehicle_hhs_df = (
+            sum_df[sum_df["autos"] == 0]
+            .rename(
+                columns={
+                    "home_mgra": "maz",
+                    "vehicle_share": "simulated_zero_vehicle_share",
+                    "count": "simulated_households",
+                }
+            )[["maz", "simulated_zero_vehicle_share", "simulated_households"]]
+            .copy()
+        )
+
+        return
+
+    def _make_census_maz_crosswalk(self):
+
+        url_string = self.observed_dict["crosswalks"]["block_group_to_maz_url"]
+        self.census_2010_to_maz_crosswalk_df = pd.read_csv(url_string)
+
+        return
+
