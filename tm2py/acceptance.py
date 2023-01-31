@@ -883,10 +883,10 @@ class Acceptance:
         # prepare the observed data
         join_df = self.census_2017_zero_vehicle_hhs_df.copy()
         join_df["tract"] = join_df["geoid"].str.replace("1400000US0", "")
-        join_df = join_df[["tract", "observed_zero_vehicle_household_share"]].drop_duplicates()
+        join_df = join_df[["tract", "total_households", "observed_zero_vehicle_household_share"]].drop_duplicates()
 
         df = pd.merge(
-            c_df[["tract", "simulated_zero_vehicle_share", "simulated_households"]],
+            c_df[["tract", "simulated_zero_vehicle_share"]],
             join_df,
             how="left",
             on="tract",
@@ -905,11 +905,11 @@ class Acceptance:
             "criteria_name"
         ] = "Spatial patters of observed and estimated zero vehicle households"
         df["dimension_01_name"] = "residence_tract"
-        df["dimension_02_name"] = "simulated_households"
+        df["dimension_02_name"] = "observed_total_households"
         df = df.rename(
             columns={
                 "tract": "dimension_01_value",
-                "simulated_households": "dimension_02_value",
+                "total_households": "dimension_02_value",
                 "observed_zero_vehicle_household_share": "observed_outcome",
                 "simulated_zero_vehicle_share": "simulated_outcome",
             }
