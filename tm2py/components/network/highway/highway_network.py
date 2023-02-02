@@ -18,7 +18,7 @@ The following keys and tables are used from the config:
         toll class values
     highway.tolls.dst_vehicle_group_names: corresponding names used in
         network attributes toll classes
-    highway.tolls.tollbooth_start_index: index to split point bridge tolls
+    highway.tolls.valuetoll_start_tollbooth_code: index to split point bridge tolls
         (< this value) from distance value tolls (>= this value)
     highway.classes: the list of assignment classes, see the notes under
         highway_assign for detailed explanation
@@ -178,10 +178,11 @@ class PrepareNetwork(Component):
         toll_index = self._get_toll_indices()
         src_veh_groups = self.config.tolls.src_vehicle_group_names
         dst_veh_groups = self.config.tolls.dst_vehicle_group_names
-        tollbooth_start_index = self.config.tolls.tollbooth_start_index
+        valuetoll_start_tollbooth_code = self.config.tolls.valuetoll_start_tollbooth_code
         for link in network.links():
-            if link["@tollbooth"]:
-                index = (
+            # set bridgetoll
+            if link["@tollbooth"] > 0 and link["@tollbooth"] < valuetoll_start_tollbooth_code:
+                index = int(
                     link["@tollbooth"] * 1000
                     + link["@tollseg"] * 10
                     + link["@useclass"]
@@ -193,20 +194,27 @@ class PrepareNetwork(Component):
                         indent=True,
                     )
                     continue  # tolls will remain at zero
-                # if index is below tollbooth start index then this is a bridge
-                # (point toll), available for all traffic assignment classes
-                if link["@tollbooth"] < tollbooth_start_index:
-                    for src_veh, dst_veh in zip(src_veh_groups, dst_veh_groups):
-                        link[f"@bridgetoll_{dst_veh}"] = (
-                            data_row[f"toll{time_period.lower()}_{src_veh}"] * 100
-                        )
-                else:  # else, this is a tollway with a per-mile charge
-                    for src_veh, dst_veh in zip(src_veh_groups, dst_veh_groups):
-                        link[f"@valuetoll_{dst_veh}"] = (
-                            data_row[f"toll{time_period.lower()}_{src_veh}"]
-                            * link.length
-                            * 100
-                        )
+                for src_veh, dst_veh in zip(src_veh_groups, dst_veh_groups):
+                    link[f"@bridgetoll_{dst_veh}"] = (
+                        float(data_row[f"toll{time_period.lower()}_{src_veh}"]) * 100
+                    )
+            # set valuetoll
+            elif link["@tollbooth"] >= valuetoll_start_tollbooth_code:
+                data_row = toll_index.get(index)
+                if data_row is None:
+                    self.logger.warn(
+                        f"set tolls failed index lookup {index}, link {link.id}",
+                        indent=True,
+                    )
+                    continue  # tolls will remain at zero
+                for src_veh, dst_veh in zip(src_veh_groups, dst_veh_groups):
+                    link[f"@valuetoll_{dst_veh}"] = (
+                        float(data_row[f"toll{time_period.lower()}_{src_veh}"])
+                        * link.length
+                        * 100
+                    )
+            else:
+                continue
 
     def _get_toll_indices(self) -> Dict[int, Dict[str, str]]:
         """Get the mapping of toll lookup table from the toll reference file."""
@@ -343,7 +351,7 @@ class PrepareNetwork(Component):
 
     def _calc_link_skim_lengths(self, network: EmmeNetwork):
         """Calculate the length attributes used in the highway skims."""
-        tollbooth_start_index = self.config.tolls.tollbooth_start_index
+        valuetoll_start_tollbooth_code = self.config.tolls.valuetoll_start_tollbooth_code
         for link in network.links():
             # distance in hov lanes / facilities
             if 2 <= link["@useclass"] <= 3:
@@ -351,7 +359,7 @@ class PrepareNetwork(Component):
             else:
                 link["@hov_length"] = 0
             # distance on non-bridge toll facilities
-            if link["@tollbooth"] > tollbooth_start_index:
+            if link["@tollbooth"] > valuetoll_start_tollbooth_code:
                 link["@toll_length"] = link.length
             else:
                 link["@toll_length"] = 0
@@ -365,5 +373,8 @@ class PrepareNetwork(Component):
             if toll_factor is None:
                 toll_factor = 1.0
             for link in network.links():
-                toll_value = sum(link[toll_attr] for toll_attr in assign_class["toll"])
+                try:
+                    toll_value = sum(link[toll_attr] for toll_attr in assign_class["toll"])
+                except:
+                    link
                 link[cost_attr] = link.length * op_cost + toll_value * toll_factor

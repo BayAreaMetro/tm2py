@@ -703,7 +703,7 @@ class HighwayClassConfig(ConfigItem):
                 "dist": distance in miles
                 "hovdist": distance on HOV facilities (is_sr2 or is_sr3)
                 "tolldist": distance on toll facilities
-                    (@tollbooth > highway.tolls.tollbooth_start_index)
+                    (@tollbooth > highway.tolls.valuetoll_start_tollbooth_code)
                 "freeflowtime": free flow travel time in minutes
                 "bridgetoll_{vehicle}": bridge tolls, {vehicle} refers to toll group
                 "valuetoll_{vehicle}": other, non-bridge tolls, {vehicle} refers to toll group
@@ -731,7 +731,7 @@ class HighwayTollsConfig(ConfigItem):
 
     Properties:
         file_path: source relative file path for the highway tolls index CSV
-        tollbooth_start_index: tollbooth separates links with "bridge" tolls
+        valuetoll_start_tollbooth_code: tollbooth separates links with "bridge" tolls
             (index < this value) vs. "value" tolls. These toll attributes
             can then be referenced separately in the highway.classes[].tolls
             list
@@ -748,7 +748,7 @@ class HighwayTollsConfig(ConfigItem):
     """
 
     file_path: pathlib.Path = Field()
-    tollbooth_start_index: int = Field(gt=1)
+    valuetoll_start_tollbooth_code: int = Field(gt=1)
     src_vehicle_group_names: Tuple[str, ...] = Field()
     dst_vehicle_group_names: Tuple[str, ...] = Field()
 
