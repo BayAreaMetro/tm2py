@@ -142,7 +142,7 @@ class HighwayAssignment(Component):
             with self._setup(scenario, time):
                 iteration = self.controller.iteration
                 assign_classes = [
-                    AssignmentClass(c, time.lower(), iteration)
+                    AssignmentClass(c, time, iteration)
                     for c in self.config.classes
                 ]
                 if iteration > 0:
@@ -311,7 +311,7 @@ class HighwayAssignment(Component):
         """
         for skim_name in skims:
             if skim_name in ["time", "distance", "freeflowtime", "hovdist", "tolldist"]:
-                matrix_name = f"mf{time_period.lower()}_{class_name}_{skim_name}"
+                matrix_name = f"mf{time_period}_{class_name}_{skim_name}"
                 self.logger.debug(f"Setting intrazonals to 0.5*min for {matrix_name}")
                 data = self._matrix_cache.get_data(matrix_name)
                 # NOTE: sets values for external zones as well

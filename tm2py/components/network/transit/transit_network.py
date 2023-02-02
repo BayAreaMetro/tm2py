@@ -131,11 +131,11 @@ class PrepareTransitNetwork(Component):
 
     @property
     def transit_networks(self):
-        if self._transit_networks is None:
-            self._transit_networks = {
-                tp: self.transit_scenarios[tp].get_network()
-                for tp in self.time_period_names
-            }
+        #if self._transit_networks is None:
+        self._transit_networks = {
+            tp: self.transit_scenarios[tp].get_network()
+            for tp in self.time_period_names
+        }
         return self._transit_networks
 
     @property
