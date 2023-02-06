@@ -86,7 +86,7 @@ class ActiveModesSkim(Component):
         """Run shortest path skim calculation for active modes."""
         skim_list = self.config.shortest_path_skims
         self._prepare_files()
-        for emmebank_path in [self.controller.config.emme.active_north_database_path, self.controller.config.emme.active_south_database_path]:
+        for emmebank_path in [self.controller.config.emme.active_south_database_path, self.controller.config.emme.active_north_database_path]:
             with self._setup(emmebank_path):
                 mode_codes = self._prepare_network()
                 for mode_id, spec in zip(mode_codes, skim_list):
@@ -192,6 +192,8 @@ class ActiveModesSkim(Component):
         for skim_spec in self.config.shortest_path_skims:
             file_path = self.get_abs_path(skim_spec["output"])
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, "w", encoding="utf8") as output_file:
+                pass
             # java expects no headers
             # from_zone,to_zone,to_zone,shortest_path_generalized_cost,shortest_path_distance_feet
 
@@ -332,9 +334,35 @@ class ActiveModesSkim(Component):
             {
                 "root_ids": root_ids,
                 "leaf_ids": leaf_ids,
+                "leaf_ids_2": leaf_ids,
                 "dist": distance_skim.flatten(),
+                "dist_feet": distance_skim.flatten() * 5280,
             }
         )
+        # convert node id to sequential (1-based) zone id
+        # consistent with tm2.1 - java expects this
+        zone_seq_file = self.get_abs_path(self.controller.config.scenario.zone_seq_file)
+        zone_seq_df = pd.read_csv(zone_seq_file)
+        taz_seq = dict(zip(zone_seq_df[zone_seq_df.TAZSEQ>0].N, zone_seq_df[zone_seq_df.TAZSEQ>0].TAZSEQ))
+        maz_seq = dict(zip(zone_seq_df[zone_seq_df.MAZSEQ>0].N, zone_seq_df[zone_seq_df.MAZSEQ>0].MAZSEQ))
+        tap_seq = dict(zip(zone_seq_df[zone_seq_df.TAPSEQ>0].N, zone_seq_df[zone_seq_df.TAPSEQ>0].TAPSEQ))
+        ext_seq = dict(zip(zone_seq_df[zone_seq_df.EXTSEQ>0].N, zone_seq_df[zone_seq_df.EXTSEQ>0].EXTSEQ))
+        taz_seq = {**taz_seq, **ext_seq}
+        for c in ["root_ids", "leaf_ids", "leaf_ids_2"]:
+            taz_bool = distances[c].isin(list(taz_seq.keys()))
+            maz_bool = distances[c].isin(list(maz_seq.keys()))
+            tap_bool = distances[c].isin(list(tap_seq.keys()))
+            if taz_bool.any():
+                distances[c] = distances[c].map(taz_seq)
+                continue
+            elif maz_bool.any():
+                distances[c] = distances[c].map(maz_seq)
+                continue
+            elif tap_bool.any():
+                distances[c] = distances[c].map(tap_seq)
+                continue
+            else:
+                raise Exception("{} has N values not in the {} file".format(c, zone_seq_file))
         # drop 0's / 1e20
         distances = distances.query("dist > 0 & dist < 1e19")
         # write remaining values to text file (append)

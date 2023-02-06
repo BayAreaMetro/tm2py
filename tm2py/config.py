@@ -51,6 +51,7 @@ class ScenarioConfig(ConfigItem):
     """
 
     maz_landuse_file: pathlib.Path
+    zone_seq_file: pathlib.Path
     name: str
     year: int = Field(ge=2005)
     verify: Optional[bool] = Field(default=False)
