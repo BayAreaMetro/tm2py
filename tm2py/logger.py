@@ -103,6 +103,7 @@ class Logger:
             controller (RunController): Associated RunController instance.
         """
         self.controller = controller
+        self._indentation = 0
         log_config = controller.config.logging
         iter_component_level = log_config.iter_component_level or []
         iter_component_level = dict(
@@ -245,6 +246,15 @@ class Logger:
             indent (bool): if true indent text based on the number of open contexts
         """
         self.log(text, "FATAL", indent)
+    
+    def log_time(self, text: str, level=1, indent=False):
+        """Log message with timestamp"""
+        timestamp = datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
+        if indent:
+            indent = "  " * self._indentation
+            self.log(f"{timestamp}: {indent}{text}", level)
+        else:
+            self.log(f"{timestamp}: {text}", level)
 
     def _log_start(self, text: str, level: LogLevel = "INFO"):
         """Log message with timestamp and 'Start'.

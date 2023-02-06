@@ -295,6 +295,30 @@ def emme_context():
 
     return True
 
+
+def parse_num_processors(value: [str, int, float]):
+    """Parse input value string "MAX-X" to number of available processors.
+
+    Used with Emme procedures (traffic and transit assignments, matrix
+    caculator, etc.) Does not raise any specific errors.
+
+    Args:
+        value: int, float or string; string value can be "X" or "MAX-X"
+    """
+    max_processors = multiprocessing.cpu_count()
+    if isinstance(value, str):
+        value = value.upper()
+        if value == "MAX":
+            return max_processors
+        if re.match("^[0-9]+$", value):
+            return int(value)
+        result = re.split(r"^MAX[\s]*-[\s]*", value)
+        if len(result) == 2:
+            return max(max_processors - int(result[1]), 1)
+    else:
+        return int(value)
+    return value
+
 class SpatialGridIndex:
     """
     Simple spatial grid hash for fast (enough) nearest neighbor / within distance searches of points.

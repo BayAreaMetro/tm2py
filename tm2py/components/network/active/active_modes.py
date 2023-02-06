@@ -72,15 +72,21 @@ class ActiveModesSkim(Component):
             controller: parent Controller object
         """
         super().__init__(controller)
+        self.config = self.controller.config.active_modes
         self._temp_scenario = None
         self._network = None
+
+    def validate_inputs(self):
+        """Validate inputs files are correct, raise if an error is found."""
+        # TODO
+        pass
 
     @LogStartEnd("active mode skim")
     def run(self):
         """Run shortest path skim calculation for active modes."""
-        skim_list = self.config.active_modes.shortest_path_skims
+        skim_list = self.config.shortest_path_skims
         self._prepare_files()
-        for emmebank_path in self.config.emme.active_database_paths:
+        for emmebank_path in [self.controller.config.emme.active_north_database_path, self.controller.config.emme.active_south_database_path]:
             with self._setup(emmebank_path):
                 mode_codes = self._prepare_network()
                 for mode_id, spec in zip(mode_codes, skim_list):
@@ -109,19 +115,22 @@ class ActiveModesSkim(Component):
         log_msg = f"Active modes shortest path skims {emmebank_path}"
         manager = self.controller.emme_manager
         with self.logger.log_start_end(log_msg, level="INFO"):
-            emmebank = manager.emmebank(self.get_abs_path(emmebank_path))
-            min_dims = emmebank.min_dimensions
+            if emmebank_path == self.controller.config.emme.active_north_database_path:
+                emmebank = manager.active_north_emmebank
+            else:
+                emmebank = manager.active_south_emmebank
+            min_dims = emmebank.emmebank.min_dimensions
             required_dims = {
                 "scenarios": 2,
                 "links": min(int(min_dims["links"] * 1.1), 2000000),
                 "extra_attribute_values": int(min_dims["extra_attribute_values"] * 1.5),
             }
-            manager.change_emmebank_dimensions(emmebank, required_dims)
-            src_scenario = emmebank.scenario(self.config.active_modes.emme_scenario_id)
+            emmebank.change_dimensions(required_dims)
+            src_scenario = emmebank.emmebank.scenario(self.config.emme_scenario_id)
             for avail_id in range(9999, 1, -1):
-                if not emmebank.scenario(avail_id):
+                if not emmebank.emmebank.scenario(avail_id):
                     break
-            self._temp_scenario = emmebank.create_scenario(avail_id)
+            self._temp_scenario = emmebank.emmebank.create_scenario(avail_id)
             try:
                 self._temp_scenario.has_traffic_results = (
                     src_scenario.has_traffic_results
@@ -175,16 +184,16 @@ class ActiveModesSkim(Component):
                 self._network.publishable = True
                 yield
             finally:
-                emmebank.delete_scenario(self._temp_scenario)
+                emmebank.emmebank.delete_scenario(self._temp_scenario)
                 self._network = None
 
     def _prepare_files(self):
         """Clear all output files and write new headers."""
-        for skim_spec in self.config.active_modes.shortest_path_skims:
+        for skim_spec in self.config.shortest_path_skims:
             file_path = self.get_abs_path(skim_spec["output"])
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            with open(file_path, "w", encoding="utf8") as output_file:
-                output_file.write("from_zone,to_zone,shortest_path_cost\n")
+            # java expects no headers
+            # from_zone,to_zone,to_zone,shortest_path_generalized_cost,shortest_path_distance_feet
 
     def _prepare_network(self):
         """Setup network modes, link adjustments for walk and bike skims.
@@ -212,7 +221,7 @@ class ActiveModesSkim(Component):
         # note that the TAZ, MAZ, TAP connectors must not have walk or bike access
         # in order to prevent "shortcutting" via zones in shortest path building (removed above)
         mode_codes = []
-        for spec in self.config.active_modes.shortest_path_skims:
+        for spec in self.config.shortest_path_skims:
             mode = network.create_mode("AUX_AUTO", network.available_mode_identifier())
             mode_id_set = {mode.id}
             mode_codes.append(mode.id)
@@ -271,7 +280,7 @@ class ActiveModesSkim(Component):
         shortest_paths = self.controller.emme_manager.tool(
             "inro.emme.network_calculation.shortest_path"
         )
-        num_processors = parse_num_processors(self.config.emme.num_processors)
+        num_processors = parse_num_processors(self.controller.config.emme.num_processors)
         spec = {
             "type": "SHORTEST_PATH",
             "modes": [mode_code],
