@@ -2,10 +2,15 @@
 
 import argparse
 
-from tm2py.controller import RunController
+# this is mysterious but appears to resolve DLL load errors that otherwise occur
+import gdal
+
+from tm2py import RunController
+
 
 def usage():
-    print("tm2py -s scenario.toml -m model.toml")
+    print("tm2py -s scenario.toml -m model.toml -r run_dir")
+
 
 def run():
     parser = argparse.ArgumentParser(description="Main: run MTC TM2PY")
@@ -14,10 +19,17 @@ def run():
         "-s", "--scenario", required=True, help=r"Scenario config file path"
     )
     parser.add_argument("-m", "--model", required=True, help=r"Model config file path")
+    parser.add_argument(
+        "-r",
+        "--run_dir",
+        required=False,
+        help=r"Model run directory; defaults to the root of the scenario config if not specified",
+    )
 
     args = parser.parse_args()
-    controller = RunController([args.scenario, args.model])
+    controller = RunController([args.scenario, args.model], args.run_dir)
     controller.run()
+
 
 if __name__ == "__main__":
     run()

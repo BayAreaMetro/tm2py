@@ -5,11 +5,13 @@ import os
 import tm2py
 
 # High-level settings
-MODULE_CLASS_DOC_LIST = [ 
-    ("classes_components.md",[("## Components", tm2py.components, 1)]),
+MODULE_CLASS_DOC_LIST = [
+    ("classes_components.md", [("## Components", tm2py.components, 1)]),
     ("classes_basic.md", [("## Basic", tm2py, 1)]),
     ("classes_config.md", [("## Config", tm2py.config, 1)]),
-    ("classes_emme.md",[("## Emme", tm2py.emme, 3) ],
+    (
+        "classes_emme.md",
+        [("## Emme", tm2py.emme, 3)],
     ),
 ]
 
@@ -18,7 +20,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 base_dir = os.path.dirname(os.path.dirname(__file__))
-docs_dir = os.path.join(base_dir,"docs")
+docs_dir = os.path.join(base_dir, "docs")
 logger.info(f"Using docs directory:\n {docs_dir}")
 
 # Update class diagrams (currently using defaults)
@@ -27,9 +29,11 @@ logger.info("Updating class diagrams")
 
 from tm2py.utils import doc_modules
 
-for _class_diagram_md,_module_list in MODULE_CLASS_DOC_LIST:
+for _class_diagram_md, _module_list in MODULE_CLASS_DOC_LIST:
     class_diagram_str = doc_modules.generate_md_class_diagram(_module_list)
-    class_diagram_outfile = os.path.join(docs_dir,"includes","class_diagrams",_class_diagram_md)
-    with open(class_diagram_outfile,'w') as f:
+    class_diagram_outfile = os.path.join(
+        docs_dir, "includes", "class_diagrams", _class_diagram_md
+    )
+    with open(class_diagram_outfile, "w") as f:
         f.write(class_diagram_str)
     logger.info(f"Updated class diagrams in:\n{class_diagram_outfile}")
