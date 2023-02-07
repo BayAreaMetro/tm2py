@@ -178,10 +178,15 @@ class PrepareNetwork(Component):
         toll_index = self._get_toll_indices()
         src_veh_groups = self.config.tolls.src_vehicle_group_names
         dst_veh_groups = self.config.tolls.dst_vehicle_group_names
-        valuetoll_start_tollbooth_code = self.config.tolls.valuetoll_start_tollbooth_code
+        valuetoll_start_tollbooth_code = (
+            self.config.tolls.valuetoll_start_tollbooth_code
+        )
         for link in network.links():
             # set bridgetoll
-            if link["@tollbooth"] > 0 and link["@tollbooth"] < valuetoll_start_tollbooth_code:
+            if (
+                link["@tollbooth"] > 0
+                and link["@tollbooth"] < valuetoll_start_tollbooth_code
+            ):
                 index = int(
                     link["@tollbooth"] * 1000
                     + link["@tollseg"] * 10
@@ -351,7 +356,9 @@ class PrepareNetwork(Component):
 
     def _calc_link_skim_lengths(self, network: EmmeNetwork):
         """Calculate the length attributes used in the highway skims."""
-        valuetoll_start_tollbooth_code = self.config.tolls.valuetoll_start_tollbooth_code
+        valuetoll_start_tollbooth_code = (
+            self.config.tolls.valuetoll_start_tollbooth_code
+        )
         for link in network.links():
             # distance in hov lanes / facilities
             if 2 <= link["@useclass"] <= 3:
@@ -374,7 +381,9 @@ class PrepareNetwork(Component):
                 toll_factor = 1.0
             for link in network.links():
                 try:
-                    toll_value = sum(link[toll_attr] for toll_attr in assign_class["toll"])
+                    toll_value = sum(
+                        link[toll_attr] for toll_attr in assign_class["toll"]
+                    )
                 except:
                     link
                 link[cost_attr] = link.length * op_cost + toll_value * toll_factor

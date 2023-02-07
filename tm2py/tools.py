@@ -8,12 +8,11 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
-from contextlib import contextmanager as _context
-from typing import Collection, Mapping, Union, Any
 from collections import defaultdict as _defaultdict
 from contextlib import contextmanager as _context
 from itertools import product as _product
-from math import sqrt, ceil
+from math import ceil, sqrt
+from typing import Any, Collection, Mapping, Union
 
 import pandas as pd
 
@@ -319,6 +318,7 @@ def parse_num_processors(value: [str, int, float]):
         return int(value)
     return value
 
+
 class SpatialGridIndex:
     """
     Simple spatial grid hash for fast (enough) nearest neighbor / within distance searches of points.
@@ -414,5 +414,7 @@ class SpatialGridIndex:
         items = []
         for x_offset, y_offset in search_offsets:
             items.extend(self._grid_index[grid_x + x_offset, grid_y + y_offset])
-        filtered_items = [i for i, xi, yi in items if filter_func(x, y, xi, yi, distance)]
+        filtered_items = [
+            i for i, xi, yi in items if filter_func(x, y, xi, yi, distance)
+        ]
         return filtered_items

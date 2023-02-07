@@ -7,15 +7,17 @@ Note: additional details in class docstring
 
 from __future__ import annotations
 
-from contextlib import contextmanager as _context
 import os
-from typing import List, Tuple, TYPE_CHECKING
-from numpy import array as NumpyArray, repeat
+from contextlib import contextmanager as _context
+from typing import TYPE_CHECKING, List, Tuple
+
 import pandas as pd
+from numpy import array as NumpyArray
+from numpy import repeat
 
 from tm2py.components.component import Component
-from tm2py.tools import parse_num_processors
 from tm2py.logger import LogStartEnd
+from tm2py.tools import parse_num_processors
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
@@ -86,13 +88,18 @@ class ActiveModesSkim(Component):
         """Run shortest path skim calculation for active modes."""
         skim_list = self.config.shortest_path_skims
         self._prepare_files()
-        for emmebank_path in [self.controller.config.emme.active_south_database_path, self.controller.config.emme.active_north_database_path]:
+        for emmebank_path in [
+            self.controller.config.emme.active_south_database_path,
+            self.controller.config.emme.active_north_database_path,
+        ]:
             with self._setup(emmebank_path):
                 mode_codes = self._prepare_network()
                 for mode_id, spec in zip(mode_codes, skim_list):
                     for county in COUNTIES:
-                        log_msg = f"skim for mode={spec['mode']}, roots={spec['roots']}, "\
-                                  f"leaves={spec['leaves']} county={county}"
+                        log_msg = (
+                            f"skim for mode={spec['mode']}, roots={spec['roots']}, "
+                            f"leaves={spec['leaves']} county={county}"
+                        )
                         with self.logger.log_start_end(log_msg, level="DETAIL"):
                             roots, leaves = self._prepare_roots_leaves(
                                 spec["roots"], spec["leaves"], county
@@ -272,8 +279,7 @@ class ActiveModesSkim(Component):
         values = self._network.get_attribute_values("NODE", ["@roots", "@leaves"])
         self._temp_scenario.set_attribute_values("NODE", ["@roots", "@leaves"], values)
         self.logger.log_time(
-            f"num roots={len(roots)}, num leaves={len(leaves)}",
-            level="DEBUG"
+            f"num roots={len(roots)}, num leaves={len(leaves)}", level="DEBUG"
         )
         return roots, leaves
 
@@ -282,7 +288,9 @@ class ActiveModesSkim(Component):
         shortest_paths = self.controller.emme_manager.tool(
             "inro.emme.network_calculation.shortest_path"
         )
-        num_processors = parse_num_processors(self.controller.config.emme.num_processors)
+        num_processors = parse_num_processors(
+            self.controller.config.emme.num_processors
+        )
         spec = {
             "type": "SHORTEST_PATH",
             "modes": [mode_code],
@@ -343,10 +351,30 @@ class ActiveModesSkim(Component):
         # consistent with tm2.1 - java expects this
         zone_seq_file = self.get_abs_path(self.controller.config.scenario.zone_seq_file)
         zone_seq_df = pd.read_csv(zone_seq_file)
-        taz_seq = dict(zip(zone_seq_df[zone_seq_df.TAZSEQ>0].N, zone_seq_df[zone_seq_df.TAZSEQ>0].TAZSEQ))
-        maz_seq = dict(zip(zone_seq_df[zone_seq_df.MAZSEQ>0].N, zone_seq_df[zone_seq_df.MAZSEQ>0].MAZSEQ))
-        tap_seq = dict(zip(zone_seq_df[zone_seq_df.TAPSEQ>0].N, zone_seq_df[zone_seq_df.TAPSEQ>0].TAPSEQ))
-        ext_seq = dict(zip(zone_seq_df[zone_seq_df.EXTSEQ>0].N, zone_seq_df[zone_seq_df.EXTSEQ>0].EXTSEQ))
+        taz_seq = dict(
+            zip(
+                zone_seq_df[zone_seq_df.TAZSEQ > 0].N,
+                zone_seq_df[zone_seq_df.TAZSEQ > 0].TAZSEQ,
+            )
+        )
+        maz_seq = dict(
+            zip(
+                zone_seq_df[zone_seq_df.MAZSEQ > 0].N,
+                zone_seq_df[zone_seq_df.MAZSEQ > 0].MAZSEQ,
+            )
+        )
+        tap_seq = dict(
+            zip(
+                zone_seq_df[zone_seq_df.TAPSEQ > 0].N,
+                zone_seq_df[zone_seq_df.TAPSEQ > 0].TAPSEQ,
+            )
+        )
+        ext_seq = dict(
+            zip(
+                zone_seq_df[zone_seq_df.EXTSEQ > 0].N,
+                zone_seq_df[zone_seq_df.EXTSEQ > 0].EXTSEQ,
+            )
+        )
         taz_seq = {**taz_seq, **ext_seq}
         for c in ["root_ids", "leaf_ids", "leaf_ids_2"]:
             taz_bool = distances[c].isin(list(taz_seq.keys()))
@@ -362,11 +390,15 @@ class ActiveModesSkim(Component):
                 distances[c] = distances[c].map(tap_seq)
                 continue
             else:
-                raise Exception("{} has N values not in the {} file".format(c, zone_seq_file))
+                raise Exception(
+                    "{} has N values not in the {} file".format(c, zone_seq_file)
+                )
         # drop 0's / 1e20
         distances = distances.query("dist > 0 & dist < 1e19")
         # write remaining values to text file (append)
-        with open(self.get_abs_path(output), "a", newline="", encoding="utf8") as output_file:
+        with open(
+            self.get_abs_path(output), "a", newline="", encoding="utf8"
+        ) as output_file:
             distances.to_csv(
                 output_file, header=False, index=False, float_format="%.5f"
             )

@@ -142,8 +142,7 @@ class HighwayAssignment(Component):
             with self._setup(scenario, time):
                 iteration = self.controller.iteration
                 assign_classes = [
-                    AssignmentClass(c, time, iteration)
-                    for c in self.config.classes
+                    AssignmentClass(c, time, iteration) for c in self.config.classes
                 ]
                 if iteration > 0:
                     self._copy_maz_flow(scenario)

@@ -246,7 +246,7 @@ class Logger:
             indent (bool): if true indent text based on the number of open contexts
         """
         self.log(text, "FATAL", indent)
-    
+
     def log_time(self, text: str, level=1, indent=False):
         """Log message with timestamp"""
         timestamp = datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
