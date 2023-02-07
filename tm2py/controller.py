@@ -29,6 +29,7 @@ from tm2py.components.demand.air_passenger import AirPassenger
 from tm2py.components.demand.commercial import CommercialVehicleModel
 from tm2py.components.demand.household import HouseholdModel
 from tm2py.components.demand.internal_external import InternalExternal
+from tm2py.components.network.active.active_modes import ActiveModesSkim
 from tm2py.components.network.create_tod_scenarios import CreateTODScenarios
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
 from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, SkimMAZCosts
@@ -44,7 +45,8 @@ from tm2py.tools import emme_context
 # mapping from names referenced in config.run to imported classes
 # NOTE: component names also listed as literal in tm2py.config for validation
 component_cls_map = {
-    "create_tod_scenarios" : CreateTODScenarios,
+    "active_modes": ActiveModesSkim,
+    "create_tod_scenarios": CreateTODScenarios,
     "prepare_network_highway": PrepareNetwork,
     "highway": HighwayAssignment,
     "highway_maz_assign": AssignMAZSPDemand,
