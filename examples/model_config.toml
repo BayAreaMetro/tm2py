@@ -485,7 +485,7 @@
         dst_vehicle_group_names = ["da", "sr2", "sr3", "vsm", "sml", "med", "lrg"]
         # tollbooth separates links with "bridge" tolls (index < this value)
         # (used in all classes) vs. "value" tolls (used in toll-available classes only)
-        tollbooth_start_index = 11
+        valuetoll_start_tollbooth_code = 11
     [highway.maz_to_maz]
         mode_code = "x"
         excluded_links = [ "is_toll_da", "is_sr",]
@@ -716,6 +716,7 @@
     fare_max_transfer_distance_miles = 3.0
     use_fares = false
     # for TAZ instead of TAPs
+    ## set to true if use TAZ
     override_connector_times = false
     #input_connector_access_times_path = "inputs\\trn\\estimated_taz_access_connectors.csv"
     #input_connector_egress_times_path = "inputs\\trn\\estimated_taz_egress_connectors.csv"
@@ -780,7 +781,7 @@
     all_day_scenario_id = 1
     project_path = "emme_project/mtc_emme.emp"
     highway_database_path = "emme_project/Database_highway/emmebank"
-    active_north_database_path = "emme_project/Database_active_south/emmebank"
+    active_north_database_path = "emme_project/Database_active_north/emmebank"
     active_south_database_path = "emme_project/Database_active_south/emmebank"
     transit_database_path = "emme_project/Database_transit/emmebank"
 

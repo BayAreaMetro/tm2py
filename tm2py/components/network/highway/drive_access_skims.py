@@ -1,6 +1,8 @@
 """Module containing the """
 
 import os
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pandas as pd
 
@@ -8,6 +10,9 @@ from tm2py.components.component import Component
 from tm2py.config import TimePeriodConfig
 from tm2py.emme.matrix import OMXManager
 from tm2py.logger import LogStartEnd
+
+if TYPE_CHECKING:
+    from tm2py.controller import RunController
 
 
 MODE_NAME_MAP = {
@@ -39,8 +44,20 @@ class DriveAccessSkims(Component):
         maz_taz = self._maz_taz_correspondence()
         ped_dist = self._get_ped_dist()
         maz_taz_tap = maz_taz.merge(ped_dist, on="TMAZ")
-        for period in self.config.time_periods:
+        for period in self.controller.config.time_periods:
             tap_modes = self._get_tap_modes(period)
+            # convert TAP node id to 1-based sequential ID
+            zone_seq_file = self.get_abs_path(
+                self.controller.config.scenario.zone_seq_file
+            )
+            zone_seq_df = pd.read_csv(zone_seq_file)
+            tap_seq = dict(
+                zip(
+                    zone_seq_df[zone_seq_df.TAPSEQ > 0].N,
+                    zone_seq_df[zone_seq_df.TAPSEQ > 0].TAPSEQ,
+                )
+            )
+            tap_modes["TTAP"] = tap_modes["TTAP"].map(tap_seq)
             maz_ttaz_tap_modes = maz_taz_tap.merge(tap_modes, on="TTAP")
             drive_costs = self._get_drive_costs(period)
             taz_to_tap_costs = drive_costs.merge(maz_ttaz_tap_modes, on="TTAZ")
@@ -50,10 +67,15 @@ class DriveAccessSkims(Component):
                     output_file, header=False, index=False, float_format="%.5f"
                 )
 
+    def validate_inputs(self):
+        """Validate inputs files are correct, raise if an error is found."""
+        # TODO
+        pass
+
     def _init_results_file(self) -> str:
         """Initialize and write header to results file"""
         output_file_path = self.get_abs_path(
-            self.config.highway.drive_access_output_skim_path
+            self.controller.config.highway.drive_access_output_skim_path
         )
         os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
         with open(output_file_path, "w", encoding="utf8") as output_file:
@@ -64,7 +86,9 @@ class DriveAccessSkims(Component):
 
     def _maz_taz_correspondence(self) -> pd.DataFrame:
         """Load maz data (landuse file) which has the MAZ-> TAZ correspondence"""
-        maz_data_file = self.get_abs_path(self.config.scenario.maz_landuse_file)
+        maz_data_file = self.get_abs_path(
+            self.controller.config.scenario.maz_landuse_file
+        )
         maz_input_data = pd.read_csv(maz_data_file)
         # drop the other landuse columns
 
@@ -90,7 +114,7 @@ class DriveAccessSkims(Component):
     def _get_ped_dist(self) -> pd.DataFrame:
         """Get walk distance from closest maz to tap"""
         # Load the shortest distance skims from the active mode skims results
-        for skim_spec in self.config.active_modes.shortest_path_skims:
+        for skim_spec in self.controller.config.active_modes.shortest_path_skims:
             if (
                 skim_spec.mode == "walk"
                 and skim_spec.roots == "MAZ"
@@ -102,15 +126,12 @@ class DriveAccessSkims(Component):
             raise Exception(
                 "No skim mode of WALK: MAZ->MAZ in active_modes.shortest_path_skims"
             )
-        ped_dist = pd.read_csv(self.get_abs_path(ped_skim_path))
-        ped_dist.rename(
-            columns={
-                "from_zone": "TMAZ",
-                "to_zone": "TTAP",
-                "shortest_path_cost": "WDIST",
-            },
-            inplace=True,
+        ped_dist = pd.read_csv(
+            self.get_abs_path(ped_skim_path),
+            names=["TMAZ", "TTAP", "TTAP_2", "WDIST_MILE", "WDIST"],
+            header=None,
         )
+        ped_dist = ped_dist[["TMAZ", "TTAP", "WDIST"]]
         # Get closest MAZ to each TAZ
         # disable no-member error as Pandas returns either a parser object or a dataframe
         # depending upon the inputs to pd.read_csv, and in this case we get a
@@ -122,9 +143,7 @@ class DriveAccessSkims(Component):
 
     def _get_tap_modes(self, period: TimePeriodConfig) -> pd.DataFrame:
         """Get the set of modes available from each TAP."""
-        emmebank = self.controller.emme_manager.emmebank(
-            self.get_abs_path(self.config.emme.transit_database_path)
-        )
+        emmebank = self.controller.emme_manager.transit_emmebank.emmebank
         # load Emme network for TAP<->available modes correspondence
         scenario = emmebank.scenario(period.emme_scenario_id)
         attrs_to_load = {
@@ -132,7 +151,7 @@ class DriveAccessSkims(Component):
             "TRANSIT_LINE": [],
             "TRANSIT_SEGMENT": ["allow_alightings", "allow_boardings"],
         }
-        if self.config.transit.use_fares:
+        if self.controller.config.transit.use_fares:
             attrs_to_load["TRANSIT_LINE"].append("#src_mode")
 
             def process_stops(stops):
@@ -142,7 +161,9 @@ class DriveAccessSkims(Component):
                         if seg.allow_alightings or seg.allow_boardings:
                             modes.add(MODE_NAME_MAP[seg.line["#src_mode"]])
                 return modes
+
         else:
+
             def process_stops(stops):
                 modes = set()
                 for stop in stops:
@@ -170,33 +191,36 @@ class DriveAccessSkims(Component):
 
     def _get_drive_costs(self, period: TimePeriodConfig) -> pd.DataFrame:
         """Load the drive costs from OMX matrix files, return as pandas dataframe."""
-        emmebank = self.controller.emme_manager.emmebank(
-            self.get_abs_path(self.config.emme.highway_database_path)
-        )
+        emmebank = self.controller.emme_manager.highway_emmebank.emmebank
         scenario = emmebank.scenario(period.emme_scenario_id)
         zone_numbers = scenario.zone_numbers
         network = self.controller.emme_manager.get_network(
             scenario, {"NODE": ["#node_county", "@taz_id"]}
         )
         externals = [
-            n["@maz_id"]
+            n["@taz_id"]
             for n in network.nodes()
-            if n["@maz_id"] > 0 and n["#node_county"] == "External"
+            if n["@taz_id"] > 0 and n["#node_county"] == "External"
         ]
         root_ids = np.repeat(zone_numbers, len(zone_numbers))
         leaf_ids = zone_numbers * len(zone_numbers)
 
         skim_src_file = self.get_abs_path(
-            self.config.highway.output_skim_path.format(period=period.name)
+            self.controller.config.highway.output_skim_path
+            / self.controller.config.highway.output_skim_filename_tmpl.format(
+                time_period=period.name
+            )
         )
         with OMXManager(skim_src_file, "r") as src_file:
             drive_costs = pd.DataFrame(
                 {
                     "FTAZ": root_ids,
                     "TTAZ": leaf_ids,
-                    "DDIST": src_file.read(f"{period.name}_da_dist").flatten(),
-                    "DTOLL": src_file.read(f"{period.name}_da_bridgetollda").flatten(),
-                    "DTIME": src_file.read(f"{period.name}_da_time").flatten(),
+                    "DDIST": src_file.read(f"{period.name.upper()}_da_dist").flatten(),
+                    "DTOLL": src_file.read(
+                        f"{period.name.upper()}_da_bridgetoll_da"
+                    ).flatten(),
+                    "DTIME": src_file.read(f"{period.name.upper()}_da_time").flatten(),
                 }
             )
         # drop externals
@@ -208,7 +232,7 @@ class DriveAccessSkims(Component):
 
     @staticmethod
     def _get_closest_taps(
-            taz_to_tap_costs: pd.DataFrame, period: TimePeriodConfig
+        taz_to_tap_costs: pd.DataFrame, period: TimePeriodConfig
     ) -> pd.DataFrame:
         """Calculate the TAZ-> TAP drive cost, and get the closest TAP for each TAZ."""
         # cost = time + vot * (dist * auto_op_cost + toll)
@@ -216,10 +240,10 @@ class DriveAccessSkims(Component):
         operating_cost_per_mile = 17.23
         auto_op_cost = operating_cost_per_mile  # / 5280 # correct for feet
         vot = 0.6 / value_of_time  # turn into minutes / cents
-        walk_speed = 60.0 / 3.0
+        walk_speed = 60.0 / 3.0  # minutes / miles
         taz_to_tap_costs["COST"] = (
             taz_to_tap_costs["DTIME"]
-            + walk_speed * taz_to_tap_costs["WDIST"]
+            + walk_speed * (taz_to_tap_costs["WDIST"] / 5280)
             + vot
             * (auto_op_cost * taz_to_tap_costs["DDIST"] + taz_to_tap_costs["DTOLL"])
         )
