@@ -52,6 +52,7 @@ examples/UnionCity/emme_project/
 examples/UnionCity/inputs/
 examples/UnionCity/ref_skim_matrices/
 examples/UnionCity/skim_matrices
+examples/UnionCity/
 
 #temp files
 tests/scratch/*

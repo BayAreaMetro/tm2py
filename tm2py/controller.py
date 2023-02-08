@@ -31,6 +31,7 @@ from tm2py.components.demand.household import HouseholdModel
 from tm2py.components.demand.internal_external import InternalExternal
 from tm2py.components.network.active.active_modes import ActiveModesSkim
 from tm2py.components.network.create_tod_scenarios import CreateTODScenarios
+from tm2py.components.network.highway.drive_access_skims import DriveAccessSkims
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
 from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, SkimMAZCosts
 from tm2py.components.network.highway.highway_network import PrepareNetwork
@@ -51,6 +52,7 @@ component_cls_map = {
     "highway": HighwayAssignment,
     "highway_maz_assign": AssignMAZSPDemand,
     "highway_maz_skim": SkimMAZCosts,
+    "drive_access_skims": DriveAccessSkims,
     "prepare_network_transit": PrepareTransitNetwork,
     "transit_assign": TransitAssignment,
     "transit_skim": TransitSkim,
