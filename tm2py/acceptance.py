@@ -37,7 +37,11 @@ class Acceptance:
     census_2010_to_maz_crosswalk_df: pd.DataFrame
     census_tract_centroids_gdf: gpd.GeoDataFrame
 
+    observed_bart_boardings_df: pd.DataFrame
+    RELEVANT_BART_OBSERVED_YEARS_LIST = [2014, 2015, 2016]
+
     canonical_agency_names_dict = {}
+    canonical_station_names_dict = {}
 
     rail_operators_vector = [
         "BART",
@@ -227,12 +231,16 @@ class Acceptance:
         if not self.canonical_agency_names_dict:
             self._make_canonical_agency_names_dict()
 
+        if not self.canonical_station_names_dict:
+            self._make_canonical_station_names_dict()
+
         if self.reduced_transit_on_board_df.empty:
             self.reduce_on_board_survey()
 
         self._reduce_ctpp_2012_2016()
         self._reduce_census_zero_car_households()
         self._make_census_maz_crosswalk()
+        self._reduce_observed_bart_boardings()
         self._make_simulated_maz_data()
 
         assert sorted(
@@ -285,7 +293,7 @@ class Acceptance:
 
         return
 
-    def _aggregate_line_names_across_time_of_day(self, input_df, input_column_name):
+    def _aggregate_line_names_across_time_of_day(self, input_df: pd.DataFrame, input_column_name: str) -> pd.DataFrame:
 
         df = input_df[input_column_name].str.split(pat="_", expand=True).copy()
         df["daily_line_name"] = df[0] + "_" + df[1] + "_" + df[2]
@@ -480,14 +488,14 @@ class Acceptance:
 
         return
 
-    def _join_standard_route_id(self, input_df):
+    def _join_standard_route_id(self, input_df: pd.DataFrame) -> pd.DataFrame:
 
         file_root = self.observed_dict["remote_io"]["crosswalk_folder_root"]
         in_file = self.observed_dict["crosswalks"]["crosswalk_standard_survey_file"]
 
         df = pd.read_csv(os.path.join(file_root, in_file))
 
-        df = self._fix_agency_names(df, "survey_agency")
+        df["survey_agency"] = df["survey_agency"].map(self.canonical_agency_names_dict)
         join_df = df[~df["survey_agency"].isin(self.rail_operators_vector)].copy()
 
         join_all_df = join_df.copy()
@@ -563,7 +571,7 @@ class Acceptance:
 
         return pd.concat([all_df, time_of_day_df], axis="rows", ignore_index=True)
 
-    def _join_florida_thresholds(self, input_df):
+    def _join_florida_thresholds(self, input_df: pd.DataFrame) -> pd.DataFrame:
 
         df = self.florida_transit_guidelines_df.copy()
         df["high"] = df["boardings"].shift(-1)
@@ -660,7 +668,7 @@ class Acceptance:
                     "boarding_weight": "survey_boardings",
                 }
             )
-            out_df = self._fix_agency_names(out_df, "survey_operator")
+            out_df["survey_operator"] = out_df["survey_operator"].map(self.canonical_agency_names_dict)
             out_df = self._join_florida_thresholds(out_df)
             out_df = self._join_standard_route_id(out_df)
             out_df.to_csv(os.path.join(file_root, out_file))
@@ -683,7 +691,7 @@ class Acceptance:
             c_df = c_df.append(df)
 
         c_df = self._join_tm2_mode_codes(c_df)
-        c_df = self._fix_agency_names(c_df, "operator")
+        c_df["operator"] = c_df["operator"].map(self.canonical_agency_names_dict)
         c_df = self._aggregate_line_names_across_time_of_day(c_df, "line_name")
 
         time_period_df = (
@@ -845,18 +853,45 @@ class Acceptance:
         self.canonical_agency_names_dict = {**a_dict, **b_dict, **c_dict}
 
         return
+    
+    def _make_canonical_station_names_dict(self):
 
-    def _fix_agency_names(self, input_df, column_name):
+        file_root = self.observed_dict["remote_io"]["crosswalk_folder_root"]
+        in_file = self.observed_dict["crosswalks"]["canonical_station_names_file"]
 
-        assert column_name in input_df.columns
+        df = pd.read_csv(os.path.join(file_root, in_file))
 
-        return_df = input_df.copy()
+        alt_list = list(df.columns)
+        alt_list.remove("canonical")
+        alt_list.remove("operator")
 
-        return_df[column_name] = return_df[column_name].map(
-            self.canonical_agency_names_dict
-        )
+        running_operator_dict = {}
+        for operator in df["operator"].unique():
+    
+            o_df = df[df["operator"] == operator].copy()
+            
+            a_df = o_df[["canonical"]].copy()
+            a_df["temp"] = o_df["canonical"]
+            a_dict = a_df.set_index("temp").to_dict()["canonical"]
 
-        return return_df
+            running_alt_dict = {**a_dict}
+
+            for alt in alt_list:
+                alt_dict = (
+                    o_df[(o_df[alt].notna())][["canonical", alt]]
+                    .set_index(alt)
+                    .to_dict()["canonical"]
+                )
+
+                running_alt_dict = {**running_alt_dict, **alt_dict}
+
+            operator_dict = {operator: running_alt_dict}
+
+            running_operator_dict = {**running_operator_dict, **operator_dict}
+
+        self.canonical_station_names_dict = running_operator_dict
+
+        return
 
     def _fix_technology_labels(
         self, input_df: pd.DataFrame, column_name: str
@@ -1147,7 +1182,7 @@ class Acceptance:
 
             return
 
-    def _make_tract_centroids(self, input_gdf):
+    def _make_tract_centroids(self, input_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
         t_gdf = input_gdf.dissolve(by="TRACTCE10")
         c_gdf = t_gdf.to_crs(3857).centroid.to_crs(4326).reset_index()
@@ -1219,4 +1254,27 @@ class Acceptance:
         url_string = self.observed_dict["crosswalks"]["block_group_to_maz_url"]
         self.census_2010_to_maz_crosswalk_df = pd.read_csv(url_string)
 
+        return
+    
+    def _reduce_observed_bart_boardings(self):
+        
+        file_root = self.observed_dict["remote_io"]["obs_folder_root"]
+        in_file = self.observed_dict["transit"]["bart_boardings_file"]
+        
+        df = pd.read_csv(os.path.join(file_root, in_file))
+
+        assert "BART" in self.canonical_station_names_dict.keys()
+
+        df["boarding"] = df["orig_name"].map(self.canonical_station_names_dict["BART"])
+        df["alighting"] = df["dest_name"].map(self.canonical_station_names_dict["BART"])
+
+        RELEVANT_BART_OBSERVED_YEARS_LIST = [2014, 2015, 2016]
+        a_df = df[df.year.isin(RELEVANT_BART_OBSERVED_YEARS_LIST)].copy()
+
+        sum_df = a_df.groupby(["boarding", "alighting"]).agg({"avg_trips": "mean"}).reset_index()
+        sum_df = sum_df.rename(columns={"avg_trips": "observed"})
+
+        self.observed_bart_boardings_df = sum_df.copy()
+        
+        
         return
