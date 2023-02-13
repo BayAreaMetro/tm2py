@@ -60,6 +60,14 @@ class DriveAccessSkims(Component):
             tap_modes["TTAP"] = tap_modes["TTAP"].map(tap_seq)
             maz_ttaz_tap_modes = maz_taz_tap.merge(tap_modes, on="TTAP")
             drive_costs = self._get_drive_costs(period)
+            taz_seq = dict(
+                zip(
+                    zone_seq_df[zone_seq_df.TAZSEQ > 0].N,
+                    zone_seq_df[zone_seq_df.TAZSEQ > 0].TAZSEQ,
+                )
+            )
+            drive_costs["TTAZ"] = drive_costs["TTAZ"].map(taz_seq)
+            drive_costs["FTAZ"] = drive_costs["FTAZ"].map(taz_seq)
             taz_to_tap_costs = drive_costs.merge(maz_ttaz_tap_modes, on="TTAZ")
             closest_taps = self._get_closest_taps(taz_to_tap_costs, period)
             with open(results_path, "a", newline="", encoding="utf8") as output_file:
