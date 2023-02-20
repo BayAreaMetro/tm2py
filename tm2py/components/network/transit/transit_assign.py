@@ -248,11 +248,18 @@ def calc_extra_wait_time(
         + eawt_weights.exit_proportion * (_offs_thru_segment / _total_offs)
     )
 
-    eawt_factor = (
-        1
-        if segment.line["#src_mode"] == ""
-        else mode_config[segment.line["#src_mode"]]["eawt_factor"]
-    )
+    if use_fares:
+        eawt_factor = (
+            1
+            if segment.line["#src_mode"] == ""
+            else mode_config[segment.line["#src_mode"]]["eawt_factor"]
+        )
+    else:
+        eawt_factor = (
+            1
+            if segment.line.mode.id == ""
+            else mode_config[segment.line.mode.id]["eawt_factor"]
+        )
 
     return eawt * eawt_factor
 
