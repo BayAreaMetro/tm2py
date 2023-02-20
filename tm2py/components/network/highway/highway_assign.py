@@ -159,10 +159,7 @@ class HighwayAssignment(Component):
                     )
                     assign(assign_spec, scenario, chart_log_interval=1)
 
-                # update reliability
-                # update vdf curve with reliability
-                HighwayAssignment.update_vdf_with_reliability(scenario)
-
+                # calucaltes link level LOS based reliability
                 net_calc = NetworkCalculator(self.controller, scenario)
 
                 exf_pars = scenario.emmebank.extra_function_parameters
@@ -391,52 +388,6 @@ class HighwayAssignment(Component):
             )
             self.logger.debug(stats)
     
-    @staticmethod
-    def update_vdf_with_reliability(scenario: EmmeScenario):
-        """
-        Update the VDF curves with reliability
-        """
-        scenario.emmebank.extra_function_parameters.el4 = "@static_rel"
-        reliability_tmplt = (
-            "* (1 + el4 + "
-            "( {factor[LOS_C]} * ( put(get(1).min.1.5) - {threshold[LOS_C]} + 0.01 ) ) * (get(1) .gt. {threshold[LOS_C]})"
-            "+ ( {factor[LOS_D]} * ( get(2) - {threshold[LOS_D]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_D]})"
-            "+ ( {factor[LOS_E]} * ( get(2) - {threshold[LOS_E]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_E]})"
-            "+ ( {factor[LOS_FL]} * ( get(2) - {threshold[LOS_FL]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_FL]})"
-            "+ ( {factor[LOS_FH]} * ( get(2) - {threshold[LOS_FH]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_FH]})"
-            ")")
-        parameters = {
-            "freeway": {
-                "factor": {
-                    "LOS_C": 0.2429, "LOS_D": 0.1705, "LOS_E": -0.2278, "LOS_FL": -0.1983, "LOS_FH": 1.022
-                },
-                "threshold": {
-                    "LOS_C": 0.7, "LOS_D": 0.8,  "LOS_E": 0.9, "LOS_FL": 1.0, "LOS_FH": 1.2
-                },
-            },
-            "road": {   # for arterials, ramps, collectors, local roads, etc.
-                "factor": {
-                    "LOS_C": 0.1561, "LOS_D": 0.0, "LOS_E": 0.0, "LOS_FL": -0.449, "LOS_FH": 0.0
-                },
-                "threshold": {
-                    "LOS_C": 0.7, "LOS_D": 0.8,  "LOS_E": 0.9, "LOS_FL": 1.0, "LOS_FH": 1.2
-                },
-            }
-        }
-        bpr_tmplt = "el1 * (1 + 0.20 * ((volau + volad)/el2/0.75)^6)"
-        akcelik_tmplt = (
-            "(el1 + 60 * (0.25 *((volau + volad)/el2 - 1 + "
-            "(((volau + volad)/el2 - 1)^2 + el3 * (volau + volad)/el2)^0.5)))"
-        )
-        for f_id in ["fd1", "fd2"]:
-            if scenario.emmebank.function(f_id):
-                scenario.emmebank.delete_function(f_id)
-            scenario.emmebank.create_function(f_id, bpr_tmplt + reliability_tmplt.format(**parameters["freeway"]))
-        for f_id in ["fd3","fd4","fd5","fd6","fd7"]:
-            if scenario.emmebank.function(f_id):
-                scenario.emmebank.delete_function(f_id)
-            scenario.emmebank.create_function(f_id, akcelik_tmplt + reliability_tmplt.format(**parameters["road"]))
-
 
 class AssignmentClass:
     """Highway assignment class, represents data from config and conversion to Emme specs."""
