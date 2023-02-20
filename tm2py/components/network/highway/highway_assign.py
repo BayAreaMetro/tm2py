@@ -159,6 +159,33 @@ class HighwayAssignment(Component):
                     )
                     assign(assign_spec, scenario, chart_log_interval=1)
 
+                # update reliability
+                # update vdf curve with reliability
+                HighwayAssignment.update_vdf_with_reliability(scenario)
+
+                net_calc = NetworkCalculator(self.controller, scenario)
+
+                exf_pars = scenario.emmebank.extra_function_parameters
+                vdfs = [f for f in scenario.emmebank.functions() if f.type == "VOLUME_DELAY"]
+                for function in vdfs:
+                    expression = function.expression
+                    for el in ["el1", "el2", "el3", "el4"]:
+                        expression = expression.replace(el, getattr(exf_pars, el))
+                    if "@static_rel" in expression:
+                        # split function into time component and reliability component
+                        time_expr, reliability_expr = expression.split("*(1+@static_rel+")
+                        net_calc("@auto_time", time_expr, {"link": "vdf=%s" % function.id[2:]})
+                        net_calc("@reliability", "(@static_rel+" + reliability_expr, 
+                                {"link": "vdf=%s" % function.id[2:]})
+
+                with self.logger.log_start_end(
+                    "Run SOLA assignment with path analyses and highway reliability", level="INFO"
+                ):
+                    assign = self.controller.emme_manager.tool(
+                        "inro.emme.traffic_assignment.sola_traffic_assignment"
+                    )
+                    assign(assign_spec, scenario, chart_log_interval=1)
+                
                 # Subtract non-time costs from gen cost to get the raw travel time
                 for emme_class_spec in assign_spec["classes"]:
                     self._calc_time_skim(emme_class_spec)
@@ -363,6 +390,52 @@ class HighwayAssignment(Component):
                 f"{data.mean():9.4g} {data.sum(): 13.7g}"
             )
             self.logger.debug(stats)
+    
+    @staticmethod
+    def update_vdf_with_reliability(scenario: EmmeScenario):
+        """
+        Update the VDF curves with reliability
+        """
+        scenario.emmebank.extra_function_parameters.el4 = "@static_rel"
+        reliability_tmplt = (
+            "* (1 + el4 + "
+            "( {factor[LOS_C]} * ( put(get(1).min.1.5) - {threshold[LOS_C]} + 0.01 ) ) * (get(1) .gt. {threshold[LOS_C]})"
+            "+ ( {factor[LOS_D]} * ( get(2) - {threshold[LOS_D]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_D]})"
+            "+ ( {factor[LOS_E]} * ( get(2) - {threshold[LOS_E]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_E]})"
+            "+ ( {factor[LOS_FL]} * ( get(2) - {threshold[LOS_FL]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_FL]})"
+            "+ ( {factor[LOS_FH]} * ( get(2) - {threshold[LOS_FH]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_FH]})"
+            ")")
+        parameters = {
+            "freeway": {
+                "factor": {
+                    "LOS_C": 0.2429, "LOS_D": 0.1705, "LOS_E": -0.2278, "LOS_FL": -0.1983, "LOS_FH": 1.022
+                },
+                "threshold": {
+                    "LOS_C": 0.7, "LOS_D": 0.8,  "LOS_E": 0.9, "LOS_FL": 1.0, "LOS_FH": 1.2
+                },
+            },
+            "road": {   # for arterials, ramps, collectors, local roads, etc.
+                "factor": {
+                    "LOS_C": 0.1561, "LOS_D": 0.0, "LOS_E": 0.0, "LOS_FL": -0.449, "LOS_FH": 0.0
+                },
+                "threshold": {
+                    "LOS_C": 0.7, "LOS_D": 0.8,  "LOS_E": 0.9, "LOS_FL": 1.0, "LOS_FH": 1.2
+                },
+            }
+        }
+        bpr_tmplt = "el1 * (1 + 0.20 * ((volau + volad)/el2/0.75)^6)"
+        akcelik_tmplt = (
+            "(el1 + 60 * (0.25 *((volau + volad)/el2 - 1 + "
+            "(((volau + volad)/el2 - 1)^2 + el3 * (volau + volad)/el2)^0.5)))"
+        )
+        for f_id in ["fd1", "fd2"]:
+            if scenario.emmebank.function(f_id):
+                scenario.emmebank.delete_function(f_id)
+            scenario.emmebank.create_function(f_id, bpr_tmplt + reliability_tmplt.format(**parameters["freeway"]))
+        for f_id in ["fd3","fd4","fd5","fd6","fd7"]:
+            if scenario.emmebank.function(f_id):
+                scenario.emmebank.delete_function(f_id)
+            scenario.emmebank.create_function(f_id, akcelik_tmplt + reliability_tmplt.format(**parameters["road"]))
 
 
 class AssignmentClass:
@@ -525,5 +598,7 @@ class AssignmentClass:
             "freeflowtime": "@free_flow_time",
             "bridgetoll": f"@bridgetoll_{group}",
             "valuetoll": f"@valuetoll_{group}",
+            "rlbty" : "@reliability",
+            "autotime" : "@auto_time",
         }
         return lookup[skim]
