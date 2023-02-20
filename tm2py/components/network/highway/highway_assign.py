@@ -173,7 +173,8 @@ class HighwayAssignment(Component):
                         time_expr, reliability_expr = expression.split("*(1+@static_rel+")
                         net_calc("@auto_time", time_expr, {"link": "vdf=%s" % function.id[2:]})
                         net_calc("@reliability", "(@static_rel+" + reliability_expr, 
-                                {"link": "vdf=%s" % function.id[2:]})
+                            {"link": "vdf=%s" % function.id[2:]})
+                        net_calc("@reliability_sq", "@reliability**2", {"link": "all"})
 
                 with self.logger.log_start_end(
                     "Run SOLA assignment with path analyses and highway reliability", level="INFO"
@@ -549,7 +550,7 @@ class AssignmentClass:
             "freeflowtime": "@free_flow_time",
             "bridgetoll": f"@bridgetoll_{group}",
             "valuetoll": f"@valuetoll_{group}",
-            "rlbty" : "@reliability",
+            "rlbty" : "@reliability_sq",
             "autotime" : "@auto_time",
         }
         return lookup[skim]
