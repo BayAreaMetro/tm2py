@@ -3,6 +3,7 @@
 import numpy as np
 import os
 import geopandas as gpd
+import itertools
 import pandas as pd
 import toml
 
@@ -30,6 +31,9 @@ class Acceptance:
     simulated_maz_data_df: pd.DataFrame
     simulated_transit_segments_gdf: gpd.GeoDataFrame
     simulated_zero_vehicle_hhs_df: pd.DataFrame
+    simulated_station_to_station_df: pd.DataFrame
+
+    standard_transit_stops_df: pd.DataFrame
 
     ctpp_2012_2016_df: pd.DataFrame
     census_2010_geo_df: pd.DataFrame
@@ -216,6 +220,8 @@ class Acceptance:
         self._make_simulated_maz_data()
         self._reduce_simulated_home_work_flows()
         self._reduce_simulated_zero_vehicle_households()
+        self._read_standard_transit_stops()
+        self._reduce_simulated_station_to_station()
 
         assert sorted(
             self.simulated_home_work_flows_df.residence_county.unique().tolist()
@@ -293,7 +299,9 @@ class Acceptance:
 
         return
 
-    def _aggregate_line_names_across_time_of_day(self, input_df: pd.DataFrame, input_column_name: str) -> pd.DataFrame:
+    def _aggregate_line_names_across_time_of_day(
+        self, input_df: pd.DataFrame, input_column_name: str
+    ) -> pd.DataFrame:
 
         df = input_df[input_column_name].str.split(pat="_", expand=True).copy()
         df["daily_line_name"] = df[0] + "_" + df[1] + "_" + df[2]
@@ -479,9 +487,10 @@ class Acceptance:
 
         a_df = self._make_home_work_flow_comparisons()
         b_gdf = self._make_zero_vehicle_household_comparisons()
+        c_gdf = self._make_bart_station_to_station_comparisons()
 
         self.compare_gdf = gpd.GeoDataFrame(
-            pd.concat([a_df, b_gdf]), geometry="geometry"
+            pd.concat([a_df, b_gdf, c_gdf]), geometry="geometry"
         )
 
         self._write_other_comparisons()
@@ -668,7 +677,9 @@ class Acceptance:
                     "boarding_weight": "survey_boardings",
                 }
             )
-            out_df["survey_operator"] = out_df["survey_operator"].map(self.canonical_agency_names_dict)
+            out_df["survey_operator"] = out_df["survey_operator"].map(
+                self.canonical_agency_names_dict
+            )
             out_df = self._join_florida_thresholds(out_df)
             out_df = self._join_standard_route_id(out_df)
             out_df.to_csv(os.path.join(file_root, out_file))
@@ -853,7 +864,7 @@ class Acceptance:
         self.canonical_agency_names_dict = {**a_dict, **b_dict, **c_dict}
 
         return
-    
+
     def _make_canonical_station_names_dict(self):
 
         file_root = self.observed_dict["remote_io"]["crosswalk_folder_root"]
@@ -867,9 +878,9 @@ class Acceptance:
 
         running_operator_dict = {}
         for operator in df["operator"].unique():
-    
+
             o_df = df[df["operator"] == operator].copy()
-            
+
             a_df = o_df[["canonical"]].copy()
             a_df["temp"] = o_df["canonical"]
             a_dict = a_df.set_index("temp").to_dict()["canonical"]
@@ -1146,11 +1157,14 @@ class Acceptance:
 
         file_root = self.observed_dict["remote_io"]["crosswalk_folder_root"]
         pickle_file = self.observed_dict["crosswalks"]["census_geographies_pickle"]
+        tract_geojson_file  = self.observed_dict["crosswalks"]["census_tract_centroids_geojson"]
 
-        if os.path.exists(os.path.join(file_root, pickle_file)):
+        if (os.path.exists(os.path.join(file_root, pickle_file)) and os.path.exists(os.path.join(file_root, tract_geojson_file))):
             self.census_2010_geo_df = pd.read_pickle(
                 os.path.join(file_root, pickle_file)
             )
+
+            self.census_tract_centroids_gdf = gpd.read_file(os.path.join(file_root, tract_geojson_file))
             return
 
         else:
@@ -1163,7 +1177,7 @@ class Acceptance:
 
             gdf = gpd.read_file(os.path.join(temp_file_root, in_file))
 
-            self._make_tract_centroids(gdf)
+            self._make_tract_centroids(gdf, os.path.join(file_root, tract_geojson_file))
 
             self.census_2010_geo_df = (
                 pd.DataFrame(gdf)
@@ -1182,7 +1196,7 @@ class Acceptance:
 
             return
 
-    def _make_tract_centroids(self, input_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    def _make_tract_centroids(self, input_gdf: gpd.GeoDataFrame, out_file: str) -> gpd.GeoDataFrame:
 
         t_gdf = input_gdf.dissolve(by="TRACTCE10")
         c_gdf = t_gdf.to_crs(3857).centroid.to_crs(4326).reset_index()
@@ -1191,9 +1205,12 @@ class Acceptance:
         df["tract"] = df.tract.str.slice(start=1)  # remove leading zero
         r_df = c_gdf.merge(df, left_on="TRACTCE10", right_on="TRACTCE10")
         return_df = r_df[["tract", 0]].rename(columns={0: "geometry"}).copy()
+
         self.census_tract_centroids_gdf = gpd.GeoDataFrame(
             return_df, geometry="geometry"
         )
+
+        self.census_tract_centroids_gdf.to_file(out_file)
 
         return
 
@@ -1255,12 +1272,12 @@ class Acceptance:
         self.census_2010_to_maz_crosswalk_df = pd.read_csv(url_string)
 
         return
-    
+
     def _reduce_observed_bart_boardings(self):
-        
+
         file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["transit"]["bart_boardings_file"]
-        
+
         df = pd.read_csv(os.path.join(file_root, in_file))
 
         assert "BART" in self.canonical_station_names_dict.keys()
@@ -1268,13 +1285,223 @@ class Acceptance:
         df["boarding"] = df["orig_name"].map(self.canonical_station_names_dict["BART"])
         df["alighting"] = df["dest_name"].map(self.canonical_station_names_dict["BART"])
 
-        RELEVANT_BART_OBSERVED_YEARS_LIST = [2014, 2015, 2016]
-        a_df = df[df.year.isin(RELEVANT_BART_OBSERVED_YEARS_LIST)].copy()
+        a_df = df[df.year.isin(self.RELEVANT_BART_OBSERVED_YEARS_LIST)].copy()
 
-        sum_df = a_df.groupby(["boarding", "alighting"]).agg({"avg_trips": "mean"}).reset_index()
+        sum_df = (
+            a_df.groupby(["boarding", "alighting"])
+            .agg({"avg_trips": "mean"})
+            .reset_index()
+        )
         sum_df = sum_df.rename(columns={"avg_trips": "observed"})
 
         self.observed_bart_boardings_df = sum_df.copy()
-        
-        
+
         return
+
+    def _reduce_simulated_station_to_station(self):
+
+        if self.model_time_periods is None:
+            self._get_model_time_periods()
+
+        root_dir = self.scenario_dict["scenario"]["root_dir"]
+
+        path_list = [
+            "WLK_TRN_WLK",
+            "WLK_TRN_KNR",
+            "KNR_TRN_WLK",
+            "WLK_TRN_PNR",
+            "PNR_TRN_WLK",
+        ]
+        operator_list = ["bart", "caltrain"]
+
+        df = pd.DataFrame(
+            {
+                "operator": pd.Series(dtype=str),
+                "time_period": pd.Series(dtype=str),
+                "boarding": pd.Series(dtype=str),
+                "alighting": pd.Series(dtype=str),
+                "simulated": pd.Series(dtype=str),
+            }
+        )
+
+        for (operator, time_period, path) in itertools.product(
+            operator_list, self.model_time_periods, path_list
+        ):
+            input_file_name = os.path.join(
+                root_dir,
+                "trn",
+                f"{operator}_station_to_station_{path}_{time_period}.txt",
+            )
+            file = open(input_file_name, "r")
+            while True:
+                line = file.readline()
+                if not line:
+                    break
+                if line[0] == "c" or line[0] == "t" or line[0] == "d" or line[0] == "a":
+                    continue
+                else:
+                    data = line.split()
+                    subject_df = pd.DataFrame(
+                        [[operator, time_period, data[0], data[1], data[2]]],
+                        columns=[
+                            "operator",
+                            "time_period",
+                            "boarding",
+                            "alighting",
+                            "simulated",
+                        ],
+                    )
+                    df = df.append(subject_df).reset_index(drop=True)
+
+            df["boarding"] = df["boarding"].astype(int)
+            df["alighting"] = df["alighting"].astype(int)
+            df["simulated"] = df["simulated"].astype(float)
+
+            file.close()
+
+        a_df = self._get_station_names_from_standard_network(df)
+        sum_df = (
+            a_df.groupby(["operator", "boarding_name", "alighting_name"])
+            .agg({"simulated": "sum", "boarding_lat": "first", "boarding_lon": "first"})
+            .reset_index()
+        )
+
+        self.simulated_station_to_station_df = sum_df.copy()
+
+        return
+
+    def _read_standard_transit_stops(self):
+
+        root_dir = self.scenario_dict["scenario"]["root_dir"]
+        in_file = os.path.join(root_dir, "inputs", "network", "standard", "stops.txt")
+
+        df = pd.read_csv(in_file)
+
+        self.standard_transit_stops_df = df.copy()
+
+        return
+
+    def _get_station_names_from_standard_network(
+        self, input_df: pd.DataFrame
+    ) -> pd.DataFrame:
+
+        root_dir = self.observed_dict["remote_io"]["crosswalk_folder_root"]
+        in_file = self.observed_dict["crosswalks"]["standard_to_emme_transit_file"]
+
+        x_df = pd.read_csv(os.path.join(root_dir, in_file))
+
+        stations_list = (
+            input_df["boarding"].unique().astype(int).tolist()
+            + input_df["alighting"].unique().tolist()
+        )
+        stations_list = list(set(stations_list))
+
+        x_trim_df = x_df[x_df["emme_node_id"].isin(stations_list)]
+
+        station_df = self.standard_transit_stops_df[
+            ["stop_name", "stop_lat", "stop_lon", "model_node_id"]
+        ]
+
+        r_df = pd.merge(
+            input_df,
+            x_trim_df,
+            left_on="boarding",
+            right_on="emme_node_id",
+            how="left",
+        ).rename(columns={"model_node_id": "boarding_standard_node_id"})
+        r_df = r_df.drop(columns=["emme_node_id"])
+
+        r_df = pd.merge(
+            r_df,
+            x_trim_df,
+            left_on="alighting",
+            right_on="emme_node_id",
+            how="left",
+        ).rename(columns={"model_node_id": "alighting_standard_node_id"})
+        r_df = r_df.drop(columns=["emme_node_id"])
+
+        r_df = pd.merge(
+            r_df,
+            station_df,
+            left_on="boarding_standard_node_id",
+            right_on="model_node_id",
+            how="left",
+        ).rename(
+            columns={
+                "stop_name": "boarding_name",
+                "stop_lat": "boarding_lat",
+                "stop_lon": "boarding_lon",
+            }
+        )
+        r_df = r_df.drop(columns=["model_node_id"])
+
+        r_df = pd.merge(
+            r_df,
+            station_df,
+            left_on="alighting_standard_node_id",
+            right_on="model_node_id",
+            how="left",
+        ).rename(
+            columns={
+                "stop_name": "alighting_name",
+                "stop_lat": "alighting_lat",
+                "stop_lon": "alighting_lon",
+            }
+        )
+        r_df = r_df.drop(columns=["model_node_id"])
+
+        r_df["operator"] = r_df["operator"].map(self.canonical_agency_names_dict)
+
+        assert "BART" in self.canonical_station_names_dict.keys()
+        bart_df = r_df[r_df["operator"] == "BART"].copy()
+        bart_df["boarding_name"] = bart_df["boarding_name"].map(
+            self.canonical_station_names_dict["BART"]
+        )
+        bart_df["alighting_name"] = bart_df["alighting_name"].map(
+            self.canonical_station_names_dict["BART"]
+        )
+
+        assert "Caltrain" in self.canonical_station_names_dict.keys()
+        caltrain_df = r_df[r_df["operator"] == "Caltrain"].copy()
+        caltrain_df["boarding_name"] = caltrain_df["boarding_name"].map(
+            self.canonical_station_names_dict["Caltrain"]
+        )
+        caltrain_df["alighting_name"] = caltrain_df["alighting_name"].map(
+            self.canonical_station_names_dict["Caltrain"]
+        )
+
+        return pd.concat([bart_df, caltrain_df]).reset_index()
+
+    def _make_bart_station_to_station_comparisons(self):
+
+        s_df = self.simulated_station_to_station_df.copy()
+
+        df = pd.merge(
+            self.observed_bart_boardings_df,
+            s_df[s_df["operator"] == "BART"].drop(columns=["operator"]),
+            left_on=["boarding", "alighting"],
+            right_on=["boarding_name", "alighting_name"],
+        ).drop(columns=["boarding_name", "alighting_name"])
+
+        df["criteria_number"] = 16
+        df[
+            "criteria_name"
+        ] = "Percent root mean square error across boarding-alighting BART flows"
+        df["acceptance_threshold"] = "Less than 40 percent"
+        df["dimension_01_name"] = "Boarding Station"
+        df["dimension_02_name"] = "Alighting Station"
+
+        df = df.rename(
+            columns={
+                "boarding": "dimension_01_value",
+                "alighting": "dimension_02_value",
+                "observed": "observed_outcome",
+                "simulated": "simulated_outcome",
+            }
+        )
+
+        r_gdf = gpd.GeoDataFrame(
+            df, geometry=gpd.points_from_xy(df["boarding_lon"], df["boarding_lat"])
+        ).drop(columns=["boarding_lon", "boarding_lat"])
+
+        return r_gdf

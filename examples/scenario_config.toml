@@ -7,7 +7,7 @@
     year = 2015
     verify = false
     maz_landuse_file = "inputs\\landuse\\maz_data.csv"
-    root_dir = "~/Documents/GitHub/tm2py/examples/temp_acceptance/"
+    root_dir = "/Users/wsp/Documents/GitHub/tm2py/examples/temp_acceptance/"
 
 [run]
     start_component = ""
