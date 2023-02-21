@@ -153,6 +153,7 @@ class PrepareNetwork(Component):
                 ("@intdist_up", "dist from the closest upstream int"),
                 ("@static_rel", "static reliability"),
                 ("@reliability", "link total reliability"),
+                ("@reliability_sq", "link total reliability variance"),
                 ("@auto_time", "link total reliability"),
             ],
             "NODE": [
