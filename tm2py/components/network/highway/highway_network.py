@@ -46,6 +46,7 @@ The following attributes are calculated:
     - "@cost_YY": total cost for class YY
 """
 
+import heapq as _heapq
 import os
 from typing import TYPE_CHECKING, Dict, List, Set
 
@@ -54,8 +55,6 @@ import pandas as pd
 from tm2py.components.component import Component, FileFormatError
 from tm2py.emme.manager import EmmeNetwork, EmmeScenario
 from tm2py.logger import LogStartEnd
-
-import heapq as _heapq
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
@@ -158,7 +157,7 @@ class PrepareNetwork(Component):
             ],
             "NODE": [
                 ("@interchange", "interchange"),
-            ]
+            ],
         }
         # toll field attributes by bridge and value and toll definition
         dst_veh_groups = self.config.tolls.dst_vehicle_group_names
@@ -439,15 +438,19 @@ class PrepareNetwork(Component):
         #         node.is_interchange = False
         # for node in network.nodes():
         #     node["@interchange"] = node.is_interchange
-        
-        mode_c = network.mode('c')
+
+        mode_c = network.mode("c")
         for link in network.links():
-            if link["@ft"] in [1,2] and mode_c in link.modes:
-                link["@intdist_down"] = PrepareNetwork.interchange_distance(link, "DOWNSTREAM")
-                link["@intdist_up"] = PrepareNetwork.interchange_distance(link, "UPSTREAM")
-        
+            if link["@ft"] in [1, 2] and mode_c in link.modes:
+                link["@intdist_down"] = PrepareNetwork.interchange_distance(
+                    link, "DOWNSTREAM"
+                )
+                link["@intdist_up"] = PrepareNetwork.interchange_distance(
+                    link, "UPSTREAM"
+                )
+
         network.delete_attribute("NODE", "is_interchange")
-    
+
     @staticmethod
     def interchange_distance(orig_link, direction):
         visited = set([])
@@ -469,7 +472,7 @@ class PrepareNetwork(Component):
         if check_far_node(orig_link):
             interchange_found = True
             link_cost = 0.0
-        
+
         try:
             while not interchange_found:
                 link_cost, link_id, link = _heapq.heappop(heap)
@@ -512,32 +515,35 @@ class PrepareNetwork(Component):
         # arterial/ramp/other coefficients
         road_rel = {
             "intercept": 0.0546552,
-            "lanes": {
-                1: 0.0,
-                2: 0.0103589,
-                3: 0.0361211,
-                4: 0.0446958,
-                5: 0.0
-            },
-            "speed":  {
+            "lanes": {1: 0.0, 2: 0.0103589, 3: 0.0361211, 4: 0.0446958, 5: 0.0},
+            "speed": {
                 "<35": 0,
                 35: 0.0075674,
                 40: 0.0091012,
                 45: 0.0080996,
                 50: -0.0022938,
-                ">50": -0.0046211
+                ">50": -0.0046211,
             },
         }
         for link in network.links():
             # if freeway apply freeway parameters to this link
-            if (link["@ft"] in [1,2]) and (link['@lanes'] > 0):
-                high_speed_factor = freeway_rel["speed>70"] if link["@free_flow_speed"]>=70 else 0
+            if (link["@ft"] in [1, 2]) and (link["@lanes"] > 0):
+                high_speed_factor = (
+                    freeway_rel["speed>70"] if link["@free_flow_speed"] >= 70 else 0
+                )
                 upstream_factor = freeway_rel["upstream"] * 1 / link["@intdist_up"]
-                downstream_factor = freeway_rel["downstream"] * 1 / link["@intdist_down"]
-                link["@static_rel"] = freeway_rel["intercept"] + high_speed_factor + upstream_factor + downstream_factor
+                downstream_factor = (
+                    freeway_rel["downstream"] * 1 / link["@intdist_down"]
+                )
+                link["@static_rel"] = (
+                    freeway_rel["intercept"]
+                    + high_speed_factor
+                    + upstream_factor
+                    + downstream_factor
+                )
             # arterial/ramp/other apply road parameters
             elif (link["@ft"] < 8) and (link["@lanes"] > 0):
-                lane_factor = road_rel["lanes"].get(link["@lanes"],0)
+                lane_factor = road_rel["lanes"].get(link["@lanes"], 0)
                 speed_bin = link["@free_flow_speed"]
                 if speed_bin < 35:
                     speed_bin = "<35"

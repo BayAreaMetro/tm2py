@@ -163,27 +163,39 @@ class HighwayAssignment(Component):
                 net_calc = NetworkCalculator(self.controller, scenario)
 
                 exf_pars = scenario.emmebank.extra_function_parameters
-                vdfs = [f for f in scenario.emmebank.functions() if f.type == "VOLUME_DELAY"]
+                vdfs = [
+                    f for f in scenario.emmebank.functions() if f.type == "VOLUME_DELAY"
+                ]
                 for function in vdfs:
                     expression = function.expression
                     for el in ["el1", "el2", "el3", "el4"]:
                         expression = expression.replace(el, getattr(exf_pars, el))
                     if "@static_rel" in expression:
                         # split function into time component and reliability component
-                        time_expr, reliability_expr = expression.split("*(1+@static_rel+")
-                        net_calc("@auto_time", time_expr, {"link": "vdf=%s" % function.id[2:]})
-                        net_calc("@reliability", "(@static_rel+" + reliability_expr, 
-                            {"link": "vdf=%s" % function.id[2:]})
+                        time_expr, reliability_expr = expression.split(
+                            "*(1+@static_rel+"
+                        )
+                        net_calc(
+                            "@auto_time",
+                            time_expr,
+                            {"link": "vdf=%s" % function.id[2:]},
+                        )
+                        net_calc(
+                            "@reliability",
+                            "(@static_rel+" + reliability_expr,
+                            {"link": "vdf=%s" % function.id[2:]},
+                        )
                         net_calc("@reliability_sq", "@reliability**2", {"link": "all"})
 
                 with self.logger.log_start_end(
-                    "Run SOLA assignment with path analyses and highway reliability", level="INFO"
+                    "Run SOLA assignment with path analyses and highway reliability",
+                    level="INFO",
                 ):
                     assign = self.controller.emme_manager.tool(
                         "inro.emme.traffic_assignment.sola_traffic_assignment"
                     )
                     assign(assign_spec, scenario, chart_log_interval=1)
-                
+
                 # Subtract non-time costs from gen cost to get the raw travel time
                 for emme_class_spec in assign_spec["classes"]:
                     self._calc_time_skim(emme_class_spec)
@@ -388,7 +400,7 @@ class HighwayAssignment(Component):
                 f"{data.mean():9.4g} {data.sum(): 13.7g}"
             )
             self.logger.debug(stats)
-    
+
 
 class AssignmentClass:
     """Highway assignment class, represents data from config and conversion to Emme specs."""
@@ -550,7 +562,7 @@ class AssignmentClass:
             "freeflowtime": "@free_flow_time",
             "bridgetoll": f"@bridgetoll_{group}",
             "valuetoll": f"@valuetoll_{group}",
-            "rlbty" : "@reliability_sq",
-            "autotime" : "@auto_time",
+            "rlbty": "@reliability_sq",
+            "autotime": "@auto_time",
         }
         return lookup[skim]

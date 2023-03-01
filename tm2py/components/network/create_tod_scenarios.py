@@ -116,24 +116,41 @@ class CreateTODScenarios(Component):
             "+ ( {factor[LOS_E]} * ( get(2) - {threshold[LOS_E]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_E]})"
             "+ ( {factor[LOS_FL]} * ( get(2) - {threshold[LOS_FL]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_FL]})"
             "+ ( {factor[LOS_FH]} * ( get(2) - {threshold[LOS_FH]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_FH]})"
-            ")")
+            ")"
+        )
         parameters = {
             "freeway": {
                 "factor": {
-                    "LOS_C": 0.2429, "LOS_D": 0.1705, "LOS_E": -0.2278, "LOS_FL": -0.1983, "LOS_FH": 1.022
+                    "LOS_C": 0.2429,
+                    "LOS_D": 0.1705,
+                    "LOS_E": -0.2278,
+                    "LOS_FL": -0.1983,
+                    "LOS_FH": 1.022,
                 },
                 "threshold": {
-                    "LOS_C": 0.7, "LOS_D": 0.8,  "LOS_E": 0.9, "LOS_FL": 1.0, "LOS_FH": 1.2
+                    "LOS_C": 0.7,
+                    "LOS_D": 0.8,
+                    "LOS_E": 0.9,
+                    "LOS_FL": 1.0,
+                    "LOS_FH": 1.2,
                 },
             },
-            "road": {   # for arterials, ramps, collectors, local roads, etc.
+            "road": {  # for arterials, ramps, collectors, local roads, etc.
                 "factor": {
-                    "LOS_C": 0.1561, "LOS_D": 0.0, "LOS_E": 0.0, "LOS_FL": -0.449, "LOS_FH": 0.0
+                    "LOS_C": 0.1561,
+                    "LOS_D": 0.0,
+                    "LOS_E": 0.0,
+                    "LOS_FL": -0.449,
+                    "LOS_FH": 0.0,
                 },
                 "threshold": {
-                    "LOS_C": 0.7, "LOS_D": 0.8,  "LOS_E": 0.9, "LOS_FL": 1.0, "LOS_FH": 1.2
+                    "LOS_C": 0.7,
+                    "LOS_D": 0.8,
+                    "LOS_E": 0.9,
+                    "LOS_FL": 1.0,
+                    "LOS_FH": 1.2,
                 },
-            }
+            },
         }
         # TODO: should have just 3 functions, and map the FT to the vdf
         # TODO: could optimize expression (to review)
@@ -149,7 +166,9 @@ class CreateTODScenarios(Component):
         for f_id in ["fd1", "fd2"]:
             if emmebank.function(f_id):
                 emmebank.delete_function(f_id)
-            emmebank.create_function(f_id, bpr_tmplt + reliability_tmplt.format(**parameters["freeway"]))
+            emmebank.create_function(
+                f_id, bpr_tmplt + reliability_tmplt.format(**parameters["freeway"])
+            )
         for f_id in [
             "fd3",
             "fd4",
@@ -165,7 +184,9 @@ class CreateTODScenarios(Component):
         ]:
             if emmebank.function(f_id):
                 emmebank.delete_function(f_id)
-            emmebank.create_function(f_id, akcelik_tmplt + reliability_tmplt.format(**parameters["road"]))
+            emmebank.create_function(
+                f_id, akcelik_tmplt + reliability_tmplt.format(**parameters["road"])
+            )
         if emmebank.function("fd8"):
             emmebank.delete_function("fd8")
         emmebank.create_function("fd8", fixed_tmplt)
