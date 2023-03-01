@@ -462,11 +462,17 @@ class PrepareNetwork(Component):
             check_far_node = lambda l: l.i_node.is_interchange
         # Shortest path search for nearest interchange node along freeway
         for link in get_links(orig_link):
-            _heapq.heappush(heap, (link["length"], link))
+            _heapq.heappush(heap, (link["length"], link["#link_id"], link))
         interchange_found = False
+
+        # Check first node
+        if check_far_node(orig_link):
+            interchange_found = True
+            link_cost = 0.0
+        
         try:
             while not interchange_found:
-                link_cost, link = _heapq.heappop(heap)
+                link_cost, link_id, link = _heapq.heappop(heap)
                 if link in visited:
                     continue
                 visited_add(link)
@@ -478,7 +484,11 @@ class PrepareNetwork(Component):
                     if next_link in visited:
                         continue
                     next_cost = link_cost + next_link["length"]
-                    _heapq.heappush(heap, (next_cost, next_link))
+                    _heapq.heappush(heap, (next_cost, next_link["#link_id"], next_link))
+        except TypeError:
+            # TypeError if the link type objects are compared in the tuples
+            # case where the path cost are the same
+            raise Exception("Path cost are the same, cannot compare Link objects")
         except IndexError:
             # IndexError if heap is empty
             # case where start / end of highway, dist = 99
