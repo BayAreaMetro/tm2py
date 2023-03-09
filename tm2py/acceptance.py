@@ -23,6 +23,9 @@ class Acceptance:
 
     ALL_DAY_WORD = "daily"
 
+    HEAVY_RAIL_NETWORK_MODE_DESCR: str
+    COMMUTER_RAIL_NETWORK_MODE_DESCR: str
+
     model_time_periods = []
     model_morning_capacity_factor: float
 
@@ -30,6 +33,7 @@ class Acceptance:
     simulated_home_work_flows_df: pd.DataFrame
     simulated_maz_data_df: pd.DataFrame
     simulated_transit_segments_gdf: gpd.GeoDataFrame
+    simulated_transit_access_df: pd.DataFrame
     simulated_zero_vehicle_hhs_df: pd.DataFrame
     simulated_station_to_station_df: pd.DataFrame
 
@@ -46,6 +50,9 @@ class Acceptance:
 
     canonical_agency_names_dict = {}
     canonical_station_names_dict = {}
+
+    transit_access_mode_dict = {}
+    transit_mode_dict = {}
 
     rail_operators_vector = [
         "BART",
@@ -87,6 +94,8 @@ class Acceptance:
             "survey_boardings": pd.Series(dtype="float"),
         }
     )
+
+    reduced_transit_on_board_access_df: pd.DataFrame
 
     tableau_projection = "4326"
 
@@ -222,6 +231,7 @@ class Acceptance:
         self._reduce_simulated_zero_vehicle_households()
         self._read_standard_transit_stops()
         self._reduce_simulated_station_to_station()
+        self._reduce_simulated_rail_access_summaries()
 
         assert sorted(
             self.simulated_home_work_flows_df.residence_county.unique().tolist()
@@ -240,9 +250,13 @@ class Acceptance:
         if not self.canonical_station_names_dict:
             self._make_canonical_station_names_dict()
 
+        if not self.transit_access_mode_dict:
+            self._make_transit_mode_dict()
+
         if self.reduced_transit_on_board_df.empty:
             self.reduce_on_board_survey()
 
+        self._reduce_observed_rail_access_summaries()
         self._reduce_ctpp_2012_2016()
         self._reduce_census_zero_car_households()
         self._make_census_maz_crosswalk()
@@ -488,9 +502,10 @@ class Acceptance:
         a_df = self._make_home_work_flow_comparisons()
         b_gdf = self._make_zero_vehicle_household_comparisons()
         c_gdf = self._make_bart_station_to_station_comparisons()
+        d_gdf = self._make_rail_access_comparisons()
 
         self.compare_gdf = gpd.GeoDataFrame(
-            pd.concat([a_df, b_gdf, c_gdf]), geometry="geometry"
+            pd.concat([a_df, b_gdf, c_gdf, d_gdf]), geometry="geometry"
         )
 
         self._write_other_comparisons()
@@ -1157,14 +1172,20 @@ class Acceptance:
 
         file_root = self.observed_dict["remote_io"]["crosswalk_folder_root"]
         pickle_file = self.observed_dict["crosswalks"]["census_geographies_pickle"]
-        tract_geojson_file  = self.observed_dict["crosswalks"]["census_tract_centroids_geojson"]
+        tract_geojson_file = self.observed_dict["crosswalks"][
+            "census_tract_centroids_geojson"
+        ]
 
-        if (os.path.exists(os.path.join(file_root, pickle_file)) and os.path.exists(os.path.join(file_root, tract_geojson_file))):
+        if os.path.exists(os.path.join(file_root, pickle_file)) and os.path.exists(
+            os.path.join(file_root, tract_geojson_file)
+        ):
             self.census_2010_geo_df = pd.read_pickle(
                 os.path.join(file_root, pickle_file)
             )
 
-            self.census_tract_centroids_gdf = gpd.read_file(os.path.join(file_root, tract_geojson_file))
+            self.census_tract_centroids_gdf = gpd.read_file(
+                os.path.join(file_root, tract_geojson_file)
+            )
             return
 
         else:
@@ -1196,7 +1217,9 @@ class Acceptance:
 
             return
 
-    def _make_tract_centroids(self, input_gdf: gpd.GeoDataFrame, out_file: str) -> gpd.GeoDataFrame:
+    def _make_tract_centroids(
+        self, input_gdf: gpd.GeoDataFrame, out_file: str
+    ) -> gpd.GeoDataFrame:
 
         t_gdf = input_gdf.dissolve(by="TRACTCE10")
         c_gdf = t_gdf.to_crs(3857).centroid.to_crs(4326).reset_index()
@@ -1384,16 +1407,34 @@ class Acceptance:
     def _get_station_names_from_standard_network(
         self, input_df: pd.DataFrame
     ) -> pd.DataFrame:
+        """_summary_
+
+        Takes a dataframe with columns "boarding" (and, optionally, "alighting") that contains the node numbers of BART and Caltrain stations from the simulation. It then uses
+        the standard network stops file (`stops.txt`) to get the station names and lat/lon coordinates for each subject station. The canonical station name is returned.
+
+        Args:
+            input_df (pd.DataFrame): A pandas dataframe with columns "boarding" and/or "alighting" that contain the node numbers of rail stations from the simulation.
+
+        Returns:
+            pd.DataFrame: The input_df with the canonical station name and lat/lon coordinates added as columns. If "boarding" and "alighting" columns are present, then name and coordinate columns are added for both the boarding and alighting station.
+        """
 
         root_dir = self.observed_dict["remote_io"]["crosswalk_folder_root"]
         in_file = self.observed_dict["crosswalks"]["standard_to_emme_transit_file"]
 
         x_df = pd.read_csv(os.path.join(root_dir, in_file))
 
-        stations_list = (
-            input_df["boarding"].unique().astype(int).tolist()
-            + input_df["alighting"].unique().tolist()
-        )
+        stations_list = []
+        if "boarding" in input_df.columns:
+            stations_list.extend(input_df["boarding"].unique().astype(int).tolist())
+
+        if "alighting" in input_df.columns:
+            stations_list.extend(input_df["alighting"].unique().astype(int).tolist())
+
+        assert (
+            len(stations_list) > 0
+        ), "No boarding or alighting columns found in input_df."
+
         stations_list = list(set(stations_list))
 
         x_trim_df = x_df[x_df["emme_node_id"].isin(stations_list)]
@@ -1402,73 +1443,81 @@ class Acceptance:
             ["stop_name", "stop_lat", "stop_lon", "model_node_id"]
         ]
 
-        r_df = pd.merge(
-            input_df,
-            x_trim_df,
-            left_on="boarding",
-            right_on="emme_node_id",
-            how="left",
-        ).rename(columns={"model_node_id": "boarding_standard_node_id"})
-        r_df = r_df.drop(columns=["emme_node_id"])
+        if "boarding" in input_df.columns:
+            r_df = pd.merge(
+                input_df,
+                x_trim_df,
+                left_on="boarding",
+                right_on="emme_node_id",
+                how="left",
+            ).rename(columns={"model_node_id": "boarding_standard_node_id"})
+            r_df = r_df.drop(columns=["emme_node_id"])
 
-        r_df = pd.merge(
-            r_df,
-            x_trim_df,
-            left_on="alighting",
-            right_on="emme_node_id",
-            how="left",
-        ).rename(columns={"model_node_id": "alighting_standard_node_id"})
-        r_df = r_df.drop(columns=["emme_node_id"])
+            r_df = pd.merge(
+                r_df,
+                station_df,
+                left_on="boarding_standard_node_id",
+                right_on="model_node_id",
+                how="left",
+            ).rename(
+                columns={
+                    "stop_name": "boarding_name",
+                    "stop_lat": "boarding_lat",
+                    "stop_lon": "boarding_lon",
+                }
+            )
+            r_df = r_df.drop(columns=["model_node_id"])
 
-        r_df = pd.merge(
-            r_df,
-            station_df,
-            left_on="boarding_standard_node_id",
-            right_on="model_node_id",
-            how="left",
-        ).rename(
-            columns={
-                "stop_name": "boarding_name",
-                "stop_lat": "boarding_lat",
-                "stop_lon": "boarding_lon",
-            }
-        )
-        r_df = r_df.drop(columns=["model_node_id"])
+        if "alighting" in input_df.columns:
+            r_df = pd.merge(
+                r_df,
+                x_trim_df,
+                left_on="alighting",
+                right_on="emme_node_id",
+                how="left",
+            ).rename(columns={"model_node_id": "alighting_standard_node_id"})
+            r_df = r_df.drop(columns=["emme_node_id"])
 
-        r_df = pd.merge(
-            r_df,
-            station_df,
-            left_on="alighting_standard_node_id",
-            right_on="model_node_id",
-            how="left",
-        ).rename(
-            columns={
-                "stop_name": "alighting_name",
-                "stop_lat": "alighting_lat",
-                "stop_lon": "alighting_lon",
-            }
-        )
-        r_df = r_df.drop(columns=["model_node_id"])
+            r_df = pd.merge(
+                r_df,
+                station_df,
+                left_on="alighting_standard_node_id",
+                right_on="model_node_id",
+                how="left",
+            ).rename(
+                columns={
+                    "stop_name": "alighting_name",
+                    "stop_lat": "alighting_lat",
+                    "stop_lon": "alighting_lon",
+                }
+            )
+            r_df = r_df.drop(columns=["model_node_id"])
 
         r_df["operator"] = r_df["operator"].map(self.canonical_agency_names_dict)
 
         assert "BART" in self.canonical_station_names_dict.keys()
         bart_df = r_df[r_df["operator"] == "BART"].copy()
-        bart_df["boarding_name"] = bart_df["boarding_name"].map(
-            self.canonical_station_names_dict["BART"]
-        )
-        bart_df["alighting_name"] = bart_df["alighting_name"].map(
-            self.canonical_station_names_dict["BART"]
-        )
 
         assert "Caltrain" in self.canonical_station_names_dict.keys()
         caltrain_df = r_df[r_df["operator"] == "Caltrain"].copy()
-        caltrain_df["boarding_name"] = caltrain_df["boarding_name"].map(
-            self.canonical_station_names_dict["Caltrain"]
-        )
-        caltrain_df["alighting_name"] = caltrain_df["alighting_name"].map(
-            self.canonical_station_names_dict["Caltrain"]
-        )
+
+        if "boarding" in input_df.columns:
+            bart_df["boarding_name"] = bart_df["boarding_name"].map(
+                self.canonical_station_names_dict["BART"]
+            )
+
+            caltrain_df["boarding_name"] = caltrain_df["boarding_name"].map(
+                self.canonical_station_names_dict["Caltrain"]
+            )
+
+        if "alighting" in input_df.columns:
+            bart_df["alighting_name"] = bart_df["alighting_name"].map(
+                self.canonical_station_names_dict["BART"]
+            )
+
+            caltrain_df["alighting_name"] = caltrain_df["alighting_name"].map(
+                self.canonical_station_names_dict["Caltrain"]
+            )
 
         return pd.concat([bart_df, caltrain_df]).reset_index()
 
@@ -1505,3 +1554,203 @@ class Acceptance:
         ).drop(columns=["boarding_lon", "boarding_lat"])
 
         return r_gdf
+
+    def _reduce_observed_rail_access_summaries(self):
+
+        root_dir = self.observed_dict["remote_io"]["obs_folder_root"]
+        in_file = self.observed_dict["transit"]["reduced_access_summary_file"]
+
+        df = pd.read_csv(os.path.join(root_dir, in_file))
+
+        assert "operator" in df.columns
+        df["operator"] = df["operator"].map(self.canonical_agency_names_dict)
+
+        assert "boarding_station" in df.columns
+        for operator in self.canonical_station_names_dict.keys():
+            df.loc[df["operator"] == operator, "boarding_station"] = df.loc[
+                df["operator"] == operator, "boarding_station"
+            ].map(self.canonical_station_names_dict[operator])
+
+        self.reduced_transit_on_board_access_df = df.copy()
+
+        return
+
+    def _reduce_simulated_rail_access_summaries(self):
+
+        # step 1: identify rail stations
+        df = pd.DataFrame(
+            self.simulated_transit_segments_gdf[
+                ["line", "i_node", "j_node", "mdesc", "mode", "voltr"]
+            ]
+        )
+        rail_df = df[
+            df["mdesc"].isin(
+                [
+                    self.HEAVY_RAIL_NETWORK_MODE_DESCR,
+                    self.COMMUTER_RAIL_NETWORK_MODE_DESCR,
+                ]
+            )
+        ].copy()
+        a_df = rail_df["line"].str.split(pat="_", expand=True).copy()
+        rail_df["operator"] = a_df[1]
+        rail_df["operator"] = rail_df["operator"].map(self.canonical_agency_names_dict)
+
+        # step 2: get station names
+        i_df = rail_df[["operator", "i_node"]].rename(columns={"i_node": "boarding"})
+        j_df = rail_df[["operator", "j_node"]].rename(columns={"j_node": "boarding"})
+        both_df = pd.concat([i_df, j_df]).drop_duplicates().reset_index(drop=True)
+        both_df = both_df[both_df["boarding"] > 0].copy()
+        both_names_df = self._get_station_names_from_standard_network(both_df)
+
+        # step 3: get the access links
+        station_list = both_names_df.boarding.unique().tolist()
+
+        access_df = (
+            df[
+                df["j_node"].isin(station_list)
+                & ~df["mdesc"].isin(
+                    [
+                        self.HEAVY_RAIL_NETWORK_MODE_DESCR,
+                        self.COMMUTER_RAIL_NETWORK_MODE_DESCR,
+                    ]
+                )
+                & df["j_node"]
+                > 0.0
+            ]
+            .reset_index(drop=True)
+            .copy()
+        )
+
+        access_df["time_period"] = "am"
+
+        join_df = pd.merge(
+            access_df,
+            both_names_df,
+            how="left",
+            left_on=["j_node"],
+            right_on=["boarding"],
+        ).reset_index(drop=True)
+
+        self.simulated_transit_access_df = (
+            join_df.groupby(
+                [
+                    "operator",
+                    "boarding",
+                    "boarding_name",
+                    "boarding_standard_node_id",
+                    "mode",
+                    "time_period",
+                ],
+            )
+            .agg({"voltr": "sum", "boarding_lat": "mean", "boarding_lon": "mean"})
+            .reset_index()
+        )
+
+        return
+
+    def _make_rail_access_comparisons(self):
+
+        PARK_AND_RIDE_OBSERVED_THRESHOLD = 500
+
+        s_df = self.simulated_transit_access_df.copy()
+        o_df = self.reduced_transit_on_board_access_df.copy()
+
+        s_df["access_mode"] = s_df["mode"].map(self.transit_mode_dict).map(self.transit_access_mode_dict)
+        o_df["access_mode"] = o_df["access_mode"].map(self.transit_access_mode_dict)
+
+        join_df = pd.merge(
+            o_df[o_df["time_period"] == "am"],
+            s_df,
+            how="left",
+            left_on=["operator", "boarding_station", "time_period", "access_mode"],
+            right_on=["operator", "boarding_name", "time_period", "access_mode"],
+        )
+
+        join_df["voltr"] = join_df["voltr"].fillna(0)
+        join_df["boarding_lat"] = join_df["boarding_lat"].fillna(0)
+        join_df["boarding_lon"] = join_df["boarding_lon"].fillna(0)
+
+        sum_df = (
+            join_df.groupby(
+                ["operator", "boarding_station", "time_period", "access_mode"]
+            )
+            .agg(
+                {
+                    "survey_trips": "sum",
+                    "voltr": "sum",
+                }
+            )
+            .reset_index()
+        )
+
+        coords_df = join_df[abs(join_df["boarding_lat"])>0.0].groupby(["operator", "boarding_station"]).agg({"boarding_lat": "first", "boarding_lon": "first"}).reset_index()
+
+        a_df = sum_df[sum_df["access_mode"]=="Park and Ride"].copy()
+        b_df = a_df[a_df["survey_trips"]>PARK_AND_RIDE_OBSERVED_THRESHOLD].copy()
+        relevant_station_df = b_df[["operator", "boarding_station"]].reset_index(drop=True)
+
+        df = (
+            sum_df[
+                sum_df["operator"].isin(relevant_station_df["operator"])
+                & sum_df["boarding_station"].isin(
+                    relevant_station_df["boarding_station"]
+                )
+            ]
+            .copy()
+            .reset_index(drop=True)
+        )
+
+        df = pd.merge(df, coords_df, how="left", on=["operator", "boarding_station"])
+
+        df["criteria_number"] = 19
+        df[
+            "criteria_name"
+        ] = "Percent error in share of transit boardings that access via walk, bus, park and ride, and kiss and ride at rail stations"
+        df["acceptance_threshold"] = "MTC's assessment of reasonableness"
+        df["dimension_01_name"] = "Boarding Station"
+        df["dimension_02_name"] = "Access Mode"
+
+        df["dimension_01_value"] = df["operator"] + " " + df["boarding_station"]
+
+        df = df.rename(
+            columns={
+                "access_mode": "dimension_02_value",
+                "survey_trips": "observed_outcome",
+                "voltr": "simulated_outcome",
+            }
+        )
+
+        df = df.drop(
+            columns=[
+                "operator",
+                "boarding_station",
+                "time_period",
+            ]
+        )
+
+        r_gdf = gpd.GeoDataFrame(
+            df, geometry=gpd.points_from_xy(df["boarding_lon"], df["boarding_lat"])
+        ).drop(columns=["boarding_lon", "boarding_lat"])
+
+        return r_gdf
+    
+    def _make_transit_mode_dict(self):
+
+        transit_mode_dict = {}
+        for lil_dict in self.model_dict["transit"]["modes"]:
+            add_dict = {lil_dict["mode_id"]: lil_dict["name"]}
+            transit_mode_dict.update(add_dict)
+
+        # TODO: this will be in model_config in TM2.2
+        transit_mode_dict.update({"p": "pnr"})
+
+        self.HEAVY_RAIL_NETWORK_MODE_DESCR = transit_mode_dict["h"]
+        self.COMMUTER_RAIL_NETWORK_MODE_DESCR = transit_mode_dict["r"]
+
+        access_mode_dict = {transit_mode_dict["w"]: "Walk", transit_mode_dict["a"]: "Walk", transit_mode_dict["e"]: "Walk", transit_mode_dict["p"]: "Park and Ride"}
+        access_mode_dict.update({"knr": "Kiss and Ride", "bike": "Bike"})
+
+        self.transit_mode_dict = transit_mode_dict
+        self.transit_access_mode_dict = access_mode_dict
+
+        return
