@@ -259,11 +259,29 @@ class TimeOfDayConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class HouseholdModeAgg(ConfigItem):
+    """household trip mode aggregation input parameters.
+
+    Properties:
+        name: aggregate name used for the class group in the input columns
+            for the trip tables,
+        modes: list of mode choice mode names used for the trip tables
+    """
+
+    name: str
+    modes: Tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class HouseholdConfig(ConfigItem):
     """Household (residents) model parameters."""
 
     highway_demand_file: pathlib.Path
     transit_demand_file: pathlib.Path
+    highway_taz_ctramp_output_file: pathlib.Path
+    mode_agg: List[HouseholdModeAgg]
+    highway_maz_ctramp_output_file: pathlib.Path
+    transit_tap_ctramp_output_file: pathlib.Path
 
 
 @dataclass(frozen=True)
@@ -823,6 +841,7 @@ class HighwayMazToMazConfig(ConfigItem):
     mode_code: str = Field(min_length=1, max_length=1)
     value_of_time: float = Field(gt=0)
     operating_cost_per_mile: float = Field(ge=0)
+    max_distance: float = Field(gt=0)
     max_skim_cost: float = Field(gt=0)
     excluded_links: Tuple[str, ...] = Field()
     demand_file: pathlib.Path = Field()
