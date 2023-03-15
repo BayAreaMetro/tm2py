@@ -467,7 +467,7 @@ class TransitAssignment(Component):
         """Run transit assignments."""
 
         use_ccr = False
-        if self.controller.iteration >= 1:
+        if self.controller.iteration >= 0: #TODO add option of warmstart
             use_ccr = self.config.use_ccr
 
             self.sub_components["prepare transit demand"].run()
@@ -984,8 +984,8 @@ class TransitAssignmentClass:
 
     @property
     def _demand_matrix(self) -> str:
-        if self._iteration < 1:
-            return 'ms"zero"'  # zero demand matrix
+        # if self._iteration < 1:
+        #     return 'ms"zero"'  # zero demand matrix
         return f'mf"TRN_{self._class_config.skim_set_id}_{self._time_period}"'
 
     def _get_used_mode_ids(self, modes: List[TransitModeConfig]) -> List[str]:
