@@ -87,6 +87,7 @@ class Simulated:
         self._read_standard_node()
 
         self._reduce_simulated_transit_boardings()
+        self._reduce_simulated_transit_shapes()
         self._reduce_simulated_home_work_flows()
         self._reduce_simulated_zero_vehicle_households()
         self._reduce_simulated_station_to_station()

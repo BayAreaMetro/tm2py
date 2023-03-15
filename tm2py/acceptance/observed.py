@@ -66,20 +66,18 @@ class Observed:
             self.reduce_on_board_survey()
 
         self._reduce_observed_rail_access_summaries()
-        # self._reduce_ctpp_2012_2016()
-        # self._reduce_census_zero_car_households()
-        # self._make_census_maz_crosswalk()
+        self._reduce_ctpp_2012_2016()
+        self._reduce_census_zero_car_households()
         self._reduce_observed_bart_boardings()
-        # self._make_simulated_maz_data()
 
-        # assert sorted(
-        #     self.ctpp_2012_2016_df.residence_county.unique().tolist()
-        # ) == sorted(self.county_names_list)
-        # assert sorted(self.ctpp_2012_2016_df.work_county.unique().tolist()) == sorted(
-        #     self.county_names_list
-        # )
+        assert sorted(
+            self.ctpp_2012_2016_df.residence_county.unique().tolist()
+        ) == sorted(self.c.county_names_list)
+        assert sorted(self.ctpp_2012_2016_df.work_county.unique().tolist()) == sorted(
+            self.c.county_names_list
+        )
 
-        # self._make_census_geo_crosswalk()
+        self._make_census_geo_crosswalk()
 
         return
 
@@ -323,9 +321,9 @@ class Observed:
 
     def _make_census_geo_crosswalk(self):
 
-        file_root = self.observed_dict["remote_io"]["crosswalk_folder_root"]
-        pickle_file = self.observed_dict["crosswalks"]["census_geographies_pickle"]
-        tract_geojson_file = self.observed_dict["crosswalks"][
+        file_root = self.observed_dict["remote_io"]["obs_folder_root"]
+        pickle_file = self.observed_dict["census"]["census_geographies_pickle"]
+        tract_geojson_file = self.observed_dict["census"][
             "census_tract_centroids_geojson"
         ]
 
@@ -342,8 +340,8 @@ class Observed:
             return
 
         else:
-            file_root = self.observed_dict["remote_io"]["crosswalk_folder_root"]
-            in_file = self.observed_dict["crosswalks"]["census_geographies_shapefile"]
+            file_root = self.observed_dict["remote_io"]["obs_folder_root"]
+            in_file = self.observed_dict["census"]["census_geographies_shapefile"]
 
             # TODO: geopandas cannot read remote files, fix
             temp_file_root = "."

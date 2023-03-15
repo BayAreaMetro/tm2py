@@ -2,6 +2,7 @@
 
 from tm2py.acceptance.simulated import Simulated
 from tm2py.acceptance.observed import Observed
+from tm2py.acceptance.canonical import Canonical
 
 import numpy as np
 import os
@@ -13,6 +14,7 @@ class Acceptance:
 
     s: Simulated
     o: Observed
+    c: Canonical
 
     acceptance_output_folder_root: str
 
@@ -76,7 +78,8 @@ class Acceptance:
         }
     )
 
-    def __init__(self, simulated: Simulated, observed: Observed, output_file_root: str) -> None:
+    def __init__(self, canonical: Canonical, simulated: Simulated, observed: Observed, output_file_root: str) -> None:
+        self.c = canonical
         self.s = simulated
         self.o = observed
         self.acceptance_output_folder_root = output_file_root
@@ -137,9 +140,9 @@ class Acceptance:
     def _make_transit_network_comparisons(self):
 
         # step 1: outer merge for rail operators (ignore route)
-        obs_df = self.reduced_transit_on_board_df[
-            self.reduced_transit_on_board_df["survey_operator"].isin(
-                self.rail_operators_vector
+        obs_df = self.o.reduced_transit_on_board_df[
+            self.o.reduced_transit_on_board_df["survey_operator"].isin(
+                self.c.rail_operators_vector
             )
         ].copy()
 
@@ -156,8 +159,8 @@ class Acceptance:
         obs_df = self._fix_technology_labels(obs_df, "technology")
 
         sim_df = (
-            self.simulated_boardings_df[
-                self.simulated_boardings_df["operator"].isin(self.rail_operators_vector)
+            self.s.simulated_boardings_df[
+                self.s.simulated_boardings_df["operator"].isin(self.c.rail_operators_vector)
             ]
             .groupby(["tm2_mode", "line_mode", "operator", "technology", "time_period"])
             .agg({"total_boarding": "sum"})
@@ -172,13 +175,13 @@ class Acceptance:
         )
 
         # step 2: left merge for non-rail operators
-        obs_df = self.reduced_transit_on_board_df[
-            ~self.reduced_transit_on_board_df["survey_operator"].isin(
-                self.rail_operators_vector
+        obs_df = self.o.reduced_transit_on_board_df[
+            ~self.o.reduced_transit_on_board_df["survey_operator"].isin(
+                self.c.rail_operators_vector
             )
         ].copy()
-        sim_df = self.simulated_boardings_df[
-            ~self.simulated_boardings_df["operator"].isin(self.rail_operators_vector)
+        sim_df = self.s.simulated_boardings_df[
+            ~self.s.simulated_boardings_df["operator"].isin(self.c.rail_operators_vector)
         ].copy()
 
         non_df = pd.merge(
@@ -203,9 +206,9 @@ class Acceptance:
         )
 
         # step 3 -- create a daily shape
-        df = pd.DataFrame(self.simulated_transit_segments_gdf).copy()
+        df = pd.DataFrame(self.s.simulated_transit_segments_gdf).copy()
         am_shape_df = df[~(df["line"].str.contains("pnr_"))].reset_index().copy()
-        am_shape_df = self._aggregate_line_names_across_time_of_day(am_shape_df, "line")
+        am_shape_df = self.c.aggregate_line_names_across_time_of_day(am_shape_df, "line")
         b_df = (
             am_shape_df.groupby("daily_line_name")
             .agg({"line": "first"})
@@ -213,8 +216,8 @@ class Acceptance:
             .copy()
         )
         c_df = pd.DataFrame(
-            self.simulated_transit_segments_gdf[
-                self.simulated_transit_segments_gdf["line"].isin(b_df["line"])
+            self.s.simulated_transit_segments_gdf[
+                self.s.simulated_transit_segments_gdf["line"].isin(b_df["line"])
             ].copy()
         )
         daily_shape_df = pd.merge(c_df, b_df, how="left", on="line")
@@ -246,12 +249,12 @@ class Acceptance:
         am_join_df["time_period"] = np.where(
             am_join_df["time_period"].isnull(), "am", am_join_df["time_period"]
         )
-        am_join_df = self._get_operator_name_from_line_name(
+        am_join_df = self.s._get_operator_name_from_line_name(
             am_join_df, "line", "temp_operator"
         )
         am_join_df["operator"] = np.where(
             am_join_df["operator"].isnull()
-            & am_join_df["temp_operator"].isin(self.rail_operators_vector),
+            & am_join_df["temp_operator"].isin(self.c.rail_operators_vector),
             am_join_df["temp_operator"],
             am_join_df["operator"],
         )
@@ -300,13 +303,13 @@ class Acceptance:
 
     def _make_other_comparisons(self):
 
-        # a_df = self._make_home_work_flow_comparisons()
-        # b_gdf = self._make_zero_vehicle_household_comparisons()
+        a_df = self._make_home_work_flow_comparisons()
+        b_gdf = self._make_zero_vehicle_household_comparisons()
         c_gdf = self._make_bart_station_to_station_comparisons()
         d_gdf = self._make_rail_access_comparisons()
 
         self.compare_gdf = gpd.GeoDataFrame(
-            pd.concat([c_gdf, d_gdf]), geometry="geometry"
+            pd.concat([a_df, b_gdf, c_gdf, d_gdf]), geometry="geometry"
         )
 
         self._write_other_comparisons()
@@ -375,20 +378,11 @@ class Acceptance:
 
     def _make_zero_vehicle_household_comparisons(self):
 
-        if self.census_2010_geo_df.empty:
-            self._make_census_geo_crosswalk()
-
-        if self.census_2017_zero_vehicle_hhs_df.empty:
-            self._reduce_census_zero_car_households()
-
-        if self.simulated_zero_vehicle_hhs_df.empty:
-            self._reduce_simulated_zero_vehicle_households()
-
         # prepare simulated data
         a_df = (
             pd.merge(
-                self.simulated_zero_vehicle_hhs_df,
-                self.simulated_maz_data_df[["MAZ_ORIGINAL", "MAZSEQ"]],
+                self.s.simulated_zero_vehicle_hhs_df,
+                self.s.simulated_maz_data_df[["MAZ_ORIGINAL", "MAZSEQ"]],
                 left_on="maz",
                 right_on="MAZSEQ",
                 how="left",
@@ -397,9 +391,10 @@ class Acceptance:
             .rename(columns={"MAZ_ORIGINAL": "maz"})
         )
 
+        # TODO: probably better if this is done in Simulated, to avoid using Canonical in this class
         a_df = pd.merge(
             a_df,
-            self.census_2010_to_maz_crosswalk_df,
+            self.c.census_2010_to_maz_crosswalk_df,
             how="left",
             on="maz",
         )
@@ -427,7 +422,7 @@ class Acceptance:
         )
 
         # prepare the observed data
-        join_df = self.census_2017_zero_vehicle_hhs_df.copy()
+        join_df = self.o.census_2017_zero_vehicle_hhs_df.copy()
         join_df["tract"] = join_df["geoid"].str.replace("1400000US0", "")
         join_df = join_df[
             ["tract", "total_households", "observed_zero_vehicle_household_share"]
@@ -440,7 +435,7 @@ class Acceptance:
             on="tract",
         )
 
-        df = pd.merge(df, self.census_tract_centroids_gdf, how="left", on="tract")
+        df = pd.merge(df, self.o.census_tract_centroids_gdf, how="left", on="tract")
 
         df["criteria_number"] = 24
         df["acceptance_threshold"] = "MTC's Assessment of Reasonableness"

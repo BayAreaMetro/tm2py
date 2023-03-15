@@ -55,7 +55,7 @@ class Canonical:
         self._load_configs()
         self._make_canonical_agency_names_dict()
         self._make_canonical_station_names_dict()
-        # self._make_census_maz_crosswalk()
+        self._make_census_maz_crosswalk()
         self._read_standard_to_emme_transit()
         self._make_tm2_to_gtfs_mode_crosswalk()
         self._read_standard_transit_to_survey_crosswalk()
