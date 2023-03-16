@@ -338,7 +338,6 @@ class Simulated:
         a_df = rail_df["line"].str.split(pat="_", expand=True).copy()
         rail_df["operator"] = a_df[1]
         rail_df["operator"] = rail_df["operator"].map(self.c.canonical_agency_names_dict)
-        rail_df.operator.value_counts()
 
         i_df = (
             rail_df[["operator", "i_node"]]
@@ -366,7 +365,7 @@ class Simulated:
         station_list = names_df.boarding.astype(str).unique().tolist()
 
         access_df = df.copy()
-        access_df = access_df[access_df["i_node"].isin(station_list)].copy()
+        access_df = access_df[access_df["j_node"].isin(station_list)].copy()
         access_df = access_df[
             ["i_node", "board_ptw", "board_wtp", "board_ktw", "board_wtk", "board_wtw"]
         ].copy()
