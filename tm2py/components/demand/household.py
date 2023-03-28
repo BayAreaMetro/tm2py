@@ -146,7 +146,7 @@ class HouseholdModel(Component):
                     self.controller.get_abs_path(self.config.transit_demand_file)
                     .__str__()
                     .format(
-                        period=period, iter="_%s" % self.controller.iteration, set=set
+                        period=period, iter=self.controller.iteration, set=set
                     )
                 )
                 output_omx = omx.open_file(output_path, "w")

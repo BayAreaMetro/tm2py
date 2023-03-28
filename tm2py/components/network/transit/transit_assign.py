@@ -467,7 +467,7 @@ class TransitAssignment(Component):
         """Run transit assignments."""
 
         use_ccr = False
-        if self.controller.iteration >= 0: #TODO add option of warmstart
+        if self.controller.iteration >= 0:  # TODO add option of warmstart
             use_ccr = self.config.use_ccr
 
             self.sub_components["prepare transit demand"].run()
