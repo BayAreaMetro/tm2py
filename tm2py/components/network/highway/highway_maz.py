@@ -334,6 +334,7 @@ class AssignMAZSPDemand(Component):
         self.logger.log(f"Reading demand from {omx_file_path}", level="DEBUG")
         with OMXManager(omx_file_path, "r") as omx_file:
             demand_array = omx_file.read(f"MAZ_AUTO_{index}_{time}")
+            omx_file.close()
         return demand_array
 
     def _group_demand(

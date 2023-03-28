@@ -51,6 +51,7 @@ class EmmeDemand:
         """
         with OMXManager(path, "r") as omx_file:
             demand = omx_file.read(name)
+            omx_file.close()
         if factor is not None:
             demand = factor * demand
         demand = self._redim_demand(demand, num_zones)

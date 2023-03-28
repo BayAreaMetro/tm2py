@@ -288,6 +288,8 @@ class TollChoiceCalculator(Subcomponent):
             _util = self.utility[prop] * _skim_values * property_factors.get(prop, 1)
             _util_sum.append(_util)
 
+        self._omx_manager.close()  # can comment out
+
         return np.exp(np.add(*_util_sum))
 
     def mask_non_available(
@@ -331,5 +333,7 @@ class TollChoiceCalculator(Subcomponent):
 
         prob_nontoll[(toll_tollcost == 0) | (toll_tollcost > 999999)] = 1.0
         prob_nontoll[(nontoll_time == 0) | (nontoll_time > 999999)] = 0.0
+
+        self._omx_manager.close()
 
         return prob_nontoll
