@@ -877,6 +877,7 @@ class HighwayConfig(ConfigItem):
     maz_to_maz: HighwayMazToMazConfig = Field()
     classes: Tuple[HighwayClassConfig, ...] = Field()
     capclass_lookup: Tuple[HighwayCapClassConfig, ...] = Field()
+    interchange_nodes_file: str = Field()
 
     @validator("output_skim_filename_tmpl")
     def valid_skim_template(value):
@@ -947,7 +948,15 @@ class HighwayConfig(ConfigItem):
         """Validate classes .skims, .toll, and .excluded_links values."""
         if "tolls" not in values:
             return value
-        avail_skims = ["time", "dist", "hovdist", "tolldist", "freeflowtime"]
+        avail_skims = [
+            "time",
+            "dist",
+            "hovdist",
+            "tolldist",
+            "freeflowtime",
+            "rlbty",
+            "autotime",
+        ]
         available_link_sets = ["is_sr", "is_sr2", "is_sr3", "is_auto_only"]
         avail_toll_attrs = []
         for name in values["tolls"].dst_vehicle_group_names:

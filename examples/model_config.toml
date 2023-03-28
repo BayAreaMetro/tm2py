@@ -476,6 +476,8 @@
     generic_highway_mode_code = "c"
     # include other MAZs to estimate density (pop+jobs*2.5)/acres for each MAZ
     area_type_buffer_dist_miles = 0.5
+    # nodes at interchanges
+    interchange_nodes_file = "inputs/hwy/interchange_nodes.csv"
     [highway.tolls]
         file_path = "inputs/hwy/tolls.csv"
         src_vehicle_group_names = ["da", "s2",  "s3",  "vsm", "sml", "med", "lrg"]
@@ -517,7 +519,7 @@
         value_of_time = 18.93
         operating_cost_per_mile = 17.23
         toll = [ "@bridgetoll_da" ]
-        skims = [ "time", "dist", "freeflowtime", "bridgetoll_da",]
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_da","rlbty","autotime"]
         [[highway.classes.demand]]
             source = "household"
             name = "SOV_GP_{period}"
@@ -537,7 +539,7 @@
         operating_cost_per_mile = 17.23
         toll = [ "@bridgetoll_sr2" ]
         toll_factor = 0.5714285714285714
-        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr2", "hovdist",]
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr2", "hovdist","rlbty","autotime"]
         [[highway.classes.demand]]
             source = "household"
             name = "SR2_GP_{period}"
@@ -562,7 +564,7 @@
         operating_cost_per_mile = 17.23
         toll = ["@bridgetoll_sr3"]
         toll_factor = 0.4
-        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr3", "hovdist",]
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr3", "hovdist","rlbty","autotime"]
         [[highway.classes.demand]]
             source = "household"
             name = "SR3_GP_{period}"
@@ -620,7 +622,7 @@
         value_of_time = 18.93
         operating_cost_per_mile = 17.23
         toll = [ "@valuetoll_da", "@bridgetoll_da" ]
-        skims = [ "time", "dist", "freeflowtime", "bridgetoll_da", "valuetoll_da", "tolldist",]
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_da", "valuetoll_da", "tolldist","rlbty","autotime"]
         [[highway.classes.demand]]
             source = "household"
             name = "SOV_PAY_{period}"
@@ -637,7 +639,7 @@
         operating_cost_per_mile = 17.23
         toll = [ "@valuetoll_sr2", "@bridgetoll_sr2" ]
         toll_factor = 0.5714285714285714
-        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr2", "valuetoll_sr2", "hovdist", "tolldist",]
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr2", "valuetoll_sr2", "hovdist", "tolldist","rlbty","autotime"]
         [[highway.classes.demand]]
             source = "household"
             name = "SR2_PAY_{period}"
@@ -655,7 +657,7 @@
         operating_cost_per_mile = 17.23
         toll = [ "@valuetoll_sr3", "@bridgetoll_sr3" ]
         toll_factor = 0.4
-        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr3", "valuetoll_sr3", "hovdist", "tolldist",]
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr3", "valuetoll_sr3", "hovdist", "tolldist","rlbty","autotime"]
         [[highway.classes.demand]]
             source = "household"
             name = "SR3_PAY_{period}"

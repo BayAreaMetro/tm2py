@@ -46,8 +46,11 @@ The following attributes are calculated:
     - "@cost_YY": total cost for class YY
 """
 
+import heapq as _heapq
 import os
 from typing import TYPE_CHECKING, Dict, List, Set
+
+import pandas as pd
 
 from tm2py.components.component import Component, FileFormatError
 from tm2py.emme.manager import EmmeNetwork, EmmeScenario
@@ -87,6 +90,8 @@ class PrepareNetwork(Component):
                 self._set_link_modes(network)
                 self._calc_link_skim_lengths(network)
                 self._calc_link_class_costs(network)
+                self._calc_interchange_distance(network)
+                self._calc_link_static_reliability(network)
                 scenario.publish_network(network)
 
     @property
@@ -143,7 +148,16 @@ class PrepareNetwork(Component):
                 ("@maz_flow", "Assigned MAZ-to-MAZ flow"),
                 ("@hov_length", "length with HOV lanes"),
                 ("@toll_length", "length with tolls"),
-            ]
+                ("@intdist_down", "dist to the closest d-stream interchange"),
+                ("@intdist_up", "dist from the closest upstream int"),
+                ("@static_rel", "static reliability"),
+                ("@reliability", "link total reliability"),
+                ("@reliability_sq", "link total reliability variance"),
+                ("@auto_time", "link total reliability"),
+            ],
+            "NODE": [
+                ("@interchange", "interchange"),
+            ],
         }
         # toll field attributes by bridge and value and toll definition
         dst_veh_groups = self.config.tolls.dst_vehicle_group_names
@@ -387,3 +401,136 @@ class PrepareNetwork(Component):
                 except:
                     link
                 link[cost_attr] = link.length * op_cost + toll_value * toll_factor
+
+    def _calc_interchange_distance(self, network: EmmeNetwork):
+        """
+        For highway reliability
+        Calculate upstream and downstream interchange distance
+        First, label the intersection nodes as nodes with freeway and freeway-to-freeway ramp
+        """
+        # input interchange nodes file
+        # This is a file inherited from https://app.box.com/folder/148342877307, as implemented in the tm2.1
+        interchange_nodes_file = self.get_abs_path(self.config.interchange_nodes_file)
+        interchange_nodes_df = pd.read_csv(interchange_nodes_file)
+        interchange_nodes_df = interchange_nodes_df[interchange_nodes_df.intx > 0]
+        interchange_points = interchange_nodes_df["N"].tolist()
+        network.create_attribute("NODE", "is_interchange")
+        for node in network.nodes():
+            if node["#node_id"] in interchange_points:
+                node.is_interchange = True
+                node["@interchange"] = node.is_interchange
+
+        mode_c = network.mode("c")
+        for link in network.links():
+            if link["@ft"] in [1, 2] and mode_c in link.modes:
+                link["@intdist_down"] = PrepareNetwork.interchange_distance(
+                    link, "DOWNSTREAM"
+                )
+                link["@intdist_up"] = PrepareNetwork.interchange_distance(
+                    link, "UPSTREAM"
+                )
+
+        network.delete_attribute("NODE", "is_interchange")
+
+    @staticmethod
+    def interchange_distance(orig_link, direction):
+        visited = set([])
+        visited_add = visited.add
+        back_links = {}
+        heap = []
+        if direction == "DOWNSTREAM":
+            get_links = lambda l: l.j_node.outgoing_links()
+            check_far_node = lambda l: l.j_node.is_interchange
+        elif direction == "UPSTREAM":
+            get_links = lambda l: l.i_node.incoming_links()
+            check_far_node = lambda l: l.i_node.is_interchange
+        # Shortest path search for nearest interchange node along freeway
+        for link in get_links(orig_link):
+            _heapq.heappush(heap, (link["length"], link["#link_id"], link))
+        interchange_found = False
+
+        # Check first node
+        if check_far_node(orig_link):
+            interchange_found = True
+            link_cost = 0.0
+
+        try:
+            while not interchange_found:
+                link_cost, link_id, link = _heapq.heappop(heap)
+                if link in visited:
+                    continue
+                visited_add(link)
+                if check_far_node(link):
+                    interchange_found = True
+                    break
+                get_links_return = get_links(link)
+                for next_link in get_links_return:
+                    if next_link in visited:
+                        continue
+                    next_cost = link_cost + next_link["length"]
+                    _heapq.heappush(heap, (next_cost, next_link["#link_id"], next_link))
+        except TypeError:
+            # TypeError if the link type objects are compared in the tuples
+            # case where the path cost are the same
+            raise Exception("Path cost are the same, cannot compare Link objects")
+        except IndexError:
+            # IndexError if heap is empty
+            # case where start / end of highway, dist = 99
+            return 99
+        return orig_link["length"] / 2.0 + link_cost
+
+    def _calc_link_static_reliability(self, network: EmmeNetwork):
+        """
+        For highway reliability
+        consists of: lane factor, interchange distance, speed factor
+        differentiated by freeway, artertial, and others
+        """
+        # Static reliability parameters
+        # freeway coefficients
+        freeway_rel = {
+            "intercept": 0.1078,
+            "speed>70": 0.01393,
+            "upstream": 0.011,
+            "downstream": 0.0005445,
+        }
+        # arterial/ramp/other coefficients
+        road_rel = {
+            "intercept": 0.0546552,
+            "lanes": {1: 0.0, 2: 0.0103589, 3: 0.0361211, 4: 0.0446958, 5: 0.0},
+            "speed": {
+                "<35": 0,
+                35: 0.0075674,
+                40: 0.0091012,
+                45: 0.0080996,
+                50: -0.0022938,
+                ">50": -0.0046211,
+            },
+        }
+        for link in network.links():
+            # if freeway apply freeway parameters to this link
+            if (link["@ft"] in [1, 2]) and (link["@lanes"] > 0):
+                high_speed_factor = (
+                    freeway_rel["speed>70"] if link["@free_flow_speed"] >= 70 else 0
+                )
+                upstream_factor = freeway_rel["upstream"] * 1 / link["@intdist_up"]
+                downstream_factor = (
+                    freeway_rel["downstream"] * 1 / link["@intdist_down"]
+                )
+                link["@static_rel"] = (
+                    freeway_rel["intercept"]
+                    + high_speed_factor
+                    + upstream_factor
+                    + downstream_factor
+                )
+            # arterial/ramp/other apply road parameters
+            elif (link["@ft"] < 8) and (link["@lanes"] > 0):
+                lane_factor = road_rel["lanes"].get(link["@lanes"], 0)
+                speed_bin = link["@free_flow_speed"]
+                if speed_bin < 35:
+                    speed_bin = "<35"
+                elif speed_bin > 50:
+                    speed_bin = ">50"
+                speed_factor = road_rel["speed"][speed_bin]
+                link["@static_rel"] = road_rel["intercept"] + lane_factor + speed_factor
+            else:
+                link["@static_rel"] = 0

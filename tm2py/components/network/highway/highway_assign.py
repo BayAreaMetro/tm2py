@@ -133,7 +133,7 @@ class HighwayAssignment(Component):
     def run(self):
         """Run highway assignment."""
         demand = PrepareHighwayDemand(self.controller)
-        if self.controller.iteration >= 1:
+        if self.controller.iteration >= 0:
             demand.run()
         else:
             self.highway_emmebank.zero_matrix
@@ -149,10 +149,52 @@ class HighwayAssignment(Component):
                 else:
                     self._reset_background_traffic(scenario)
                 self._create_skim_matrices(scenario, assign_classes)
-                assign_spec = self._get_assignment_spec(assign_classes)
+                assign_spec = self._get_assignment_spec(
+                    assign_classes, path_analysis=False
+                )
                 # self.logger.log_dict(assign_spec, level="DEBUG")
                 with self.logger.log_start_end(
                     "Run SOLA assignment with path analyses", level="INFO"
+                ):
+                    assign = self.controller.emme_manager.tool(
+                        "inro.emme.traffic_assignment.sola_traffic_assignment"
+                    )
+                    assign(assign_spec, scenario, chart_log_interval=1)
+
+                # calucaltes link level LOS based reliability
+                net_calc = NetworkCalculator(self.controller, scenario)
+
+                exf_pars = scenario.emmebank.extra_function_parameters
+                vdfs = [
+                    f for f in scenario.emmebank.functions() if f.type == "VOLUME_DELAY"
+                ]
+                for function in vdfs:
+                    expression = function.expression
+                    for el in ["el1", "el2", "el3", "el4"]:
+                        expression = expression.replace(el, getattr(exf_pars, el))
+                    if "@static_rel" in expression:
+                        # split function into time component and reliability component
+                        time_expr, reliability_expr = expression.split(
+                            "*(1+@static_rel+"
+                        )
+                        net_calc(
+                            "@auto_time",
+                            time_expr,
+                            {"link": "vdf=%s" % function.id[2:]},
+                        )
+                        net_calc(
+                            "@reliability",
+                            "(@static_rel+" + reliability_expr,
+                            {"link": "vdf=%s" % function.id[2:]},
+                        )
+                        net_calc("@reliability_sq", "@reliability**2", {"link": "all"})
+
+                assign_spec = self._get_assignment_spec(
+                    assign_classes, path_analysis=True
+                )
+                with self.logger.log_start_end(
+                    "Run SOLA assignment with path analyses and highway reliability",
+                    level="INFO",
                 ):
                     assign = self.controller.emme_manager.tool(
                         "inro.emme.traffic_assignment.sola_traffic_assignment"
@@ -245,7 +287,7 @@ class HighwayAssignment(Component):
                     self._skim_matrices.append(matrix)
 
     def _get_assignment_spec(
-        self, assign_classes: List[AssignmentClass]
+        self, assign_classes: List[AssignmentClass], path_analysis=True
     ) -> EmmeTrafficAssignmentSpec:
         """Generate template Emme SOLA assignment specification.
 
@@ -277,6 +319,10 @@ class HighwayAssignment(Component):
                 "number_of_processors": self.controller.num_processors
             },
         }
+        if not path_analysis:
+            base_spec["classes"] = [
+                klass.emme_highway_class_spec_wo_pa for klass in assign_classes
+            ]
         return base_spec
 
     def _calc_time_skim(self, emme_class_spec: EmmeHighwayClassSpec):
@@ -309,7 +355,7 @@ class HighwayAssignment(Component):
             skims: list of requested skims (from config)
         """
         for skim_name in skims:
-            if skim_name in ["time", "distance", "freeflowtime", "hovdist", "tolldist"]:
+            if skim_name in ["time", "dist", "freeflowtime", "hovdist", "tolldist"]:
                 matrix_name = f"mf{time_period}_{class_name}_{skim_name}"
                 self.logger.debug(f"Setting intrazonals to 0.5*min for {matrix_name}")
                 data = self._matrix_cache.get_data(matrix_name)
@@ -413,6 +459,39 @@ class AssignmentClass:
                 },
             },
             "path_analyses": self.emme_class_analysis,
+        }
+        return class_spec
+
+    @property
+    def emme_highway_class_spec_wo_pa(self) -> EmmeHighwayClassSpec:
+        """Construct and return Emme traffic assignment class specification.
+
+        Converted from input config (highway.classes), see Emme Help for
+        SOLA traffic assignment for specification details.
+        Adds time_period as part of demand and skim matrix names.
+
+        Returns:
+            A nested dictionary corresponding to the expected Emme traffic
+            class specification used in the SOLA assignment.
+        """
+        if self.iteration == 0:
+            demand_matrix = 'ms"zero"'
+        else:
+            demand_matrix = f'mf"{self.time_period}_{self.name}"'
+        class_spec = {
+            "mode": self.class_config.mode_code,
+            "demand": demand_matrix,
+            "generalized_cost": {
+                "link_costs": f"@cost_{self.name.lower()}",  # cost in $0.01
+                # $/hr -> min/$0.01
+                "perception_factor": 0.6 / self.class_config.value_of_time,
+            },
+            "results": {
+                "link_volumes": f"@flow_{self.name.lower()}",
+                "od_travel_times": {
+                    "shortest_paths": f"mf{self.time_period}_{self.name}_time"
+                },
+            },
         }
         return class_spec
 
@@ -525,5 +604,7 @@ class AssignmentClass:
             "freeflowtime": "@free_flow_time",
             "bridgetoll": f"@bridgetoll_{group}",
             "valuetoll": f"@valuetoll_{group}",
+            "rlbty": "@reliability_sq",
+            "autotime": "@auto_time",
         }
         return lookup[skim]
