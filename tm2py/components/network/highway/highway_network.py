@@ -419,25 +419,6 @@ class PrepareNetwork(Component):
             if node["#node_id"] in interchange_points:
                 node.is_interchange = True
                 node["@interchange"] = node.is_interchange
-        # The following approach is based on SANDAG's code
-        # network.create_attribute("NODE", "is_interchange")
-        # interchange_points = []
-        # mode_c = network.mode('c')
-        # for node in network.nodes():
-        #     adj_links = list(node.incoming_links()) + list(node.outgoing_links())
-        #     has_freeway_links = bool(
-        #         [l for l in adj_links
-        #             if l["@ft"] in [1,2] and mode_c in l.modes])
-        #     has_ramp_links = bool(
-        #         [l for l in adj_links
-        #             if l["@ft"] == 3 and mode_c in l.modes])
-        #     if has_freeway_links and has_ramp_links:
-        #         node.is_interchange = True
-        #         interchange_points.append(node)
-        #     else:
-        #         node.is_interchange = False
-        # for node in network.nodes():
-        #     node["@interchange"] = node.is_interchange
 
         mode_c = network.mode("c")
         for link in network.links():
