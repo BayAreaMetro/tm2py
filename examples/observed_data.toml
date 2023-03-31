@@ -8,6 +8,7 @@
     on_board_survey_file = "Survey_Database_122717/onboard-survey-trip-list.feather"
     reduced_summaries_file = "Survey_Database_122717/acceptance-criteria-reductions.csv"
     reduced_access_summary_file = "Survey_Database_122717/acceptance-criteria-access-summaries-year-2015.csv"
+    reduced_flow_summary_file = "Survey_Database_122717/acceptance-criteria-spatial-flows-year-2015.csv"
     bart_boardings_file = "bart-typical-weekday/BART Through Time Typical Weekday.csv"
 [census]
     ctpp_2012_2016_file = "CTPP20122016/A302100 - Total Workers (1) (Workers 16 years and over).csv"

@@ -46,6 +46,8 @@ class Observed:
     )
 
     reduced_transit_on_board_access_df: pd.DataFrame
+    reduced_transit_spatial_flow_df: pd.DataFrame
+    reduced_transit_district_flows_by_technology_df: pd.DataFrame
 
     def _load_configs(self):
 
@@ -66,6 +68,8 @@ class Observed:
             self.reduce_on_board_survey()
 
         self._reduce_observed_rail_access_summaries()
+        self._reduce_observed_rail_flow_summaries()
+        self._make_district_to_district_transit_flows_by_technology()
         self._reduce_ctpp_2012_2016()
         self._reduce_census_zero_car_households()
         self._reduce_observed_bart_boardings()
@@ -431,5 +435,41 @@ class Observed:
             ].map(self.c.canonical_station_names_dict[operator])
 
         self.reduced_transit_on_board_access_df = df.copy()
+
+        return
+    
+    def _reduce_observed_rail_flow_summaries(self):
+
+        root_dir = self.observed_dict["remote_io"]["obs_folder_root"]
+        in_file = self.observed_dict["transit"]["reduced_flow_summary_file"]
+
+        df = pd.read_csv(os.path.join(root_dir, in_file))
+
+        self.reduced_transit_spatial_flow_df = df.copy()
+
+        return
+    
+    def _make_district_to_district_transit_flows_by_technology(self):
+
+        o_df = self.reduced_transit_spatial_flow_df.copy()
+        o_df = o_df[o_df["time_period"] == "am"].copy()
+
+        tm1_district_dict = self.c.taz_to_district_df.set_index("taz_tm1")["district_tm1"].to_dict()
+        o_df["orig_district"] = o_df["orig_taz"].map(tm1_district_dict)
+        o_df["dest_district"] = o_df["dest_taz"].map(tm1_district_dict)
+        
+        for prefix in self.c.transit_technology_abbreviation_dict.keys():
+            o_df["{}".format(prefix.lower())] = o_df["is_{}_in_path".format(prefix.lower())] * o_df["observed_trips"]
+            
+        agg_dict = {"observed_trips": "sum"}
+        for prefix in self.c.transit_technology_abbreviation_dict.keys():
+            agg_dict["{}".format(prefix.lower())] = "sum"
+
+        sum_o_df = o_df.groupby(["orig_district", "dest_district"]).agg(agg_dict).reset_index()
+
+        long_sum_o_df = sum_o_df.melt(id_vars=["orig_district", "dest_district"], var_name="tech", value_name="observed")
+        long_sum_o_df["tech"] = np.where(long_sum_o_df["tech"] == "observed_trips", "total", long_sum_o_df["tech"])
+
+        self.reduced_transit_district_flows_by_technology_df = long_sum_o_df.copy()
 
         return

@@ -307,9 +307,10 @@ class Acceptance:
         b_gdf = self._make_zero_vehicle_household_comparisons()
         c_gdf = self._make_bart_station_to_station_comparisons()
         d_gdf = self._make_rail_access_comparisons()
+        e_df = self._make_transit_district_flow_comparisons()
 
         self.compare_gdf = gpd.GeoDataFrame(
-            pd.concat([a_df, b_gdf, c_gdf, d_gdf]), geometry="geometry"
+            pd.concat([a_df, b_gdf, c_gdf, d_gdf, e_df]), geometry="geometry"
         )
 
         self._write_other_comparisons()
@@ -593,4 +594,40 @@ class Acceptance:
         ).drop(columns=["boarding_lon", "boarding_lat"])
 
         return r_gdf
+    
+    def _make_transit_district_flow_comparisons(self):
+
+        s_df = self.s.simulated_transit_district_to_district_by_tech_df.copy()
+        o_df = self.o.reduced_transit_district_flows_by_technology_df.copy()
+
+        df = pd.merge(o_df, s_df, how="left", on=["orig_district", "dest_district", "tech"]).reset_index(drop=True)
+        df = df[df["tech"] != "total"].reset_index(drop=True).copy()
+        df["tech_name"] = df["tech"].str.upper().map(self.c.transit_technology_abbreviation_dict)
+        df = df.drop(columns=["tech"]).copy()
+
+        df["criteria_number"] = 6
+        df[
+            "criteria_name"
+        ] = "Reasonableness of district level transit flows by technology (Ferry, CR, HR, LRT, Express bus)"
+        df["acceptance_threshold"] = "MTC's assessment of reasonableness"
+        df["dimension_01_name"] = "Origin District"
+        df["dimension_02_name"] = "Destination District"
+        df["dimension_03_name"] = "Technology"
+
+        df = df.rename(
+            columns={
+                "orig_district": "dimension_01_value",
+                "dest_district": "dimension_02_value",
+                "tech_name": "dimension_03_value",
+                "observed": "observed_outcome",
+                "simulated": "simulated_outcome",
+            }
+        )
+
+        return df
+
+        
+
+
+
 

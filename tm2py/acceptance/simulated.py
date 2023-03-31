@@ -6,6 +6,7 @@ import numpy as np
 import os
 import geopandas as gpd
 import itertools
+import openmatrix as omx
 import pandas as pd
 import toml
 
@@ -33,6 +34,9 @@ class Simulated:
     simulated_transit_access_df: pd.DataFrame
     simulated_zero_vehicle_hhs_df: pd.DataFrame
     simulated_station_to_station_df: pd.DataFrame
+    simulated_transit_demand_df: pd.DataFrame
+    simulated_transit_tech_in_vehicle_times_df: pd.DataFrame
+    simulated_transit_district_to_district_by_tech_df: pd.DataFrame
 
     HEAVY_RAIL_NETWORK_MODE_DESCR: str
     COMMUTER_RAIL_NETWORK_MODE_DESCR: str
@@ -85,6 +89,9 @@ class Simulated:
         self._read_standard_transit_stops()
         self._read_standard_transit_shapes()
         self._read_standard_node()
+        self._read_transit_demand()
+        self._make_transit_technology_in_vehicle_table_from_skims()
+        self._make_district_to_district_transit_summaries()
 
         self._reduce_simulated_transit_boardings()
         self._reduce_simulated_transit_shapes()
@@ -787,3 +794,143 @@ class Simulated:
         self.transit_access_mode_dict = access_mode_dict
 
         return
+    
+    def _make_transit_technology_in_vehicle_table_from_skims(self):
+
+        path_list = ["WLK_TRN_WLK", "PNR_TRN_WLK", "WLK_TRN_PNR", "KNR_TRN_WLK", "WLK_TRN_KNR"]
+        path_list = ["WLK_TRN_WLK"]
+        tech_list = self.c.transit_technology_abbreviation_dict.keys()
+
+        skim_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "skims")
+
+        running_df = None
+        for (path, time_period) in itertools.product(path_list, self.model_time_periods):
+            filename = os.path.join(skim_dir, "trnskm{}_{}.omx".format(time_period, path))
+            if os.path.exists(filename):
+                omx_handle = omx.open_file(filename)
+
+                # IVT 
+                matrix_name = "IVT"
+                if matrix_name in omx_handle.listMatrices():
+                    ivt_df = self._make_dataframe_from_omx(omx_handle[matrix_name], matrix_name)
+                    ivt_df = ivt_df[ivt_df[matrix_name] > 0.0].copy()
+
+                # Transfers to get boardings from trips
+                matrix_name = "BOARDS"
+                if matrix_name in omx_handle.listMatrices():
+                    boards_df = self._make_dataframe_from_omx(omx_handle[matrix_name], matrix_name)
+                    boards_df = boards_df[boards_df[matrix_name] > 0.0].copy()
+
+                path_time_df = pd.merge(ivt_df, boards_df, on=["origin", "destination"], how="left")
+                path_time_df["path"] = path
+                path_time_df["time_period"] = time_period
+
+                for tech in tech_list:
+                    matrix_name = "IVT{}".format(tech)
+                    if matrix_name in omx_handle.listMatrices():
+                        df = self._make_dataframe_from_omx(omx_handle[matrix_name], matrix_name)
+                        df = df[df[matrix_name] > 0.0].copy()
+                        col_name = "{}".format(tech.lower())
+                        df[col_name] = df[matrix_name]
+                        df = df.drop(columns=[matrix_name]).copy()
+                        path_time_df = pd.merge(path_time_df, df, how="left", on=["origin", "destination"])
+                
+                if running_df is None:
+                    running_df = path_time_df.copy()
+                else:
+                    running_df = pd.concat([running_df, path_time_df], axis="rows", ignore_index=True).reset_index(drop=True)
+
+                omx_handle.close()
+
+        self.simulated_transit_tech_in_vehicle_times_df = running_df.fillna(0).copy()
+
+        return
+    
+    def _read_transit_demand(self):
+
+        # TODO: placeholder demand for now
+        path_list = ["WLK_TRN_WLK", "PNR_TRN_WLK", "WLK_TRN_PNR", "KNR_TRN_WLK", "WLK_TRN_KNR"]
+        dem_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "demand")
+
+        time_period = "am"
+        filename = os.path.join(dem_dir, "trn_demand_v12_trim_{}.omx".format(time_period))
+        omx_handle = omx.open_file(filename)
+
+        running_df = None
+        for path in path_list:
+            if path in omx_handle.listMatrices():
+                df = self._make_dataframe_from_omx(omx_handle[path], path)
+                df = df[df[path] > 0.0].copy()
+                df = df.rename(columns={path: "simulated_flow"})
+                df["path"] = path
+                df["time_period"] = time_period
+
+                if running_df is None:
+                    running_df = df.copy()
+                else:
+                    running_df = pd.concat([running_df, df], axis="rows", ignore_index=True).reset_index(drop=True)
+
+        omx_handle.close()
+
+        self.simulated_transit_demand_df = running_df.fillna(0).copy()
+
+        return
+
+    
+    def _make_dataframe_from_omx(self, input_mtx: omx, column_name: str):
+        """_summary_
+
+        Args:
+            input_mtx (omx): _description_
+            column_name (str): _description_
+        """
+        df = pd.DataFrame(input_mtx)
+        df = df.add_prefix('dest_')
+        df['id'] = df.index
+        df = pd.wide_to_long(df, 'dest_', 'id', 'destination')
+        df = df.reset_index().rename(columns = {'dest_': column_name, 'id': 'origin'})
+        df['origin'] = df['origin'] + 1
+        df['destination'] = df['destination'] + 1
+    
+        return df
+    
+    def _make_district_to_district_transit_summaries(self):
+
+        # TODO: placeholder with link21 demand, so using link21 taz to district mapping for now
+        link21_district_dict = self.c.taz_to_district_df.set_index("taz_link21")["district_tm1"].to_dict()
+
+        s_dem_df = self.simulated_transit_demand_df.copy()
+        s_path_df = self.simulated_transit_tech_in_vehicle_times_df.copy()
+
+        s_dem_sum_df = s_dem_df.groupby(["origin", "destination"]).agg({"simulated_flow": "sum"}).reset_index()
+        s_df = s_dem_sum_df.merge(s_path_df, left_on=["origin", "destination"], right_on=["origin", "destination"])
+
+        for tech in self.c.transit_technology_abbreviation_dict.keys():
+            column_name = "simulated_{}_flow".format(tech.lower())
+            s_df[column_name] = s_df["simulated_flow"] * s_df["BOARDS"] * s_df["{}".format(tech.lower())]/s_df["IVT"]
+
+        s_df["orig_district"] = s_df["origin"].map(link21_district_dict)
+        s_df["dest_district"] = s_df["destination"].map(link21_district_dict)
+
+        agg_dict = {"simulated_flow": "sum"}
+        rename_dict = {"simulated_flow": "total"}
+        for tech in self.c.transit_technology_abbreviation_dict.keys(): 
+            agg_dict["simulated_{}_flow".format(tech.lower())] = "sum"
+            rename_dict["simulated_{}_flow".format(tech.lower())] = tech.lower()
+
+        sum_s_df = s_df.groupby(["orig_district", "dest_district"]).agg(agg_dict).reset_index()
+
+        long_sum_s_df = sum_s_df.melt(id_vars=["orig_district", "dest_district"], var_name="tech", value_name="simulated")
+        long_sum_s_df["tech"] = long_sum_s_df["tech"].map(rename_dict)
+
+        self.simulated_transit_district_to_district_by_tech_df = long_sum_s_df.copy()
+
+        return
+
+
+
+        
+
+
+
+
