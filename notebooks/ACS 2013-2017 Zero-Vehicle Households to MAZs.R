@@ -46,9 +46,10 @@ maz_summary <- maz %>%
   mutate(maz_hhs=zero_vehicle_tot*maz_share) %>% 
   group_by(maz) %>% 
   summarize(maz_0veh_hhs=sum(maz_hhs)) %>%
+  mutate(rounded_maz_0veh_hhs = round(maz_0veh_hhs,0)) %>% 
   filter(maz!=0) %>% 
   ungroup()
 
 # Output file
 
-write.csv(summary_2021, file.path(tm2py_location,"ACS 2013-2017 MAZ Zero-Vehicle Households.csv"), row.names = FALSE)
+write.csv(maz_summary, file.path(tm2py_location,"ACS 2013-2017 MAZ Zero-Vehicle Households.csv"), row.names = FALSE)
