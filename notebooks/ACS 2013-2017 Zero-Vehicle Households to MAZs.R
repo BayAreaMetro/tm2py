@@ -15,7 +15,7 @@ github_location      <- file.path(USERPROFILE, "Documents","GitHub")
 tm2py_location       <- file.path(github_location, "tm2py","notebooks")
 maz_cross_location   <- file.path(github_location,"travel-model-two","maz_taz","crosswalks")
 
-maz_cross_location   <- read.csv(file.path(maz_cross_location,
+maz_cross            <- read.csv(file.path(maz_cross_location,
                                            "Census 2010 hhs maz share of blockgroups_ACS2017.csv"),header=T) 
 
 
@@ -40,7 +40,7 @@ block_group_0 <- get_acs(geography = "cbg", variables = acs_variables,
 # Join block group and maz data. Apportion households to mazs from blockgroups
 
 maz <- block_group_0 %>% 
-  left_join(.,maz_cross_location,by=c("GEOID"=as.character("blockgroup"))) 
+  left_join(.,maz_cross,by=c("GEOID"="blockgroup"))
 
 maz_summary <- maz %>% 
   mutate(maz_hhs=zero_vehicle_tot*maz_share) %>% 
