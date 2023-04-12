@@ -604,11 +604,12 @@ class Acceptance:
         df = df[df["tech"] != "total"].reset_index(drop=True).copy()
         df["tech_name"] = df["tech"].str.upper().map(self.c.transit_technology_abbreviation_dict)
         df = df.drop(columns=["tech"]).copy()
+        df["simulated"] = df["simulated"].fillna(0.0)
 
         df["criteria_number"] = 6
         df[
             "criteria_name"
-        ] = "Reasonableness of district level transit flows by technology (Ferry, CR, HR, LRT, Express bus)"
+        ] = "Reasonableness of morning commute district level transit flows by technology (Ferry, CR, HR, LRT, Express bus)"
         df["acceptance_threshold"] = "MTC's assessment of reasonableness"
         df["dimension_01_name"] = "Origin District"
         df["dimension_02_name"] = "Destination District"
