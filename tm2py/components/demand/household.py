@@ -145,9 +145,7 @@ class HouseholdModel(Component):
                 output_path = (
                     self.controller.get_abs_path(self.config.transit_demand_file)
                     .__str__()
-                    .format(
-                        period=period, iter=self.controller.iteration, set=set
-                    )
+                    .format(period=period, iter=self.controller.iteration, set=set)
                 )
                 output_omx = omx.open_file(output_path, "w")
                 for mode_agg in self.config.mode_agg:
