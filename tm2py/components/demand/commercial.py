@@ -559,7 +559,7 @@ class CommercialVehicleTripDistribution(Subcomponent):
         Returns:
             NumpyArray: Zone-by-zone matrix of friction factors
         """
-        if not self._friction_factor_matrices.get(trk_class):
+        if trk_class not in self._friction_factor_matrices.keys():
             self._friction_factor_matrices[
                 trk_class
             ] = self._calculate_friction_factor_matrix(

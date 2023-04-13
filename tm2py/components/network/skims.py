@@ -97,7 +97,7 @@ def get_omx_skim_as_numpy(
             )
 
     _matrix_name = _config.output_skim_matrixname_tmpl.format(
-        time_period=time_period.lower(),
+        time_period=time_period.upper(),
         mode=skim_mode,
         property=property,
     )
@@ -110,26 +110,22 @@ def get_omx_skim_as_numpy(
         )
         _filepath = controller.run_dir / _config.output_skim_path / _filename
         with OMXManager(_filepath, "r") as _f:
-            return _f.read(_matrix_name)
+            omx_data = _f.read(_matrix_name)
+            _f.close()
+            return omx_data
     else:
-        if omx_manager._omx_file is None:
-            if not omx_manager._file_path.endswith(".omx"):
-                _filename = _config.output_skim_filename_tmpl.format(
-                    time_period=time_period.lower()
-                )
-                omx_manager._file_path = os.path.join(omx_manager._file_path, _filename)
-            omx_manager.open()
-        else:
-            _filename = _config.output_skim_filename_tmpl.format(
-                time_period=time_period.lower()
+        _filename = _config.output_skim_filename_tmpl.format(
+            time_period=time_period.lower()
+        )
+        if os.path.basename(omx_manager._file_path) != _filename:
+            omx_manager.close()
+            omx_manager._file_path = (
+                controller.run_dir / _config.output_skim_path / _filename
             )
-            if os.path.basename(omx_manager._file_path) != _filename:
-                omx_manager.close()
-                omx_manager._file_path = (
-                    controller.run_dir / _config.output_skim_path / _filename
-                )
-                omx_manager.open()
-        return omx_manager.read(_matrix_name)
+        omx_manager.open()
+        omx_data = omx_manager.read(_matrix_name)
+        omx_manager.close()
+        return omx_data
 
 
 def get_blended_skim(

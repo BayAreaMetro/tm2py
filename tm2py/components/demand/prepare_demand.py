@@ -51,6 +51,7 @@ class EmmeDemand:
         """
         with OMXManager(path, "r") as omx_file:
             demand = omx_file.read(name)
+            omx_file.close()
         if factor is not None:
             demand = factor * demand
         demand = self._redim_demand(demand, num_zones)
@@ -209,7 +210,11 @@ class PrepareHighwayDemand(EmmeDemand):
         path = self.controller.get_abs_path(
             self.controller.config[source].highway_demand_file
         ).__str__()
-        return self._read(path.format(period=time_period), name, num_zones)
+        return self._read(
+            path.format(period=time_period, iter=self.controller.iteration),
+            name,
+            num_zones,
+        )
 
 
 class PrepareTransitDemand(EmmeDemand):
@@ -300,5 +305,9 @@ class PrepareTransitDemand(EmmeDemand):
             self.controller.config[source].transit_demand_file
         ).__str__()
         return self._read(
-            path.format(period=time_period, set=skim_set), name, num_zones
+            path.format(
+                period=time_period, set=skim_set, iter=self.controller.iteration
+            ),
+            name,
+            num_zones,
         )

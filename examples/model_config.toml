@@ -35,8 +35,32 @@
     use_emme_logbook = true
 
 [household]
-    highway_demand_file = "demand_matrices/highway/household/TAZ_Demand_{period}.omx"
-    transit_demand_file = "demand_matrices/transit/TAP_Demand_{set}_{period}.omx"
+    highway_demand_file = "demand_matrices/highway/household/TAZ_Demand_{period}_{iter}.omx"
+    transit_demand_file = "demand_matrices/transit/TAP_Demand_{set}_{period}_{iter}.omx"
+    highway_taz_ctramp_output_file = "ctramp_output/{mode_agg}_{period}_{mode}_{period}.omx"
+    highway_maz_ctramp_output_file = "ctramp_output/auto_{period}_MAZ_AUTO_{number}_{period}.omx"
+    transit_tap_ctramp_output_file = "ctramp_output/{mode_agg}_{period}_{mode}_TRN_{set}_{period}.omx"
+    [[household.mode_agg]]
+        name = "auto"
+        modes = [
+            "SOV_GP",
+            "SOV_PAY",
+            "SR2_GP",
+            "SR2_HOV",
+            "SR2_PAY",
+            "SR3_GP",
+            "SR3_HOV",
+            "SR3_PAY",
+        ]
+    [[household.mode_agg]]
+        name = "nonmotor"
+        modes = ["BIKE", "WALK"]
+    [[household.mode_agg]]
+        name = "other"
+        modes = ["SCHLBUS", "TAXI", "TNC"]
+    [[household.mode_agg]]
+        name = "transit"
+        modes = ["KNRPRV", "KNRTNC", "PNR", "WLK"]
 
 [air_passenger]
     output_trip_table_directory = "demand_matrices/highway/air_passenger"
@@ -495,11 +519,12 @@
         value_of_time = 17.23
         output_skim_file = "skim_matrices/highway/HWYSKIM_MAZMAZ_DA.csv"
         skim_period = "md"
+        max_distance = 10
         max_skim_cost = 11.0
             # based on ~= 5 miles @ 40 mph = 11
             #           = time + (0.6 / vot) * (dist * opcost)
             #           = 5 / 40 * 60 + (0.6 / 17.23) * (5 * 18.93)
-        demand_file = "demand_matrices/highway/maz_demand/auto_{period}_MAZ_AUTO_{number}_{period}.omx"
+        demand_file = "demand_matrices/highway/maz_demand/auto_{period}_MAZ_AUTO_{number}_{period}_{iter}.omx"
         [[highway.maz_to_maz.demand_county_groups]]
             number = 1
             counties = ["San Francisco", "San Mateo", "Santa Clara"]
@@ -519,7 +544,7 @@
         value_of_time = 18.93
         operating_cost_per_mile = 17.23
         toll = [ "@bridgetoll_da" ]
-        skims = [ "time", "dist", "freeflowtime", "bridgetoll_da","rlbty","autotime"]
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_da", "rlbty", "autotime"]
         [[highway.classes.demand]]
             source = "household"
             name = "SOV_GP_{period}"
@@ -539,7 +564,7 @@
         operating_cost_per_mile = 17.23
         toll = [ "@bridgetoll_sr2" ]
         toll_factor = 0.5714285714285714
-        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr2", "hovdist","rlbty","autotime"]
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr2", "hovdist", "rlbty", "autotime"]
         [[highway.classes.demand]]
             source = "household"
             name = "SR2_GP_{period}"
@@ -564,7 +589,7 @@
         operating_cost_per_mile = 17.23
         toll = ["@bridgetoll_sr3"]
         toll_factor = 0.4
-        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr3", "hovdist","rlbty","autotime"]
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr3", "hovdist", "rlbty", "autotime"]
         [[highway.classes.demand]]
             source = "household"
             name = "SR3_GP_{period}"
@@ -622,7 +647,7 @@
         value_of_time = 18.93
         operating_cost_per_mile = 17.23
         toll = [ "@valuetoll_da", "@bridgetoll_da" ]
-        skims = [ "time", "dist", "freeflowtime", "bridgetoll_da", "valuetoll_da", "tolldist","rlbty","autotime"]
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_da", "valuetoll_da", "tolldist", "rlbty", "autotime"]
         [[highway.classes.demand]]
             source = "household"
             name = "SOV_PAY_{period}"
@@ -639,10 +664,18 @@
         operating_cost_per_mile = 17.23
         toll = [ "@valuetoll_sr2", "@bridgetoll_sr2" ]
         toll_factor = 0.5714285714285714
-        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr2", "valuetoll_sr2", "hovdist", "tolldist","rlbty","autotime"]
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr2", "valuetoll_sr2", "hovdist", "tolldist", "rlbty", "autotime"]
         [[highway.classes.demand]]
             source = "household"
             name = "SR2_PAY_{period}"
+            factor = 0.5714285714285714
+        [[highway.classes.demand]]
+            source = "household"
+            name = "TAXI_{period}"
+            factor = 0.5714285714285714
+        [[highway.classes.demand]]
+            source = "household"
+            name = "TNC_{period}"
             factor = 0.5714285714285714
         [[highway.classes.demand]]
             source = "internal_external"
@@ -657,7 +690,7 @@
         operating_cost_per_mile = 17.23
         toll = [ "@valuetoll_sr3", "@bridgetoll_sr3" ]
         toll_factor = 0.4
-        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr3", "valuetoll_sr3", "hovdist", "tolldist","rlbty","autotime"]
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr3", "valuetoll_sr3", "hovdist", "tolldist", "rlbty", "autotime"]
         [[highway.classes.demand]]
             source = "household"
             name = "SR3_PAY_{period}"
@@ -723,7 +756,7 @@
     #input_connector_access_times_path = "inputs\\trn\\estimated_taz_access_connectors.csv"
     #input_connector_egress_times_path = "inputs\\trn\\estimated_taz_egress_connectors.csv"
     #output_stop_usage_path = "inputs\\trn\\stop_usage_{period}.csv"
-    use_ccr = false
+    use_ccr = true
     ccr_stop_criteria.max_iterations = 3
     ccr_stop_criteria.relative_difference = 0.01
     ccr_stop_criteria.percent_segments_over_capacity = 0.01
@@ -741,13 +774,16 @@
         mode_types = ["ACCESS", "EGRESS", "WALK", "LOCAL"]
         [[transit.classes.demand]]
             source = "household"
-            name = "WLK_SET_{period}"
+            name = "WLK_TRN_set1_{period}"
         [[transit.classes.demand]]
             source = "household"
-            name = "PNR_SET_{period}"
+            name = "PNR_TRN_set1_{period}"
         [[transit.classes.demand]]
             source = "household"
-            name = "KNR_SET_{period}"
+            name = "KNRPRV_TRN_set1_{period}"
+        [[transit.classes.demand]]
+            source = "household"
+            name = "KNRTNC_TRN_set1_{period}"
     [[transit.classes]]
         skim_set_id = "SET2"
         name = "PREM"
@@ -755,13 +791,16 @@
         mode_types = ["ACCESS", "EGRESS", "WALK", "PREMIUM"]
         [[transit.classes.demand]]
             source = "household"
-            name = "WLK_SET_{period}"
+            name = "WLK_TRN_set2_{period}"
         [[transit.classes.demand]]
             source = "household"
-            name = "PNR_SET_{period}"
+            name = "PNR_TRN_set2_{period}"
         [[transit.classes.demand]]
             source = "household"
-            name = "KNR_SET_{period}"
+            name = "KNRPRV_TRN_set2_{period}"
+        [[transit.classes.demand]]
+            source = "household"
+            name = "KNRTNC_TRN_set2_{period}"
     [[transit.classes]]
         skim_set_id = "SET3"
         name = "ALLPEN"
@@ -770,13 +809,16 @@
         required_mode_combo = ["LOCAL","PREMIUM"] # AND not or
         [[transit.classes.demand]]
             source = "household"
-            name = "WLK_SET_{period}"
+            name = "WLK_TRN_set3_{period}"
         [[transit.classes.demand]]
             source = "household"
-            name = "PNR_SET_{period}"
+            name = "PNR_TRN_set3_{period}"
         [[transit.classes.demand]]
             source = "household"
-            name = "KNR_SET_{period}"
+            name = "KNRPRV_TRN_set3_{period}"
+        [[transit.classes.demand]]
+            source = "household"
+            name = "KNRTNC_TRN_set3_{period}"
 
 [emme]
     num_processors = "MAX-1"

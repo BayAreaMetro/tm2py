@@ -222,15 +222,33 @@ class AssignMAZSPDemand(Component):
             f"Processing county MAZs for {', '.join(counties)}", level="DETAIL"
         )
         network = self._network
+        # maz data
+        # maz_file = self.get_abs_path(self.controller.config.scenario.maz_landuse_file)
+        # maz_df = pd.read_csv(maz_file)
+        # maz_county_dict = dict(zip(maz_df["MAZ_ORIGINAL"], maz_df["CountyName"]))
         # NOTE: every maz must have a valid #node_county
         if self._mazs is None:
             self._mazs = _defaultdict(lambda: [])
             for node in network.nodes():
                 if node["@maz_id"]:
+                    # self._mazs[maz_county_dict[node["@maz_id"]]].append(node)
                     self._mazs[node["#node_county"]].append(node)
         mazs = []
         for county in counties:
             mazs.extend(self._mazs[county])
+        # highway emme network does not include the 5 inaccessiable MAZs, but the trip table is indexed by the full MAZ list
+        # https://app.asana.com/0/12291104512575/1199091221400653/f
+        if "San Francisco" in counties:
+            mazs.extend(
+                [
+                    {"@maz_id": 10186},
+                    {"@maz_id": 16084},
+                    {"@maz_id": 111432},
+                    {"@maz_id": 111433},
+                ]
+            )
+        if "Contra Costa" in counties:
+            mazs.extend([{"@maz_id": 411178}])
         self.logger.log(f"Num MAZs {len(mazs)}", level="DEBUG")
         return sorted(mazs, key=lambda n: n["@maz_id"])
 
@@ -261,11 +279,30 @@ class AssignMAZSPDemand(Component):
             # skip intra-maz demand
             if orig == dest:
                 continue
+            if orig > len(maz_ids) - 1:
+                self.logger.log(
+                    f"Network MAZ @maz_id={orig} #county_name does not match its county name in the input MAZ SE data.",
+                    level="DEBUG",
+                )
+                continue
+            if dest > len(maz_ids) - 1:
+                self.logger.log(
+                    f"Network MAZ @maz_id={dest} #county_name does not match its county name in the input MAZ SE data.",
+                    level="DEBUG",
+                )
+                continue
+            check = maz_ids[99]
             orig_node = maz_ids[orig]
             dest_node = maz_ids[dest]
             dist = _sqrt(
                 (dest_node.x - orig_node.x) ** 2 + (dest_node.y - orig_node.y) ** 2
             )
+            if (dist / 5280) > self.config.max_distance:
+                self.logger.log(
+                    f"MAZ demand from {orig} to {dest} is over {self.config.max_distance} miles, do not assign",
+                    level="DEBUG",
+                )
+                continue
             if dist > self._max_dist:
                 self._max_dist = dist
             demand = data[orig][dest]
@@ -290,11 +327,14 @@ class AssignMAZSPDemand(Component):
         """
         file_path_tmplt = self.get_abs_path(self.config.demand_file)
         omx_file_path = self.get_abs_path(
-            file_path_tmplt.format(period=time, number=index)
+            file_path_tmplt.format(
+                period=time, number=index, iter=self.controller.iteration
+            )
         )
         self.logger.log(f"Reading demand from {omx_file_path}", level="DEBUG")
         with OMXManager(omx_file_path, "r") as omx_file:
-            demand_array = omx_file.read("M0")
+            demand_array = omx_file.read(f"MAZ_AUTO_{index}_{time}")
+            omx_file.close()
         return demand_array
 
     def _group_demand(

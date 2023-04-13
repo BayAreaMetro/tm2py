@@ -231,6 +231,7 @@ class DriveAccessSkims(Component):
                     "DTIME": src_file.read(f"{period.name.upper()}_da_time").flatten(),
                 }
             )
+            src_file.close()
         # drop externals
         drive_costs = drive_costs[~drive_costs["FTAZ"].isin(externals)]
         drive_costs = drive_costs[~drive_costs["TTAZ"].isin(externals)]
