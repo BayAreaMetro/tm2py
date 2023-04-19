@@ -12,4 +12,6 @@
     canonical_station_names_file = "canonical-station-names.csv"
     block_group_to_maz_url = "https://raw.githubusercontent.com/BayAreaMetro/travel-model-two/master/maz_taz/crosswalks/Census%202010%20hhs%20maz%20share%20of%20blockgroups_ACS2017.csv"
     taz_to_district_file = "temp-taz-crosswalk.csv"
+    pems_station_to_tm2_links_file = "pems_station_to_TM2_links_crosswalk.csv"
+    standard_to_emme_nodes_file = "emme_drive_network_node_id_crosswalk.csv"
 

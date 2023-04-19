@@ -19,13 +19,23 @@ class Canonical:
     standard_transit_to_survey_df: pd.DataFrame
     taz_to_district_df: pd.DataFrame
 
+    standard_to_emme_node_crosswalk_df: pd.DataFrame
+    pems_to_link_crosswalk_df: pd.DataFrame
+
     ALL_DAY_WORD = "daily"
     WALK_ACCESS_WORD = "Walk"
     PARK_AND_RIDE_ACCESS_WORD = "Park and Ride"
     KISS_AND_RIDE_ACCESS_WORD = "Kiss and Ride"
     BIKE_ACCESS_WORD = "Bike"
 
-    transit_technology_abbreviation_dict = {"LOC": "Local Bus", "EXP": "Express Bus", "LRT": "Light Rail", "FRY": "Ferry", "HVY": "Heavy Rail", "COM": "Commuter Rail"}
+    transit_technology_abbreviation_dict = {
+        "LOC": "Local Bus",
+        "EXP": "Express Bus",
+        "LRT": "Light Rail",
+        "FRY": "Ferry",
+        "HVY": "Heavy Rail",
+        "COM": "Commuter Rail",
+    }
 
     rail_operators_vector = [
         "BART",
@@ -63,6 +73,8 @@ class Canonical:
         self._make_tm2_to_gtfs_mode_crosswalk()
         self._read_standard_transit_to_survey_crosswalk()
         self._read_taz_to_district_crosswalk()
+        self._read_pems_to_link_crosswalk()
+        self._read_standard_to_emme_node_crosswalk()
 
         return
 
@@ -137,7 +149,7 @@ class Canonical:
         self.census_2010_to_maz_crosswalk_df = pd.read_csv(url_string)
 
         return
-    
+
     def _read_standard_to_emme_transit(self):
 
         root_dir = self.canonical_dict["remote_io"]["crosswalk_folder_root"]
@@ -148,7 +160,7 @@ class Canonical:
         self.standard_to_emme_transit_nodes_df = x_df
 
         return
-    
+
     def _make_tm2_to_gtfs_mode_crosswalk(self):
 
         file_root = self.canonical_dict["remote_io"]["crosswalk_folder_root"]
@@ -166,9 +178,9 @@ class Canonical:
         )
 
         self.gtfs_to_tm2_mode_codes_df = df
-        
+
         return
-    
+
     def _read_standard_transit_to_survey_crosswalk(self):
 
         file_root = self.canonical_dict["remote_io"]["crosswalk_folder_root"]
@@ -179,7 +191,7 @@ class Canonical:
         self.standard_transit_to_survey_df = df
 
         return
-    
+
     def aggregate_line_names_across_time_of_day(
         self, input_df: pd.DataFrame, input_column_name: str
     ) -> pd.DataFrame:
@@ -189,7 +201,7 @@ class Canonical:
         return_df = pd.concat([input_df, df["daily_line_name"]], axis="columns")
 
         return return_df
-    
+
     def _read_taz_to_district_crosswalk(self):
 
         file_root = self.canonical_dict["remote_io"]["crosswalk_folder_root"]
@@ -198,5 +210,31 @@ class Canonical:
         df = pd.read_csv(os.path.join(file_root, in_file))
 
         self.taz_to_district_df = df
+
+        return
+
+    def _read_pems_to_link_crosswalk(self) -> pd.DataFrame:
+        file_root = self.canonical_dict["remote_io"]["crosswalk_folder_root"]
+        in_file = self.canonical_dict["crosswalks"]["pems_station_to_tm2_links_file"]
+
+        df = pd.read_csv(os.path.join(file_root, in_file))
+
+        df["pems_station_id"] = df["station"].astype(str) + "_" + df["direction"]
+
+        assert df["pems_station_id"].is_unique  # validate crosswalk - correct location?
+
+        df = df[["pems_station_id", "A", "B"]]
+
+        self.pems_to_link_crosswalk_df = df
+
+        return
+
+    def _read_standard_to_emme_node_crosswalk(self) -> pd.DataFrame:
+        file_root = self.canonical_dict["remote_io"]["crosswalk_folder_root"]
+        in_file = self.canonical_dict["crosswalks"]["standard_to_emme_nodes_file"]
+
+        df = pd.read_csv(os.path.join(file_root, in_file))
+
+        self.standard_to_emme_node_crosswalk_df = df
 
         return
