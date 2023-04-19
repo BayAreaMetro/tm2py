@@ -231,9 +231,12 @@ class Observed:
                 in_df = pd.read_csv(os.path.join(file_root, in_file))
 
                 # filter relevant years
-                df = in_df[df.year.isin(self.RELEVANT_COUNT_OBSERVED_YEARS_LIST)].copy()
+                df = in_df[in_df.year.isin(self.RELEVANT_COUNT_OBSERVED_YEARS_LIST)].copy()
+            
+                # create pems_station_id
+                df["pems_station_id"] = df["station"].astype(str) + "_" + df["direction"]
 
-                # remove unneeded variables
+                 # remove unneeded variables
                 df = df[["pems_station_id","year","time_period","median_flow"]]
 
                 # summarize counts by time of day (for when there are counts for more than one of the selected years)
@@ -266,7 +269,7 @@ class Observed:
                 )
             
                 out_df = self._join_ohio_standards(out_df) # to attach flow category from standards and determine the applicable standard
-                out_df = self._join__tm2_link_ids(out_df) # to translate pems_station_id  into model_link_id
+                out_df = self._join_tm2_link_ids(out_df) # to translate pems_station_id  into model_link_id
                 out_df = self._join_selected_links(out_df)# to tag selected arterials and bridges
                 out_df.to_csv(os.path.join(file_root, out_file))
                 self.reduced_traffic_counts_df = out_df  
