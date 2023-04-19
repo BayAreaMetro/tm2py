@@ -43,6 +43,7 @@ class Simulated:
 
     standard_transit_stops_df: pd.DataFrame
     standard_transit_shapes_df: pd.DataFrame
+    standard_transit_routes_df: pd.DataFrame
     standard_nodes_gdf: gpd.GeoDataFrame
     standard_to_emme_transit_nodes_df: pd.DataFrame
 
@@ -72,7 +73,9 @@ class Simulated:
 
         return
 
-    def __init__(self, canonical: Canonical, scenario_file: str, model_file: str) -> None:
+    def __init__(
+        self, canonical: Canonical, scenario_file: str, model_file: str
+    ) -> None:
         self.c = canonical
         self.scenario_file = scenario_file
         self.model_file = model_file
@@ -88,6 +91,7 @@ class Simulated:
 
         self._read_standard_transit_stops()
         self._read_standard_transit_shapes()
+        self._read_standard_transit_routes()
         self._read_standard_node()
         self._read_transit_demand()
         self._make_transit_technology_in_vehicle_table_from_skims()
@@ -249,6 +253,17 @@ class Simulated:
 
         return
 
+    def _read_standard_transit_routes(self):
+
+        root_dir = self.scenario_dict["scenario"]["root_dir"]
+        in_file = os.path.join(root_dir, "inputs", "network", "standard", "routes.txt")
+
+        df = pd.read_csv(in_file)
+
+        self.standard_transit_routes_df = df
+
+        return
+
     def _reduce_simulated_home_work_flows(self):
 
         # if self.simulated_maz_data_df.empty:
@@ -344,7 +359,9 @@ class Simulated:
 
         a_df = rail_df["line"].str.split(pat="_", expand=True).copy()
         rail_df["operator"] = a_df[1]
-        rail_df["operator"] = rail_df["operator"].map(self.c.canonical_agency_names_dict)
+        rail_df["operator"] = rail_df["operator"].map(
+            self.c.canonical_agency_names_dict
+        )
 
         i_df = (
             rail_df[["operator", "i_node"]]
@@ -759,7 +776,7 @@ class Simulated:
                     return_df = pd.concat([return_df, sub_df]).reset_index()
 
         return return_df
-    
+
     def _make_transit_mode_dict(self):
 
         transit_mode_dict = {}
@@ -794,66 +811,96 @@ class Simulated:
         self.transit_access_mode_dict = access_mode_dict
 
         return
-    
+
     def _make_transit_technology_in_vehicle_table_from_skims(self):
 
-        path_list = ["WLK_TRN_WLK", "PNR_TRN_WLK", "WLK_TRN_PNR", "KNR_TRN_WLK", "WLK_TRN_KNR"]
+        path_list = [
+            "WLK_TRN_WLK",
+            "PNR_TRN_WLK",
+            "WLK_TRN_PNR",
+            "KNR_TRN_WLK",
+            "WLK_TRN_KNR",
+        ]
         path_list = ["WLK_TRN_WLK"]
         tech_list = self.c.transit_technology_abbreviation_dict.keys()
 
         skim_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "skims")
 
         running_df = None
-        for (path, time_period) in itertools.product(path_list, self.model_time_periods):
-            filename = os.path.join(skim_dir, "trnskm{}_{}.omx".format(time_period, path))
+        for (path, time_period) in itertools.product(
+            path_list, self.model_time_periods
+        ):
+            filename = os.path.join(
+                skim_dir, "trnskm{}_{}.omx".format(time_period, path)
+            )
             if os.path.exists(filename):
                 omx_handle = omx.open_file(filename)
 
-                # IVT 
+                # IVT
                 matrix_name = "IVT"
                 if matrix_name in omx_handle.listMatrices():
-                    ivt_df = self._make_dataframe_from_omx(omx_handle[matrix_name], matrix_name)
+                    ivt_df = self._make_dataframe_from_omx(
+                        omx_handle[matrix_name], matrix_name
+                    )
                     ivt_df = ivt_df[ivt_df[matrix_name] > 0.0].copy()
 
                 # Transfers to get boardings from trips
                 matrix_name = "BOARDS"
                 if matrix_name in omx_handle.listMatrices():
-                    boards_df = self._make_dataframe_from_omx(omx_handle[matrix_name], matrix_name)
+                    boards_df = self._make_dataframe_from_omx(
+                        omx_handle[matrix_name], matrix_name
+                    )
                     boards_df = boards_df[boards_df[matrix_name] > 0.0].copy()
 
-                path_time_df = pd.merge(ivt_df, boards_df, on=["origin", "destination"], how="left")
+                path_time_df = pd.merge(
+                    ivt_df, boards_df, on=["origin", "destination"], how="left"
+                )
                 path_time_df["path"] = path
                 path_time_df["time_period"] = time_period
 
                 for tech in tech_list:
                     matrix_name = "IVT{}".format(tech)
                     if matrix_name in omx_handle.listMatrices():
-                        df = self._make_dataframe_from_omx(omx_handle[matrix_name], matrix_name)
+                        df = self._make_dataframe_from_omx(
+                            omx_handle[matrix_name], matrix_name
+                        )
                         df = df[df[matrix_name] > 0.0].copy()
                         col_name = "{}".format(tech.lower())
                         df[col_name] = df[matrix_name]
                         df = df.drop(columns=[matrix_name]).copy()
-                        path_time_df = pd.merge(path_time_df, df, how="left", on=["origin", "destination"])
-                
+                        path_time_df = pd.merge(
+                            path_time_df, df, how="left", on=["origin", "destination"]
+                        )
+
                 if running_df is None:
                     running_df = path_time_df.copy()
                 else:
-                    running_df = pd.concat([running_df, path_time_df], axis="rows", ignore_index=True).reset_index(drop=True)
+                    running_df = pd.concat(
+                        [running_df, path_time_df], axis="rows", ignore_index=True
+                    ).reset_index(drop=True)
 
                 omx_handle.close()
 
         self.simulated_transit_tech_in_vehicle_times_df = running_df.fillna(0).copy()
 
         return
-    
+
     def _read_transit_demand(self):
 
         # TODO: placeholder demand for now
-        path_list = ["WLK_TRN_WLK", "PNR_TRN_WLK", "WLK_TRN_PNR", "KNR_TRN_WLK", "WLK_TRN_KNR"]
+        path_list = [
+            "WLK_TRN_WLK",
+            "PNR_TRN_WLK",
+            "WLK_TRN_PNR",
+            "KNR_TRN_WLK",
+            "WLK_TRN_KNR",
+        ]
         dem_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "demand")
 
         time_period = "am"
-        filename = os.path.join(dem_dir, "trn_demand_v12_trim_{}.omx".format(time_period))
+        filename = os.path.join(
+            dem_dir, "trn_demand_v12_trim_{}.omx".format(time_period)
+        )
         omx_handle = omx.open_file(filename)
 
         running_df = None
@@ -868,7 +915,9 @@ class Simulated:
                 if running_df is None:
                     running_df = df.copy()
                 else:
-                    running_df = pd.concat([running_df, df], axis="rows", ignore_index=True).reset_index(drop=True)
+                    running_df = pd.concat(
+                        [running_df, df], axis="rows", ignore_index=True
+                    ).reset_index(drop=True)
 
         omx_handle.close()
 
@@ -876,7 +925,6 @@ class Simulated:
 
         return
 
-    
     def _make_dataframe_from_omx(self, input_mtx: omx, column_name: str):
         """_summary_
 
@@ -885,52 +933,65 @@ class Simulated:
             column_name (str): _description_
         """
         df = pd.DataFrame(input_mtx)
-        df = df.add_prefix('dest_')
-        df['id'] = df.index
-        df = pd.wide_to_long(df, 'dest_', 'id', 'destination')
-        df = df.reset_index().rename(columns = {'dest_': column_name, 'id': 'origin'})
-        df['origin'] = df['origin'] + 1
-        df['destination'] = df['destination'] + 1
-    
+        df = df.add_prefix("dest_")
+        df["id"] = df.index
+        df = pd.wide_to_long(df, "dest_", "id", "destination")
+        df = df.reset_index().rename(columns={"dest_": column_name, "id": "origin"})
+        df["origin"] = df["origin"] + 1
+        df["destination"] = df["destination"] + 1
+
         return df
-    
+
     def _make_district_to_district_transit_summaries(self):
 
         # TODO: placeholder with link21 demand, so using link21 taz to district mapping for now
-        link21_district_dict = self.c.taz_to_district_df.set_index("taz_link21")["district_tm1"].to_dict()
+        link21_district_dict = self.c.taz_to_district_df.set_index("taz_link21")[
+            "district_tm1"
+        ].to_dict()
 
         s_dem_df = self.simulated_transit_demand_df.copy()
         s_path_df = self.simulated_transit_tech_in_vehicle_times_df.copy()
 
-        s_dem_sum_df = s_dem_df.groupby(["origin", "destination"]).agg({"simulated_flow": "sum"}).reset_index()
-        s_df = s_dem_sum_df.merge(s_path_df, left_on=["origin", "destination"], right_on=["origin", "destination"])
+        s_dem_sum_df = (
+            s_dem_df.groupby(["origin", "destination"])
+            .agg({"simulated_flow": "sum"})
+            .reset_index()
+        )
+        s_df = s_dem_sum_df.merge(
+            s_path_df,
+            left_on=["origin", "destination"],
+            right_on=["origin", "destination"],
+        )
 
         for tech in self.c.transit_technology_abbreviation_dict.keys():
             column_name = "simulated_{}_flow".format(tech.lower())
-            s_df[column_name] = s_df["simulated_flow"] * s_df["BOARDS"] * s_df["{}".format(tech.lower())]/s_df["IVT"]
+            s_df[column_name] = (
+                s_df["simulated_flow"]
+                * s_df["BOARDS"]
+                * s_df["{}".format(tech.lower())]
+                / s_df["IVT"]
+            )
 
         s_df["orig_district"] = s_df["origin"].map(link21_district_dict)
         s_df["dest_district"] = s_df["destination"].map(link21_district_dict)
 
         agg_dict = {"simulated_flow": "sum"}
         rename_dict = {"simulated_flow": "total"}
-        for tech in self.c.transit_technology_abbreviation_dict.keys(): 
+        for tech in self.c.transit_technology_abbreviation_dict.keys():
             agg_dict["simulated_{}_flow".format(tech.lower())] = "sum"
             rename_dict["simulated_{}_flow".format(tech.lower())] = tech.lower()
 
-        sum_s_df = s_df.groupby(["orig_district", "dest_district"]).agg(agg_dict).reset_index()
+        sum_s_df = (
+            s_df.groupby(["orig_district", "dest_district"]).agg(agg_dict).reset_index()
+        )
 
-        long_sum_s_df = sum_s_df.melt(id_vars=["orig_district", "dest_district"], var_name="tech", value_name="simulated")
+        long_sum_s_df = sum_s_df.melt(
+            id_vars=["orig_district", "dest_district"],
+            var_name="tech",
+            value_name="simulated",
+        )
         long_sum_s_df["tech"] = long_sum_s_df["tech"].map(rename_dict)
 
         self.simulated_transit_district_to_district_by_tech_df = long_sum_s_df.copy()
 
         return
-
-
-
-        
-
-
-
-

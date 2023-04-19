@@ -119,7 +119,9 @@ class Observed:
 
         df = self.c.standard_transit_to_survey_df.copy()
 
-        df["survey_agency"] = df["survey_agency"].map(self.c.canonical_agency_names_dict)
+        df["survey_agency"] = df["survey_agency"].map(
+            self.c.canonical_agency_names_dict
+        )
         join_df = df[~df["survey_agency"].isin(self.c.rail_operators_vector)].copy()
 
         join_all_df = join_df.copy()
@@ -307,8 +309,12 @@ class Observed:
 
         assert "BART" in self.c.canonical_station_names_dict.keys()
 
-        df["boarding"] = df["orig_name"].map(self.c.canonical_station_names_dict["BART"])
-        df["alighting"] = df["dest_name"].map(self.c.canonical_station_names_dict["BART"])
+        df["boarding"] = df["orig_name"].map(
+            self.c.canonical_station_names_dict["BART"]
+        )
+        df["alighting"] = df["dest_name"].map(
+            self.c.canonical_station_names_dict["BART"]
+        )
 
         a_df = df[df.year.isin(self.RELEVANT_BART_OBSERVED_YEARS_LIST)].copy()
 
@@ -437,7 +443,7 @@ class Observed:
         self.reduced_transit_on_board_access_df = df.copy()
 
         return
-    
+
     def _reduce_observed_rail_flow_summaries(self):
 
         root_dir = self.observed_dict["remote_io"]["obs_folder_root"]
@@ -448,27 +454,39 @@ class Observed:
         self.reduced_transit_spatial_flow_df = df.copy()
 
         return
-    
+
     def _make_district_to_district_transit_flows_by_technology(self):
 
         o_df = self.reduced_transit_spatial_flow_df.copy()
         o_df = o_df[o_df["time_period"] == "am"].copy()
 
-        tm1_district_dict = self.c.taz_to_district_df.set_index("taz_tm1")["district_tm1"].to_dict()
+        tm1_district_dict = self.c.taz_to_district_df.set_index("taz_tm1")[
+            "district_tm1"
+        ].to_dict()
         o_df["orig_district"] = o_df["orig_taz"].map(tm1_district_dict)
         o_df["dest_district"] = o_df["dest_taz"].map(tm1_district_dict)
-        
+
         for prefix in self.c.transit_technology_abbreviation_dict.keys():
-            o_df["{}".format(prefix.lower())] = o_df["is_{}_in_path".format(prefix.lower())] * o_df["observed_trips"]
-            
+            o_df["{}".format(prefix.lower())] = (
+                o_df["is_{}_in_path".format(prefix.lower())] * o_df["observed_trips"]
+            )
+
         agg_dict = {"observed_trips": "sum"}
         for prefix in self.c.transit_technology_abbreviation_dict.keys():
             agg_dict["{}".format(prefix.lower())] = "sum"
 
-        sum_o_df = o_df.groupby(["orig_district", "dest_district"]).agg(agg_dict).reset_index()
+        sum_o_df = (
+            o_df.groupby(["orig_district", "dest_district"]).agg(agg_dict).reset_index()
+        )
 
-        long_sum_o_df = sum_o_df.melt(id_vars=["orig_district", "dest_district"], var_name="tech", value_name="observed")
-        long_sum_o_df["tech"] = np.where(long_sum_o_df["tech"] == "observed_trips", "total", long_sum_o_df["tech"])
+        long_sum_o_df = sum_o_df.melt(
+            id_vars=["orig_district", "dest_district"],
+            var_name="tech",
+            value_name="observed",
+        )
+        long_sum_o_df["tech"] = np.where(
+            long_sum_o_df["tech"] == "observed_trips", "total", long_sum_o_df["tech"]
+        )
 
         self.reduced_transit_district_flows_by_technology_df = long_sum_o_df.copy()
 

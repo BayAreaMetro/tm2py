@@ -10,6 +10,7 @@ import geopandas as gpd
 import itertools
 import pandas as pd
 
+
 class Acceptance:
 
     s: Simulated
@@ -78,15 +79,19 @@ class Acceptance:
         }
     )
 
-    def __init__(self, canonical: Canonical, simulated: Simulated, observed: Observed, output_file_root: str) -> None:
+    def __init__(
+        self,
+        canonical: Canonical,
+        simulated: Simulated,
+        observed: Observed,
+        output_file_root: str,
+    ) -> None:
         self.c = canonical
         self.s = simulated
         self.o = observed
         self.acceptance_output_folder_root = output_file_root
 
-    def make_acceptance(
-        self, make_transit=True, make_roadway=True, make_other=False
-    ):
+    def make_acceptance(self, make_transit=True, make_roadway=True, make_other=False):
         if make_roadway:
             # self._make_roadway_acceptance()
             pass
@@ -96,7 +101,6 @@ class Acceptance:
             self._make_other_comparisons()
 
         return
-
 
     def _write_roadway_network():
         """_summary_
@@ -160,7 +164,9 @@ class Acceptance:
 
         sim_df = (
             self.s.simulated_boardings_df[
-                self.s.simulated_boardings_df["operator"].isin(self.c.rail_operators_vector)
+                self.s.simulated_boardings_df["operator"].isin(
+                    self.c.rail_operators_vector
+                )
             ]
             .groupby(["tm2_mode", "line_mode", "operator", "technology", "time_period"])
             .agg({"total_boarding": "sum"})
@@ -181,7 +187,9 @@ class Acceptance:
             )
         ].copy()
         sim_df = self.s.simulated_boardings_df[
-            ~self.s.simulated_boardings_df["operator"].isin(self.c.rail_operators_vector)
+            ~self.s.simulated_boardings_df["operator"].isin(
+                self.c.rail_operators_vector
+            )
         ].copy()
 
         non_df = pd.merge(
@@ -208,7 +216,9 @@ class Acceptance:
         # step 3 -- create a daily shape
         df = pd.DataFrame(self.s.simulated_transit_segments_gdf).copy()
         am_shape_df = df[~(df["line"].str.contains("pnr_"))].reset_index().copy()
-        am_shape_df = self.c.aggregate_line_names_across_time_of_day(am_shape_df, "line")
+        am_shape_df = self.c.aggregate_line_names_across_time_of_day(
+            am_shape_df, "line"
+        )
         b_df = (
             am_shape_df.groupby("daily_line_name")
             .agg({"line": "first"})
@@ -594,15 +604,19 @@ class Acceptance:
         ).drop(columns=["boarding_lon", "boarding_lat"])
 
         return r_gdf
-    
+
     def _make_transit_district_flow_comparisons(self):
 
         s_df = self.s.simulated_transit_district_to_district_by_tech_df.copy()
         o_df = self.o.reduced_transit_district_flows_by_technology_df.copy()
 
-        df = pd.merge(o_df, s_df, how="left", on=["orig_district", "dest_district", "tech"]).reset_index(drop=True)
+        df = pd.merge(
+            o_df, s_df, how="left", on=["orig_district", "dest_district", "tech"]
+        ).reset_index(drop=True)
         df = df[df["tech"] != "total"].reset_index(drop=True).copy()
-        df["tech_name"] = df["tech"].str.upper().map(self.c.transit_technology_abbreviation_dict)
+        df["tech_name"] = (
+            df["tech"].str.upper().map(self.c.transit_technology_abbreviation_dict)
+        )
         df = df.drop(columns=["tech"]).copy()
         df["simulated"] = df["simulated"].fillna(0.0)
 
@@ -626,9 +640,3 @@ class Acceptance:
         )
 
         return df
-
-        
-
-
-
-
