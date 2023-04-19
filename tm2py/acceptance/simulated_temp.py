@@ -23,8 +23,15 @@ class Simulated:
     model_time_periods = []
     model_morning_capacity_factor: float
 
-    simulated_traffic_flow_df: pd.DataFrame
     simulated_traffic_flow_gdf: gpd.GeoDataFrame
+
+    simulated_traffic_flow_df = pd.DataFrame(
+        { "model_link_id": pd.Series(dtype="int"),
+          "time_period": pd.Series(dtype="str"),
+          "simulated_flow_auto": pd.Series(dtype="float"),
+          "simulated_flow_truck": pd.Series(dtype="float"),
+          "simulated_flow": pd.Series(dtype="float")}
+    )
 
     def _load_configs(self):
 
@@ -70,7 +77,7 @@ class Simulated:
         file_root = self.scenario_dict["scenario"]["root_dir"]
         #out_file =
         time_of_day_df = pd.DataFrame()
-        time_periods = ["AM", "EV"] # temporary
+        time_periods = ["AM"] # temporary
 
         #for time_period in self.model_time_periods:
         for time_period in time_periods:
@@ -98,7 +105,13 @@ class Simulated:
         out_df = pd.concat(
                 [time_of_day_df, all_day_df], axis="rows", ignore_index=True
             )
+
+        # remove unneeded columns
+        out_df = out_df[["model_link_id","time_period","simulated_flow_auto","simulated_flow_truck","simulated_flow"]]
+
         #out_df.to_csv(os.path.join(file_root, out_file))
-        out_df.to_csv("simulated_traffic_flows_temp.csv")
-        self.simulated_traffic_flows_df = out_df  # model_link_id, time_period (which includes each of the timeperiods and daily) and flow vars (including simulated_flow)
+        out_df.to_csv("simulated_traffic_flow_temp.csv")
+
+        self.simulated_traffic_flow_df = out_df  # model_link_id, time_period (which includes each of the timeperiods and daily) and flow vars (including simulated_flow)
+
 
