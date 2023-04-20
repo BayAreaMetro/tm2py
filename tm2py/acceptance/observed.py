@@ -21,6 +21,84 @@ class Observed:
     census_2017_zero_vehicle_hhs_df: pd.DataFrame
     census_tract_centroids_gdf: gpd.GeoDataFrame
 
+    RELEVANT_PEMS_OBSERVED_YEARS_LIST = [2014, 2015, 2016]
+
+    ohio_rmse_standards_df = pd.DataFrame(
+        [
+            [250, 24, 200],
+            [1000, 100, 100],
+            [2000, 200, 62],
+            [3000, 300, 54],
+            [4000, 400, 48],
+            [5000, 500, 45],
+            [6250, 625, 42],
+            [7750, 775, 39],
+            [9250, 925, 36],
+            [11250, 1125, 34],
+            [13750, 1375, 31],
+            [16250, 1625, 30],
+            [18750, 1875, 28],
+            [22500, 2250, 26],
+            [30000, 3000, 24],
+            [45000, 4500, 21],
+            [65000, 6500, 18],
+            [97500, 9750, 12],
+        ],
+        columns=[
+            "daily_volume_midpoint",
+            "hourly_volume_midpoint",
+            "desired_percent_RMSE",
+        ],
+    )
+
+    reduced_traffic_counts_df = pd.DataFrame(
+        {
+            "model_link_id": pd.Series(dtype="int"),
+            "pems_station_id": pd.Series(dtype="int"),
+            "time_period": pd.Series(dtype="str"),
+            "observed_flow": pd.Series(dtype="float"),
+            "odot_flow_category_daily": pd.Series(dtype="str"),
+            "odot_flow_category_hourly": pd.Series(dtype="str"),
+            "odot_maximum_error": pd.Series(dtype="float"),
+            "key_location": pd.Series(dtype="str"),
+        }
+    )
+
+    key_arterials_df = pd.DataFrame(
+        [
+            ["San Pablo", "Alameda", 123, np.nan],
+            ["19th Ave", "San Franscisco", 1, "401180_N"],
+            ["El Camino Real", "San Mateo", 82, np.nan],
+            ["El Camino Real", "Santa Clara", 82, np.nan],
+            ["Mission Blvd", "Alameda", 238, "400646_N"],
+            ["Ygnacio Valley Road", "Contra Costa", np.nan, np.nan],
+            ["Hwy 12", "Solano", 12, "409485_W"],
+            ["Hwy 37", "Marin", 37, "402038_W"],
+            ["Hwy 29", "Napa", 29, "402864_N"],
+            ["CA 128", "Sonoma", 128, np.nan],
+        ],
+        columns=[
+            "name",
+            "county",
+            "route",
+            "pems_station_id",
+        ],
+    )
+
+    bridges_df = pd.DataFrame(
+        [
+            ["Antioch Bridge", np.nan],
+            ["Benecia-Martinez Bridge", "402156_N"],
+            ["Carquinez Bridge", "401638_W"],
+            ["Dumbarton Bridge", "400841_W"],
+            ["Richmond-San Rafael Bridge", np.nan],
+            ["San Francisco-Oakland Bay Bridge", "402827_W"],
+            ["San Mateo-Hayward Bridge", "401272_W"],
+            ["Golden Gate Bridge", np.nan],
+        ],
+        columns=["name", "pems_station_id"],
+    )
+
     observed_bart_boardings_df: pd.DataFrame
     RELEVANT_BART_OBSERVED_YEARS_LIST = [2014, 2015, 2016]
 
@@ -66,6 +144,9 @@ class Observed:
 
         if self.reduced_transit_on_board_df.empty:
             self.reduce_on_board_survey()
+
+        if self.reduced_traffic_counts_df.empty:
+            self.reduce_traffic_counts()
 
         self._reduce_observed_rail_access_summaries()
         self._reduce_observed_rail_flow_summaries()
@@ -491,3 +572,162 @@ class Observed:
         self.reduced_transit_district_flows_by_technology_df = long_sum_o_df.copy()
 
         return
+
+    def _join_tm2_link_ids(self, input_df: pd.DataFrame) -> pd.DataFrame:
+
+        df = self.c.pems_to_link_crosswalk_df.copy()
+        nodes_df = self.c.standard_to_emme_node_crosswalk_df.copy()
+
+        df = (
+            pd.merge(df, nodes_df, how="left", left_on="A", right_on="model_node_id")
+            .rename(
+                columns={
+                    "emme_node_id": "emme_a_node_id",
+                }
+            )
+            .drop(["model_node_id"], axis=1)
+        )
+
+        df = (
+            pd.merge(df, nodes_df, how="left", left_on="B", right_on="model_node_id")
+            .rename(
+                columns={
+                    "emme_node_id": "emme_b_node_id",
+                }
+            )
+            .drop(["model_node_id"], axis=1)
+        )
+
+        df[["emme_a_node_id", "emme_b_node_id"]] = df[["emme_a_node_id", "emme_b_node_id"]].fillna(0).astype(int)
+
+        return_df = pd.merge(
+            df,
+            input_df,
+            how="left",
+            on="pems_station_id",
+        )
+
+        return return_df
+
+    def _join_ohio_standards(self, input_df: pd.DataFrame) -> pd.DataFrame:
+
+        df = self.ohio_rmse_standards_df.copy()
+
+        df["upper"] = (
+            df["daily_volume_midpoint"].shift(-1) - df["daily_volume_midpoint"]
+        ) / 2
+        df["lower"] = (
+            df["daily_volume_midpoint"].shift(1) - df["daily_volume_midpoint"]
+        ) / 2
+        df["low"] = df["daily_volume_midpoint"] + df["lower"]
+        df["low"] = np.where(df["low"].isna(), 0, df["low"])
+        df["high"] = df["daily_volume_midpoint"] + df["upper"]
+        df["high"] = np.where(df["high"].isna(), np.inf, df["high"])
+
+        df = df.drop(
+            ["daily_volume_midpoint", "hourly_volume_midpoint", "upper", "lower"],
+            axis="columns",
+        )
+
+        df = df.rename(
+            columns={
+                "desired_percent_rmse": "odot_maximum_error",
+            }
+        )
+
+        vals = input_df.observed_flow.values
+        high = df.high.values
+        low = df.low.values
+
+        i, j = np.where((vals[:, None] >= low) & (vals[:, None] <= high))
+
+        return_df = pd.concat(
+            [
+                input_df.loc[i, :].reset_index(drop=True),
+                df.loc[j, :].reset_index(drop=True),
+            ],
+            axis=1,
+        )
+
+        return_df["low_hourly"] = return_df["low"] / 10
+        return_df["high_hourly"] = return_df["high"] / 10
+        return_df["odot_flow_category_daily"] = (
+            return_df["low"].astype("str") + "-" + return_df["high"].astype("str")
+        )
+        return_df["odot_flow_category_hourly"] = (
+            return_df["low_hourly"].astype("str")
+            + "-"
+            + return_df["high_hourly"].astype("str")
+        )
+
+        return_df = return_df.drop(
+            ["high", "low", "high_hourly", "low_hourly"], axis="columns"
+        )
+
+        return return_df
+
+    def _identify_key_arterials_and_bridges(
+        self, input_df: pd.DataFrame
+    ) -> pd.DataFrame:
+        
+        df1 = self.key_arterials_df.copy()
+        df2 = self.bridges_df.copy()
+        df = pd.concat([df1, df2])[["name", "pems_station_id"]]
+        df = df.dropna().copy()
+        out_df = pd.merge(input_df, df, how="left", on="pems_station_id")
+        out_df.rename(columns={"name": "key_location"})
+
+        return out_df
+
+    def reduce_traffic_counts(self, read_file_from_disk=True):
+        """
+        Prepares observed traffic count data for Acceptance Comparisons by computing daily counts,
+        joining with the TM2 link cross walk, and joining the Ohio Standards database.
+
+        Args:
+            read_file_from_disk (bool, optional): If `False`, will do calculations from source data. Defaults to True.
+        """
+
+        file_root = self.observed_dict["remote_io"]["obs_folder_root"]
+        in_file = self.observed_dict["roadway"]["pems_traffic_count_file"]
+        out_file = self.observed_dict["roadway"]["reduced_summaries_file"]
+
+        if os.path.isfile(out_file) and read_file_from_disk:
+            self.reduced_traffic_counts_df = pd.read_csv(
+                os.path.join(file_root, out_file),
+                dtype=self.reduced_traffic_counts_df.dtypes.to_dict(),
+            )
+        else:
+            in_df = pd.read_csv(os.path.join(file_root, in_file))
+            df = in_df[in_df.year.isin(self.RELEVANT_PEMS_OBSERVED_YEARS_LIST)].copy()
+            df["pems_station_id"] = df["station"].astype(str) + "_" + df["direction"]
+            df = df[["pems_station_id", "year", "time_period", "median_flow"]].copy()
+            median_across_years_df = (
+                df.groupby(["pems_station_id", "time_period"])["median_flow"]
+                .median()
+                .reset_index()
+            )
+            median_across_years_df = median_across_years_df.rename(
+                columns={"median_flow": "observed_flow"}
+            )
+
+            all_day_df = (
+                median_across_years_df.groupby(["pems_station_id"])["observed_flow"]
+                .sum()
+                .reset_index()
+            )
+            all_day_df["time_period"] = self.c.ALL_DAY_WORD
+
+            out_df = pd.concat(
+                [all_day_df, median_across_years_df], axis="rows", ignore_index=True
+            )
+
+            out_df = self._join_ohio_standards(out_df)
+            out_df = self._join_tm2_link_ids(out_df)
+            out_df = self._identify_key_arterials_and_bridges(out_df)
+
+            out_df.to_csv(os.path.join(file_root, out_file))
+
+            self.reduced_traffic_counts_df = out_df
+
+            return
