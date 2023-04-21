@@ -598,7 +598,9 @@ class Observed:
             .drop(["model_node_id"], axis=1)
         )
 
-        df[["emme_a_node_id", "emme_b_node_id"]] = df[["emme_a_node_id", "emme_b_node_id"]].fillna(0).astype(int)
+        df[["emme_a_node_id", "emme_b_node_id"]] = (
+            df[["emme_a_node_id", "emme_b_node_id"]].fillna(0).astype(int)
+        )
 
         return_df = pd.merge(
             df,
@@ -669,7 +671,7 @@ class Observed:
     def _identify_key_arterials_and_bridges(
         self, input_df: pd.DataFrame
     ) -> pd.DataFrame:
-        
+
         df1 = self.key_arterials_df.copy()
         df2 = self.bridges_df.copy()
         df = pd.concat([df1, df2])[["name", "pems_station_id"]]

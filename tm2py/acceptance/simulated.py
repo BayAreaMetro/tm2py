@@ -24,6 +24,10 @@ class Simulated:
     model_time_periods = []
     model_morning_capacity_factor: float
 
+    simulated_roadway_am_shape_gdf: gpd.GeoDataFrame
+
+    simulated_roadway_assignment_results_df = pd.DataFrame
+
     transit_access_mode_dict = {}
     transit_mode_dict = {}
 
@@ -93,6 +97,7 @@ class Simulated:
         self._read_standard_transit_shapes()
         self._read_standard_transit_routes()
         self._read_standard_node()
+
         self._read_transit_demand()
         self._make_transit_technology_in_vehicle_table_from_skims()
         self._make_district_to_district_transit_summaries()
@@ -103,6 +108,8 @@ class Simulated:
         self._reduce_simulated_zero_vehicle_households()
         self._reduce_simulated_station_to_station()
         self._reduce_simulated_rail_access_summaries()
+
+        self._reduce_simulated_roadway_assignment_outcomes()
 
         assert sorted(
             self.simulated_home_work_flows_df.residence_county.unique().tolist()
@@ -993,5 +1000,166 @@ class Simulated:
         long_sum_s_df["tech"] = long_sum_s_df["tech"].map(rename_dict)
 
         self.simulated_transit_district_to_district_by_tech_df = long_sum_s_df.copy()
+
+        return
+
+    def _reduce_simulated_traffic_flow(self):
+
+        file_root = self.scenario_dict["scenario"]["root_dir"]
+        time_of_day_df = pd.DataFrame()
+        time_periods = ["AM"]  # temporary
+
+        # for time_period in self.model_time_periods:
+        for time_period in time_periods:
+
+            gdf = gpd.read_file(
+                os.path.join(file_root + time_period + "/" + "emme_links.shp")
+            )
+            df = gdf[
+                ["ID", "@flow_da", "@flow_lrgt", "@flow_s2", "@flow_s3", "@flow_trk"]
+            ]
+            df = df.rename(columns={"ID": "model_link_id"})
+            df["time_period"] = time_period
+            time_of_day_df = time_of_day_df.append(
+                df
+            )  # one file with selected vars for all the time periods
+
+        time_of_day_df["simulated_flow_auto"] = time_of_day_df[
+            ["@flow_da", "@flow_s2", "@flow_s3"]
+        ].sum(
+            axis=1
+        )  # include @flow_lrgt?
+        time_of_day_df = time_of_day_df.rename(
+            columns={"@flow_trk": "simulated_flow_truck"}
+        )
+        time_of_day_df["simulated_flow"] = time_of_day_df[
+            ["simulated_flow_auto", "simulated_flow_truck", "@flow_lrgt"]
+        ].sum(axis=1)
+
+        all_day_df = (
+            time_of_day_df.groupby(
+                ["model_link_id"]
+            )  # summarize all timeperiod flow variables to daily
+            .sum()
+            .reset_index()
+        )
+        all_day_df["time_period"] = self.c.ALL_DAY_WORD
+
+        # combine
+        out_df = pd.concat([time_of_day_df, all_day_df], axis="rows", ignore_index=True)
+
+        # remove unneeded columns
+        out_df = out_df[
+            [
+                "model_link_id",
+                "time_period",
+                "simulated_flow_auto",
+                "simulated_flow_truck",
+                "simulated_flow",
+            ]
+        ]
+
+        # out_df.to_csv(os.path.join(file_root, out_file))
+        out_df.to_csv("simulated_traffic_flow_temp.csv")
+
+        self.simulated_traffic_flow_df = out_df  # model_link_id, time_period (which includes each of the timeperiods and daily) and flow vars (including simulated_flow)
+
+        return
+
+    def _reduce_simulated_roadway_assignment_outcomes(self):
+
+        file_root = self.scenario_dict["scenario"]["root_dir"]
+
+        # step 1: get the shape
+        shape_period = "am"
+        gdf = gpd.read_file(
+            os.path.join(file_root + shape_period + "/" + "emme_links.shp")
+        )
+        self.simulated_roadway_am_shape_gdf = (
+            gdf[["INODE", "JNODE", "#link_id", "geometry"]]
+            .copy()
+            .rename(
+                columns={
+                    "INODE": "emme_a_node_id",
+                    "JNODE": "emme_b_node_id",
+                    "#link_id": "standard_link_id",
+                }
+            )
+        )
+
+        # step 2: fetch the roadway volumes
+        across_df = pd.DataFrame()
+        for t in self.model_time_periods:
+            if t != shape_period:
+                gdf = gpd.read_file(
+                    os.path.join(file_root + t.upper() + "/" + "emme_links.shp")
+                )
+
+            df = pd.DataFrame(gdf)[
+                [
+                    "INODE",
+                    "JNODE",
+                    "@lanes",
+                    "@useclass",
+                    "@managed",
+                    "@tollbooth",
+                    "@tollseg",
+                    "@ft",
+                    "@flow_da",
+                    "@flow_s2",
+                    "@flow_s3",
+                    "@flow_lrgt",
+                    "@flow_trk",
+                ]
+            ]
+            df = df.rename(
+                columns={
+                    "INODE": "emme_a_node_id",
+                    "JNODE": "emme_b_node_id",
+                    "@managed": "managed",
+                    "@tollbooth": "tollbooth",
+                    "@tollseg": "tollseg",
+                    "@ft": "ft",
+                    "@useclass": "useclass",
+                    "@lanes": "lanes",
+                    "@flow_da": "flow_da",
+                    "@flow_s2": "flow_s2",
+                    "@flow_s3": "flow_s3",
+                    "@flow_lrgt": "flow_lrgt",
+                    "@flow_trk": "flow_trk",
+                }
+            )
+
+            df["time_period"] = t
+            df["flow_total"] = df[
+                [col for col in df.columns if col.startswith("flow_")]
+            ].sum(axis=1)
+
+            if len(across_df) == 0:
+                across_df = df.copy()
+            else:
+                across_df = pd.concat([across_df, df], axis="rows")
+
+        daily_df = (
+            df.groupby(["emme_a_node_id", "emme_b_node_id"])
+            .agg(
+                {
+                    "flow_da": "sum",
+                    "flow_s2": "sum",
+                    "flow_s3": "sum",
+                    "flow_trk": "sum",
+                    "flow_lrgt": "sum",
+                }
+            )
+            .reset_index(drop=False)
+        )
+        daily_df["time_period"] = self.c.ALL_DAY_WORD
+        daily_df["flow_total"] = daily_df[
+            [col for col in daily_df.columns if col.startswith("flow_")]
+        ].sum(axis=1)
+
+        self.simulated_roadway_assignment_results_df = pd.concat(
+            [across_df, daily_df], axis="rows"
+        ).reset_index(drop=True)
 
         return
