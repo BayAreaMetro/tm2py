@@ -28,6 +28,8 @@ class Canonical:
     KISS_AND_RIDE_ACCESS_WORD = "Kiss and Ride"
     BIKE_ACCESS_WORD = "Bike"
 
+    MANAGED_LANE_OFFSET = 10000000
+
     transit_technology_abbreviation_dict = {
         "LOC": "Local Bus",
         "EXP": "Express Bus",

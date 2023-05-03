@@ -21,17 +21,40 @@ class Acceptance:
 
     output_transit_filename = "acceptance-transit-network.geojson"
     output_other_filename = "acceptance-other.geojson"
+    output_roadway_filename = "acceptance-roadway-network.geojson"
 
     tableau_projection = "4326"
+
+    MAX_FACILITY_TYPE_FOR_ROADWAY_COMPARISONS = 6
 
     # Output data specs
     road_network_gdf = gpd.GeoDataFrame(
         {
             "model_link_id": pd.Series(dtype="int"),
+            "emme_a_node_id": pd.Series(dtype="int"),
+            "emme_b_node_id": pd.Series(dtype="int"),
             "pems_station_id": pd.Series(dtype="int"),
             "time_period": pd.Series(dtype="str"),
             "observed_flow": pd.Series(dtype="float"),
             "simulated_flow": pd.Series(dtype="float"),
+            "simulated_flow_da": pd.Series(dtype="float"),
+            "simulated_flow_s2": pd.Series(dtype="float"),
+            "simulated_flow_s3": pd.Series(dtype="float"),
+            "simulated_flow_lrgt": pd.Series(dtype="float"),
+            "simulated_flow_trk": pd.Series(dtype="float"),
+            "simulated_flow_managed": pd.Series(dtype="float"),
+            "simulated_flow_da_managed": pd.Series(dtype="float"),
+            "simulated_flow_s2_managed": pd.Series(dtype="float"),
+            "simulated_flow_s3_managed": pd.Series(dtype="float"),
+            "simulated_flow_lrgt_managed": pd.Series(dtype="float"),
+            "simulated_flow_trk_managed": pd.Series(dtype="float"),
+            "simulated_capacity": pd.Series(dtype="float"),
+            "simulated_capacity_managed": pd.Series(dtype="float"),
+            "simulated_facility_type": pd.Series(dtype="float"),
+            "simulated_lanes": pd.Series(dtype="float"),
+            "simulated_lanes_managed": pd.Series(dtype="float"),
+            "simulated_speed_mph": pd.Series(dtype="float"),
+            "simulated_speed_mph_managed": pd.Series(dtype="float"),
             "odot_flow_category": pd.Series(dtype="int"),
             "odot_maximum_error": pd.Series(dtype="float"),
             "geometry": pd.Series(dtype="str"),  # line
@@ -93,7 +116,7 @@ class Acceptance:
 
     def make_acceptance(self, make_transit=True, make_roadway=True, make_other=False):
         if make_roadway:
-            # self._make_roadway_acceptance()
+            self._make_roadway_network_comparisons()
             pass
         if make_transit:
             self._make_transit_network_comparisons()
@@ -102,15 +125,13 @@ class Acceptance:
 
         return
 
-    def _write_roadway_network():
-        """_summary_
-        Method to set the geometry of the geopandas object and write the file to disk.
-        """
+    def _write_roadway_network(self):
 
-        # set the geometry
-        # make sure it is in the right projection
-        # get the file location from the dictionary
-        # write to disk
+        file_root = self.acceptance_output_folder_root
+        # TODO: figure out how to get remote write, use . for now
+        file_root = "."
+        out_file = os.path.join(file_root, self.output_roadway_filename)
+        self.road_network_gdf.to_file(out_file, driver="GeoJSON")
 
         return
 
@@ -134,10 +155,98 @@ class Acceptance:
 
         return
 
-    def _make_roadway_network_comparisons():
+    def _make_roadway_network_comparisons(self):
 
-        # placeholder
-        # _write_roadway_network()
+        o_df = self.o.reduced_traffic_counts_df.copy()
+        s_df = self.s.simulated_roadway_assignment_results_df.copy()
+        s_am_shape_gdf = self.s.simulated_roadway_am_shape_gdf.copy()
+
+        o_df["time_period"] = o_df.time_period.str.lower()
+        s_trim_df = s_df[
+            s_df["ft"] <= self.MAX_FACILITY_TYPE_FOR_ROADWAY_COMPARISONS
+        ].copy()
+
+        out_df = pd.merge(
+            s_trim_df,
+            o_df,
+            on=["emme_a_node_id", "emme_b_node_id", "time_period"],
+            how="left",
+        )
+
+        out_df["odot_flow_category"] = np.where(
+            out_df["time_period"] == self.c.ALL_DAY_WORD,
+            out_df["odot_flow_category_daily"],
+            out_df["odot_flow_category_hourly"],
+        )
+        out_df = out_df[
+            [
+                "emme_a_node_id",
+                "emme_b_node_id",
+                "pems_station_id",
+                "time_period",
+                "observed_flow",
+                "name",
+                "odot_flow_category",
+                "odot_maximum_error",
+                "flow_total",
+                "flow_da",
+                "flow_s2",
+                "flow_s3",
+                "flow_lrgt",
+                "flow_trk",
+                "capacity",
+                "ft",
+                "lanes",
+                "speed_mph",
+                "m_flow_total",
+                "m_flow_da",
+                "m_flow_s2",
+                "m_flow_s3",
+                "m_flow_lrgt",
+                "m_flow_trk",
+                "m_lanes",
+                "m_speed_mph",
+                "m_capacity",
+            ]
+        ]
+        out_df = out_df.rename(
+            columns={
+                "flow_total": "simulated_flow",
+                "flow_da": "simulated_flow_da",
+                "flow_s2": "simulated_flow_s2",
+                "flow_s3": "simulated_flow_s3",
+                "flow_lrgt": "simulated_flow_lrgt",
+                "flow_trk": "simulated_flow_trk",
+                "capacity": "simulated_capacity",
+                "ft": "simulated_facility_type",
+                "name": "location_name",
+                "lanes": "simulated_lanes",
+                "speed_mph": "simulated_speed_mph",
+                "m_lanes": "simulated_lanes_managed",
+                "m_speed_mph": "simulated_speed_mph_managed",
+                "m_capacity": "simulated_capacity_managed",
+                "m_flow_total": "simulated_flow_managed",
+                "m_flow_da": "simulated_flow_da_managed",
+                "m_flow_s2": "simulated_flow_s2_managed",
+                "m_flow_s3": "simulated_flow_s3_managed",
+                "m_flow_lrgt": "simulated_flow_lrgt_managed",
+                "m_flow_trk": "simulated_flow_trk_managed",
+            }
+        )
+
+        s_am_shape_gdf["time_period"] = "am"
+        return_df = pd.merge(
+            out_df,
+            s_am_shape_gdf,
+            how="left",
+            on=["emme_a_node_id", "emme_b_node_id", "time_period"],
+        ).rename(columns={"standard_link_id": "model_link_id"})
+
+        return_gdf = gpd.GeoDataFrame(return_df, geometry="geometry")
+        return_gdf = return_gdf.to_crs(crs="EPSG:" + self.tableau_projection)
+        self.road_network_gdf = return_gdf[self.road_network_gdf.columns]
+
+        self._write_roadway_network()
 
         return
 
