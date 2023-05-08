@@ -1009,7 +1009,7 @@ class HighwayConfig(ConfigItem):
 class TransitModeConfig(ConfigItem):
     """Transit mode definition (see also mode in the Emme API)."""
 
-    type: Literal["WALK", "ACCESS", "EGRESS", "LOCAL", "PREMIUM"]
+    type: Literal["WALK", "ACCESS", "EGRESS", "LOCAL", "PREMIUM", "DRIVE", "PNR_dummy","KNR_dummy"]
     assign_type: Literal["TRANSIT", "AUX_TRANSIT"]
     mode_id: str = Field(min_length=1, max_length=1)
     name: str = Field(max_length=10)
@@ -1044,9 +1044,9 @@ class TransitModeConfig(ConfigItem):
 class TransitVehicleConfig(ConfigItem):
     """Transit vehicle definition (see also transit vehicle in the Emme API)."""
 
-    vehicle_id: int
-    mode: str
-    name: str
+    vehicle_id: Optional[int] = Field(default=None, ge=0)
+    mode: Optional[str] = Field(default="")
+    name: Optional[str] = Field(default="")
     auto_equivalent: Optional[float] = Field(default=0, ge=0)
     seated_capacity: Optional[int] = Field(default=None, ge=0)
     total_capacity: Optional[int] = Field(default=None, ge=0)
@@ -1098,7 +1098,6 @@ class TransitConfig(ConfigItem):
     """Transit assignment parameters."""
 
     modes: Tuple[TransitModeConfig, ...]
-    vehicles: Tuple[TransitVehicleConfig, ...]
     classes: Tuple[TransitClassConfig, ...]
     value_of_time: float
     effective_headway_source: str
@@ -1125,7 +1124,7 @@ class TransitConfig(ConfigItem):
     input_connector_egress_times_path: Optional[str] = Field(default=None)
     output_stop_usage_path: Optional[str] = Field(default=None)
     output_transit_boardings_path: Optional[str] = Field(default=None)
-
+    vehicles: Optional[TransitVehicleConfig] = Field(default_factory=TransitVehicleConfig)
 
 @dataclass(frozen=True)
 class EmmeConfig(ConfigItem):
