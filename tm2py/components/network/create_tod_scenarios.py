@@ -46,7 +46,7 @@ class CreateTODScenarios(Component):
         # emme_app = self._emme_manager.project(project_path)
         # self._emme_manager.init_modeller(emme_app)
         with self._setup():
-            self._create_highway_scenarios()
+            # self._create_highway_scenarios()
             self._create_transit_scenarios()
 
     @_context
@@ -221,7 +221,7 @@ class CreateTODScenarios(Component):
                 "scenarios": 1 + n_time_periods,
                 "regular_nodes": 650000,
                 "links": 1900000,
-                "transit_vehicles": 200,
+                "transit_vehicles": 600, # pnr vechiles
                 "transit_segments": 1800000,
                 "extra_attribute_values": 200000000,
             }
@@ -254,22 +254,22 @@ class CreateTODScenarios(Component):
                     if ref_scenario.extra_attribute(name) is None:
                         ref_scenario.create_extra_attribute(domain, name)
             network = ref_scenario.get_network()
-            auto_network = self._ref_auto_network
-            # copy link attributes from auto network to transit network
-            link_lookup = {}
-            for link in auto_network.links():
-                link_lookup[link["#link_id"]] = link
-            for link in network.links():
-                auto_link = link_lookup.get(link["#link_id"])
-                if not auto_link:
-                    continue
-                for attr in [
-                    "@area_type",
-                    "@capclass",
-                    "@free_flow_speed",
-                    "@free_flow_time",
-                ]:
-                    link[attr] = auto_link[attr]
+            # auto_network = self._ref_auto_network
+            # # copy link attributes from auto network to transit network
+            # link_lookup = {}
+            # for link in auto_network.links():
+            #     link_lookup[link["#link_id"]] = link
+            # for link in network.links():
+            #     auto_link = link_lookup.get(link["#link_id"])
+            #     if not auto_link:
+            #         continue
+            #     for attr in [
+            #         "@area_type",
+            #         "@capclass",
+            #         "@free_flow_speed",
+            #         "@free_flow_time",
+            #     ]:
+            #         link[attr] = auto_link[attr]
 
             mode_table = self.controller.config.transit.modes
             in_vehicle_factors = {}
@@ -309,20 +309,20 @@ class CreateTODScenarios(Component):
                 )
 
             # create vehicles
-            vehicle_table = self.controller.config.transit.vehicles
-            for veh_data in vehicle_table:
-                vehicle = network.transit_vehicle(veh_data["vehicle_id"])
-                if vehicle is None:
-                    vehicle = network.create_transit_vehicle(
-                        veh_data["vehicle_id"], veh_data["mode"]
-                    )
-                elif vehicle.mode.id != veh_data["mode"]:
-                    raise Exception(
-                        f"vehicle {veh_data['vehicle_id']} already exists with mode {vehicle.mode.id} instead of {veh_data['mode']}"
-                    )
-                vehicle.auto_equivalent = veh_data["auto_equivalent"]
-                vehicle.seated_capacity = veh_data["seated_capacity"]
-                vehicle.total_capacity = veh_data["total_capacity"]
+            # vehicle_table = self.controller.config.transit.vehicles
+            # for veh_data in vehicle_table:
+            #     vehicle = network.transit_vehicle(veh_data["vehicle_id"])
+            #     if vehicle is None:
+            #         vehicle = network.create_transit_vehicle(
+            #             veh_data["vehicle_id"], veh_data["mode"]
+            #         )
+            #     elif vehicle.mode.id != veh_data["mode"]:
+            #         raise Exception(
+            #             f"vehicle {veh_data['vehicle_id']} already exists with mode {vehicle.mode.id} instead of {veh_data['mode']}"
+            #         )
+            #     vehicle.auto_equivalent = veh_data["auto_equivalent"]
+            #     vehicle.seated_capacity = veh_data["seated_capacity"]
+            #     vehicle.total_capacity = veh_data["total_capacity"]
 
             # set fixed guideway times, and initial free flow auto link times
             # TODO: cntype_speed_map to config
@@ -349,10 +349,10 @@ class CreateTODScenarios(Component):
                     link.length = 0.01  # 60.0 / 5280.0
             for line in network.transit_lines():
                 # TODO: may want to set transit line speeds (not necessarily used in the assignment though)
-                line_veh = network.transit_vehicle(line["#mode"])
+                line_veh = network.transit_vehicle(line["#vehtype"]) # use #vehtype here instead of #mode (#vehtype is vehtype_num in Lasso\mtc_data\lookups\transitSeatCap.csv)
                 if line_veh is None:
                     raise Exception(
-                        f"line {line.id} requires vehicle ('#mode') {line['#mode']} which does not exist"
+                        f"line {line.id} requires vehicle ('#vehtype') {line['#vehtype']} which does not exist"
                     )
                 line_mode = line_veh.mode.id
                 for seg in line.segments():
