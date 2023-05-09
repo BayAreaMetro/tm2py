@@ -918,12 +918,12 @@ class ApplyFares(Component):
             self.station_to_station_approx(
                 valid_farezones, fare_matrix, zone_nodes, valid_links, network
             )
-
-        # copy costs from links to segments
-        for line in lines:
-            for segment in line.segments():
-                segment["@invehicle_cost"] = max(segment.link.invehicle_cost, 0)
-                segment["@board_cost"] = max(segment.link.board_cost, 0)
+            # copy costs from links to segments
+            for line in lines:
+                for segment in line.segments():
+                    segment["@invehicle_cost"] = max(segment.link.invehicle_cost, 0)
+                    segment["@board_cost"] = max(segment.link.board_cost, 0)
+        
         network.delete_attribute("LINK", "invehicle_cost")
         network.delete_attribute("LINK", "board_cost")
 
@@ -1028,8 +1028,7 @@ class ApplyFares(Component):
                                 {"type": "text3", "content": farezone_warning4}
                             )
                         same_farezone_missing_cost = farezone
-                    if seg.link:
-                        seg.link.board_cost = max(board_cost, seg.link.board_cost)
+                    seg["@board_cost"] = max(board_cost, seg["@board_cost"])
 
                 farezone = int(seg.i_node["@farezone"])
                 # Set the zone-to-zone fare increment from the previous stop
@@ -1037,10 +1036,10 @@ class ApplyFares(Component):
                     try:
                         invehicle_cost = (
                             fare_matrix[prev_farezone][farezone]
-                            - prev_seg.link.board_cost
+                            - prev_seg["@board_cost"]
                         )
-                        prev_seg.link.invehicle_cost = max(
-                            invehicle_cost, prev_seg.link.invehicle_cost
+                        prev_seg["@invehicle_cost"] = max(
+                            invehicle_cost, prev_seg["@invehicle_cost"]
                         )
                     except KeyError:
                         self._log.append(
@@ -1308,7 +1307,14 @@ class ApplyFares(Component):
                         if fare1 != fare2 and (
                             fare1 != "TOO_FAR" and fare2 != "TOO_FAR"
                         ):
-                            return False
+                            # if the difference between two fares are less that a number, 
+                            # then treat them as the same fare
+                            if isinstance(fare1, float) and isinstance(fare2, float) and (
+                                abs(fare1 - fare2)<=1.5
+                                ):
+                                continue
+                            else:
+                                return False
             return True
 
         # group faresystems together which have the same transfer-to pattern,
@@ -1361,7 +1367,14 @@ class ApplyFares(Component):
             xfer_fares = {}
             for fs_id in faresystems.keys():
                 to_fares = [f[fs_id] for f in xfer_fares_list if f[fs_id] != "TOO_FAR"]
-                fare = to_fares[0] if len(to_fares) > 0 else 0.0
+                # fare = to_fares[0] if len(to_fares) > 0 else 0.0
+                if len(to_fares) == 0:
+                    fare = 0.0
+                elif all(isinstance(item, float) for item in to_fares): 
+                    # caculate the average here becasue of the edits in matching_xfer_fares function
+                    fare = round(sum(to_fares)/len(to_fares),2)
+                else:
+                    fare = to_fares[0]
                 xfer_fares[fs_id] = fare
             faresystem_groups.append((group, xfer_fares))
             for fs_id in group:
@@ -1401,6 +1414,8 @@ class ApplyFares(Component):
         )
 
         transit_modes = set([m for m in network.modes() if m.type == "TRANSIT"])
+        #remove PNR dummy route from transit modes
+        transit_modes -= set([m for m in network.modes() if m.description == "pnrdummy"])
         mode_desc = {m.id: m.description for m in transit_modes}
         get_mode_id = network.available_mode_identifier
         get_vehicle_id = network.available_transit_vehicle_identifier
@@ -1412,22 +1427,24 @@ class ApplyFares(Component):
                 link.modes |= set([meta_mode])
         lines = _defaultdict(lambda: [])
         for line in network.transit_lines():
-            lines[line.vehicle.id].append(line)
+            if line.mode.id != "p": #remove PNR dummy mode
+                lines[line.vehicle.id].append(line)
             line["#src_mode"] = line.mode.id
             line["#src_veh"] = line.vehicle.id
         for vehicle in network.transit_vehicles():
-            temp_veh = network.create_transit_vehicle(get_vehicle_id(), vehicle.mode.id)
-            veh_id = vehicle.id
-            attributes = {a: vehicle[a] for a in network.attributes("TRANSIT_VEHICLE")}
-            for line in lines[veh_id]:
-                line.vehicle = temp_veh
-            network.delete_transit_vehicle(vehicle)
-            new_veh = network.create_transit_vehicle(veh_id, meta_mode.id)
-            for a, v in attributes.items():
-                new_veh[a] = v
-            for line in lines[veh_id]:
-                line.vehicle = new_veh
-            network.delete_transit_vehicle(temp_veh)
+            if vehicle.mode.id != "p": #remove PNR dummy mode
+                temp_veh = network.create_transit_vehicle(get_vehicle_id(), vehicle.mode.id)
+                veh_id = vehicle.id
+                attributes = {a: vehicle[a] for a in network.attributes("TRANSIT_VEHICLE")}
+                for line in lines[veh_id]:
+                    line.vehicle = temp_veh
+                network.delete_transit_vehicle(vehicle)
+                new_veh = network.create_transit_vehicle(veh_id, meta_mode.id)
+                for a, v in attributes.items():
+                    new_veh[a] = v
+                for line in lines[veh_id]:
+                    line.vehicle = new_veh
+                network.delete_transit_vehicle(temp_veh)
         for link in network.links():
             link.modes -= transit_modes
         for mode in transit_modes:
