@@ -67,14 +67,14 @@ class Observed:
     key_arterials_df = pd.DataFrame(
         [
             ["San Pablo", "Alameda", 123, np.nan],
-            ["19th Ave", "San Franscisco", 1, "401180_N"],
+            ["19th Ave", "San Francisco", 1, np.nan],
             ["El Camino Real", "San Mateo", 82, np.nan],
             ["El Camino Real", "Santa Clara", 82, np.nan],
-            ["Mission Blvd", "Alameda", 238, "400646_N"],
+            ["Mission Blvd", "Alameda", 238, np.nan],
             ["Ygnacio Valley Road", "Contra Costa", np.nan, np.nan],
             ["Hwy 12", "Solano", 12, "409485_W"],
             ["Hwy 37", "Marin", 37, "402038_W"],
-            ["Hwy 29", "Napa", 29, "402864_N"],
+            ["Hwy 29", "Napa", 29, "401796_N"],
             ["CA 128", "Sonoma", 128, np.nan],
         ],
         columns=[
