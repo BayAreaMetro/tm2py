@@ -200,12 +200,15 @@ class TimePeriodConfig(ConfigItem):
             capacites in the highway network
         emme_scenario_id: scenario ID to use for Emme per-period
             assignment (highway and transit) scenarios
+        congested_transit_assn_max_iteration: max iterations in congested 
+            transit assignment stopping criteria
     """
 
     name: str = Field(max_length=4)
     length_hours: float = Field(gt=0)
     highway_capacity_factor: float = Field(gt=0)
     emme_scenario_id: int = Field(ge=1)
+    congested_transit_assn_max_iteration: int = Field(ge=1)
     description: Optional[str] = Field(default="")
 
 
@@ -1015,7 +1018,11 @@ class TransitModeConfig(ConfigItem):
     name: str = Field(max_length=10)
     description: Optional[str] = ""
     in_vehicle_perception_factor: Optional[float] = Field(default=None, ge=0)
-    speed_miles_per_hour: Optional[float] = Field(default=None, gt=0)
+    speed_or_time_factor: Optional[str] = Field(default="")
+    initial_boarding_penalty: Optional[float] = Field(default=None, ge=0)
+    transfer_boarding_penalty: Optional[float] = Field(default=None, ge=0)
+    headway_fraction: Optional[float] = Field(default=None, ge=0)
+    transfer_wait_perception_factor: Optional[float] = Field(default=None, ge=0)
     eawt_factor: Optional[float] = Field(default=1)
 
     @validator("in_vehicle_perception_factor", always=True)
@@ -1025,15 +1032,43 @@ class TransitModeConfig(ConfigItem):
             assert value is not None, "must be specified when assign_type==TRANSIT"
         return value
 
-    @validator("speed_miles_per_hour", always=True)
-    def speed_miles_per_hour_valid(cls, value, values):
-        """Validate speed_miles_per_hour exists if assign_type is AUX_TRANSIT."""
+    @validator("speed_or_time_factor", always=True)
+    def speed_or_time_factor_valid(cls, value, values):
+        """Validate speed_or_time_factor exists if assign_type is AUX_TRANSIT."""
         if "assign_type" in values and values["assign_type"] == "AUX_TRANSIT":
             assert value is not None, "must be specified when assign_type==AUX_TRANSIT"
         return value
 
+    @validator("initial_boarding_penalty", always=True)
+    def initial_boarding_penalty_valid(value, values):
+        """Validate initial_boarding_penalty exists if assign_type is TRANSIT."""
+        if "assign_type" in values and values["assign_type"] == "TRANSIT":
+            assert value is not None, "must be specified when assign_type==TRANSIT"
+        return value
+
+    @validator("transfer_boarding_penalty", always=True)
+    def transfer_boarding_penalty_valid(value, values):
+        """Validate transfer_boarding_penalty exists if assign_type is TRANSIT."""
+        if "assign_type" in values and values["assign_type"] == "TRANSIT":
+            assert value is not None, "must be specified when assign_type==TRANSIT"
+        return value
+
+    @validator("headway_fraction", always=True)
+    def headway_fraction_valid(value, values):
+        """Validate headway_fraction exists if assign_type is TRANSIT."""
+        if "assign_type" in values and values["assign_type"] == "TRANSIT":
+            assert value is not None, "must be specified when assign_type==TRANSIT"
+        return value
+
+    @validator("transfer_wait_perception_factor", always=True)
+    def transfer_wait_perception_factor_valid(value, values):
+        """Validate transfer_wait_perception_factor exists if assign_type is TRANSIT."""
+        if "assign_type" in values and values["assign_type"] == "TRANSIT":
+            assert value is not None, "must be specified when assign_type==TRANSIT"
+        return value
+
     @classmethod
-    @validator("speed_miles_per_hour")
+    @validator("mode_id")
     def mode_id_valid(cls, value):
         """Validate mode_id."""
         assert len(value) == 1, "mode_id must be one character"
@@ -1094,36 +1129,63 @@ class EawtWeightsConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class CongestedAssnConfig(ConfigItem):
+    "Congested transit assignment Configuration."
+    trim_demand_before_congested_transit_assignment: bool = False
+    output_trimmed_demand_report_path: str = Field(default=None)
+    normalized_gap: float = Field(default=0.25)
+    relative_gap: float = Field(default=0.25)
+    use_peaking_factor: bool = False
+    am_peaking_factor: float = Field(default=1.219)
+    am_peaking_factor: float = Field(default=1.262)
+
+
+@dataclass(frozen=True)
 class TransitConfig(ConfigItem):
     """Transit assignment parameters."""
 
     modes: Tuple[TransitModeConfig, ...]
     classes: Tuple[TransitClassConfig, ...]
+    apply_msa_demand: bool
     value_of_time: float
+    walk_speed: float
+    transit_speed: float    
     effective_headway_source: str
     initial_wait_perception_factor: float
     transfer_wait_perception_factor: float
     walk_perception_factor: float
     initial_boarding_penalty: float
     transfer_boarding_penalty: float
+    walk_perception_factor: float
+    walk_perception_factor_cbd: float
+    drive_perception_factor: float
     max_transfers: int
-    output_skim_path: pathlib.Path
+    use_fares: bool
+    fare_2015_to_2000_deflator: float
     fares_path: pathlib.Path
     fare_matrix_path: pathlib.Path
     fare_max_transfer_distance_miles: float
-    use_fares: bool
+    override_connector_times: bool
     use_ccr: bool
     ccr_stop_criteria: Optional[AssignmentStoppingCriteriaConfig]
     ccr_weights: CcrWeightsConfig
     eawt_weights: EawtWeightsConfig
-    override_connector_times: bool
-    apply_msa_demand: bool
+    congested_transit_assignment: bool
+    congested: CongestedAssnConfig
+    output_skim_path: pathlib.Path
+    output_skim_filename_tmpl: str = Field()
+    output_skim_matrixname_tmpl: str = Field()
+    output_stop_usage_path: Optional[str] = Field(default=None)
+    output_transit_boardings_path: Optional[str] = Field(default=None)
+    output_transit_segment_path: Optional[str] = Field(default=None)
+    output_station_to_station_flow_path: Optional[str] = Field(default=None)
+    output_transfer_at_station_path: Optional[str] = Field(default=None)
+    timed_transfer_nodes: Tuple[int, ...] = Field()
+    output_transfer_at_station_node_ids: Dict[str, int] = Field()
     max_ccr_iterations: float = None
     split_connectors_to_prevent_walk: bool = True
     input_connector_access_times_path: Optional[str] = Field(default=None)
     input_connector_egress_times_path: Optional[str] = Field(default=None)
-    output_stop_usage_path: Optional[str] = Field(default=None)
-    output_transit_boardings_path: Optional[str] = Field(default=None)
     vehicles: Optional[TransitVehicleConfig] = Field(default_factory=TransitVehicleConfig)
 
 @dataclass(frozen=True)

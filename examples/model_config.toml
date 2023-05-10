@@ -7,26 +7,31 @@
     length_hours = 3
     highway_capacity_factor = 3
     emme_scenario_id = 11
+    congested_transit_assn_max_iteration = 1
 [[time_periods]]
     name = "am"
     length_hours = 4
     highway_capacity_factor = 3.65
     emme_scenario_id = 12
+    congested_transit_assn_max_iteration = 10
 [[time_periods]]
     name = "md"
     length_hours = 5
     highway_capacity_factor = 5
     emme_scenario_id = 13
+    congested_transit_assn_max_iteration = 1
 [[time_periods]]
     name = "pm"
     length_hours = 4
     highway_capacity_factor = 3.65
     emme_scenario_id = 14
+    congested_transit_assn_max_iteration = 10
 [[time_periods]]
     name = "ev"
     length_hours = 8
     highway_capacity_factor = 8
     emme_scenario_id = 15
+    congested_transit_assn_max_iteration = 1
 
 [logging]
     # Use default log configuration
@@ -736,26 +741,33 @@
 
 [transit]
     apply_msa_demand = false
-    value_of_time = 16.2
+    # vot=16.2*(180.20/227.47) https://github.com/BayAreaMetro/modeling-website/wiki/InflationAssumptions
+    value_of_time = 12.8
+    walk_speed = 3.0
+    # default transit speed used to calculate transit time in case any links has missing time from highway network
+    transit_speed = 30.0 
     effective_headway_source = "hdw"
     initial_wait_perception_factor = 1.5
     transfer_wait_perception_factor = 3.0
     walk_perception_factor = 2.0
+    walk_perception_factor_cbd = 1.0
+    drive_perception_factor = 3.0
     initial_boarding_penalty = 10
     transfer_boarding_penalty = 10
     max_transfers = 3
-    output_skim_path = "skim_matrices/transit/transit_skims_{period}.omx"
+    # fare option
+    use_fares = true
+    fare_2015_to_2000_deflator = 0.698 #180.20/258.27
     fares_path = "inputs/trn/fares.far"
     fare_matrix_path = "inputs/trn/fareMatrix.txt"
     # max expected transfer distance for mode-to-mode transfer fare table generation
     fare_max_transfer_distance_miles = 3.0
-    use_fares = false
     # for TAZ instead of TAPs
     ## set to true if use TAZ
     override_connector_times = false
     #input_connector_access_times_path = "inputs\\trn\\estimated_taz_access_connectors.csv"
     #input_connector_egress_times_path = "inputs\\trn\\estimated_taz_egress_connectors.csv"
-    #output_stop_usage_path = "inputs\\trn\\stop_usage_{period}.csv"
+    # capacitated transit assignment methods
     use_ccr = false
     ccr_stop_criteria.max_iterations = 3
     ccr_stop_criteria.relative_difference = 0.01
@@ -767,6 +779,32 @@
     ccr_weights.max_stand = 1.6
     ccr_weights.power_stand = 3.4
     eawt_weights.constant = 0.259625
+    # congested transit assignment methods
+    congested_transit_assignment = true
+    congested.trim_demand_before_congested_transit_assignment = true
+    congested.output_trimmed_demand_report_path = "output_summaries/trimmed_demand_{period}_{iteration}.csv"
+    congested.normalized_gap = 0.25
+    congested.relative_gap = 0.005
+    congested.use_peaking_factor = true
+    congested.am_peaking_factor = 1.219
+    congested.pm_peaking_factor = 1.262
+    # output skim and summary paths
+    output_skim_path = "skim_matrices/transit/transit_skims_{period}.omx"
+    # output_skim_path = "skims/transit"
+    output_skim_filename_tmpl = "trnskm{time_period}_{set_name}.omx"
+    output_skim_matrixname_tmpl = "{property}"
+    output_stop_usage_path = "output_summaries/stop_usage_{period}.csv"
+    output_transit_boardings_path = "output_summaries/boardings_by_line_{period}.csv"
+    output_transit_segment_path = "output_summaries/transit_segment_{period}.csv"
+    output_station_to_station_flow_path = "output_summaries/{operator}_station_to_station_{set_name}_{period}.txt"
+    output_transfer_at_station_path = "output_summaries/{set_name}_transfer_at_{stop}_{period}"
+    # timed tranfer nodes
+    timed_transfer_nodes = [2625944, 2625943] # standard network #node_id of Bart stations: 19th street, MacArthur
+    [transit.output_transfer_at_station_node_ids]
+        "12th_street"=2625945 # standard network #node_id
+        "19th street"=2625944 
+        "MacArthur"=2625943
+
     [[transit.classes]]
         skim_set_id = "SET1"
         name = "BUS"
@@ -1418,35 +1456,35 @@
     description = "drive_acc"
     type = "DRIVE"
     assign_type = "AUX_TRANSIT"
-    speed_miles_per_hour = 30.0
+    speed_or_time_factor = "ul1*1"
 [[transit.modes]]
     mode_id = "k"
     name = "knrdummy"
     description = "knrdummy"
     type = "KNR_dummy"
     assign_type = "AUX_TRANSIT"
-    speed_miles_per_hour = 40.0
+    speed_or_time_factor = 40.0
 [[transit.modes]]
     mode_id = "w"
     name = "walk"
     description = "walk"
     type = "WALK"
     assign_type = "AUX_TRANSIT"
-    speed_miles_per_hour = 3.0
+    speed_or_time_factor = "ul2*1"
 [[transit.modes]]
     mode_id = "a"
     name = "access"
     description = "access"
     type = "ACCESS"
     assign_type = "AUX_TRANSIT"
-    speed_miles_per_hour = 3.0
+    speed_or_time_factor = "ul2*1"
 [[transit.modes]]
     mode_id = "e"
     name = "egress"
     description = "egress"
     type = "EGRESS"
     assign_type = "AUX_TRANSIT"
-    speed_miles_per_hour = 3.0
+    speed_or_time_factor = "ul2*1"
 [[transit.modes]]
     mode_id = "p"
     name = "pnrdummy"
@@ -1454,6 +1492,10 @@
     type = "PNR_dummy"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
+    initial_boarding_penalty = 2.0
+    transfer_boarding_penalty = 2.0
+    headway_fraction = 0.5
+    transfer_wait_perception_factor = 3
 [[transit.modes]]
     mode_id = "b"
     description = "local_bus"
@@ -1461,6 +1503,10 @@
     type = "LOCAL"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
+    initial_boarding_penalty = 10.0
+    transfer_boarding_penalty = 10.0
+    headway_fraction = 0.5
+    transfer_wait_perception_factor = 3
 [[transit.modes]]
     mode_id = "x"
     description = "exp_bus"
@@ -1468,6 +1514,10 @@
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
+    initial_boarding_penalty = 10.0
+    transfer_boarding_penalty = 10.0
+    headway_fraction = 0.5
+    transfer_wait_perception_factor = 3
     eawt_factor = 0.4
 [[transit.modes]]
     mode_id = "f"
@@ -1475,7 +1525,11 @@
     name = "FR"
     type = "PREMIUM"
     assign_type = "TRANSIT"
-    in_vehicle_perception_factor = 1.0
+    in_vehicle_perception_factor = 0.8
+    initial_boarding_penalty = 2.0
+    transfer_boarding_penalty = 2.0
+    headway_fraction = 0.1
+    transfer_wait_perception_factor = 0.1
     eawt_factor = 0.2
 [[transit.modes]]
     mode_id = "l"
@@ -1483,7 +1537,11 @@
     name = "LR"
     type = "PREMIUM"
     assign_type = "TRANSIT"
-    in_vehicle_perception_factor = 1.0
+    in_vehicle_perception_factor = 0.9
+    initial_boarding_penalty = 7.0
+    transfer_boarding_penalty = 7.0
+    headway_fraction = 0.5
+    transfer_wait_perception_factor = 3
     eawt_factor = 0.4
 [[transit.modes]]
     mode_id = "h"
@@ -1491,7 +1549,11 @@
     name = "HR"
     type = "PREMIUM"
     assign_type = "TRANSIT"
-    in_vehicle_perception_factor = 1.0
+    in_vehicle_perception_factor = 0.7
+    initial_boarding_penalty = 5.0
+    transfer_boarding_penalty = 5.0
+    headway_fraction = 0.5
+    transfer_wait_perception_factor = 3
     eawt_factor = 0.2
 [[transit.modes]]
     mode_id = "r"
@@ -1499,7 +1561,11 @@
     name = "CR"
     type = "PREMIUM"
     assign_type = "TRANSIT"
-    in_vehicle_perception_factor = 1.0
+    in_vehicle_perception_factor = 0.7
+    initial_boarding_penalty = 5.0
+    transfer_boarding_penalty = 5.0
+    headway_fraction = 0.3
+    transfer_wait_perception_factor = 3
 
 # [[transit.vehicles]]
 #     vehicle_id = 12
