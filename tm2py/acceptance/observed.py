@@ -47,7 +47,7 @@ class Observed:
         columns=[
             "daily_volume_midpoint",
             "hourly_volume_midpoint",
-            "desired_percent_RMSE",
+            "desired_percent_rmse",
         ],
     )
 
@@ -148,21 +148,21 @@ class Observed:
         if self.reduced_traffic_counts_df.empty:
             self.reduce_traffic_counts()
 
-        self._reduce_observed_rail_access_summaries()
-        self._reduce_observed_rail_flow_summaries()
-        self._make_district_to_district_transit_flows_by_technology()
-        self._reduce_ctpp_2012_2016()
-        self._reduce_census_zero_car_households()
-        self._reduce_observed_bart_boardings()
+        # self._reduce_observed_rail_access_summaries()
+        # self._reduce_observed_rail_flow_summaries()
+        # self._make_district_to_district_transit_flows_by_technology()
+        # self._reduce_ctpp_2012_2016()
+        # self._reduce_census_zero_car_households()
+        # self._reduce_observed_bart_boardings()
 
-        assert sorted(
-            self.ctpp_2012_2016_df.residence_county.unique().tolist()
-        ) == sorted(self.c.county_names_list)
-        assert sorted(self.ctpp_2012_2016_df.work_county.unique().tolist()) == sorted(
-            self.c.county_names_list
-        )
+        # assert sorted(
+        #     self.ctpp_2012_2016_df.residence_county.unique().tolist()
+        # ) == sorted(self.c.county_names_list)
+        # assert sorted(self.ctpp_2012_2016_df.work_county.unique().tolist()) == sorted(
+        #     self.c.county_names_list
+        # )
 
-        self._make_census_geo_crosswalk()
+        # self._make_census_geo_crosswalk()
 
         return
 

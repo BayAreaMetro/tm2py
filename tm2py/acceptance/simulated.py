@@ -90,33 +90,33 @@ class Simulated:
 
     def _validate(self):
 
-        self._make_transit_mode_dict()
-        self._make_simulated_maz_data()
+        # self._make_transit_mode_dict()
+        # self._make_simulated_maz_data()
 
-        self._read_standard_transit_stops()
-        self._read_standard_transit_shapes()
-        self._read_standard_transit_routes()
-        self._read_standard_node()
+        # self._read_standard_transit_stops()
+        # self._read_standard_transit_shapes()
+        # self._read_standard_transit_routes()
+        # self._read_standard_node()
 
-        self._read_transit_demand()
-        self._make_transit_technology_in_vehicle_table_from_skims()
-        self._make_district_to_district_transit_summaries()
+        # self._read_transit_demand()
+        # self._make_transit_technology_in_vehicle_table_from_skims()
+        # self._make_district_to_district_transit_summaries()
 
-        self._reduce_simulated_transit_boardings()
-        self._reduce_simulated_transit_shapes()
-        self._reduce_simulated_home_work_flows()
-        self._reduce_simulated_zero_vehicle_households()
-        self._reduce_simulated_station_to_station()
-        self._reduce_simulated_rail_access_summaries()
+        # self._reduce_simulated_transit_boardings()
+        # self._reduce_simulated_transit_shapes()
+        # self._reduce_simulated_home_work_flows()
+        # self._reduce_simulated_zero_vehicle_households()
+        # self._reduce_simulated_station_to_station()
+        # self._reduce_simulated_rail_access_summaries()
 
         self._reduce_simulated_roadway_assignment_outcomes()
 
-        assert sorted(
-            self.simulated_home_work_flows_df.residence_county.unique().tolist()
-        ) == sorted(self.c.county_names_list)
-        assert sorted(
-            self.simulated_home_work_flows_df.work_county.unique().tolist()
-        ) == sorted(self.c.county_names_list)
+        # assert sorted(
+        #     self.simulated_home_work_flows_df.residence_county.unique().tolist()
+        # ) == sorted(self.c.county_names_list)
+        # assert sorted(
+        #     self.simulated_home_work_flows_df.work_county.unique().tolist()
+        # ) == sorted(self.c.county_names_list)
 
         return
 
@@ -1087,9 +1087,13 @@ class Simulated:
             )
         )
 
+        join_standard_id_df = pd.DataFrame(
+            self.simulated_roadway_am_shape_gdf.drop(columns="geometry").copy()
+        )
+
         # step 2: fetch the roadway volumes
         across_df = pd.DataFrame()
-        for t in self.model_time_periods:
+        for t in ["am"]: #self.model_time_periods:
             if t != shape_period:
                 gdf = gpd.read_file(
                     os.path.join(file_root + t.upper() + "/" + "emme_links.shp")
@@ -1099,8 +1103,11 @@ class Simulated:
                 [
                     "INODE",
                     "JNODE",
+                    "LENGTH",
+                    "TIMAU",
                     "@lanes",
                     "@useclass",
+                    "@capacity",
                     "@managed",
                     "@tollbooth",
                     "@tollseg",
@@ -1110,17 +1117,21 @@ class Simulated:
                     "@flow_s3",
                     "@flow_lrgt",
                     "@flow_trk",
+                    "@ffs"
                 ]
             ]
             df = df.rename(
                 columns={
                     "INODE": "emme_a_node_id",
                     "JNODE": "emme_b_node_id",
+                    "LENGTH": "distance_in_miles",
+                    "TIMAU": "time_in_minutes",
                     "@managed": "managed",
                     "@tollbooth": "tollbooth",
                     "@tollseg": "tollseg",
                     "@ft": "ft",
                     "@useclass": "useclass",
+                    "@capacity": "capacity",
                     "@lanes": "lanes",
                     "@flow_da": "flow_da",
                     "@flow_s2": "flow_s2",
@@ -1131,11 +1142,94 @@ class Simulated:
             )
 
             df["time_period"] = t
+            df["speed_mph"] = np.where(df["distance_in_miles"] > 0, df["distance_in_miles"]/(df["time_in_minutes"]/60.0), df["@ffs"]) 
             df["flow_total"] = df[
                 [col for col in df.columns if col.startswith("flow_")]
             ].sum(axis=1)
 
-            if len(across_df) == 0:
+            # join managed lane flows to general purpose
+            managed_df = df[df["managed"] == 1].copy()
+            managed_df = pd.merge(
+                managed_df,
+                join_standard_id_df,
+                how="left",
+                on=["emme_a_node_id", "emme_b_node_id"],
+            )
+            managed_df["join_link_id"] = (
+                managed_df["standard_link_id"] - self.c.MANAGED_LANE_OFFSET
+            )
+            managed_df = managed_df[
+                [
+                    "join_link_id",
+                    "flow_da",
+                    "flow_s2",
+                    "flow_s3",
+                    "flow_lrgt",
+                    "flow_trk",
+                    "flow_total",
+                    "time_period",
+                    "lanes",
+                    "capacity",
+                    "speed_mph",
+                ]
+            ].copy()
+            managed_df = managed_df.rename(
+                columns={
+                    "join_link_id": "standard_link_id",
+                    "lanes": "m_lanes",
+                    "flow_da": "m_flow_da",
+                    "flow_s2": "m_flow_s2",
+                    "flow_s3": "m_flow_s3",
+                    "flow_lrgt": "m_flow_lrgt",
+                    "flow_trk": "m_flow_trk",
+                    "flow_total": "m_flow_total",
+                    "speed_mph": "m_speed_mph",
+                    "capacity": "m_capacity",
+                }
+            )
+
+            df = pd.merge(
+                df,
+                join_standard_id_df,
+                how="left",
+                on=["emme_a_node_id", "emme_b_node_id"],
+            )
+            df = pd.merge(
+                df, managed_df, how="left", on=["standard_link_id", "time_period"]
+            )
+            df.fillna(
+                {
+                    "m_flow_da": 0,
+                    "m_flow_s2": 0,
+                    "m_flow_s3": 0,
+                    "m_flow_lrgt": 0,
+                    "m_flow_trk": 0,
+                    "m_flow_total": 0,
+                    "m_lanes": 0,
+                    "m_speed_mph": 0,
+                    "m_capacity": 0,
+                },
+                inplace=True,
+            )
+
+            variable_list = [
+                "flow_da",
+                "flow_s2",
+                "flow_s3",
+                "flow_lrgt",
+                "flow_trk",
+                "flow_total",
+                "lanes",
+                "capacity",
+            ]
+            for variable in variable_list:
+                m_variable = "m_" + variable
+                df[variable] = df[variable] + df[m_variable]
+
+            # can now drop managed lane entries
+            df = df[df["managed"] == 0].copy()
+
+            if len(across_df.index) == 0:
                 across_df = df.copy()
             else:
                 across_df = pd.concat([across_df, df], axis="rows")
@@ -1149,6 +1243,13 @@ class Simulated:
                     "flow_s3": "sum",
                     "flow_trk": "sum",
                     "flow_lrgt": "sum",
+                    "flow_total": "sum",
+                    "m_flow_da": "sum",
+                    "m_flow_s2": "sum",
+                    "m_flow_s3": "sum",
+                    "m_flow_lrgt": "sum",
+                    "m_flow_trk": "sum",
+                    "m_flow_total": "sum",
                 }
             )
             .reset_index(drop=False)
