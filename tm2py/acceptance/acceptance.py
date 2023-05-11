@@ -34,6 +34,7 @@ class Acceptance:
             "emme_a_node_id": pd.Series(dtype="int"),
             "emme_b_node_id": pd.Series(dtype="int"),
             "pems_station_id": pd.Series(dtype="int"),
+            "pems_station_type": pd.Series(dtype="str"),
             "distance_in_miles": pd.Series(dtype="float"),
             "key_road_name": pd.Series(dtype="str"),
             "time_period": pd.Series(dtype="str"),
@@ -119,7 +120,6 @@ class Acceptance:
     def make_acceptance(self, make_transit=True, make_roadway=True, make_other=False):
         if make_roadway:
             self._make_roadway_network_comparisons()
-            pass
         if make_transit:
             self._make_transit_network_comparisons()
         if make_other:
@@ -185,6 +185,7 @@ class Acceptance:
                 "emme_a_node_id",
                 "emme_b_node_id",
                 "pems_station_id",
+                "type",
                 "distance_in_miles",
                 "time_period",
                 "observed_flow",
@@ -214,6 +215,7 @@ class Acceptance:
         ]
         out_df = out_df.rename(
             columns={
+                "type": "pems_station_type",
                 "flow_total": "simulated_flow",
                 "flow_da": "simulated_flow_da",
                 "flow_s2": "simulated_flow_s2",

@@ -67,14 +67,14 @@ class Observed:
     key_arterials_df = pd.DataFrame(
         [
             ["San Pablo", "Alameda", 123, np.nan],
-            ["19th Ave", "San Franscisco", 1, "401180_N"],
+            ["19th Ave", "San Francisco", 1, np.nan],
             ["El Camino Real", "San Mateo", 82, np.nan],
             ["El Camino Real", "Santa Clara", 82, np.nan],
-            ["Mission Blvd", "Alameda", 238, "400646_N"],
+            ["Mission Blvd", "Alameda", 238, np.nan],
             ["Ygnacio Valley Road", "Contra Costa", np.nan, np.nan],
             ["Hwy 12", "Solano", 12, "409485_W"],
             ["Hwy 37", "Marin", 37, "402038_W"],
-            ["Hwy 29", "Napa", 29, "402864_N"],
+            ["Hwy 29", "Napa", 29, "401796_N"],
             ["CA 128", "Sonoma", 128, np.nan],
         ],
         columns=[
@@ -148,21 +148,21 @@ class Observed:
         if self.reduced_traffic_counts_df.empty:
             self.reduce_traffic_counts()
 
-        # self._reduce_observed_rail_access_summaries()
-        # self._reduce_observed_rail_flow_summaries()
-        # self._make_district_to_district_transit_flows_by_technology()
-        # self._reduce_ctpp_2012_2016()
-        # self._reduce_census_zero_car_households()
-        # self._reduce_observed_bart_boardings()
+        self._reduce_observed_rail_access_summaries()
+        self._reduce_observed_rail_flow_summaries()
+        self._make_district_to_district_transit_flows_by_technology()
+        self._reduce_ctpp_2012_2016()
+        self._reduce_census_zero_car_households()
+        self._reduce_observed_bart_boardings()
 
-        # assert sorted(
-        #     self.ctpp_2012_2016_df.residence_county.unique().tolist()
-        # ) == sorted(self.c.county_names_list)
-        # assert sorted(self.ctpp_2012_2016_df.work_county.unique().tolist()) == sorted(
-        #     self.c.county_names_list
-        # )
+        assert sorted(
+            self.ctpp_2012_2016_df.residence_county.unique().tolist()
+        ) == sorted(self.c.county_names_list)
+        assert sorted(self.ctpp_2012_2016_df.work_county.unique().tolist()) == sorted(
+            self.c.county_names_list
+        )
 
-        # self._make_census_geo_crosswalk()
+        self._make_census_geo_crosswalk()
 
         return
 
@@ -602,12 +602,25 @@ class Observed:
             df[["emme_a_node_id", "emme_b_node_id"]].fillna(0).astype(int)
         )
 
-        return_df = pd.merge(
+        df = pd.merge(
             df,
             input_df,
             how="left",
             on="pems_station_id",
         )
+
+        # take median across multiple stations on same link
+        median_df = (
+            df.groupby(["A", "B", "emme_a_node_id", "emme_b_node_id", "time_period"])[
+                "observed_flow"
+            ]
+            .agg("median")
+            .reset_index()
+        )
+        join_df = df[["A", "B", "observed_flow", "pems_station_id", "type"]].copy()
+        return_df = pd.merge(
+            median_df, join_df, how="left", on=["A", "B", "observed_flow"]
+        ).reset_index(drop=True)
 
         return return_df
 
@@ -703,9 +716,11 @@ class Observed:
             in_df = pd.read_csv(os.path.join(file_root, in_file))
             df = in_df[in_df.year.isin(self.RELEVANT_PEMS_OBSERVED_YEARS_LIST)].copy()
             df["pems_station_id"] = df["station"].astype(str) + "_" + df["direction"]
-            df = df[["pems_station_id", "year", "time_period", "median_flow"]].copy()
+            df = df[
+                ["pems_station_id", "type", "year", "time_period", "median_flow"]
+            ].copy()
             median_across_years_df = (
-                df.groupby(["pems_station_id", "time_period"])["median_flow"]
+                df.groupby(["pems_station_id", "type", "time_period"])["median_flow"]
                 .median()
                 .reset_index()
             )
@@ -714,7 +729,9 @@ class Observed:
             )
 
             all_day_df = (
-                median_across_years_df.groupby(["pems_station_id"])["observed_flow"]
+                median_across_years_df.groupby(["pems_station_id", "type"])[
+                    "observed_flow"
+                ]
                 .sum()
                 .reset_index()
             )
@@ -724,8 +741,8 @@ class Observed:
                 [all_day_df, median_across_years_df], axis="rows", ignore_index=True
             )
 
-            out_df = self._join_ohio_standards(out_df)
             out_df = self._join_tm2_link_ids(out_df)
+            out_df = self._join_ohio_standards(out_df)
             out_df = self._identify_key_arterials_and_bridges(out_df)
 
             out_df.to_csv(os.path.join(file_root, out_file))

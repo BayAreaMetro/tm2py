@@ -90,33 +90,33 @@ class Simulated:
 
     def _validate(self):
 
-        # self._make_transit_mode_dict()
-        # self._make_simulated_maz_data()
+        self._make_transit_mode_dict()
+        self._make_simulated_maz_data()
 
-        # self._read_standard_transit_stops()
-        # self._read_standard_transit_shapes()
-        # self._read_standard_transit_routes()
-        # self._read_standard_node()
+        self._read_standard_transit_stops()
+        self._read_standard_transit_shapes()
+        self._read_standard_transit_routes()
+        self._read_standard_node()
 
-        # self._read_transit_demand()
-        # self._make_transit_technology_in_vehicle_table_from_skims()
-        # self._make_district_to_district_transit_summaries()
+        self._read_transit_demand()
+        self._make_transit_technology_in_vehicle_table_from_skims()
+        self._make_district_to_district_transit_summaries()
 
-        # self._reduce_simulated_transit_boardings()
-        # self._reduce_simulated_transit_shapes()
-        # self._reduce_simulated_home_work_flows()
-        # self._reduce_simulated_zero_vehicle_households()
-        # self._reduce_simulated_station_to_station()
-        # self._reduce_simulated_rail_access_summaries()
+        self._reduce_simulated_transit_boardings()
+        self._reduce_simulated_transit_shapes()
+        self._reduce_simulated_home_work_flows()
+        self._reduce_simulated_zero_vehicle_households()
+        self._reduce_simulated_station_to_station()
+        self._reduce_simulated_rail_access_summaries()
 
         self._reduce_simulated_roadway_assignment_outcomes()
 
-        # assert sorted(
-        #     self.simulated_home_work_flows_df.residence_county.unique().tolist()
-        # ) == sorted(self.c.county_names_list)
-        # assert sorted(
-        #     self.simulated_home_work_flows_df.work_county.unique().tolist()
-        # ) == sorted(self.c.county_names_list)
+        assert sorted(
+            self.simulated_home_work_flows_df.residence_county.unique().tolist()
+        ) == sorted(self.c.county_names_list)
+        assert sorted(
+            self.simulated_home_work_flows_df.work_county.unique().tolist()
+        ) == sorted(self.c.county_names_list)
 
         return
 
@@ -1072,11 +1072,11 @@ class Simulated:
 
         # step 1: get the shape
         shape_period = "am"
-        gdf = gpd.read_file(
+        shape_gdf = gpd.read_file(
             os.path.join(file_root + shape_period + "/" + "emme_links.shp")
         )
         self.simulated_roadway_am_shape_gdf = (
-            gdf[["INODE", "JNODE", "#link_id", "geometry"]]
+            shape_gdf[["INODE", "JNODE", "#link_id", "geometry"]]
             .copy()
             .rename(
                 columns={
@@ -1093,8 +1093,10 @@ class Simulated:
 
         # step 2: fetch the roadway volumes
         across_df = pd.DataFrame()
-        for t in ["am"]: #self.model_time_periods:
-            if t != shape_period:
+        for t in self.model_time_periods:
+            if t == shape_period:
+                gdf = shape_gdf
+            else:
                 gdf = gpd.read_file(
                     os.path.join(file_root + t.upper() + "/" + "emme_links.shp")
                 )
@@ -1117,7 +1119,7 @@ class Simulated:
                     "@flow_s3",
                     "@flow_lrgt",
                     "@flow_trk",
-                    "@ffs"
+                    "@ffs",
                 ]
             ]
             df = df.rename(
@@ -1142,7 +1144,11 @@ class Simulated:
             )
 
             df["time_period"] = t
-            df["speed_mph"] = np.where(df["distance_in_miles"] > 0, df["distance_in_miles"]/(df["time_in_minutes"]/60.0), df["@ffs"]) 
+            df["speed_mph"] = np.where(
+                df["distance_in_miles"] > 0,
+                df["distance_in_miles"] / (df["time_in_minutes"] / 60.0),
+                df["@ffs"],
+            )
             df["flow_total"] = df[
                 [col for col in df.columns if col.startswith("flow_")]
             ].sum(axis=1)
@@ -1238,6 +1244,9 @@ class Simulated:
             df.groupby(["emme_a_node_id", "emme_b_node_id"])
             .agg(
                 {
+                    "ft": "median",
+                    "distance_in_miles": "median",
+                    "lanes": "median",
                     "flow_da": "sum",
                     "flow_s2": "sum",
                     "flow_s3": "sum",
