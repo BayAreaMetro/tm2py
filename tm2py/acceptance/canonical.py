@@ -28,6 +28,9 @@ class Canonical:
     KISS_AND_RIDE_ACCESS_WORD = "Kiss and Ride"
     BIKE_ACCESS_WORD = "Bike"
 
+    ALL_VEHICLE_TYPE_WORD = "All Vehicles"
+    LARGE_TRUCK_VEHICLE_TYPE_WORD = "Large Trucks"
+
     MANAGED_LANE_OFFSET = 10000000
 
     transit_technology_abbreviation_dict = {

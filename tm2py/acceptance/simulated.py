@@ -90,33 +90,33 @@ class Simulated:
 
     def _validate(self):
 
-        self._make_transit_mode_dict()
-        self._make_simulated_maz_data()
+        # self._make_transit_mode_dict()
+        # self._make_simulated_maz_data()
 
-        self._read_standard_transit_stops()
-        self._read_standard_transit_shapes()
-        self._read_standard_transit_routes()
-        self._read_standard_node()
+        # self._read_standard_transit_stops()
+        # self._read_standard_transit_shapes()
+        # self._read_standard_transit_routes()
+        # self._read_standard_node()
 
-        self._read_transit_demand()
-        self._make_transit_technology_in_vehicle_table_from_skims()
-        self._make_district_to_district_transit_summaries()
+        # self._read_transit_demand()
+        # self._make_transit_technology_in_vehicle_table_from_skims()
+        # self._make_district_to_district_transit_summaries()
 
-        self._reduce_simulated_transit_boardings()
-        self._reduce_simulated_transit_shapes()
-        self._reduce_simulated_home_work_flows()
-        self._reduce_simulated_zero_vehicle_households()
-        self._reduce_simulated_station_to_station()
-        self._reduce_simulated_rail_access_summaries()
+        # self._reduce_simulated_transit_boardings()
+        # self._reduce_simulated_transit_shapes()
+        # self._reduce_simulated_home_work_flows()
+        # self._reduce_simulated_zero_vehicle_households()
+        # self._reduce_simulated_station_to_station()
+        # self._reduce_simulated_rail_access_summaries()
+
+        # assert sorted(
+        #     self.simulated_home_work_flows_df.residence_county.unique().tolist()
+        # ) == sorted(self.c.county_names_list)
+        # assert sorted(
+        #     self.simulated_home_work_flows_df.work_county.unique().tolist()
+        # ) == sorted(self.c.county_names_list)
 
         self._reduce_simulated_roadway_assignment_outcomes()
-
-        assert sorted(
-            self.simulated_home_work_flows_df.residence_county.unique().tolist()
-        ) == sorted(self.c.county_names_list)
-        assert sorted(
-            self.simulated_home_work_flows_df.work_county.unique().tolist()
-        ) == sorted(self.c.county_names_list)
 
         return
 
@@ -1241,7 +1241,7 @@ class Simulated:
                 across_df = pd.concat([across_df, df], axis="rows")
 
         daily_df = (
-            df.groupby(["emme_a_node_id", "emme_b_node_id"])
+            across_df.groupby(["emme_a_node_id", "emme_b_node_id"])
             .agg(
                 {
                     "ft": "median",
@@ -1264,12 +1264,11 @@ class Simulated:
             .reset_index(drop=False)
         )
         daily_df["time_period"] = self.c.ALL_DAY_WORD
-        daily_df["flow_total"] = daily_df[
-            [col for col in daily_df.columns if col.startswith("flow_")]
-        ].sum(axis=1)
 
-        self.simulated_roadway_assignment_results_df = pd.concat(
+        return_df = pd.concat(
             [across_df, daily_df], axis="rows"
         ).reset_index(drop=True)
+
+        self.simulated_roadway_assignment_results_df = return_df
 
         return

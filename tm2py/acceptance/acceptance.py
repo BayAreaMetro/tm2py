@@ -39,6 +39,7 @@ class Acceptance:
             "key_road_name": pd.Series(dtype="str"),
             "time_period": pd.Series(dtype="str"),
             "observed_flow": pd.Series(dtype="float"),
+            "observed_vehicle_class": pd.Series(dtype="str"),
             "simulated_flow": pd.Series(dtype="float"),
             "simulated_flow_da": pd.Series(dtype="float"),
             "simulated_flow_s2": pd.Series(dtype="float"),
@@ -189,6 +190,7 @@ class Acceptance:
                 "distance_in_miles",
                 "time_period",
                 "observed_flow",
+                "vehicle_class",
                 "name",
                 "odot_flow_category",
                 "odot_maximum_error",
@@ -216,6 +218,7 @@ class Acceptance:
         out_df = out_df.rename(
             columns={
                 "type": "pems_station_type",
+                "vehicle_class": "observed_vehicle_class",
                 "flow_total": "simulated_flow",
                 "flow_da": "simulated_flow_da",
                 "flow_s2": "simulated_flow_s2",

@@ -22,6 +22,7 @@ class Observed:
     census_tract_centroids_gdf: gpd.GeoDataFrame
 
     RELEVANT_PEMS_OBSERVED_YEARS_LIST = [2014, 2015, 2016]
+    RELEVANT_PEMS_VEHICLE_CLASSES_FOR_LARGE_TRUCK = [6, 7, 8, 9, 10, 11, 12]
 
     ohio_rmse_standards_df = pd.DataFrame(
         [
@@ -611,15 +612,15 @@ class Observed:
 
         # take median across multiple stations on same link
         median_df = (
-            df.groupby(["A", "B", "emme_a_node_id", "emme_b_node_id", "time_period"])[
+            df.groupby(["A", "B", "emme_a_node_id", "emme_b_node_id", "time_period", "vehicle_class"])[
                 "observed_flow"
             ]
             .agg("median")
             .reset_index()
         )
-        join_df = df[["A", "B", "observed_flow", "pems_station_id", "type"]].copy()
+        join_df = df[["A", "B", "observed_flow", "pems_station_id", "type", "vehicle_class"]].copy()
         return_df = pd.merge(
-            median_df, join_df, how="left", on=["A", "B", "observed_flow"]
+            median_df, join_df, how="left", on=["A", "B", "observed_flow", "vehicle_class"]
         ).reset_index(drop=True)
 
         return return_df
@@ -693,6 +694,36 @@ class Observed:
         out_df.rename(columns={"name": "key_location"})
 
         return out_df
+    
+    def _make_truck_counts(self) -> pd.DataFrame: 
+
+        file_root = self.observed_dict["remote_io"]["obs_folder_root"]
+        in_file = self.observed_dict["roadway"]["pems_truck_count_file"]
+
+        in_df = pd.read_csv(os.path.join(file_root, in_file))
+
+        df = in_df[in_df.year.isin(self.RELEVANT_PEMS_OBSERVED_YEARS_LIST)].copy()
+        df = df[df["Vehicle.Class"].isin(self.RELEVANT_PEMS_VEHICLE_CLASSES_FOR_LARGE_TRUCK)].copy()
+        df = df.rename(columns = {"Census.Station.Identifier": "station", "Freeway.Direction": "direction", "Station.Type": "type"})
+        df["pems_station_id"] = df["station"].astype(str) + "_" + df["direction"]
+        df = df[
+            ["pems_station_id", "type", "year", "time_period", "median_flow"]
+        ].copy()
+
+        return_df = (
+            df.groupby(["pems_station_id", "type", "time_period"])["median_flow"]
+            .median()
+            .reset_index()
+        )
+        return_df = return_df.rename(
+            columns={"median_flow": "observed_flow"}
+        )
+
+        return_df["vehicle_class"] = self.c.LARGE_TRUCK_VEHICLE_TYPE_WORD
+
+        return return_df
+
+        
 
     def reduce_traffic_counts(self, read_file_from_disk=True):
         """
@@ -719,17 +750,21 @@ class Observed:
             df = df[
                 ["pems_station_id", "type", "year", "time_period", "median_flow"]
             ].copy()
-            median_across_years_df = (
+            median_across_years_all_vehs_df = (
                 df.groupby(["pems_station_id", "type", "time_period"])["median_flow"]
                 .median()
                 .reset_index()
             )
-            median_across_years_df = median_across_years_df.rename(
+            median_across_years_all_vehs_df = median_across_years_all_vehs_df.rename(
                 columns={"median_flow": "observed_flow"}
             )
+            median_across_years_all_vehs_df["vehicle_class"] = self.c.ALL_VEHICLE_TYPE_WORD
+            median_across_years_trucks_df = self._make_truck_counts() 
+
+            median_across_years_df = pd.concat([median_across_years_all_vehs_df, median_across_years_trucks_df], axis="rows", ignore_index=True)
 
             all_day_df = (
-                median_across_years_df.groupby(["pems_station_id", "type"])[
+                median_across_years_df.groupby(["pems_station_id", "type", "vehicle_class"])[
                     "observed_flow"
                 ]
                 .sum()

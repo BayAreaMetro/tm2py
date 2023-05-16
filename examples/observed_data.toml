@@ -18,5 +18,6 @@
     census_tract_centroids_geojson = "Census/tl_2010_tract_centroids.geojson"
 [roadway]
     pems_traffic_count_file = "PeMS/pems_period.csv"
+    pems_truck_count_file = "PeMS/pems_truck_period.csv"
     reduced_summaries_file = "PeMS/acceptance-criteria-reduced_traffic_counts.csv"
 
