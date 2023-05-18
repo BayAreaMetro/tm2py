@@ -6,6 +6,7 @@ import inspect
 import json as _json
 import os
 import textwrap
+import copy
 from collections import defaultdict as _defaultdict
 from functools import partial
 from typing import TYPE_CHECKING, Dict, List, Set, Tuple, Union
@@ -19,6 +20,7 @@ from tm2py.logger import LogStartEnd
 if TYPE_CHECKING:
     from tm2py.config import (
         CcrWeightsConfig,
+        CongestedWeightsConfig,
         TransitClassConfig,
         TransitConfig,
         TransitModeConfig,
@@ -930,22 +932,22 @@ class TransitAssignmentClass:
             "demand": self._demand_matrix,
             "waiting_time": {
                 "effective_headways": self._config.effective_headway_source,
-                "headway_fraction": 0.5,
+                "headway_fraction": "@hdw_fraction",
                 "perception_factor": self._config.initial_wait_perception_factor,
                 "spread_factor": 1.0,
             },
             "boarding_cost": {"global": {"penalty": 0, "perception_factor": 1}},
             "boarding_time": {
-                "global": {
-                    "penalty": self._config.initial_boarding_penalty,
+                "on_lines": {
+                    "penalty": "@iboard_penalty",
                     "perception_factor": 1,
                 }
             },
             "in_vehicle_cost": None,
             "in_vehicle_time": {"perception_factor": "@invehicle_factor"},
             "aux_transit_time": {
-                "perception_factor": self._config.walk_perception_factor
-            },
+                "perception_factor": 1
+            }, # walk and drive perception factors are specified in mode definition "speed_or_time_factor"
             "aux_transit_cost": None,
             "journey_levels": self._journey_levels,
             "flow_distribution_between_lines": {"consider_total_impedance": False},
@@ -1037,31 +1039,468 @@ class TransitAssignmentClass:
     def _journey_levels(self) -> EmmeTransitJourneyLevelSpec:
         modes = self._transit_modes
         effective_headway_source = self._config.effective_headway_source
-        xfer_perception_factor = self._config.transfer_wait_perception_factor
-        xfer_boarding_penalty = self._config.transfer_boarding_penalty
         if self._config.use_fares:
             fare_perception = self.fare_perception
-            file_name = f"{self._time_period}_{self.name}_journey_levels.ems"
+            file_name = f"{self._time_period}_ALLPEN_journey_levels.ems"
             with open(
                 os.path.join(self._spec_dir, file_name), "r", encoding="utf8"
             ) as jl_spec:
                 journey_levels = _json.load(jl_spec)["journey_levels"]
-            # add transfer wait perception penalty
-            for level in journey_levels[1:]:
-                level["waiting_time"] = {
-                    "headway_fraction": 0.5,
-                    "effective_headways": effective_headway_source,
-                    "spread_factor": 1,
-                    "perception_factor": xfer_perception_factor,
-                }
-            # add in the correct value of time parameter
-            for level in journey_levels:
-                if level["boarding_cost"]:
-                    level["boarding_cost"]["on_segments"][
-                        "perception_factor"
-                    ] = fare_perception
+            
+            if self.name == "PNR_TRN_WLK":
+                new_journey_levels = copy.deepcopy(journey_levels)
+
+                for i in range(0,len(new_journey_levels)):
+                    jls = new_journey_levels[i]
+                    for level in jls["transition_rules"]:
+                        level["next_journey_level"] = level["next_journey_level"]+1
+                    jls["transition_rules"].extend(
+                        [
+                        {'mode': 'e', 'next_journey_level': i+2},
+                        {'mode': 'D', 'next_journey_level': len(new_journey_levels)+2}, 
+                        {'mode': 'w', 'next_journey_level': i+2},
+                        {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2}
+                        ]
+                    )
+                # level 0: drive access
+                transition_rules_drive_access = copy.deepcopy(journey_levels[0]["transition_rules"])
+                for level in transition_rules_drive_access:
+                    level["next_journey_level"] = len(new_journey_levels)+2
+                transition_rules_drive_access.extend(
+                    [
+                    {'mode': 'e', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'D', 'next_journey_level': 0},
+                    {'mode': 'w', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'p', 'next_journey_level': 1}
+                    ]
+                )
+                # level 1: use transit
+                transition_rules_pnr = copy.deepcopy(journey_levels[0]["transition_rules"])
+                for level in transition_rules_pnr:
+                    level["next_journey_level"] = 2
+                transition_rules_pnr.extend(
+                    [
+                    {'mode': 'e', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'D', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'w', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'p', 'next_journey_level': 1}
+                    ]
+                )
+                # level len(new_journey_levels)+2: every mode is prohibited
+                transition_rules_prohibit = copy.deepcopy(journey_levels[0]["transition_rules"])
+                for level in transition_rules_prohibit:
+                    level["next_journey_level"] = len(new_journey_levels)+2
+                transition_rules_prohibit.extend(
+                    [
+                    {'mode': 'e', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'D', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'w', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2}
+                    ]
+                )
+                new_journey_levels.insert(
+                                        0,
+                                        {
+                                        "description": "drive access",
+                                        "destinations_reachable": False,
+                                        "transition_rules": transition_rules_drive_access,
+                                        "waiting_time": None,
+                                        "boarding_time": None,
+                                        "boarding_cost": None                                     
+                                        }
+                )
+                new_journey_levels.insert(
+                                        1,
+                                        {
+                                        "description": "pnr",
+                                        "destinations_reachable": False,
+                                        "transition_rules": transition_rules_pnr,
+                                        "waiting_time": None,
+                                        "boarding_time": None,
+                                        "boarding_cost": None                                     
+                                        }
+                )
+                new_journey_levels.append(
+                                        {
+                                        "description": "prohibit",
+                                        "destinations_reachable": False,
+                                        "transition_rules": transition_rules_prohibit,
+                                        "waiting_time": None,
+                                        "boarding_time": None,
+                                        "boarding_cost": None                                     
+                                        }
+                )
+                for level in new_journey_levels[2:-1]:
+                    level["waiting_time"] = {
+                        "headway_fraction": "@hdw_fraction",
+                        "effective_headways": effective_headway_source,
+                        "spread_factor": 1,
+                        "perception_factor": "@wait_pfactor"
+                    }
+                    level["boarding_time"] = {
+                    "on_lines": {
+                        "penalty": "@xboard_penalty", "perception_factor": 1},
+                    "at_nodes": {
+                        "penalty": "@xboard_nodepen", "perception_factor": 1}, 
+                    }
+                # add in the correct value of time parameter
+                for level in new_journey_levels:
+                    if level["boarding_cost"]:
+                        level["boarding_cost"]["on_segments"][
+                            "perception_factor"
+                            ] = fare_perception
+
+            elif self.name == "WLK_TRN_PNR":
+                new_journey_levels = copy.deepcopy(journey_levels)
+
+                for i in range(0,len(new_journey_levels)):
+                    jls = new_journey_levels[i]    
+                    jls["destinations_reachable"] = False
+                    jls["transition_rules"].extend(
+                        [
+                        {'mode': 'a', 'next_journey_level': len(new_journey_levels)+2},
+                        {'mode': 'D', 'next_journey_level': len(new_journey_levels)+2}, 
+                        {'mode': 'w', 'next_journey_level': i+1}, 
+                        {'mode': 'p', 'next_journey_level': len(new_journey_levels)+1}
+                        ]
+                    )
+                # level 0: walk access
+                transition_rules_walk_access = copy.deepcopy(journey_levels[0]["transition_rules"])
+                for level in transition_rules_walk_access:
+                    level["next_journey_level"] = 1
+                transition_rules_walk_access.extend(
+                    [
+                    {'mode': 'a', 'next_journey_level': 0},
+                    {'mode': 'D', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'w', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2}
+                    ]
+                )       
+                # level len(new_journey_levels)+1: drive home
+                transition_rules_drive_home = copy.deepcopy(journey_levels[0]["transition_rules"])
+                for level in transition_rules_drive_home:
+                    level["next_journey_level"] = len(new_journey_levels)+2
+                transition_rules_drive_home.extend(
+                    [
+                    {'mode': 'a', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'D', 'next_journey_level': len(new_journey_levels)+1},
+                    {'mode': 'w', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2}
+                    ]
+                )
+                # level len(new_journey_levels)+2: every mode is prohibited
+                transition_rules_prohibit = copy.deepcopy(journey_levels[0]["transition_rules"])
+                for level in transition_rules_prohibit:
+                    level["next_journey_level"] = len(new_journey_levels)+2
+                transition_rules_prohibit.extend(
+                    [
+                    {'mode': 'a', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'D', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'w', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2}
+                    ]
+                )
+                new_journey_levels.insert(
+                                        0,
+                                        {
+                                        "description": "walk access",
+                                        "destinations_reachable": True,
+                                        "transition_rules": transition_rules_walk_access,
+                                        "waiting_time": None,
+                                        "boarding_time": None,
+                                        "boarding_cost": None                                     
+                                        }
+                )
+                new_journey_levels.append(
+                                        {
+                                        "description": "drive home",
+                                        "destinations_reachable": True,
+                                        "transition_rules": transition_rules_drive_home,
+                                        "waiting_time": None,
+                                        "boarding_time": None,
+                                        "boarding_cost": None                                     
+                                        }
+                )
+                new_journey_levels.append(
+                                        {
+                                        "description": "prohibit",
+                                        "destinations_reachable": False,
+                                        "transition_rules": transition_rules_prohibit,
+                                        "waiting_time": None,
+                                        "boarding_time": None,
+                                        "boarding_cost": None                                     
+                                        }
+                )
+                for level in new_journey_levels[1:-2]:
+                    level["waiting_time"] = {
+                        "headway_fraction": "@hdw_fraction",
+                        "effective_headways": effective_headway_source,
+                        "spread_factor": 1,
+                        "perception_factor": "@wait_pfactor"
+                    }
+                    level["boarding_time"] = {
+                    "on_lines": {
+                        "penalty": "@xboard_penalty", "perception_factor": 1},
+                    "at_nodes": {
+                        "penalty": "@xboard_nodepen", "perception_factor": 1}, 
+                    }
+                # add in the correct value of time parameter
+                for level in new_journey_levels:
+                    if level["boarding_cost"]:
+                        level["boarding_cost"]["on_segments"]["perception_factor"] = fare_perception
+
+            elif self.name == "KNR_TRN_WLK":
+                new_journey_levels = copy.deepcopy(journey_levels)
+
+                for i in range(0,len(new_journey_levels)):
+                    jls = new_journey_levels[i]
+                    for level in jls["transition_rules"]:
+                        level["next_journey_level"] = level["next_journey_level"]+1
+                    jls["transition_rules"].extend(
+                        [
+                        {'mode': 'e', 'next_journey_level': i+2},
+                        {'mode': 'D', 'next_journey_level': len(new_journey_levels)+2}, 
+                        {'mode': 'w', 'next_journey_level': i+2},
+                        ## {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2},
+                        {'mode': 'k', 'next_journey_level': len(new_journey_levels)+2}
+                        ]
+                    )                
+                # level 0: drive access
+                transition_rules_drive_access = copy.deepcopy(journey_levels[0]["transition_rules"])
+                for level in transition_rules_drive_access:
+                    level["next_journey_level"] = len(new_journey_levels)+2
+                transition_rules_drive_access.extend(
+                    [
+                    {'mode': 'e', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'D', 'next_journey_level': 0},
+                    {'mode': 'w', 'next_journey_level': len(new_journey_levels)+2},
+                    ## {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'k', 'next_journey_level': 1}
+                    ]
+                )
+                # level 1: use transit
+                transition_rules_knr = copy.deepcopy(journey_levels[0]["transition_rules"])
+                for level in transition_rules_knr:
+                    level["next_journey_level"] = 2
+                transition_rules_knr.extend(
+                    [
+                    {'mode': 'e', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'D', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'w', 'next_journey_level': len(new_journey_levels)+2},
+                    ## {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'k', 'next_journey_level': 1}
+                    ]
+                )
+                # level len(new_journey_levels)+2: every mode is prohibited
+                transition_rules_prohibit = copy.deepcopy(journey_levels[0]["transition_rules"])
+                for level in transition_rules_prohibit:
+                    level["next_journey_level"] = len(new_journey_levels)+2
+                transition_rules_prohibit.extend(
+                    [
+                    {'mode': 'e', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'D', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'w', 'next_journey_level': len(new_journey_levels)+2},
+                    ## {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'k', 'next_journey_level': len(new_journey_levels)+2}
+                    ]
+                )
+                new_journey_levels.insert(
+                                        0,
+                                        {
+                                        "description": "drive access",
+                                        "destinations_reachable": False,
+                                        "transition_rules": transition_rules_drive_access,
+                                        "waiting_time": None,
+                                        "boarding_time": None,
+                                        "boarding_cost": None                                     
+                                        }
+                )
+                new_journey_levels.insert(
+                                        1,
+                                        {
+                                        "description": "knr",
+                                        "destinations_reachable": False,
+                                        "transition_rules": transition_rules_knr,
+                                        "waiting_time": None,
+                                        "boarding_time": None,
+                                        "boarding_cost": None                                     
+                                        }
+                )
+                new_journey_levels.append(
+                                        {
+                                        "description": "prohibit",
+                                        "destinations_reachable": False,
+                                        "transition_rules": transition_rules_prohibit,
+                                        "waiting_time": None,
+                                        "boarding_time": None,
+                                        "boarding_cost": None                                     
+                                        }
+                )
+                for level in new_journey_levels[2:-1]:
+                    level["waiting_time"] = {
+                        "headway_fraction": "@hdw_fraction",
+                        "effective_headways": effective_headway_source,
+                        "spread_factor": 1,
+                        "perception_factor": "@wait_pfactor"
+                    }
+                    level["boarding_time"] = {
+                    "on_lines": {
+                        "penalty": "@xboard_penalty", "perception_factor": 1},
+                    "at_nodes": {
+                        "penalty": "@xboard_nodepen", "perception_factor": 1}, 
+                    }
+                # add in the correct value of time parameter
+                for level in new_journey_levels:
+                    if level["boarding_cost"]:
+                        level["boarding_cost"]["on_segments"]["perception_factor"] = fare_perception
+
+            elif self.name == "WLK_TRN_KNR":
+                new_journey_levels = copy.deepcopy(journey_levels)
+
+                for i in range(0,len(new_journey_levels)):
+                    jls = new_journey_levels[i]    
+                    jls["destinations_reachable"] = False
+                    jls["transition_rules"].extend(
+                        [
+                        {'mode': 'a', 'next_journey_level': len(new_journey_levels)+2},
+                        {'mode': 'D', 'next_journey_level': len(new_journey_levels)+2}, 
+                        {'mode': 'w', 'next_journey_level': i+1},
+                        ## {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2},
+                        {'mode': 'k', 'next_journey_level': len(new_journey_levels)+1}
+                        ]
+                    )
+                # level 0: walk access
+                transition_rules_walk_access = copy.deepcopy(journey_levels[0]["transition_rules"])
+                for level in transition_rules_walk_access:
+                    level["next_journey_level"] = 1
+                transition_rules_walk_access.extend(
+                    [
+                    {'mode': 'a', 'next_journey_level': 0},
+                    {'mode': 'D', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'w', 'next_journey_level': len(new_journey_levels)+2},
+                    ## {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'k', 'next_journey_level': len(new_journey_levels)+2}
+                    ]
+                )    
+                # level len(new_journey_levels)+1: drive home
+                transition_rules_drive_home = copy.deepcopy(journey_levels[0]["transition_rules"])
+                for level in transition_rules_drive_home:
+                    level["next_journey_level"] = len(new_journey_levels)+2
+                transition_rules_drive_home.extend(
+                    [
+                    {'mode': 'a', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'D', 'next_journey_level': len(new_journey_levels)+1},
+                    {'mode': 'w', 'next_journey_level': len(new_journey_levels)+2},
+                    ## {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'k', 'next_journey_level': len(new_journey_levels)+2}
+                    ]
+                )
+                # level len(new_journey_levels)+2: every mode is prohibited
+                transition_rules_prohibit = copy.deepcopy(journey_levels[0]["transition_rules"])
+                for level in transition_rules_prohibit:
+                    level["next_journey_level"] = len(new_journey_levels)+2
+                transition_rules_prohibit.extend(
+                    [
+                    {'mode': 'a', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'D', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'w', 'next_journey_level': len(new_journey_levels)+2},
+                    ## {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2},
+                    {'mode': 'k', 'next_journey_level': len(new_journey_levels)+2}
+                    ]
+                )
+                new_journey_levels.insert(
+                                        0,
+                                        {
+                                        "description": "walk access",
+                                        "destinations_reachable": True,
+                                        "transition_rules": transition_rules_walk_access,
+                                        "waiting_time": None,
+                                        "boarding_time": None,
+                                        "boarding_cost": None                                     
+                                        }
+                )
+                new_journey_levels.append(
+                                        {
+                                        "description": "drive home",
+                                        "destinations_reachable": True,
+                                        "transition_rules": transition_rules_drive_home,
+                                        "waiting_time": None,
+                                        "boarding_time": None,
+                                        "boarding_cost": None                                     
+                                        }
+                )
+                new_journey_levels.append(
+                                        {
+                                        "description": "prohibit",
+                                        "destinations_reachable": False,
+                                        "transition_rules": transition_rules_prohibit,
+                                        "waiting_time": None,
+                                        "boarding_time": None,
+                                        "boarding_cost": None                                     
+                                        }
+                )
+                for level in new_journey_levels[1:-2]:
+                    level["waiting_time"] = {
+                        "headway_fraction": "@hdw_fraction",
+                        "effective_headways": effective_headway_source,
+                        "spread_factor": 1,
+                        "perception_factor": "@wait_pfactor"
+                    }
+                    level["boarding_time"] = {
+                    "on_lines": {
+                        "penalty": "@xboard_penalty", "perception_factor": 1},
+                    "at_nodes": {
+                        "penalty": "@xboard_nodepen", "perception_factor": 1}, 
+                    }
+                # add in the correct value of time parameter
+                for level in new_journey_levels:
+                    if level["boarding_cost"]:
+                        level["boarding_cost"]["on_segments"]["perception_factor"] = fare_perception
+
+            elif self.name == "WLK_TRN_WLK":
+                new_journey_levels = copy.deepcopy(journey_levels)
+                transition_rules = copy.deepcopy(journey_levels[0]["transition_rules"])
+                new_journey_levels.insert(
+                                        0,
+                                        {
+                                        "description": "base",
+                                        "destinations_reachable": True,
+                                        "transition_rules": transition_rules,
+                                        "waiting_time": None,
+                                        "boarding_time": None,
+                                        "boarding_cost": None                                     
+                                        }
+                )
+                for level in new_journey_levels[1:]:
+                    level["waiting_time"] = {
+                        "headway_fraction": "@hdw_fraction",
+                        "effective_headways": effective_headway_source,
+                        "spread_factor": 1,
+                        "perception_factor": "@wait_pfactor"
+                    }
+                    level["boarding_time"] = {
+                    "on_lines": {
+                        "penalty": "@xboard_penalty", "perception_factor": 1},
+                    "at_nodes": {
+                        "penalty": "@xboard_nodepen", "perception_factor": 1}, 
+                    }
+                # add in the correct value of time parameter
+                for level in new_journey_levels:
+                    if level["boarding_cost"]:
+                        level["boarding_cost"]["on_segments"]["perception_factor"] = fare_perception
+
+            with open(
+                    os.path.join(
+                        self._spec_dir,
+                        "%s_%s_journey_levels.ems" % (self._time_period, self.name)
+                    ),
+                    "w",
+            ) as jl_spec_file:
+                spec = {"type": "EXTENDED_TRANSIT_ASSIGNMENT", "journey_levels": new_journey_levels}
+                _json.dump(spec, jl_spec_file, indent=4)
+
         else:
-            journey_levels = [
+            new_journey_levels = [
                 {
                     "description": "",
                     "destinations_reachable": True,
@@ -1076,16 +1515,19 @@ class TransitAssignmentClass:
                         {"mode": m, "next_journey_level": 1} for m in modes
                     ],
                     "waiting_time": {
-                        "headway_fraction": self.headway_fraction,
+                        "headway_fraction": "@hdw_fraction",
                         "effective_headways": effective_headway_source,
                         "spread_factor": 1,
-                        "perception_factor": xfer_perception_factor,
+                        "perception_factor": "@wait_pfactor",
                     },
                 },
             ]
-        if xfer_boarding_penalty is not None:
-            for level in journey_levels[1:]:
+            for level in new_journey_levels[1:]:
                 level["boarding_time"] = {
-                    "global": {"penalty": xfer_boarding_penalty, "perception_factor": 1}
-                }
-        return journey_levels
+                    "on_lines": {
+                        "penalty": "@xboard_penalty", "perception_factor": 1},
+                    "at_nodes": {
+                        "penalty": "@xboard_nodepen", "perception_factor": 1}, 
+                    }
+
+        return new_journey_levels

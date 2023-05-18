@@ -1119,6 +1119,17 @@ class CcrWeightsConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class CongestedWeightsConfig(ConfigItem):
+    "Weights for Congested Transit Assignment Configuration."
+    min_seat: float = Field(default=1.0)
+    max_seat: float = Field(default=1.4)
+    power_seat: float = Field(default=2.2)
+    min_stand: float = Field(default=1.4)
+    max_stand: float = Field(default=1.6)
+    power_stand: float = Field(default=3.4)
+
+
+@dataclass(frozen=True)
 class EawtWeightsConfig(ConfigItem):
     "Weights for calculating extra added wait time Configuration."
     constant: float = Field(default=0.259625)
@@ -1154,8 +1165,6 @@ class TransitConfig(ConfigItem):
     initial_wait_perception_factor: float
     transfer_wait_perception_factor: float
     walk_perception_factor: float
-    initial_boarding_penalty: float
-    transfer_boarding_penalty: float
     walk_perception_factor: float
     walk_perception_factor_cbd: float
     drive_perception_factor: float
@@ -1172,6 +1181,7 @@ class TransitConfig(ConfigItem):
     eawt_weights: EawtWeightsConfig
     congested_transit_assignment: bool
     congested: CongestedAssnConfig
+    congested_weights: CongestedWeightsConfig
     output_skim_path: pathlib.Path
     output_skim_filename_tmpl: str = Field()
     output_skim_matrixname_tmpl: str = Field()
@@ -1183,7 +1193,7 @@ class TransitConfig(ConfigItem):
     timed_transfer_nodes: Tuple[int, ...] = Field()
     output_transfer_at_station_node_ids: Dict[str, int] = Field()
     max_ccr_iterations: float = None
-    split_connectors_to_prevent_walk: bool = True
+    split_connectors_to_prevent_walk: bool = False
     input_connector_access_times_path: Optional[str] = Field(default=None)
     input_connector_egress_times_path: Optional[str] = Field(default=None)
     vehicles: Optional[TransitVehicleConfig] = Field(default_factory=TransitVehicleConfig)

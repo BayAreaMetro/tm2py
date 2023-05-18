@@ -697,21 +697,21 @@ class ApplyFares(Component):
                 faresystems, faresystem_groups, network
             )
             self.save_journey_levels("ALLPEN", journey_levels)
-            local_modes = []
-            premium_modes = []
-            for mode in self.config.modes:
-                if mode.type == "LOCAL":
-                    local_modes.extend(mode_map[mode.mode_id])
-                if mode.type == "PREMIUM":
-                    premium_modes.extend(mode_map[mode.mode_id])
-            local_levels = self.filter_journey_levels_by_mode(
-                local_modes, journey_levels
-            )
-            self.save_journey_levels("BUS", local_levels)
-            premium_levels = self.filter_journey_levels_by_mode(
-                premium_modes, journey_levels
-            )
-            self.save_journey_levels("PREM", premium_levels)
+            # local_modes = []
+            # premium_modes = []
+            # for mode in self.config.modes:
+            #     if mode.type == "LOCAL":
+            #         local_modes.extend(mode_map[mode.mode_id])
+            #     if mode.type == "PREMIUM":
+            #         premium_modes.extend(mode_map[mode.mode_id])
+            # local_levels = self.filter_journey_levels_by_mode(
+            #     local_modes, journey_levels
+            # )
+            # self.save_journey_levels("BUS", local_levels)
+            # premium_levels = self.filter_journey_levels_by_mode(
+            #     premium_modes, journey_levels
+            # )
+            # self.save_journey_levels("PREM", premium_levels)
 
         except Exception as error:
             self._log.append({"type": "text", "content": "error during apply fares"})
@@ -1453,14 +1453,14 @@ class ApplyFares(Component):
         # transition rules will be the same for every journey level
         transition_rules = []
         journey_levels = [
-            {
-                "description": "base",
-                "destinations_reachable": True,
-                "transition_rules": transition_rules,
-                "waiting_time": None,
-                "boarding_time": None,
-                "boarding_cost": None,
-            }
+            # {
+            #     "description": "base",
+            #     "destinations_reachable": True,
+            #     "transition_rules": transition_rules,
+            #     "waiting_time": None,
+            #     "boarding_time": None,
+            #     "boarding_cost": None,
+            # }
         ]
         mode_map = _defaultdict(lambda: [])
         level = 1
