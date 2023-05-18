@@ -306,7 +306,9 @@ class PrepareTransitDemand(EmmeDemand):
         ).__str__()
         return self._read(
             path.format(
-                period=time_period, set=skim_set, iter=self.controller.iteration
+                period=time_period, 
+                # set=skim_set, 
+                # iter=self.controller.iteration
             ),
             name,
             num_zones,
