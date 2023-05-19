@@ -246,6 +246,7 @@ class CreateTODScenarios(Component):
                     "@capclass",
                     "@free_flow_speed",
                     "@free_flow_time",
+                    "@drive_toll"
                 ],
                 "TRANSIT_LINE": [
                     "@invehicle_factor",

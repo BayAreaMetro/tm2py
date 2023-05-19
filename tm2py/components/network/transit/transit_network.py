@@ -94,6 +94,7 @@ class PrepareTransitNetwork(Component):
 
         for time_period in self.time_period_names:
             self._update_auto_times(time_period)
+            self._update_pnr_penalty(time_period)
             if self.config.override_connector_times:
                 self._update_connector_times(time_period)
 
@@ -165,11 +166,48 @@ class PrepareTransitNetwork(Component):
             time_period: time period name abbreviation
         """
 
-        _highway_ttime_dict = self._get_highway_travel_times(time_period)
+        _highway_link_dict = self._get_highway_links(time_period)
         _transit_link_dict = self._get_transit_links(time_period)
 
-        for _link_id in _highway_ttime_dict.keys() & _transit_link_dict.keys():
-            _transit_link_dict[_link_id]["@trantime"] = _highway_ttime_dict[_link_id]
+        for _link_id in _highway_link_dict.keys() & _transit_link_dict.keys():
+            auto_time = _highway_link_dict[_link_id].auto_time
+            area_type = _highway_link_dict[_link_id]["@area_type"]
+            # use @valuetoll_dam (cents/mile) here to represent the drive alone toll
+            sov_toll_per_mile = _highway_link_dict[_link_id]['@valuetoll_dam']
+            link_length = _transit_link_dict[_link_id].length
+            facility_type = _transit_link_dict[_link_id]['@ft']
+            sov_toll = sov_toll_per_mile * link_length/100
+
+            _transit_link_dict[_link_id]["@drive_toll"] = sov_toll 
+            
+            if auto_time > 0:
+                # https://github.com/BayAreaMetro/travel-model-one/blob/master/model-files/scripts/skims/PrepHwyNet.job#L106
+                tran_speed = 60 * link_length/auto_time
+                if (facility_type<=4 or facility_type==8) and (tran_speed<6):
+                    tran_speed = 6
+                    _transit_link_dict[_link_id]["@trantime"] = 60 * link_length/tran_speed
+                elif (tran_speed<3):
+                    tran_speed = 3
+                    _transit_link_dict[_link_id]["@trantime"] = 60 * link_length/tran_speed
+                else:
+                    _transit_link_dict[_link_id]["@trantime"] = auto_time
+                # data1 is the auto time used in Mixed-Mode transit assigment
+                _transit_link_dict[_link_id].data1 = (_transit_link_dict[_link_id]["@trantime"] + 
+                                                      60*sov_toll/self.config.value_of_time)
+                # bus time calculation
+                if facility_type in [1,2,3,8]:
+                    delayfactor = 0.0
+                else:
+                    if area_type in [0,1]: 
+                        delayfactor = 2.46
+                    elif area_type in [2,3]: 
+                        delayfactor = 1.74
+                    elif area_type==4:
+                        delayfactor = 1.14
+                    else:
+                        delayfactor = 0.08
+                bus_time = _transit_link_dict[_link_id]["@trantime"] + (delayfactor * link_length)
+                _transit_link_dict[_link_id]["@trantime"] = bus_time                 
 
         # TODO document this! Consider copying to another method.
         # set us1 (segment data1), used in ttf expressions, from @trantime
@@ -184,7 +222,33 @@ class PrepareTransitNetwork(Component):
 
         _update_attributes = {
             "TRANSIT_SEGMENT": ["@trantime_seg", "data1"],
-            "LINK": ["@trantime"],
+            "LINK": ["@trantime", "@drive_toll"],
+        }
+        self.emme_manager.copy_attribute_values(
+            _transit_net, _transit_scenario, _update_attributes
+        )
+
+    def _update_pnr_penalty(self, time_period: str):
+        """Add the parking penalties to pnr parking lots.
+
+        Args:
+            time_period: time period name abbreviation
+        """
+        _transit_net = self._transit_networks[time_period]
+        _transit_scenario = self.transit_scenarios[time_period]
+        deflator = self.config.fare_2015_to_2000_deflator
+
+        for segment in _transit_net.transit_segments():
+            if "BART_acc" in segment.id:
+                if "West Oakland" in segment.id:
+                    segment["@board_cost"] = 12.4 * deflator        
+                else:
+                    segment["@board_cost"] = 3.0 * deflator
+            elif "Caltrain_acc" in segment.id:
+                segment["@board_cost"] = 5.5 * deflator
+
+        _update_attributes = {
+            "TRANSIT_SEGMENT": ["@board_cost"]
         }
         self.emme_manager.copy_attribute_values(
             _transit_net, _transit_scenario, _update_attributes
@@ -302,7 +366,7 @@ class PrepareTransitNetwork(Component):
         _transit_scenario = self.transit_scenarios[time_period]
         _transit_net = self.transit_networks[time_period]
         transit_attributes = {
-            "LINK": ["#link_id", "@trantime"],
+            "LINK": ["#link_id", "@trantime", "@ft"],
             "TRANSIT_SEGMENT": ["@schedule_time", "@trantime_seg", "data1"],
         }
         self.emme_manager.copy_attribute_values(
@@ -313,7 +377,7 @@ class PrepareTransitNetwork(Component):
         }
         return _transit_link_dict
 
-    def _get_highway_travel_times(
+    def _get_highway_links(
         self,
         time_period: str,
     ):
@@ -328,16 +392,19 @@ class PrepareTransitNetwork(Component):
         _highway_net = _highway_scenario.get_partial_network(
             ["LINK"], include_attributes=False
         )
-        travel_time_attributes = {"LINK": ["#link_id", "auto_time"]}
+        travel_time_attributes = {"LINK": ["#link_id", 
+                                           "auto_time",
+                                           "@area_type",
+                                           "@valuetoll_dam"]}
         self.emme_manager.copy_attribute_values(
             _highway_scenario, _highway_net, travel_time_attributes
         )
         # TODO can we just get the link attributes as a DataFrame and merge them?
-        auto_link_time_dict = {
-            auto_link["#link_id"]: auto_link.auto_time
+        auto_link_dict = {
+            auto_link["#link_id"]: auto_link
             for auto_link in _highway_net.links()
         }
-        return auto_link_time_dict
+        return auto_link_dict
 
     def prepare_connectors(self, network, period):
         for node in network.centroids():
