@@ -7,6 +7,7 @@ import json as _json
 import os
 import textwrap
 import copy
+import pandas as pd
 from collections import defaultdict as _defaultdict
 from functools import partial
 from typing import TYPE_CHECKING, Dict, List, Set, Tuple, Union
@@ -16,6 +17,7 @@ from tm2py.components.component import Component
 from tm2py.components.demand.prepare_demand import PrepareTransitDemand
 from tm2py.emme.manager import EmmeNetwork, EmmeScenario
 from tm2py.logger import LogStartEnd
+from tm2py.components.network.transit.transit_network import PrepareTransitNetwork
 
 if TYPE_CHECKING:
     from tm2py.config import (
@@ -116,6 +118,78 @@ def func_returns_crowded_segment_cost(time_period_duration, weights: CcrWeightsC
 
     return textwrap.dedent(inspect.getsource(calc_segment_cost)).format(
         time_period_duration=time_period_duration, weights=weights
+    )
+
+
+def func_returns_segment_congestion(time_period_duration, scenario, weights: CongestedWeightsConfig, use_fares: bool = False):
+    """
+    function that returns the calc_segment_cost function for emme assignment, with partial preloaded parameters
+    acts like partial as emme does not take partial
+    """
+    if use_fares:
+        values = scenario.get_attribute_values("TRANSIT_LINE", ["#src_mode"])
+        scenario.set_attribute_values("TRANSIT_LINE", ["#src_mode"], values)
+
+    def calc_segment_cost(transit_volume: float, capacity, segment) -> float:
+        """Calculates crowding factor for a segment.
+
+        Toronto implementation limited factor between 1.0 and 10.0.
+        For use with Emme Capacitated assignment normalize by subtracting 1
+
+        Args:
+            time_period_duration(float): time period duration in minutes
+            weights (_type_): transit capacity weights
+            segment: emme line segment
+
+        Returns:
+            float: crowding factor for a segment
+        """
+
+        from tm2py.config import (
+            CongestedWeightsConfig,
+            TransitClassConfig,
+            TransitConfig,
+            TransitModeConfig,
+        )
+
+        if transit_volume <= 0:
+            return 0.0
+
+        line = segment.line
+
+        if {use_fares}:
+            mode_char = line["#src_mode"]
+        else:
+            mode_char = line.mode.mode_id
+
+        if mode_char in ["p"]:
+            congestion = 0.25 * ((transit_volume / capacity) ** 8)
+        else:
+            seated_capacity = (
+                line.vehicle.seated_capacity * {time_period_duration} * 60 / line.headway
+            )
+
+            seated_pax = min(transit_volume, seated_capacity)
+            standing_pax = max(transit_volume - seated_pax, 0)
+
+            seated_cost = {weights}.min_seat + ({weights}.max_seat - {weights}.min_seat) * (
+                transit_volume / capacity
+            ) ** {weights}.power_seat
+
+            standing_cost = {weights}.min_stand + (
+                {weights}.max_stand - {weights}.min_stand
+            ) * (transit_volume / capacity) ** {weights}.power_stand
+
+            crowded_cost = (seated_cost * seated_pax + standing_cost * standing_pax) / (
+                transit_volume
+            )
+
+            congestion = max(crowded_cost, 1) - 1.0
+
+        return congestion
+
+    return textwrap.dedent(inspect.getsource(calc_segment_cost)).format(
+        time_period_duration=time_period_duration, weights=weights, use_fares = use_fares
     )
 
 
@@ -448,6 +522,7 @@ class TransitAssignment(Component):
         self.sub_components = {
             "prepare transit demand": PrepareTransitDemand(controller),
         }
+        self.transit_network = PrepareTransitNetwork(controller)
         self._demand_matrix = None  # FIXME
         self._num_processors = self.controller.emme_manager.num_processors
         self._time_period = None
@@ -471,25 +546,30 @@ class TransitAssignment(Component):
         use_ccr = False
         if self.controller.iteration >= 0:  # TODO add option of warmstart
             use_ccr = self.config.use_ccr
-
+            congested_transit_assignment = self.config.congested_transit_assignment
             self.sub_components["prepare transit demand"].run()
         else:
             self.transit_emmebank.zero_matrix
         for time_period in self.time_period_names:
-            self.run_transit_assign(time_period, use_ccr)
+            # update auto times
+            self.transit_network.update_auto_times(time_period)
+            self.run_transit_assign(time_period, use_ccr, congested_transit_assignment)
 
     @LogStartEnd("Transit assignments for a time period")
-    def run_transit_assign(self, time_period: str, use_ccr: bool):
+    def run_transit_assign(self, time_period: str, use_ccr: bool, congested_transit_assignment: bool):
 
         if use_ccr:
             self._run_ccr_assign(time_period)
+        elif congested_transit_assignment:
+            self._run_congested_assign(time_period)
         else:
             self._run_extended_assign(time_period)
+        # output_summaries
         if self.config.output_stop_usage_path is not None:
-            network, class_stop_attrs = self._calc_connector_flows()
-            self._export_connector_flows(network, class_stop_attrs)
+            network, class_stop_attrs = self._calc_connector_flows(time_period)
+            self._export_connector_flows(network, class_stop_attrs, time_period)
         if self.config.output_transit_boardings_path is not None:
-            self._export_boardings_by_line()
+            self._export_boardings_by_line(time_period)
 
     def _transit_classes(self, time_period) -> List[TransitAssignmentClass]:
         emme_manager = self.controller.emme_manager
@@ -623,6 +703,49 @@ class TransitAssignment(Component):
 
         # question - why do we need to do this between iterations AND ALSO give it to the EMME cost function? Does EMME not use it?
         self._calc_segment_ccr_penalties(time_period)
+
+    def _run_congested_assign(self, time_period: str) -> None:
+        """Runs congested transit assignment for a time period.
+
+        Args:
+            time_period: time period name
+        """
+        _duration = self.time_period_durations[time_period.lower()]
+        _congested_weights = self.config.congested_weights
+        _emme_scenario = self.transit_emmebank.scenario(time_period)
+        transit_classes = self._transit_classes(time_period)
+
+        assign_transit = self.controller.emme_manager.tool(
+            "inro.emme.transit_assignment.congested_transit_assignment"
+        )
+        _tclass_specs = [tclass.emme_transit_spec for tclass in transit_classes]
+        _tclass_names = [tclass.name for tclass in transit_classes]
+
+        _cost_func = {
+            "type": "CUSTOM",
+            "python_function": func_returns_segment_congestion(
+                _duration, _emme_scenario, _congested_weights, use_fares=self.config.use_fares
+            ),
+            "congestion_attribute": "us3",
+            "orig_func": False,
+            "assignment_period": _duration,
+        }
+
+        _stop_criteria = {
+            "max_iterations": self.congested_transit_assn_max_iteration[time_period.lower()],
+            "normalized_gap": self.config.congested.normalized_gap,
+            "relative_gap": self.config.congested.relative_gap,
+        }
+        add_volumes = False
+        assign_transit(
+            _tclass_specs,
+            congestion_function=_cost_func,
+            stopping_criteria=_stop_criteria,
+            class_names=_tclass_names,
+            scenario=_emme_scenario,
+            log_worksheets=False,
+        )
+        add_volumes = True
 
     def _run_extended_assign(self, time_period: str) -> None:
         """Run transit assignment without CCR.
