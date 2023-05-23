@@ -115,6 +115,7 @@ class EmmeBank:
             _zero_matrix = self.emmebank.create_matrix(ident)
             _zero_matrix.name = name
             _zero_matrix.description = name
+            _matrix = _zero_matrix
         return _matrix
 
     @property
