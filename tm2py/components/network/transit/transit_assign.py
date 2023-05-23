@@ -664,7 +664,7 @@ class TransitAssignment(Component):
             ["TRANSIT_LINE", "TRANSIT_SEGMENT"], include_attributes=False
         )
         _attributes = {
-            "TRANSIT_LINE": ["description", "#src_mode", "@mode"],
+            "TRANSIT_LINE": ["description", "#src_mode"],
             "TRANSIT_SEGMENT": ["transit_boardings"],
         }
         _emme_manager = self.controller.emme_manager
@@ -681,19 +681,44 @@ class TransitAssignment(Component):
         _network = self._get_network_with_boardings(_emme_scenario)
 
         output_transit_boardings_file = self.get_abs_path(
-            self.config.output_transit_boardings_file
+            self.config.output_transit_boardings_path
         )
 
         os.makedirs(os.path.dirname(output_transit_boardings_file), exist_ok=True)
 
-        with open(output_transit_boardings_file, "w", encoding="utf8") as out_file:
-            out_file.write("line_name, description, total_boardings, mode, line_mode\n")
+        with open(output_transit_boardings_file.format(period=time_period.lower()), "w", encoding="utf8") as out_file:
+            out_file.write(",".join(["line_name", 
+                            "description", 
+                            "total_boarding",
+                            'total_hour_cap',
+                            "tm2_mode", 
+                            "line_mode", 
+                            "headway", 
+                            "fare_system", 
+                            ]))
+            out_file.write("\n")
             for line in _network.transit_lines():
-                total_board = sum(seg.transit_boardings for seg in line.segments)
-                out_file.write(
-                    f"{line.id}, {line.description}, {total_board}, "
-                    f"{line['#src_mode']}, {line['@mode']}\n"
-                )
+                boardings = 0
+                capacity = line.vehicle.total_capacity
+                hdw = line.headway
+                line_hour_cap = 60*capacity/hdw
+                if self.config.use_fares:
+                    mode = line['#src_mode']
+                else:
+                    mode = line.mode
+                for segment in line.segments(include_hidden=True):
+                    boardings += segment.transit_boardings  
+                    # total_board = sum(seg.transit_boardings for seg in line.segments)
+                out_file.write(",".join([str(x) for x in [line.id, 
+                                                line['#description'], 
+                                                boardings, 
+                                                line_hour_cap,    
+                                                line['#mode'], 
+                                                mode,
+                                                line.headway,
+                                                line['#faresystem'],  
+                                                ]]))
+                out_file.write("\n")
 
     def _calc_connector_flows(
         self, time_period: str
@@ -717,7 +742,7 @@ class TransitAssignment(Component):
         )
         tclass_stop_attrs = {}
         for tclass in self.config.classes:
-            attr_name = f"@aux_volume_{tclass.name}".lower()
+            attr_name = f"@aux_vol_{tclass.name}".lower() # maximum length 20 limit
             create_extra("LINK", attr_name, overwrite=True, scenario=_emme_scenario)
             spec = {
                 "type": "EXTENDED_TRANSIT_NETWORK_RESULTS",
@@ -732,11 +757,11 @@ class TransitAssignment(Component):
             "LINK": tclass_stop_attrs.values(),
             "NODE": ["@taz_id", "#node_id"],
         }
-        _emme_manager.copy_attribute_values(self._scenario, network, attributes)
+        _emme_manager.copy_attribute_values(_emme_scenario, network, attributes)
         return network, tclass_stop_attrs
 
     def _export_connector_flows(
-        self, network: EmmeNetwork, class_stop_attrs: Dict[str, str]
+        self, network: EmmeNetwork, class_stop_attrs: Dict[str, str], time_period: str
     ):
         """Export boardings and alightings by assignment class, stop(connector) and TAZ.
 
@@ -747,9 +772,10 @@ class TransitAssignment(Component):
         path_tmplt = self.get_abs_path(self.config.output_stop_usage_path)
         os.makedirs(os.path.dirname(path_tmplt), exist_ok=True)
         with open(
-            path_tmplt.format(period=self._time_period), "w", encoding="utf8"
+            path_tmplt.format(period=time_period.lower()), "w", encoding="utf8"
         ) as out_file:
             out_file.write(",".join(["mode", "taz", "stop", "boardings", "alightings"]))
+            out_file.write("\n")
             for zone in network.centroids():
                 taz_id = int(zone["@taz_id"])
                 for link in zone.outgoing_links():
