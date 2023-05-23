@@ -251,7 +251,8 @@ class CreateTODScenarios(Component):
                 "TRANSIT_LINE": [
                     "@invehicle_factor",
                     "@iboard_penalty",
-                    "@xboard_penalty"
+                    "@xboard_penalty",
+                    "@orig_hdw"
                 ],
                 "NODE": [
                     "@hdw_fraction",

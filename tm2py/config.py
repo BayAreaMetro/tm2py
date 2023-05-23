@@ -1148,7 +1148,7 @@ class CongestedAssnConfig(ConfigItem):
     relative_gap: float = Field(default=0.25)
     use_peaking_factor: bool = False
     am_peaking_factor: float = Field(default=1.219)
-    am_peaking_factor: float = Field(default=1.262)
+    pm_peaking_factor: float = Field(default=1.262)
 
 
 @dataclass(frozen=True)

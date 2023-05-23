@@ -553,7 +553,22 @@ class TransitAssignment(Component):
         for time_period in self.time_period_names:
             # update auto times
             self.transit_network.update_auto_times(time_period)
+            # apply peaking factor
+            if self.config.congested.use_peaking_factor:
+                path_boardings = self.get_abs_path(
+                    self.config.output_transit_boardings_path
+                    )
+                ea_df_path = path_boardings.format(period='ea_pnr')
+                if (time_period.lower() == 'am') and (os.path.isfile(ea_df_path)==False):
+                    raise Exception("run ea period first to account for the am peaking factor")
+                if (time_period.lower() == 'am') and (os.path.isfile(ea_df_path)==True):
+                    ea_df = pd.read_csv(ea_df_path)
+                    self._apply_peaking_factor(time_period, ea_df=ea_df)
+                if (time_period.lower() == 'pm'):
+                    self._apply_peaking_factor(time_period)
             self.run_transit_assign(time_period, use_ccr, congested_transit_assignment)
+            if self.config.congested.use_peaking_factor and (time_period.lower() == 'ea'):
+                self._apply_peaking_factor(time_period)
 
     @LogStartEnd("Transit assignments for a time period")
     def run_transit_assign(self, time_period: str, use_ccr: bool, congested_transit_assignment: bool):
@@ -570,6 +585,79 @@ class TransitAssignment(Component):
             self._export_connector_flows(network, class_stop_attrs, time_period)
         if self.config.output_transit_boardings_path is not None:
             self._export_boardings_by_line(time_period)
+
+    def _apply_peaking_factor(self, time_period: str, ea_df):
+        """apply peaking factors.
+
+        Args:
+            time_period: time period name abbreviation
+        """
+        _emme_scenario = self.transit_emmebank.scenario(time_period)
+        _network = _emme_scenario.get_network()
+        _duration = self.time_period_durations[time_period.lower()]
+
+        if time_period.lower() == 'am':
+            for line in _network.transit_lines():
+                line["@orig_hdw"] = line.headway
+                line_name = line.id
+                line_veh = line.vehicle
+                line_hdw = line.headway
+                line_cap = 60 * _duration * line_veh.total_capacity / line_hdw
+                if line_name in ea_df['line_name_am'].to_list():
+                    ea_boardings = ea_df.loc[ea_df['line_name_am'] == line_name,'boardings'].values[0]
+                else:
+                    ea_boardings = 0
+                pnr_peaking_factor =(line_cap-ea_boardings)/line_cap #substract ea boardings from am parking capacity
+                non_pnr_peaking_factor = self.config.congested.am_peaking_factor
+                # in Emme transit assignment, the capacity is computed for each transit line as: 60 * _duration * vehicle.total_capacity / line.headway
+                # so instead of applying peaking factor to calculated capacity, we can divide line.headway by this peaking factor
+                # if ea number of parkers exceed the am parking capacity, set the headway to a very large number
+                if pnr_peaking_factor>0:
+                    pnr_line_hdw = line_hdw/pnr_peaking_factor 
+                else:
+                    pnr_line_hdw = 999
+                non_pnr_line_hdw = line_hdw*non_pnr_peaking_factor
+                if ('pnr' in line_name) and ('egr' in line_name):
+                    continue
+                elif ('pnr' in line_name) and ('acc' in line_name):
+                    line.headway = pnr_line_hdw
+                else:
+                    line.headway = non_pnr_line_hdw
+
+        if time_period.lower() == 'pm':
+            for line in _network.transit_lines():
+                line["@orig_hdw"] = line.headway
+                line_name = line.id
+                line_hdw = line.headway
+                non_pnr_peaking_factor = self.config.congested.pm_peaking_factor
+                non_pnr_line_hdw = line_hdw*non_pnr_peaking_factor
+                if 'pnr' in line_name:
+                    continue
+                else:
+                    line.headway = non_pnr_line_hdw
+
+        if time_period.lower() == 'ea':
+            line_name=[]
+            boards=[]
+            ea_pnr_df = pd.DataFrame()
+            for line in _network.transit_lines():
+                boardings = 0
+                for segment in line.segments(include_hidden=True):
+                    boardings += segment.transit_boardings  
+                line_name.append(line.id)
+                boards.append(boardings)
+            ea_pnr_df["line_name"]  = line_name
+            ea_pnr_df["boardings"]  = boards
+            ea_pnr_df["line_name_am"]  = ea_pnr_df["line_name"].str.replace('EA','AM') #will substract ea boardings from am parking capacity
+            path_boardings = self.get_abs_path(
+                self.config.output_transit_boardings_path
+                )
+            ea_pnr_df.to_csv(path_boardings.format(period='ea_pnr'), index=False)
+
+        _update_attributes = {
+            "TRANSIT_LINE": ["@orig_hdw", "headway"]
+        } 
+        self.controller.emme_manager.copy_attribute_values(_network, _emme_scenario, _update_attributes)   
 
     def _transit_classes(self, time_period) -> List[TransitAssignmentClass]:
         emme_manager = self.controller.emme_manager
