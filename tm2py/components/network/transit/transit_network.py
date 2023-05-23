@@ -93,7 +93,7 @@ class PrepareTransitNetwork(Component):
                     scenario.publish_network(network)
 
         for time_period in self.time_period_names:
-            self._update_auto_times(time_period)
+            # self.update_auto_times(time_period) # run in transit_assign component 
             self._update_pnr_penalty(time_period)
             if self.config.override_connector_times:
                 self._update_connector_times(time_period)
@@ -155,7 +155,7 @@ class PrepareTransitNetwork(Component):
             )
         return self._egress_connector_df
 
-    def _update_auto_times(self, time_period: str):
+    def update_auto_times(self, time_period: str):
         """Update the auto travel times from the last auto assignment to the transit scenario.
 
         TODO Document steps more when understand them.
@@ -392,12 +392,12 @@ class PrepareTransitNetwork(Component):
         _highway_net = _highway_scenario.get_partial_network(
             ["LINK"], include_attributes=False
         )
-        travel_time_attributes = {"LINK": ["#link_id", 
-                                           "auto_time",
-                                           "@area_type",
-                                           "@valuetoll_dam"]}
+        highway_attributes = {"LINK": ["#link_id", 
+                                        "auto_time",
+                                        "@area_type",
+                                        "@valuetoll_dam"]}
         self.emme_manager.copy_attribute_values(
-            _highway_scenario, _highway_net, travel_time_attributes
+            _highway_scenario, _highway_net, highway_attributes
         )
         # TODO can we just get the link attributes as a DataFrame and merge them?
         auto_link_dict = {
