@@ -585,6 +585,12 @@ class TransitAssignment(Component):
             self._export_connector_flows(network, class_stop_attrs, time_period)
         if self.config.output_transit_boardings_path is not None:
             self._export_boardings_by_line(time_period)
+        if self.config.output_transit_segment_path is not None:
+            self._export_transit_segment(time_period)
+        if self.config.output_station_to_station_flow_path is not None:
+            self._export_boardings_by_station(time_period)
+        if self.config.output_transfer_at_station_path is not None:
+            self._export_transfer_at_stops(time_period)
 
     def _apply_peaking_factor(self, time_period: str, ea_df):
         """apply peaking factors.
@@ -889,7 +895,7 @@ class TransitAssignment(Component):
             time_period (str): time period abbreviation
         """
         _emme_scenario = self.transit_emmebank.scenario(time_period)
-        _network = self._get_network_with_boardings(_emme_scenario)
+        network = _emme_scenario.get_network()
 
         output_transit_boardings_file = self.get_abs_path(
             self.config.output_transit_boardings_path
@@ -897,7 +903,8 @@ class TransitAssignment(Component):
 
         os.makedirs(os.path.dirname(output_transit_boardings_file), exist_ok=True)
 
-        with open(output_transit_boardings_file.format(period=time_period.lower()), "w", encoding="utf8") as out_file:
+        with open(output_transit_boardings_file.format(period=time_period.lower()), "w", encoding="utf8"
+                  ) as out_file:
             out_file.write(",".join(["line_name", 
                             "description", 
                             "total_boarding",
@@ -908,7 +915,7 @@ class TransitAssignment(Component):
                             "fare_system", 
                             ]))
             out_file.write("\n")
-            for line in _network.transit_lines():
+            for line in network.transit_lines():
                 boardings = 0
                 capacity = line.vehicle.total_capacity
                 hdw = line.headway
@@ -1006,6 +1013,164 @@ class TransitAssignment(Component):
                         out_file.write(
                             f"{name}, {taz_id}, {stop_id}, 0.0, {link[attr_name]}\n"
                         )
+
+    def _export_transit_segment(self, time_period: str):
+        # add total boardings by access mode
+        _emme_manager = self.controller.emme_manager
+        _emme_scenario = self.transit_emmebank.scenario(time_period)
+        network = _emme_scenario.get_network()
+        network_results = _emme_manager.tool(
+            "inro.emme.transit_assignment.extended.network_results"
+        )
+        create_extra = _emme_manager.tool(
+            "inro.emme.data.extra_attribute.create_extra_attribute"
+        )
+        for tclass in self.config.classes:
+            attr_name = f"@board_{tclass.name}".lower()
+            create_extra("TRANSIT_SEGMENT", attr_name, overwrite=True, scenario=_emme_scenario)
+            spec = {
+                "type": "EXTENDED_TRANSIT_NETWORK_RESULTS",
+                "on_segments": {"total_boardings": attr_name}
+            }
+            network_results(spec, class_name=tclass.name, scenario=_emme_scenario)
+
+        path_boardings = self.get_abs_path(self.config.output_transit_segment_path)
+        with open(path_boardings.format(period=time_period.lower()), "w") as f:
+            f.write(",".join(["line", 
+                            "stop_name",
+                            "i_node", 
+                            "j_node",
+                            "dwt",
+                            "ttf", 
+                            "voltr", 
+                            "board", 
+                            "con_time", 
+                            "uncon_time", 
+                            "mode", 
+                            "src_mode",
+                            "mdesc", 
+                            "hdw", 
+                            "orig_hdw", 
+                            "speed", 
+                            "vauteq", 
+                            "vcaps", 
+                            "vcapt", 
+                            "board_ptw",
+                            "board_wtp",
+                            "board_ktw",
+                            "board_wtk",
+                            "board_wtw"
+                            ]))
+            f.write("\n")
+
+            for line in network.transit_lines():
+                for segment in line.segments(include_hidden=True):
+                    if self.config.use_fares:
+                        mode = segment.line['#src_mode']
+                    else:
+                        mode = segment.line.mode
+                    if self.config.congested.use_peaking_factor and (time_period.lower() in ['am','pm']):
+                        orig_headway = segment.line['@orig_hdw']
+                    else:
+                        orig_headway = segment.line.headway
+                    f.write(",".join([str(x) for x in [
+                                                    segment.id,
+                                                    '"{0}"'.format(segment['#stop_name']),
+                                                    segment.i_node, 
+                                                    segment.j_node, 
+                                                    segment.dwell_time, 
+                                                    segment.transit_time_func, 
+                                                    segment.transit_volume,
+                                                    segment.transit_boardings, 
+                                                    segment.transit_time, 
+                                                    segment['@trantime_seg'], 
+                                                    segment.line.mode, 
+                                                    mode,
+                                                    segment.line.mode.description,
+                                                    segment.line.headway,
+                                                    orig_headway,
+                                                    segment.line.speed,
+                                                    segment.line.vehicle.auto_equivalent,
+                                                    segment.line.vehicle.seated_capacity,
+                                                    segment.line.vehicle.total_capacity,
+                                                    segment['@board_pnr_trn_wlk'],
+                                                    segment['@board_wlk_trn_pnr'],
+                                                    segment['@board_knr_trn_wlk'],
+                                                    segment['@board_wlk_trn_knr'],
+                                                    segment['@board_wlk_trn_wlk'],
+                                                    ]]))
+                    f.write("\n")
+
+    def _export_boardings_by_station(self, time_period: str):
+        _emme_manager = self.controller.emme_manager
+        _emme_scenario = self.transit_emmebank.scenario(time_period)
+        network = _emme_scenario.get_network()
+        sta2sta = _emme_manager.tool(
+            "inro.emme.transit_assignment.extended.station_to_station_analysis")
+        sta2sta_spec = {
+            "type": "EXTENDED_TRANSIT_STATION_TO_STATION_ANALYSIS",
+            "transit_line_selections": {
+                "first_boarding": "mode=h",
+                "last_alighting": "mode=h"
+            },
+            "analyzed_demand": None,
+        }
+
+        # map to used modes in apply fares case
+        fare_modes = _defaultdict(lambda: set([]))
+        for line in network.transit_lines():
+            if self.config.use_fares:
+                fare_modes[line["#src_mode"]].add(line.mode.id)
+            else:
+                fare_modes[line.mode.id].add(line.mode.id)
+
+        operator_dict = {
+        # mode: network_selection
+            'bart': "h",
+            'caltrain': "r"
+        }
+        
+        for tclass in self.config.classes:
+            for op, cut in operator_dict.items():
+                demand_matrix = "mfTRN_%s_%s" % (tclass.name, time_period)
+                output_file_name = self.get_abs_path(self.config.output_station_to_station_flow_path)
+
+                sta2sta_spec['transit_line_selections']['first_boarding'] = "mode="+",".join(list(fare_modes[cut])) 
+                sta2sta_spec['transit_line_selections']['last_alighting'] = "mode="+",".join(list(fare_modes[cut])) 
+                sta2sta_spec['analyzed_demand'] = demand_matrix
+
+                output_path = output_file_name.format(operator=op, tclass=tclass.name, period=time_period.lower())
+                sta2sta(specification=sta2sta_spec,
+                        output_file=output_path,
+                        scenario=_emme_scenario,
+                        append_to_output_file=False,
+                        class_name=tclass.name)
+
+    def _export_transfer_at_stops(self, time_period: str):
+        _emme_manager = self.controller.emme_manager
+        _emme_scenario = self.transit_emmebank.scenario(time_period)
+        network = _emme_scenario.get_network()
+        transfers_at_stops = _emme_manager.tool(
+            "inro.emme.transit_assignment.extended.apps.transfers_at_stops")
+
+        stop_location = self.config.output_transfer_at_station_node_ids
+        stop_location_val_key = {val:key for key, val in stop_location.items()}
+
+        for node in network.nodes():
+            if stop_location_val_key.get(node["#node_id"]):
+                stop_location[stop_location_val_key[node["#node_id"]]] = node.id
+
+        for tclass in self.config.classes:
+            for stop_name, stop_id in stop_location.items():
+                demand_matrix = "mfTRN_%s_%s" % (tclass.name, time_period)
+                output_file_name = self.get_abs_path(self.config.output_transfer_at_station_path)
+                output_path = output_file_name.format(tclass=tclass.name, stop=stop_name, period=time_period.lower())
+                
+                transfers_at_stops(selection=f"i={stop_id}",
+                                    export_path=output_path,
+                                    scenario=_emme_scenario,
+                                    class_name=tclass.name,
+                                    analyzed_demand=demand_matrix)
 
     def _add_ccr_vars_to_scenario(self, emme_scenario: "EmmeScenario") -> None:
         """Add Extra Added Wait Time and Capacity Penalty to emme scenario.
