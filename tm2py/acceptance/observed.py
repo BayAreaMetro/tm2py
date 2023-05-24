@@ -22,6 +22,7 @@ class Observed:
     census_tract_centroids_gdf: gpd.GeoDataFrame
 
     RELEVANT_PEMS_OBSERVED_YEARS_LIST = [2014, 2015, 2016]
+    RELEVANT_BRIDGE_TRANSACTIONS_YEARS_LIST = [2014, 215, 2016]
     RELEVANT_PEMS_VEHICLE_CLASSES_FOR_LARGE_TRUCK = [6, 7, 8, 9, 10, 11, 12]
 
     ohio_rmse_standards_df = pd.DataFrame(
@@ -55,7 +56,8 @@ class Observed:
     reduced_traffic_counts_df = pd.DataFrame(
         {
             "model_link_id": pd.Series(dtype="int"),
-            "pems_station_id": pd.Series(dtype="int"),
+            "source": pd.Series(dtype="str"),
+            "station_id": pd.Series(dtype="str"),
             "time_period": pd.Series(dtype="str"),
             "observed_flow": pd.Series(dtype="float"),
             "odot_flow_category_daily": pd.Series(dtype="str"),
@@ -67,38 +69,49 @@ class Observed:
 
     key_arterials_df = pd.DataFrame(
         [
-            ["San Pablo", "Alameda", 123, np.nan],
-            ["19th Ave", "San Francisco", 1, np.nan],
-            ["El Camino Real", "San Mateo", 82, np.nan],
-            ["El Camino Real", "Santa Clara", 82, np.nan],
-            ["Mission Blvd", "Alameda", 238, np.nan],
-            ["Ygnacio Valley Road", "Contra Costa", np.nan, np.nan],
-            ["Hwy 12", "Solano", 12, "409485_W"],
-            ["Hwy 37", "Marin", 37, "402038_W"],
-            ["Hwy 29", "Napa", 29, "401796_N"],
-            ["CA 128", "Sonoma", 128, np.nan],
+            ["San Pablo", "Alameda", 123, "XB", np.nan],
+            ["19th Ave", "San Francisco", 1, "XB", np.nan],
+            ["El Camino Real", "San Mateo", 82, "XB", np.nan],
+            ["El Camino Real", "Santa Clara", 82, "XB", np.nan],
+            ["Mission Blvd", "Alameda", 238, "XB", np.nan],
+            ["Ygnacio Valley Road", "Contra Costa", "XB", np.nan, np.nan],
+            ["Hwy 12", "Solano", 12, "XB", "409485_W"],
+            ["Hwy 37", "Marin", 37, "XB", "402038_W"],
+            ["Hwy 29", "Napa", 29, "XB", "401796_N"],
+            ["CA 128", "Sonoma", 128, "XB", np.nan],
         ],
         columns=[
             "name",
             "county",
             "route",
+            "direction",
             "pems_station_id",
         ],
     )
 
     bridges_df = pd.DataFrame(
         [
-            ["Antioch Bridge", np.nan],
-            ["Benecia-Martinez Bridge", "402156_N"],
-            ["Carquinez Bridge", "401638_W"],
-            ["Dumbarton Bridge", "400841_W"],
-            ["Richmond-San Rafael Bridge", np.nan],
-            ["San Francisco-Oakland Bay Bridge", "402827_W"],
-            ["San Mateo-Hayward Bridge", "401272_W"],
-            ["Golden Gate Bridge", np.nan],
+            ["Antioch Bridge", "NB", np.nan],
+            ["Antioch Bridge", "NB", np.nan],
+            ["Benecia-Martinez Bridge", "NB", "402541_N"],
+            ["Benecia-Martinez Bridge", "SB", "402412_S"],
+            ["Carquinez Bridge", "WB", "401638_W"],
+            ["Carquinez Bridge", "EB", np.nan],
+            ["Dumbarton Bridge", "WB", "400841_W"],
+            ["Dumbarton Bridge", "EB", np.nan],
+            ["Richmond-San Rafael Bridge", "WB", np.nan],
+            ["Richmond-San Rafael Bridge", "EB", np.nan],
+            ["San Francisco-Oakland Bay Bridge", "WB", "404917_W"],
+            ["San Francisco-Oakland Bay Bridge", "EB", "404906_E"],
+            ["San Mateo-Hayward Bridge", "WB", "400071_W"],
+            ["San Mateo-Hayward Bridge", "EB", "400683_E"],
+            ["Golden Gate Bridge", "NB", np.nan],
+            ["Golden Gate Bridge", "SB", np.nan],
         ],
-        columns=["name", "pems_station_id"],
+        columns=["name", "direction", "pems_station_id"],
     )
+
+    observed_bridge_transactions_df: pd.DataFrame
 
     observed_bart_boardings_df: pd.DataFrame
     RELEVANT_BART_OBSERVED_YEARS_LIST = [2014, 2015, 2016]
@@ -148,6 +161,8 @@ class Observed:
 
         if self.reduced_traffic_counts_df.empty:
             self.reduce_traffic_counts()
+
+        self.reduce_bridge_transactions()
 
         self._reduce_observed_rail_access_summaries()
         self._reduce_observed_rail_flow_summaries()
@@ -574,9 +589,9 @@ class Observed:
 
         return
 
-    def _join_tm2_link_ids(self, input_df: pd.DataFrame) -> pd.DataFrame:
+    def _join_tm2_node_ids(self, input_df: pd.DataFrame) -> pd.DataFrame:
 
-        df = self.c.pems_to_link_crosswalk_df.copy()
+        df = input_df.copy()
         nodes_df = self.c.standard_to_emme_node_crosswalk_df.copy()
 
         df = (
@@ -599,31 +614,7 @@ class Observed:
             .drop(["model_node_id"], axis=1)
         )
 
-        df[["emme_a_node_id", "emme_b_node_id"]] = (
-            df[["emme_a_node_id", "emme_b_node_id"]].fillna(0).astype(int)
-        )
-
-        df = pd.merge(
-            df,
-            input_df,
-            how="left",
-            on="pems_station_id",
-        )
-
-        # take median across multiple stations on same link
-        median_df = (
-            df.groupby(["A", "B", "emme_a_node_id", "emme_b_node_id", "time_period", "vehicle_class"])[
-                "observed_flow"
-            ]
-            .agg("median")
-            .reset_index()
-        )
-        join_df = df[["A", "B", "observed_flow", "pems_station_id", "type", "vehicle_class"]].copy()
-        return_df = pd.merge(
-            median_df, join_df, how="left", on=["A", "B", "observed_flow", "vehicle_class"]
-        ).reset_index(drop=True)
-
-        return return_df
+        return df
 
     def _join_ohio_standards(self, input_df: pd.DataFrame) -> pd.DataFrame:
 
@@ -688,14 +679,19 @@ class Observed:
 
         df1 = self.key_arterials_df.copy()
         df2 = self.bridges_df.copy()
-        df = pd.concat([df1, df2])[["name", "pems_station_id"]]
+        df = pd.concat([df1, df2])[["name", "direction", "pems_station_id"]].rename(
+            columns={
+                "name": "key_location_name",
+                "direction": "key_location_direction",
+                "pems_station_id": "station_id",
+            }
+        )
         df = df.dropna().copy()
-        out_df = pd.merge(input_df, df, how="left", on="pems_station_id")
-        out_df.rename(columns={"name": "key_location"})
+        out_df = pd.merge(input_df, df, how="left", on="station_id")
 
         return out_df
-    
-    def _make_truck_counts(self) -> pd.DataFrame: 
+
+    def _reduce_truck_counts(self) -> pd.DataFrame:
 
         file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["roadway"]["pems_truck_count_file"]
@@ -703,27 +699,107 @@ class Observed:
         in_df = pd.read_csv(os.path.join(file_root, in_file))
 
         df = in_df[in_df.year.isin(self.RELEVANT_PEMS_OBSERVED_YEARS_LIST)].copy()
-        df = df[df["Vehicle.Class"].isin(self.RELEVANT_PEMS_VEHICLE_CLASSES_FOR_LARGE_TRUCK)].copy()
-        df = df.rename(columns = {"Census.Station.Identifier": "station", "Freeway.Direction": "direction", "Station.Type": "type"})
-        df["pems_station_id"] = df["station"].astype(str) + "_" + df["direction"]
         df = df[
-            ["pems_station_id", "type", "year", "time_period", "median_flow"]
+            df["Vehicle.Class"].isin(self.RELEVANT_PEMS_VEHICLE_CLASSES_FOR_LARGE_TRUCK)
         ].copy()
+        df = df.rename(
+            columns={
+                "Census.Station.Identifier": "station",
+                "Freeway.Direction": "direction",
+                "Station.Type": "type",
+            }
+        )
+        df["station_id"] = df["station"].astype(str) + "_" + df["direction"]
+        df = df[["station_id", "type", "year", "time_period", "median_flow"]].copy()
 
         return_df = (
-            df.groupby(["pems_station_id", "type", "time_period"])["median_flow"]
+            df.groupby(["station_id", "type", "time_period"])["median_flow"]
             .median()
             .reset_index()
         )
-        return_df = return_df.rename(
-            columns={"median_flow": "observed_flow"}
-        )
+        return_df = return_df.rename(columns={"median_flow": "observed_flow"})
 
         return_df["vehicle_class"] = self.c.LARGE_TRUCK_VEHICLE_TYPE_WORD
 
         return return_df
 
-        
+    def reduce_bridge_transactions(self, read_file_from_disk=True):
+        """
+        Prepares observed bridge transaction data for Acceptance Comparisons.
+
+        Args:
+            read_file_from_disk (bool, optional): If `False`, will do calculations from source data. Defaults to True.
+        """
+
+        time_period_dict = {
+            "3 am": "ea",
+            "4 am": "ea",
+            "5 am": "ea",
+            "6 am": "am",
+            "7 am": "am",
+            "8 am": "am",
+            "9 am": "am",
+            "10 am": "md",
+            "11 am": "md",
+            "Noon": "md",
+            "1 pm": "md",
+            "2 pm": "md",
+            "3 pm": "pm",
+            "4 pm": "pm",
+            "5 pm": "pm",
+            "6 pm": "pm",
+            "7 pm": "ev",
+            "8 pm": "ev",
+            "9 pm": "ev",
+            "10 pm": "ev",
+            "11 pm": "ev",
+            "Mdnt": "ev",
+            "1 am": "ev",
+            "2 am": "ev",
+        }
+
+        file_root = self.observed_dict["remote_io"]["obs_folder_root"]
+        in_file = self.observed_dict["roadway"]["bridge_transactions_file"]
+        out_file = self.observed_dict["roadway"]["reduced_transactions_file"]
+
+        if os.path.isfile(out_file) and read_file_from_disk:
+            return_df = pd.read_csv(
+                os.path.join(file_root, out_file),
+            )
+        else:
+            in_df = pd.read_csv(
+                os.path.join(file_root, in_file), sep="\t", encoding="utf-16"
+            )
+            df = in_df[
+                in_df["Year"].isin(self.RELEVANT_BRIDGE_TRANSACTIONS_YEARS_LIST)
+            ].copy()
+            df = df[df["Lane Designation"] == "all"].copy()
+            hourly_median_df = (
+                df.groupby(["Plaza Name", "Hour beginning"])["transactions"]
+                .agg("median")
+                .reset_index()
+            )
+            daily_df = (
+                hourly_median_df.groupby(["Plaza Name"])["transactions"]
+                .agg("sum")
+                .reset_index()
+                .rename(columns={"Plaza Name": "plaza_name"})
+            )
+            daily_df["time_period"] = self.c.ALL_DAY_WORD
+
+            df = hourly_median_df.copy()
+            df["time_period"] = hourly_median_df["Hour beginning"].map(time_period_dict)
+            time_period_df = (
+                df.groupby(["Plaza Name", "time_period"])["transactions"]
+                .agg("sum")
+                .reset_index()
+                .rename(columns={"Plaza Name": "plaza_name"})
+            )
+            return_df = pd.concat([time_period_df, daily_df]).reset_index(drop=True)
+
+        self.observed_bridge_transactions_df = return_df
+
+        return
 
     def reduce_traffic_counts(self, read_file_from_disk=True):
         """
@@ -734,37 +810,56 @@ class Observed:
             read_file_from_disk (bool, optional): If `False`, will do calculations from source data. Defaults to True.
         """
 
+        pems_df = self._reduce_pems_counts(read_file_from_disk=read_file_from_disk)
+        caltrans_df = self._reduce_caltrans_counts()
+        self.reduced_traffic_counts_df = pd.concat([pems_df, caltrans_df])
+
+        return
+
+    def _reduce_pems_counts(self, read_file_from_disk=True):
+        """
+        Prepares observed traffic count data for Acceptance Comparisons by computing daily counts,
+        joining with the TM2 link cross walk, and joining the Ohio Standards database.
+
+        Args:
+            read_file_from_disk (bool, optional): If `False`, will do calculations from source data. Defaults to True.
+        """
+
         file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["roadway"]["pems_traffic_count_file"]
-        out_file = self.observed_dict["roadway"]["reduced_summaries_file"]
+        out_file = self.observed_dict["roadway"]["reduced_pems_summaries_file"]
 
         if os.path.isfile(out_file) and read_file_from_disk:
-            self.reduced_traffic_counts_df = pd.read_csv(
+            return_df = pd.read_csv(
                 os.path.join(file_root, out_file),
                 dtype=self.reduced_traffic_counts_df.dtypes.to_dict(),
             )
         else:
             in_df = pd.read_csv(os.path.join(file_root, in_file))
             df = in_df[in_df.year.isin(self.RELEVANT_PEMS_OBSERVED_YEARS_LIST)].copy()
-            df["pems_station_id"] = df["station"].astype(str) + "_" + df["direction"]
-            df = df[
-                ["pems_station_id", "type", "year", "time_period", "median_flow"]
-            ].copy()
+            df["station_id"] = df["station"].astype(str) + "_" + df["direction"]
+            df = df[["station_id", "type", "year", "time_period", "median_flow"]].copy()
             median_across_years_all_vehs_df = (
-                df.groupby(["pems_station_id", "type", "time_period"])["median_flow"]
+                df.groupby(["station_id", "type", "time_period"])["median_flow"]
                 .median()
                 .reset_index()
             )
             median_across_years_all_vehs_df = median_across_years_all_vehs_df.rename(
                 columns={"median_flow": "observed_flow"}
             )
-            median_across_years_all_vehs_df["vehicle_class"] = self.c.ALL_VEHICLE_TYPE_WORD
-            median_across_years_trucks_df = self._make_truck_counts() 
+            median_across_years_all_vehs_df[
+                "vehicle_class"
+            ] = self.c.ALL_VEHICLE_TYPE_WORD
+            median_across_years_trucks_df = self._reduce_truck_counts()
 
-            median_across_years_df = pd.concat([median_across_years_all_vehs_df, median_across_years_trucks_df], axis="rows", ignore_index=True)
+            median_across_years_df = pd.concat(
+                [median_across_years_all_vehs_df, median_across_years_trucks_df],
+                axis="rows",
+                ignore_index=True,
+            )
 
             all_day_df = (
-                median_across_years_df.groupby(["pems_station_id", "type", "vehicle_class"])[
+                median_across_years_df.groupby(["station_id", "type", "vehicle_class"])[
                     "observed_flow"
                 ]
                 .sum()
@@ -776,12 +871,96 @@ class Observed:
                 [all_day_df, median_across_years_df], axis="rows", ignore_index=True
             )
 
-            out_df = self._join_tm2_link_ids(out_df)
-            out_df = self._join_ohio_standards(out_df)
-            out_df = self._identify_key_arterials_and_bridges(out_df)
+            out_df = pd.merge(
+                self.c.pems_to_link_crosswalk_df,
+                out_df,
+                how="left",
+                left_on="pems_station_id",
+                right_on="station_id",
+            ).drop(columns=["pems_station_id"])
 
-            out_df.to_csv(os.path.join(file_root, out_file))
+            out_df = self._join_tm2_node_ids(out_df)
 
-            self.reduced_traffic_counts_df = out_df
+            # take median across multiple stations on same link
+            median_df = (
+                out_df.groupby(
+                    [
+                        "A",
+                        "B",
+                        "emme_a_node_id",
+                        "emme_b_node_id",
+                        "time_period",
+                        "vehicle_class",
+                    ]
+                )["observed_flow"]
+                .agg("median")
+                .reset_index()
+            )
+            join_df = out_df[
+                ["A", "B", "observed_flow", "station_id", "type", "vehicle_class"]
+            ].copy()
+            return_df = pd.merge(
+                median_df,
+                join_df,
+                how="left",
+                on=["A", "B", "observed_flow", "vehicle_class"],
+            ).reset_index(drop=True)
 
-            return
+            return_df = self._join_ohio_standards(return_df)
+            return_df = self._identify_key_arterials_and_bridges(return_df)
+
+            return_df["source"] = "PeMS"
+
+            return_df.to_csv(os.path.join(file_root, out_file))
+
+        return return_df
+
+    def _reduce_caltrans_counts(self):
+
+        file_root = self.observed_dict["remote_io"]["obs_folder_root"]
+        in_file = self.observed_dict["roadway"]["caltrans_count_file"]
+
+        in_df = pd.read_csv(os.path.join(file_root, in_file))
+        temp_df = (
+            in_df[
+                [
+                    "2015 Traffic AADT",
+                    "2015 Truck AADT",
+                    "IModelNODE",
+                    "JModelNODE",
+                    "Calt_stn2",
+                ]
+            ]
+            .copy()
+            .rename(
+                columns={
+                    "IModelNODE": "A",
+                    "JModelNODE": "B",
+                    "Calt_stn2": "station_id",
+                }
+            )
+        )
+        out_cars_df = (
+            temp_df.copy()
+            .rename(columns={"2015 Traffic AADT": "observed_flow"})
+            .drop(columns=["2015 Truck AADT"])
+        )
+        out_cars_df["vehicle_class"] = self.c.ALL_VEHICLE_TYPE_WORD
+
+        out_trucks_df = (
+            temp_df.copy()
+            .rename(columns={"2015 Truck AADT": "observed_flow"})
+            .drop(columns=["2015 Traffic AADT"])
+        )
+        out_trucks_df["vehicle_class"] = self.c.LARGE_TRUCK_VEHICLE_TYPE_WORD
+
+        out_df = pd.concat([out_cars_df, out_trucks_df]).reset_index(drop=True)
+        out_df = out_df[out_df["observed_flow"].notna()]
+
+        return_df = self._join_tm2_node_ids(out_df)
+        return_df["time_period"] = self.c.ALL_DAY_WORD
+        return_df["source"] = "Caltrans"
+
+        return_df = self._join_ohio_standards(return_df)
+
+        return return_df

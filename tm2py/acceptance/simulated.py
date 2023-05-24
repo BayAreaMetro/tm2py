@@ -51,6 +51,15 @@ class Simulated:
     standard_nodes_gdf: gpd.GeoDataFrame
     standard_to_emme_transit_nodes_df: pd.DataFrame
 
+    # TODO: make this for all bridges
+    simulated_bridge_details_df = pd.DataFrame(
+        [
+            ["Bay Bridge", "WB", 3082623, True],
+            ["Bay Bridge", "EB", 3055540, False],
+        ],
+        columns=["plaza_name", "direction", "standard_link_id", "pay_toll"],
+    )
+
     def _load_configs(self):
 
         with open(self.scenario_file, "r", encoding="utf-8") as toml_file:
@@ -1087,10 +1096,6 @@ class Simulated:
             )
         )
 
-        join_standard_id_df = pd.DataFrame(
-            self.simulated_roadway_am_shape_gdf.drop(columns="geometry").copy()
-        )
-
         # step 2: fetch the roadway volumes
         across_df = pd.DataFrame()
         for t in self.model_time_periods:
@@ -1105,6 +1110,7 @@ class Simulated:
                 [
                     "INODE",
                     "JNODE",
+                    "#link_id",
                     "LENGTH",
                     "TIMAU",
                     "@lanes",
@@ -1126,6 +1132,7 @@ class Simulated:
                 columns={
                     "INODE": "emme_a_node_id",
                     "JNODE": "emme_b_node_id",
+                    "#link_id": "standard_link_id",
                     "LENGTH": "distance_in_miles",
                     "TIMAU": "time_in_minutes",
                     "@managed": "managed",
@@ -1155,12 +1162,6 @@ class Simulated:
 
             # join managed lane flows to general purpose
             managed_df = df[df["managed"] == 1].copy()
-            managed_df = pd.merge(
-                managed_df,
-                join_standard_id_df,
-                how="left",
-                on=["emme_a_node_id", "emme_b_node_id"],
-            )
             managed_df["join_link_id"] = (
                 managed_df["standard_link_id"] - self.c.MANAGED_LANE_OFFSET
             )
@@ -1194,12 +1195,6 @@ class Simulated:
                 }
             )
 
-            df = pd.merge(
-                df,
-                join_standard_id_df,
-                how="left",
-                on=["emme_a_node_id", "emme_b_node_id"],
-            )
             df = pd.merge(
                 df, managed_df, how="left", on=["standard_link_id", "time_period"]
             )
@@ -1241,7 +1236,7 @@ class Simulated:
                 across_df = pd.concat([across_df, df], axis="rows")
 
         daily_df = (
-            across_df.groupby(["emme_a_node_id", "emme_b_node_id"])
+            across_df.groupby(["emme_a_node_id", "emme_b_node_id", "standard_link_id"])
             .agg(
                 {
                     "ft": "median",
@@ -1265,9 +1260,7 @@ class Simulated:
         )
         daily_df["time_period"] = self.c.ALL_DAY_WORD
 
-        return_df = pd.concat(
-            [across_df, daily_df], axis="rows"
-        ).reset_index(drop=True)
+        return_df = pd.concat([across_df, daily_df], axis="rows").reset_index(drop=True)
 
         self.simulated_roadway_assignment_results_df = return_df
 

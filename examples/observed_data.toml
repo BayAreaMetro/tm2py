@@ -19,5 +19,8 @@
 [roadway]
     pems_traffic_count_file = "PeMS/pems_period.csv"
     pems_truck_count_file = "PeMS/pems_truck_period.csv"
-    reduced_summaries_file = "PeMS/acceptance-criteria-reduced_traffic_counts.csv"
+    caltrans_count_file = "Travel Model Two Conversion/Link21 Roadway Counts/CaltransandAlameda/Link21EMME_Caltrans_AADT_Traffic_and_Truck_alsowithAlamadaCounts.csv"
+    reduced_pems_summaries_file = "PeMS/acceptance-criteria-reduced-traffic-counts.csv"
+    bridge_transactions_file = "bridge-transactions/Typical Weekday Transactions Statistics.csv"
+    reduced_transactions_file = "bridge-transactions/acceptance-criteria-reduced_transactions.csv"
 

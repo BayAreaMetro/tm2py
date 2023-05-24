@@ -33,13 +33,17 @@ class Acceptance:
             "model_link_id": pd.Series(dtype="int"),
             "emme_a_node_id": pd.Series(dtype="int"),
             "emme_b_node_id": pd.Series(dtype="int"),
-            "pems_station_id": pd.Series(dtype="int"),
+            "station_id": pd.Series(dtype="str"),
             "pems_station_type": pd.Series(dtype="str"),
             "distance_in_miles": pd.Series(dtype="float"),
-            "key_road_name": pd.Series(dtype="str"),
+            "key_location_name": pd.Series(dtype="str"),
+            "key_location_direction": pd.Series(dtype="str"),
+            "bridge_plaza_name": pd.Series(dtype="str"),
             "time_period": pd.Series(dtype="str"),
+            "observed_source": pd.Series(dtype="str"),
             "observed_flow": pd.Series(dtype="float"),
             "observed_vehicle_class": pd.Series(dtype="str"),
+            "observed_toll_transactions": pd.Series(dtype="float"),
             "simulated_flow": pd.Series(dtype="float"),
             "simulated_flow_da": pd.Series(dtype="float"),
             "simulated_flow_s2": pd.Series(dtype="float"),
@@ -161,19 +165,39 @@ class Acceptance:
     def _make_roadway_network_comparisons(self):
 
         o_df = self.o.reduced_traffic_counts_df.copy()
+        o_trans_df = self.o.observed_bridge_transactions_df.copy()
         s_df = self.s.simulated_roadway_assignment_results_df.copy()
         s_am_shape_gdf = self.s.simulated_roadway_am_shape_gdf.copy()
+        s_bridge_df = self.s.simulated_bridge_details_df.copy()
 
         o_df["time_period"] = o_df.time_period.str.lower()
         s_trim_df = s_df[
             s_df["ft"] <= self.MAX_FACILITY_TYPE_FOR_ROADWAY_COMPARISONS
         ].copy()
 
+        s_bridge_join_df = s_bridge_df[s_bridge_df["pay_toll"]].copy().reset_index()
+        s_bridge_join_df = s_bridge_join_df[["plaza_name", "standard_link_id"]]
+
         out_df = pd.merge(
             s_trim_df,
             o_df,
             on=["emme_a_node_id", "emme_b_node_id", "time_period"],
             how="left",
+        )
+
+        trans_df = pd.merge(
+            o_trans_df,
+            s_bridge_join_df,
+            how="left",
+            on="plaza_name",
+        )
+        trans_df = trans_df[trans_df["standard_link_id"].notna()].copy().reset_index()
+
+        out_df = pd.merge(
+            out_df,
+            trans_df,
+            how="left",
+            on=["standard_link_id", "time_period"],
         )
 
         out_df["odot_flow_category"] = np.where(
@@ -185,13 +209,18 @@ class Acceptance:
             [
                 "emme_a_node_id",
                 "emme_b_node_id",
-                "pems_station_id",
+                "standard_link_id",
+                "station_id",
+                "plaza_name",
                 "type",
                 "distance_in_miles",
                 "time_period",
+                "source",
                 "observed_flow",
+                "transactions",
                 "vehicle_class",
-                "name",
+                "key_location_name",
+                "key_location_direction",
                 "odot_flow_category",
                 "odot_maximum_error",
                 "flow_total",
@@ -219,6 +248,9 @@ class Acceptance:
             columns={
                 "type": "pems_station_type",
                 "vehicle_class": "observed_vehicle_class",
+                "plaza_name": "bridge_plaza_name",
+                "transactions": "observed_toll_transactions",
+                "source": "observed_source",
                 "flow_total": "simulated_flow",
                 "flow_da": "simulated_flow_da",
                 "flow_s2": "simulated_flow_s2",
@@ -227,7 +259,6 @@ class Acceptance:
                 "flow_trk": "simulated_flow_trk",
                 "capacity": "simulated_capacity",
                 "ft": "simulated_facility_type",
-                "name": "key_road_name",
                 "lanes": "simulated_lanes",
                 "speed_mph": "simulated_speed_mph",
                 "m_lanes": "simulated_lanes_managed",
@@ -247,7 +278,7 @@ class Acceptance:
             out_df,
             s_am_shape_gdf,
             how="left",
-            on=["emme_a_node_id", "emme_b_node_id", "time_period"],
+            on=["emme_a_node_id", "emme_b_node_id", "standard_link_id", "time_period"],
         ).rename(columns={"standard_link_id": "model_link_id"})
 
         return_gdf = gpd.GeoDataFrame(return_df, geometry="geometry")
