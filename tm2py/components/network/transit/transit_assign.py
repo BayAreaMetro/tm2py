@@ -160,7 +160,7 @@ def func_returns_segment_congestion(time_period_duration, scenario, weights: Con
         if {use_fares}:
             mode_char = line["#src_mode"]
         else:
-            mode_char = line.mode.mode_id
+            mode_char = line.mode.id
 
         if mode_char in ["p"]:
             congestion = 0.25 * ((transit_volume / capacity) ** 8)
@@ -543,32 +543,78 @@ class TransitAssignment(Component):
     def run(self):
         """Run transit assignments."""
 
-        use_ccr = False
-        if self.controller.iteration >= 0:  # TODO add option of warmstart
-            use_ccr = self.config.use_ccr
-            congested_transit_assignment = self.config.congested_transit_assignment
-            self.sub_components["prepare transit demand"].run()
-        else:
-            self.transit_emmebank.zero_matrix
         for time_period in self.time_period_names:
-            # update auto times
-            self.transit_network.update_auto_times(time_period)
-            # apply peaking factor
-            if self.config.congested.use_peaking_factor:
-                path_boardings = self.get_abs_path(
-                    self.config.output_transit_boardings_path
-                    )
-                ea_df_path = path_boardings.format(period='ea_pnr')
-                if (time_period.lower() == 'am') and (os.path.isfile(ea_df_path)==False):
-                    raise Exception("run ea period first to account for the am peaking factor")
-                if (time_period.lower() == 'am') and (os.path.isfile(ea_df_path)==True):
-                    ea_df = pd.read_csv(ea_df_path)
-                    self._apply_peaking_factor(time_period, ea_df=ea_df)
-                if (time_period.lower() == 'pm'):
-                    self._apply_peaking_factor(time_period)
-            self.run_transit_assign(time_period, use_ccr, congested_transit_assignment)
-            if self.config.congested.use_peaking_factor and (time_period.lower() == 'ea'):
-                self._apply_peaking_factor(time_period)
+            if self.controller.iteration == 0:
+                use_ccr = False
+                congested_transit_assignment =  False
+                # update auto times
+                print("update_auto_times")
+                self.transit_network.update_auto_times(time_period)
+
+                # run extended transit assignment and skimming
+                # if run warm start, trim the demands based on extended transit assignment and run congested assignment
+                # otherwise run with 0 demands
+                if self.controller.config.run.warmstart.warmstart:
+                    # import transit demands
+                    print("warmstart")
+                    self.sub_components["prepare transit demand"].run()
+                    print("uncongested")
+                    self.run_transit_assign(time_period, use_ccr, congested_transit_assignment)
+                    #TODO: run skim
+                    #TODO: trim_demand
+
+                    congested_transit_assignment = self.config.congested_transit_assignment
+                    # apply peaking factor
+                    if self.config.congested.use_peaking_factor:
+                        path_boardings = self.get_abs_path(
+                            self.config.output_transit_boardings_path
+                            )
+                        ea_df_path = path_boardings.format(period='ea_pnr')
+                        if (time_period.lower() == 'am') and (os.path.isfile(ea_df_path)==False):
+                            raise Exception("run ea period first to account for the am peaking factor")
+                        if (time_period.lower() == 'am') and (os.path.isfile(ea_df_path)==True):
+                            print("peaking_factor")
+                            ea_df = pd.read_csv(ea_df_path)
+                            self._apply_peaking_factor(time_period, ea_df=ea_df)
+                        if (time_period.lower() == 'pm'):
+                            self._apply_peaking_factor(time_period)
+                    print("congested")
+                    self.run_transit_assign(time_period, use_ccr, congested_transit_assignment)
+                    if self.config.congested.use_peaking_factor and (time_period.lower() == 'ea'):
+                        self._apply_peaking_factor(time_period)
+                else:
+                    self.transit_emmebank.zero_matrix #TODO: need further test
+                
+            else: # iteration >=1
+                use_ccr = self.config.use_ccr
+                congested_transit_assignment = self.config.congested_transit_assignment
+                # update auto times
+                self.transit_network.update_auto_times(time_period)
+                # import transit demands
+                self.sub_components["prepare transit demand"].run()
+
+                if (self.config.congested.trim_demand_before_congested_transit_assignment and 
+                    congested_transit_assignment):
+                    use_ccr = False
+                    congested_transit_assignment =  False                   
+                    self.run_transit_assign(time_period, use_ccr, congested_transit_assignment)
+                    #TODO: run skim
+                    #TODO: trim_demand
+                
+                self.run_transit_assign(time_period, use_ccr, congested_transit_assignment)
+                            
+            # output_summaries
+            if self.config.output_stop_usage_path is not None:
+                network, class_stop_attrs = self._calc_connector_flows(time_period)
+                self._export_connector_flows(network, class_stop_attrs, time_period)
+            if self.config.output_transit_boardings_path is not None:
+                self._export_boardings_by_line(time_period)
+            if self.config.output_transit_segment_path is not None:
+                self._export_transit_segment(time_period)
+            if self.config.output_station_to_station_flow_path is not None:
+                self._export_boardings_by_station(time_period)
+            if self.config.output_transfer_at_station_path is not None:
+                self._export_transfer_at_stops(time_period)
 
     @LogStartEnd("Transit assignments for a time period")
     def run_transit_assign(self, time_period: str, use_ccr: bool, congested_transit_assignment: bool):
@@ -579,20 +625,8 @@ class TransitAssignment(Component):
             self._run_congested_assign(time_period)
         else:
             self._run_extended_assign(time_period)
-        # output_summaries
-        if self.config.output_stop_usage_path is not None:
-            network, class_stop_attrs = self._calc_connector_flows(time_period)
-            self._export_connector_flows(network, class_stop_attrs, time_period)
-        if self.config.output_transit_boardings_path is not None:
-            self._export_boardings_by_line(time_period)
-        if self.config.output_transit_segment_path is not None:
-            self._export_transit_segment(time_period)
-        if self.config.output_station_to_station_flow_path is not None:
-            self._export_boardings_by_station(time_period)
-        if self.config.output_transfer_at_station_path is not None:
-            self._export_transfer_at_stops(time_period)
 
-    def _apply_peaking_factor(self, time_period: str, ea_df):
+    def _apply_peaking_factor(self, time_period: str, ea_df=None):
         """apply peaking factors.
 
         Args:
@@ -1018,7 +1052,6 @@ class TransitAssignment(Component):
         # add total boardings by access mode
         _emme_manager = self.controller.emme_manager
         _emme_scenario = self.transit_emmebank.scenario(time_period)
-        network = _emme_scenario.get_network()
         network_results = _emme_manager.tool(
             "inro.emme.transit_assignment.extended.network_results"
         )
@@ -1026,14 +1059,21 @@ class TransitAssignment(Component):
             "inro.emme.data.extra_attribute.create_extra_attribute"
         )
         for tclass in self.config.classes:
-            attr_name = f"@board_{tclass.name}".lower()
-            create_extra("TRANSIT_SEGMENT", attr_name, overwrite=True, scenario=_emme_scenario)
+            initial_board_attr_name = f"@iboard_{tclass.name}".lower()
+            direct_xboard_attr_name = f"@dboard_{tclass.name}".lower()
+            auxiliary_xboard_attr_name = f"@aboard_{tclass.name}".lower()
+            create_extra("TRANSIT_SEGMENT", initial_board_attr_name, overwrite=True, scenario=_emme_scenario)
+            create_extra("TRANSIT_SEGMENT", direct_xboard_attr_name, overwrite=True, scenario=_emme_scenario)
+            create_extra("TRANSIT_SEGMENT", auxiliary_xboard_attr_name, overwrite=True, scenario=_emme_scenario)
             spec = {
                 "type": "EXTENDED_TRANSIT_NETWORK_RESULTS",
-                "on_segments": {"total_boardings": attr_name}
+                "on_segments": {"initial_boardings": initial_board_attr_name,
+                                "transfer_boardings_direct": direct_xboard_attr_name,
+                                "transfer_boardings_indirect": auxiliary_xboard_attr_name},
             }
             network_results(spec, class_name=tclass.name, scenario=_emme_scenario)
 
+        network = _emme_scenario.get_network()
         path_boardings = self.get_abs_path(self.config.output_transit_segment_path)
         with open(path_boardings.format(period=time_period.lower()), "w") as f:
             f.write(",".join(["line", 
@@ -1055,11 +1095,21 @@ class TransitAssignment(Component):
                             "vauteq", 
                             "vcaps", 
                             "vcapt", 
-                            "board_ptw",
-                            "board_wtp",
-                            "board_ktw",
-                            "board_wtk",
-                            "board_wtw"
+                            "initial_board_ptw",
+                            "initial_board_wtp",
+                            "initial_board_ktw",
+                            "initial_board_wtk",
+                            "initial_board_wtw",
+                            "direct_transfer_board_ptw",
+                            "direct_transfer_board_wtp",
+                            "direct_transfer_board_ktw",
+                            "direct_transfer_board_wtk",
+                            "direct_transfer_board_wtw",
+                            "auxiliary_transfer_board_ptw",
+                            "auxiliary_transfer_board_wtp",
+                            "auxiliary_transfer_board_ktw",
+                            "auxiliary_transfer_board_wtk",
+                            "auxiliary_transfer_board_wtw"                     
                             ]))
             f.write("\n")
 
@@ -1093,11 +1143,21 @@ class TransitAssignment(Component):
                                                     segment.line.vehicle.auto_equivalent,
                                                     segment.line.vehicle.seated_capacity,
                                                     segment.line.vehicle.total_capacity,
-                                                    segment['@board_pnr_trn_wlk'],
-                                                    segment['@board_wlk_trn_pnr'],
-                                                    segment['@board_knr_trn_wlk'],
-                                                    segment['@board_wlk_trn_knr'],
-                                                    segment['@board_wlk_trn_wlk'],
+                                                    segment['@iboard_pnr_trn_wlk'],
+                                                    segment['@iboard_wlk_trn_pnr'],
+                                                    segment['@iboard_knr_trn_wlk'],
+                                                    segment['@iboard_wlk_trn_knr'],
+                                                    segment['@iboard_wlk_trn_wlk'],
+                                                    segment['@dboard_pnr_trn_wlk'],
+                                                    segment['@dboard_wlk_trn_pnr'],
+                                                    segment['@dboard_knr_trn_wlk'],
+                                                    segment['@dboard_wlk_trn_knr'],
+                                                    segment['@dboard_wlk_trn_wlk'],
+                                                    segment['@aboard_pnr_trn_wlk'],
+                                                    segment['@aboard_wlk_trn_pnr'],
+                                                    segment['@aboard_knr_trn_wlk'],
+                                                    segment['@aboard_wlk_trn_knr'],
+                                                    segment['@aboard_wlk_trn_wlk']
                                                     ]]))
                     f.write("\n")
 

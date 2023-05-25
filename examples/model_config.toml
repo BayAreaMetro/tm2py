@@ -42,7 +42,7 @@
 [household]
     highway_demand_file = "demand_matrices/highway/household/TAZ_Demand_{period}_{iter}.omx"
     # transit_demand_file = "demand_matrices/transit/TAP_Demand_{set}_{period}_{iter}.omx"
-    transit_demand_file = "demand_matrices/transit/trn_demand_v9_trim_{period}.omx" #temp
+    transit_demand_file = "demand_matrices/transit/trn_demand_v9_trim_{period}.omx" #temp name format, add iteration?
     highway_taz_ctramp_output_file = "ctramp_output/{mode_agg}_{period}_{mode}_{period}.omx"
     highway_maz_ctramp_output_file = "ctramp_output/auto_{period}_MAZ_AUTO_{number}_{period}.omx"
     transit_tap_ctramp_output_file = "ctramp_output/{mode_agg}_{period}_{mode}_TRN_{set}_{period}.omx"
@@ -800,9 +800,9 @@
     output_skim_matrixname_tmpl = "{property}"
     output_stop_usage_path = "output_summaries/stop_usage_{period}.csv"
     output_transit_boardings_path = "output_summaries/boardings_by_line_{period}.csv"
-    # output_transit_segment_path = "output_summaries/transit_segment_{period}.csv"
-    # output_station_to_station_flow_path = "output_summaries/{operator}_station_to_station_{set_name}_{period}.txt"
-    # output_transfer_at_station_path = "output_summaries/{set_name}_transfer_at_{stop}_{period}"
+    output_transit_segment_path = "output_summaries/transit_segment_{period}.csv"
+    output_station_to_station_flow_path = "output_summaries/{operator}_station_to_station_{tclass}_{period}.txt"
+    output_transfer_at_station_path = "output_summaries/{tclass}_transfer_at_{stop}_{period}"
     # timed tranfer nodes
     timed_transfer_nodes = [2625944, 2625943] # standard network #node_id of Bart stations: 19th street, MacArthur
     [transit.output_transfer_at_station_node_ids]

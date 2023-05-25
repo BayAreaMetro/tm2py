@@ -76,6 +76,28 @@ ComponentNames = Literal[
 ]
 EmptyString = Literal[""]
 
+@dataclass(frozen=True)
+class WarmStartConfig(ConfigItem):
+    """Warm start parameters.
+
+    Note that the components will be executed in the order listed.
+
+    Properties:
+        warmstart: Boolean indicating whether warmstart demand matrices are used.
+        warmstart_check: if on, check that demand matrix files exist.
+        household_highway_demand_file: file name template of warmstart household highway demand matrices.
+        household_transit_demand_file: file name template of warmstart household transit demand matrices.
+        air_passenger_highway_demand_file: file name template of warmstart airport highway demand matrices.
+        internal_external_highway_demand_file: file name template of warmstart internal-external highway demand matrices.
+    """
+
+    warmstart: Optional[bool] = Field(default=False)
+    warmstart_check: Optional[bool] = Field(default=False)
+    household_highway_demand_file: Optional[str] = Field(default="")
+    household_transit_demand_file: Optional[str] = Field(default="")
+    air_passenger_highway_demand_file: Optional[str] = Field(default="")
+    internal_external_highway_demand_file: Optional[str] = Field(default="")
+    truck_highway_demand_file: Optional[str] = Field(default="")
 
 @dataclass(frozen=True)
 class RunConfig(ConfigItem):
@@ -92,6 +114,7 @@ class RunConfig(ConfigItem):
         global_iteration_components: list of component to run at every subsequent
             iteration (max(1, start_iteration) to end_iteration), in order.
         final_components: list of components to run after final iteration, in order
+        warmstart: warmstart configuration, including file locations.
     """
 
     initial_components: Tuple[ComponentNames, ...]
@@ -99,6 +122,7 @@ class RunConfig(ConfigItem):
     final_components: Tuple[ComponentNames, ...]
     start_iteration: int = Field(ge=0)
     end_iteration: int = Field(gt=0)
+    warmstart: WarmStartConfig = WarmStartConfig()
     start_component: Optional[Union[ComponentNames, EmptyString]] = Field(default="")
 
     @validator("end_iteration", allow_reuse=True)
