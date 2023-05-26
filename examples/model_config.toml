@@ -794,9 +794,9 @@
     congested_weights.max_stand = 1.6
     congested_weights.power_stand = 3.4    
     # output skim and summary paths
-    output_skim_path = "skim_matrices/transit/transit_skims_{period}.omx"
-    # output_skim_path = "skims/transit"
-    output_skim_filename_tmpl = "trnskm{time_period}_{set_name}.omx"
+    # output_skim_path = "skim_matrices/transit/transit_skims_{period}.omx"
+    output_skim_path = "skim_matrices/transit"
+    output_skim_filename_tmpl = "trnskm{time_period}_{tclass}.omx"
     output_skim_matrixname_tmpl = "{property}"
     output_stop_usage_path = "output_summaries/stop_usage_{period}.csv"
     output_transit_boardings_path = "output_summaries/boardings_by_line_{period}.csv"
@@ -1492,7 +1492,7 @@
 [[transit.modes]]
     mode_id = "b"
     description = "local_bus"
-    name = "LB"
+    name = "LOC"
     type = "LOCAL"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
@@ -1503,7 +1503,7 @@
 [[transit.modes]]
     mode_id = "x"
     description = "exp_bus"
-    name = "EB"
+    name = "EXP"
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 1.0
@@ -1515,7 +1515,7 @@
 [[transit.modes]]
     mode_id = "f"
     description = "ferry"
-    name = "FR"
+    name = "FRY"
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 0.8
@@ -1527,7 +1527,7 @@
 [[transit.modes]]
     mode_id = "l"
     description = "light_rail"
-    name = "LR"
+    name = "LTR"
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 0.9
@@ -1539,7 +1539,7 @@
 [[transit.modes]]
     mode_id = "h"
     description = "heavy_rail"
-    name = "HR"
+    name = "HVY"
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 0.7
@@ -1551,7 +1551,7 @@
 [[transit.modes]]
     mode_id = "r"
     description = "comm_rail"
-    name = "CR"
+    name = "COM"
     type = "PREMIUM"
     assign_type = "TRANSIT"
     in_vehicle_perception_factor = 0.7
