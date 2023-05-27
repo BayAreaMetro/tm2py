@@ -237,6 +237,7 @@ class TransitSkim(Component):
             5. mask if doesn't have required modes
         """
         use_ccr = False
+        congested_transit_assignment = self.config.congested_transit_assignment
         if self.controller.iteration >= 1:
             use_ccr = self.config.use_ccr
         with self.controller.emme_manager.logbook_trace(
@@ -247,6 +248,11 @@ class TransitSkim(Component):
         with self.controller.emme_manager.logbook_trace("In-vehicle time by mode"):
             self.skim_invehicle_time_by_mode(time_period, transit_class, use_ccr)
         with self.controller.emme_manager.logbook_trace(
+            "Transfer boarding time penalty",
+            "Drive toll"
+        ):
+            self.skim_penalty_toll(time_period, transit_class)
+        with self.controller.emme_manager.logbook_trace(
             "Drive distance and time",
             "Walk auxiliary time, walk access time and walk egress time"
         ):
@@ -254,6 +260,9 @@ class TransitSkim(Component):
         if use_ccr:
             with self.controller.emme_manager.logbook_trace("CCR related skims"):
                 self.skim_reliability_crowding_capacity(time_period, transit_class)
+        if congested_transit_assignment:
+            with self.controller.emme_manager.logbook_trace("Calculate crowding"):
+                self.skim_crowding(time_period, transit_class)
         # self.mask_above_max_transfers(time_period, transit_class) #TODO: need to test
         # self.mask_if_not_required_modes(time_period, transit_class) #TODO: need to test
 
@@ -292,10 +301,10 @@ class TransitSkim(Component):
             num_processors=self.controller.num_processors,
         )
 
-        # self._calc_xfer_wait(time_period, transit_class.name) #TODO: error in MATRIX_CALCULATION
-        # self._calc_boardings(time_period, transit_class.name) #TODO: error in MATRIX_CALCULATION
-        # if self.config.use_fares:
-        #     self._calc_fares(time_period, transit_class.name) #TODO: error in MATRIX_CALCULATION
+        self._calc_xfer_wait(time_period, transit_class.name)
+        self._calc_boardings(time_period, transit_class.name)
+        if self.config.use_fares:
+            self._calc_fares(time_period, transit_class.name)
 
     def _calc_xfer_walk(self, time_period, transit_class_name):
         xfer_modes = [m.mode_id for m in self.config.modes if m.type == "WALK"]
@@ -362,11 +371,11 @@ class TransitSkim(Component):
                 "expression": f'(mf"{_tp_tclass}_BOARDS" - 1).max.0',
             }
 
-        self.controller.emme_manager.matrix_calculator(
-            spec,
-            scenario=self.scenarios[time_period],
-            num_processors=self.controller.num_processors,
-        )
+            self.controller.emme_manager.matrix_calculator(
+                spec,
+                scenario=self.scenarios[time_period],
+                num_processors=self.controller.num_processors,
+            )
 
     def _calc_fares(self, time_period: str, transit_class_name: str):
         """Calculate fares as sum in-vehicle cost and boarding cost to get the fare paid and add to Emmebank.
@@ -433,13 +442,13 @@ class TransitSkim(Component):
                 self.networks[time_period].delete_attribute(
                     "TRANSIT_SEGMENT", "@mode_timtr"
                 )
-                _ivtt_matrix_name = f'mf"{_tp_tclass}_{_mode_name}IVTT"'
+                _ivtt_matrix_name = f'mf"{_tp_tclass}_IVT{_mode_name}"'
                 _total_ivtt_expr.append(_ivtt_matrix_name)
                 self._run_strategy_analysis(
                     time_period,
                     transit_class,
                     {"in_vehicle": "@mode_timtr"},
-                    f"{_mode_name}IVTT",
+                    f"IVT{_mode_name}",
                 )
         return _total_ivtt_expr
 
@@ -498,7 +507,7 @@ class TransitSkim(Component):
                 time_period, transit_class, mode_combinations
             )
         # sum total ivtt across all modes
-        # self._calc_total_ivt(time_period, transit_class, total_ivtt_expr) #TODO: error in MATRIX_CALCULATION
+        self._calc_total_ivt(time_period, transit_class, total_ivtt_expr)
 
     def _calc_total_ivt(
         self, time_period: str, transit_class: str, total_ivtt_expr: list[str]
@@ -530,7 +539,7 @@ class TransitSkim(Component):
             """
             """
             _tp_tclass = f"{time_period}_{transit_class.name}"
-            _network = self.networks[time_period]
+            # _network = self.networks[time_period]
 
             # drive time here is perception factor*(drive time + toll penalty), 
             # will calculate the actual drive time and substract toll penalty in the following steps
@@ -593,6 +602,7 @@ class TransitSkim(Component):
 
             drive_perception_factor = self.config.drive_perception_factor
             walk_speed = self.config.walk_speed
+            vot = self.config.value_of_time 
             # divide drive time by mode specific perception factor to get the actual time
             # for walk time, use walk distance/walk speed
             # because the mode specific perception factors are hardcoded in the mode definition
@@ -602,6 +612,12 @@ class TransitSkim(Component):
                     "constraint": None,
                     "result": f'mf"{_tp_tclass}_DTIME"',
                     "expression": f'mf"{_tp_tclass}_DTIME"/{drive_perception_factor}',
+                },
+                {
+                    "type": "MATRIX_CALCULATION",
+                    "constraint": None,
+                    "result": f'mf"{_tp_tclass}_DTIME"',
+                    "expression": f'mf"{_tp_tclass}_DTIME" - 60*mf"{_tp_tclass}_DTOLL"/{vot}',
                 },
                 {
                     "type": "MATRIX_CALCULATION",
@@ -622,11 +638,55 @@ class TransitSkim(Component):
                     "expression": f'mf"{_tp_tclass}_WEGR"/({walk_speed}/60)',
                 },
             ]
-            # self.controller.emme_manager.matrix_calculator(  #TODO: error in MATRIX_CALCULATION
-            #     spec_list,
-            #     scenario=self.scenarios[time_period],
-            #     num_processors=self.controller.num_processors,
-            # )
+            self.controller.emme_manager.matrix_calculator(
+                spec_list,
+                scenario=self.scenarios[time_period],
+                num_processors=self.controller.num_processors,
+            )
+
+    def skim_penalty_toll(
+            self, time_period: str, transit_class: str
+        ) -> None:
+            """
+            """
+            # transfer boarding time penalty
+            self._run_strategy_analysis(
+                time_period, transit_class, {"boarding": "@xboard_nodepen"}, "XBOATIME"
+            )
+
+            _tp_tclass = f"{time_period}_{transit_class.name}"
+            if ("PNR_TRN_WLK" in _tp_tclass) or ("WLK_TRN_PNR"in _tp_tclass):
+                spec = { # subtract PNR boarding from total transfer boarding time penalty
+                    "type": "MATRIX_CALCULATION",
+                    "constraint": {
+                        "by_value": {
+                            "od_values": f'mf"{_tp_tclass}_XBOATIME"',
+                            "interval_min": 0,
+                            "interval_max": 9999999,
+                            "condition": "INCLUDE",
+                        }
+                    },
+                    "result": f'mf"{_tp_tclass}_XBOATIME"',
+                    "expression": f'(mf"{_tp_tclass}_XBOATIME" - 1).max.0',
+                }
+
+                self.controller.emme_manager.matrix_calculator(
+                    spec,
+                    scenario=self.scenarios[time_period],
+                    num_processors=self.controller.num_processors,
+                )      
+
+            # drive toll
+            if ("PNR_TRN_WLK" in _tp_tclass) or ("KNR_TRN_WLK" in _tp_tclass):
+                self._run_path_analysis(
+                    time_period, transit_class, "ORIGIN_TO_INITIAL_BOARDING", 
+                    {"aux_transit": "@drive_toll"}, "DTOLL"
+                )
+            elif ("WLK_TRN_PNR" in _tp_tclass) or ("WLK_TRN_KNR" in _tp_tclass):
+                self._run_path_analysis(
+                    time_period, transit_class, "FINAL_ALIGHTING_TO_DESTINATION", 
+                    {"aux_transit": "@drive_toll"}, "DTOLL"
+                )
 
     def _get_emme_mode_ids(
         self, transit_class, time_period
@@ -707,6 +767,16 @@ class TransitSkim(Component):
             time_period, transit_class, {"boarding": "@capacity_penalty"}, "CAPPEN"
         )
 
+    def skim_crowding(
+        self, time_period: str, transit_class
+    ) -> None:
+        """
+        """
+        # Crowding penalty
+        self._run_strategy_analysis(
+            time_period, transit_class, {"in_vehicle": "@ccost"}, "CROWD"
+        )
+
     def _run_strategy_analysis(
         self,
         time_period: str,
@@ -742,6 +812,51 @@ class TransitSkim(Component):
             "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS",
         }
         strategy_analysis(
+            spec,
+            class_name=transit_class.name,
+            scenario=self.scenarios[time_period],
+            num_processors=self.controller.num_processors,
+        )
+
+    def _run_path_analysis(
+            self,
+            time_period: str,
+            transit_class,
+            portion_of_path: str,
+            components: Dict[str, str],
+            matrix_name_suffix: str,
+    ):
+        """Runs path analysis in Emme and stores results in emmebank.
+
+        Args:
+            time_period (str): Time period name abbreviation
+            transit_class (_type_): _description_
+            components (Dict[str, str]): _description_
+            matrix_name_suffix (str): Appended to time period and transit class name to create output matrix name.
+        """
+        _tp_tclass = f"{time_period}_{transit_class.name}"
+        _matrix_name = f'mf"{_tp_tclass}_{matrix_name_suffix}"'
+        path_analysis = self.controller.emme_manager.tool(
+            "inro.emme.transit_assignment.extended.path_based_analysis"
+        )
+
+        spec = {
+                "portion_of_path": portion_of_path,
+                "trip_components": components,
+                "path_operator": "+",
+                "path_selection_threshold": {
+                    "lower": -999999,
+                    "upper": 999999
+                },
+                "path_to_od_aggregation": {
+                    "operator": "average",
+                    "aggregated_path_values": _matrix_name
+                },
+                "analyzed_demand": None,
+                "constraint": None,
+            "type": "EXTENDED_TRANSIT_PATH_ANALYSIS",
+        }
+        path_analysis(
             spec,
             class_name=transit_class.name,
             scenario=self.scenarios[time_period],
