@@ -342,6 +342,8 @@ class CreateTODScenarios(Component):
                         link["@trantime"] = (
                             60 * link.length / speed + link.length * 5 * 0.33
                         )
+                    else:
+                        link["@trantime"] = 0
                 else:
                     link["@trantime"] = 60 * link.length / speed
                 # set TAP connector distance to 60 feet
@@ -517,6 +519,8 @@ class CreateTODScenarios(Component):
             area_type = link["@area_type"]
             if area_type < 0:
                 link["@capclass"] = -1
+            elif (link["@ft"] == 99) & (link["@assignable"] == 1):
+                link["@capclass"] = 10 * area_type + 7
             else:
                 link["@capclass"] = 10 * area_type + link["@ft"]
 
