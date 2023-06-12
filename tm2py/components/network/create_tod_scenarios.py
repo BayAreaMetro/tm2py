@@ -173,6 +173,7 @@ class CreateTODScenarios(Component):
             "fd3",
             "fd4",
             "fd5",
+            "fd6",
             "fd7",
             "fd9",
             "fd10",
