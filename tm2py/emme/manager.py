@@ -112,9 +112,10 @@ class EmmeBank:
         _matrix = self.emmebank.matrix(f'ms"{name}"')
         if _matrix is None:
             ident = self.emmebank.available_matrix_identifier(matrix_type)
-            _zero_matrix = self.emmebank.create_matrix(ident)
-            _zero_matrix.name = name
-            _zero_matrix.description = name
+            _matrix = self.emmebank.create_matrix(ident)
+            _matrix.name = name
+            _matrix.description = name
+            # _matrix.data = 0
         return _matrix
 
     @property
@@ -122,7 +123,6 @@ class EmmeBank:
         """Create ms"zero" matrix for zero-demand assignments."""
         if self._zero_matrix is None:
             self._zero_matrix = self.get_or_init("zero", "SCALAR")
-            self._zero_matrix.data = 0
         return self._zero_matrix
 
 
