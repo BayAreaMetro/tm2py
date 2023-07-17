@@ -117,6 +117,11 @@ class Component(ABC):
         return self.controller.time_period_durations
 
     @property
+    def congested_transit_assn_max_iteration(self) -> dict:
+        """Return mapping of time periods to max iteration in congested transit assignment."""
+        return self.controller.congested_transit_assn_max_iteration
+
+    @property
     def top_sheet(self):
         """Reference to top sheet."""
         return self.controller.top_sheet

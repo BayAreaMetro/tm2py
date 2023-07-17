@@ -136,6 +136,7 @@ class OMXManager:
         omx_key: str = "NAME",
         matrix_cache: MatrixCache = None,
         mask_max_value: float = None,
+        growth_factor: float = None
     ):  # pylint: disable=R0913
         """The OMXManager constructor.
 
@@ -149,12 +150,15 @@ class OMXManager:
             from cache (instead of always reading from Emmmebank). Defaults to None.
             mask_max_value (float, optional): max value above which to write
             zero instead ("big to zero" behavior). Defaults to None.
+            growth_factor (float, optional): grow the value in each cell by a factor
+            (e.g. write out ivt skim in minute*100)
         """
         self._file_path = file_path
         self._mode = mode
         self._scenario = scenario
         self._omx_key = omx_key
         self._mask_max_value = mask_max_value
+        self._growth_factor = growth_factor
         self._omx_file = None
         self._emme_matrix_cache = matrix_cache
         self._read_cache = {}
@@ -236,7 +240,7 @@ class OMXManager:
             n_zones = len(numpy_array)
             numpy_array = resize(numpy_array, (n_zones, 1))
         attrs = {"description": matrix.description}
-        self.write_array(numpy_array, name, attrs)
+        self.write_array(numpy_array, name, "float32", attrs)
 
     def write_clipped_array(
         self,
@@ -259,10 +263,10 @@ class OMXManager:
             numpy_array = numpy_array.clip(a_min, a_max)
         else:
             numpy_array = numpy_array.clip(a_min)
-        self.write_array(numpy_array, name, attrs)
+        self.write_array(numpy_array, name, "float32", attrs)
 
     def write_array(
-        self, numpy_array: NumpyArray, name: str, attrs: Dict[str, str] = None
+        self, numpy_array: NumpyArray, name: str, data_type: str = "float32", attrs: Dict[str, str] = None
     ):
         """Write array with name and optional attrs to OMX file.
 
@@ -270,6 +274,7 @@ class OMXManager:
             numpy_array:: Numpy array
             name: name to use for the OMX key
             attrs: additional attribute key value pairs to write to OMX file
+            data_type: int, float32, float64, etc.
         """
         if self._mode not in ["a", "w"]:
             raise Exception(f"{self._file_path}: open in read-only mode")
@@ -280,7 +285,9 @@ class OMXManager:
             chunkshape = None
         if self._mask_max_value:
             numpy_array[numpy_array > self._mask_max_value] = 0
-        numpy_array = numpy_array.astype(dtype="float64", copy=False)
+        if self._growth_factor:
+            numpy_array = numpy_array * self._growth_factor       
+        numpy_array = numpy_array.astype(dtype=data_type, copy=False)
         self._omx_file.create_matrix(
             name, obj=numpy_array, chunkshape=chunkshape, attrs=attrs
         )

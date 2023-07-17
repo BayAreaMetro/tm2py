@@ -29,7 +29,6 @@
         "truck",
         "highway_maz_assign",
         "highway",
-        "prepare_network_transit",
         "drive_access_skims",
         "transit_assign",
         "transit_skim"
@@ -37,3 +36,12 @@
     final_components = []
     start_iteration = 0
     end_iteration = 2
+
+    [run.warmstart]
+        warmstart = true
+        warmstart_check = true
+        household_highway_demand_file = "warmstart/demand_matrices/highway/household/TAZ_Demand_{period}.omx"
+        household_transit_demand_file = "warmstart/demand_matrices/transit/trn_demand_v9_trim_{period}.omx"
+        air_passenger_highway_demand_file = "warmstart/demand_matrices/highway/air_passenger/2015_tripsAirPax{period}.omx"
+        internal_external_highway_demand_file = "warmstart/demand_matrices/highway/internal_external/tripsIx{period}.omx"
+        truck_highway_demand_file = "warmstart/demand_matrices/highway/commercial/tripstrk{period}.omx"

@@ -299,14 +299,24 @@ class PrepareTransitDemand(EmmeDemand):
     def _read_demand(self, file_config, time_period, skim_set, num_zones):
         # Load demand from cross-referenced source file,
         # the named demand model component under the key highway_demand_file
-        source = file_config["source"]
-        name = file_config["name"].format(period=time_period.upper())
-        path = self.controller.get_abs_path(
-            self.controller.config[source].transit_demand_file
-        ).__str__()
+        if (self.controller.config.run.warmstart.warmstart and 
+            self.controller.iteration == 0
+            ):
+            source = self.controller.config.run.warmstart
+            path = self.controller.get_abs_path(
+                source.household_transit_demand_file
+            ).__str__()
+        else:
+            source = file_config["source"]
+            path = self.controller.get_abs_path(
+                self.controller.config[source].transit_demand_file
+            ).__str__()
+        name = file_config["name"]
         return self._read(
             path.format(
-                period=time_period, set=skim_set, iter=self.controller.iteration
+                period=time_period, 
+                # set=skim_set, 
+                # iter=self.controller.iteration
             ),
             name,
             num_zones,
