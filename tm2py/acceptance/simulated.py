@@ -56,6 +56,18 @@ class Simulated:
         [
             ["Bay Bridge", "WB", 3082623, True],
             ["Bay Bridge", "EB", 3055540, False],
+            ["San Mateo Bridge", "WB", 1034262, True],
+            ["San Mateo Bridge", "EB", 3164437, False],
+            ["Dumbarton Bridge", "WB", 3098698, True],
+            ["Dumbarton Bridge", "EB", 3133722, False],
+            ["Richmond Bridge", "WB", 4062186, True],
+            ["Richmond Bridge", "EB", 4074386, False],
+            ["Carquinez Bridge", "WB", 5051527, False],
+            ["Carquinez Bridge", "EB", 5051375, True],
+            ["Benicia Bridge", "SB", 4074831, False],
+            ["Benicia Bridge", "NB", 5004246, True],
+            ["Antioch Bridge", "SB", 26067351, False],
+            ["Antioch Bridge", "NB", 26067350, True],
         ],
         columns=["plaza_name", "direction", "standard_link_id", "pay_toll"],
     )
@@ -99,31 +111,31 @@ class Simulated:
 
     def _validate(self):
 
-        # self._make_transit_mode_dict()
-        # self._make_simulated_maz_data()
+        self._make_transit_mode_dict()
+        self._make_simulated_maz_data()
 
-        # self._read_standard_transit_stops()
-        # self._read_standard_transit_shapes()
-        # self._read_standard_transit_routes()
-        # self._read_standard_node()
+        self._read_standard_transit_stops()
+        self._read_standard_transit_shapes()
+        self._read_standard_transit_routes()
+        self._read_standard_node()
 
-        # self._read_transit_demand()
-        # self._make_transit_technology_in_vehicle_table_from_skims()
-        # self._make_district_to_district_transit_summaries()
+        self._read_transit_demand()
+        self._make_transit_technology_in_vehicle_table_from_skims()
+        self._make_district_to_district_transit_summaries()
 
-        # self._reduce_simulated_transit_boardings()
-        # self._reduce_simulated_transit_shapes()
-        # self._reduce_simulated_home_work_flows()
-        # self._reduce_simulated_zero_vehicle_households()
-        # self._reduce_simulated_station_to_station()
-        # self._reduce_simulated_rail_access_summaries()
+        self._reduce_simulated_transit_boardings()
+        self._reduce_simulated_transit_shapes()
+        self._reduce_simulated_home_work_flows()
+        self._reduce_simulated_zero_vehicle_households()
+        self._reduce_simulated_station_to_station()
+        self._reduce_simulated_rail_access_summaries()
 
-        # assert sorted(
-        #     self.simulated_home_work_flows_df.residence_county.unique().tolist()
-        # ) == sorted(self.c.county_names_list)
-        # assert sorted(
-        #     self.simulated_home_work_flows_df.work_county.unique().tolist()
-        # ) == sorted(self.c.county_names_list)
+        assert sorted(
+            self.simulated_home_work_flows_df.residence_county.unique().tolist()
+        ) == sorted(self.c.county_names_list)
+        assert sorted(
+            self.simulated_home_work_flows_df.work_county.unique().tolist()
+        ) == sorted(self.c.county_names_list)
 
         self._reduce_simulated_roadway_assignment_outcomes()
 
@@ -143,10 +155,6 @@ class Simulated:
 
         file_prefix = "boardings_by_segment_"
         file_root = self.scenario_dict["scenario"]["root_dir"]
-
-        # AM for now, just to get the shapes
-        # TODO: problem with remote read in, use . for now
-        file_root = "."
         time_period = "am"
         gdf = gpd.read_file(
             os.path.join(file_root, file_prefix + time_period + ".geojson")
@@ -236,11 +244,7 @@ class Simulated:
     def _read_standard_node(self):
 
         root_dir = self.scenario_dict["scenario"]["root_dir"]
-
-        # TODO fix geopandas relative
-        # in_file = os.path.join(root_dir, "inputs", "network", "standard", "node.geojson")
         in_file = os.path.join(root_dir, "node.feather")
-
         gdf = gpd.read_feather(in_file)
 
         self.standard_nodes_gdf = gdf

@@ -135,8 +135,6 @@ class Acceptance:
     def _write_roadway_network(self):
 
         file_root = self.acceptance_output_folder_root
-        # TODO: figure out how to get remote write, use . for now
-        file_root = "."
         out_file = os.path.join(file_root, self.output_roadway_filename)
         self.road_network_gdf.to_file(out_file, driver="GeoJSON")
 
@@ -145,8 +143,6 @@ class Acceptance:
     def _write_transit_network(self):
 
         file_root = self.acceptance_output_folder_root
-        # TODO: figure out how to get remote write, use . for now
-        file_root = "."
         out_file = os.path.join(file_root, self.output_transit_filename)
         self.transit_network_gdf.to_file(out_file, driver="GeoJSON")
 
@@ -155,8 +151,6 @@ class Acceptance:
     def _write_other_comparisons(self):
 
         file_root = self.acceptance_output_folder_root
-        # TODO: figure out how to get remote write, use . for now
-        file_root = "."
         out_file = os.path.join(file_root, self.output_other_filename)
         self.compare_gdf.to_file(out_file, driver="GeoJSON")
 

@@ -449,12 +449,7 @@ class Observed:
         else:
             file_root = self.observed_dict["remote_io"]["obs_folder_root"]
             in_file = self.observed_dict["census"]["census_geographies_shapefile"]
-
-            # TODO: geopandas cannot read remote files, fix
-            temp_file_root = "."
-            in_file = "tl_2010_06_bg10.shp"
-
-            gdf = gpd.read_file(os.path.join(temp_file_root, in_file))
+            gdf = gpd.read_file(os.path.join(file_root, in_file))
 
             self._make_tract_centroids(gdf, os.path.join(file_root, tract_geojson_file))
 
