@@ -1380,10 +1380,10 @@ class ApplyFares(Component):
                         if fare1 != fare2 and (
                             fare1 != "TOO_FAR" and fare2 != "TOO_FAR"
                         ):
-                            # if the difference between two fares are less that a number, 
+                            # if the difference between two fares are less than a number, 
                             # then treat them as the same fare
                             if isinstance(fare1, float) and isinstance(fare2, float) and (
-                                abs(fare1 - fare2)<=1.5
+                                abs(fare1 - fare2)<=2.0
                                 ):
                                 continue
                             else:
