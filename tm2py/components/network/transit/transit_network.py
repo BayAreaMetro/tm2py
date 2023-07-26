@@ -173,10 +173,13 @@ class PrepareTransitNetwork(Component):
             auto_time = _highway_link_dict[_link_id].auto_time
             area_type = _highway_link_dict[_link_id]["@area_type"]
             # use @valuetoll_dam (cents/mile) here to represent the drive alone toll
-            sov_toll_per_mile = _highway_link_dict[_link_id]['@valuetoll_dam']
+            #sov_toll_per_mile = _highway_link_dict[_link_id]['@valuetoll_dam']
             link_length = _transit_link_dict[_link_id].length
             facility_type = _transit_link_dict[_link_id]['@ft']
-            sov_toll = sov_toll_per_mile * link_length/100
+            #sov_toll = sov_toll_per_mile * link_length/100
+
+            # using the @valuetoll_da to get drive alone toll
+            sov_toll = _highway_link_dict[_link_id]['@valuetoll_da']
 
             _transit_link_dict[_link_id]["@drive_toll"] = sov_toll 
             
@@ -397,7 +400,7 @@ class PrepareTransitNetwork(Component):
                                         "auto_time",
                                         "@lanes",
                                         "@area_type",
-                                        "@valuetoll_dam"]}
+                                        "@valuetoll_da"]}
                                         
         self.emme_manager.copy_attribute_values(
             _highway_scenario, _highway_net, highway_attributes
