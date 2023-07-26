@@ -403,15 +403,11 @@ class PrepareTransitNetwork(Component):
             _highway_scenario, _highway_net, highway_attributes
         )
         # TODO can we just get the link attributes as a DataFrame and merge them?
-        # if the link does not have meaningful travel time in highway assigned network
-        # such as bus only link, managed lanes, etc.
-        # assume default bus speed of 30 mph
-        auto_link_time_dict = {
-            auto_link["#link_id"] : ( auto_link.auto_time
-            if auto_link["@lanes"] > 0 else 60*auto_link["length"]/30 )
+        auto_link_dict = {
+            auto_link["#link_id"]: auto_link
             for auto_link in _highway_net.links()
         }
-        return auto_link_time_dict
+        return auto_link_dict
 
     def prepare_connectors(self, network, period):
         for node in network.centroids():
