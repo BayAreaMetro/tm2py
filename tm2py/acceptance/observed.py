@@ -58,6 +58,7 @@ class Observed:
             "model_link_id": pd.Series(dtype="int"),
             "source": pd.Series(dtype="str"),
             "station_id": pd.Series(dtype="str"),
+            "vehicle_class": pd.Series(dtype="str"),
             "time_period": pd.Series(dtype="str"),
             "observed_flow": pd.Series(dtype="float"),
             "odot_flow_category_daily": pd.Series(dtype="str"),
