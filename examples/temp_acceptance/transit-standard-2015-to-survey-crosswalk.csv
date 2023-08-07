@@ -6864,3 +6864,95 @@ VTA___902 Light Rail,VTA,Light Rail,626,31_VTA_626_AM_d1_s1929,31_VTA_626_AM_d1_
 VTA___902 Light Rail,VTA,Light Rail,626,31_VTA_626_MD_d1_s1929,31_VTA_626_MD_d1_s1929,31_626_MD_d1_s1929,VTA,WINCHESTER,VTA_2015_8_27,902,MOUNTAIN VIEW - WINCHESTER,VTA
 VTA___902 Light Rail,VTA,Light Rail,626,31_VTA_626_PM_d1_s1929,31_VTA_626_PM_d1_s1929,31_626_PM_d1_s1929,VTA,WINCHESTER,VTA_2015_8_27,902,MOUNTAIN VIEW - WINCHESTER,VTA
 VTA___902 Light Rail,VTA,Light Rail,626,31_VTA_626_EV_d1_s1929,31_VTA_626_EV_d1_s1929,31_626_EV_d1_s1929,VTA,WINCHESTER,VTA_2015_8_27,902,MOUNTAIN VIEW - WINCHESTER,VTA
+18 - East Circulator,Santa Rosa CityBus,LOCAL,471,1_SRCityBus_471_AM_d1_s1403,1_SRCityBus_471_AM_d1_s1403,1_471_AM_d1_s1403,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,18,18 Southeast Circulator,Santa Rosa CityBus
+18 - East Circulator,Santa Rosa CityBus,LOCAL,471,1_SRCityBus_471_MD_d1_s1403,1_SRCityBus_471_MD_d1_s1403,1_471_MD_d1_s1403,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,18,18 Southeast Circulator,Santa Rosa CityBus
+18 - East Circulator,Santa Rosa CityBus,LOCAL,471,1_SRCityBus_471_PM_d1_s1403,1_SRCityBus_471_PM_d1_s1403,1_471_PM_d1_s1403,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,18,18 Southeast Circulator,Santa Rosa CityBus
+19 - North Circulator/Guerneville Road,Santa Rosa CityBus,LOCAL,472,1_SRCityBus_472_AM_d1_s1404,1_SRCityBus_472_AM_d1_s1404,1_472_AM_d1_s1404,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,19,19 South City Connector,Santa Rosa CityBus
+19 - North Circulator/Guerneville Road,Santa Rosa CityBus,LOCAL,472,1_SRCityBus_472_EV_d1_s1404,1_SRCityBus_472_EV_d1_s1404,1_472_EV_d1_s1404,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,19,19 South City Connector,Santa Rosa CityBus
+19 - North Circulator/Guerneville Road,Santa Rosa CityBus,LOCAL,472,1_SRCityBus_472_MD_d1_s1404,1_SRCityBus_472_MD_d1_s1404,1_472_MD_d1_s1404,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,19,19 South City Connector,Santa Rosa CityBus
+19 - North Circulator/Guerneville Road,Santa Rosa CityBus,LOCAL,472,1_SRCityBus_472_PM_d1_s1404,1_SRCityBus_472_PM_d1_s1404,1_472_PM_d1_s1404,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,19,19 South City Connector,Santa Rosa CityBus
+6 - Fulton Road,Santa Rosa CityBus,LOCAL,478,1_SRCityBus_478_AM_d1_s1410,1_SRCityBus_478_AM_d1_s1410,1_478_AM_d1_s1410,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,6,6 West Third St,Santa Rosa CityBus
+6 - Fulton Road,Santa Rosa CityBus,LOCAL,478,1_SRCityBus_478_EV_d1_s1410,1_SRCityBus_478_EV_d1_s1410,1_478_EV_d1_s1410,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,6,6 West Third St,Santa Rosa CityBus
+6 - Fulton Road,Santa Rosa CityBus,LOCAL,478,1_SRCityBus_478_MD_d1_s1410,1_SRCityBus_478_MD_d1_s1410,1_478_MD_d1_s1410,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,6,6 West Third St,Santa Rosa CityBus
+6 - Fulton Road,Santa Rosa CityBus,LOCAL,478,1_SRCityBus_478_PM_d1_s1410,1_SRCityBus_478_PM_d1_s1410,1_478_PM_d1_s1410,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,6,6 West Third St,Santa Rosa CityBus
+7 - Montgomery Village/Coddington Mall,Santa Rosa CityBus,LOCAL,479,1_SRCityBus_479_AM_d1_s1411,1_SRCityBus_479_AM_d1_s1411,1_479_AM_d1_s1411,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,7,7 Montgomery Village / Rincon Valley,Santa Rosa CityBus
+7 - Montgomery Village/Coddington Mall,Santa Rosa CityBus,LOCAL,479,1_SRCityBus_479_MD_d1_s1411,1_SRCityBus_479_MD_d1_s1411,1_479_MD_d1_s1411,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,7,7 Montgomery Village / Rincon Valley,Santa Rosa CityBus
+7 - Montgomery Village/Coddington Mall,Santa Rosa CityBus,LOCAL,479,1_SRCityBus_479_PM_d1_s1411,1_SRCityBus_479_PM_d1_s1411,1_479_PM_d1_s1411,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,7,7 Montgomery Village / Rincon Valley,Santa Rosa CityBus
+8 - Bennett Valley,Santa Rosa CityBus,LOCAL,480,1_SRCityBus_480_AM_d1_s1412,1_SRCityBus_480_AM_d1_s1412,1_480_AM_d1_s1412,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,8,8 Sonoma Ave,Santa Rosa CityBus
+8 - Bennett Valley,Santa Rosa CityBus,LOCAL,480,1_SRCityBus_480_EV_d1_s1412,1_SRCityBus_480_EV_d1_s1412,1_480_EV_d1_s1412,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,8,8 Sonoma Ave,Santa Rosa CityBus
+8 - Bennett Valley,Santa Rosa CityBus,LOCAL,480,1_SRCityBus_480_MD_d1_s1412,1_SRCityBus_480_MD_d1_s1412,1_480_MD_d1_s1412,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,8,8 Sonoma Ave,Santa Rosa CityBus
+8 - Bennett Valley,Santa Rosa CityBus,LOCAL,480,1_SRCityBus_480_PM_d1_s1412,1_SRCityBus_480_PM_d1_s1412,1_480_PM_d1_s1412,Santa Rosa CityBus,0,SantaRosa_google_transit_08_28_15,8,8 Sonoma Ave,Santa Rosa CityBus
+17N,Marin Transit,LOCAL,224,35__224_AM_d0_s555,35__224_AM_d0_s555,35_224_AM_d0_s555,Golden Gate Transit,0,GGTransit_2015_9_3,17,San Rafael - Sausalito,Golden Gate Transit
+17N,Marin Transit,LOCAL,224,35__224_AM_d1_s553,35__224_AM_d1_s553,35_224_AM_d1_s553,Golden Gate Transit,0,GGTransit_2015_9_3,17,San Rafael - Sausalito,Golden Gate Transit
+17N,Marin Transit,LOCAL,224,35__224_EA_d1_s553,35__224_EA_d1_s553,35_224_EA_d1_s553,Golden Gate Transit,0,GGTransit_2015_9_3,17,San Rafael - Sausalito,Golden Gate Transit
+17N,Marin Transit,LOCAL,224,35__224_EV_d0_s554,35__224_EV_d0_s554,35_224_EV_d0_s554,Golden Gate Transit,0,GGTransit_2015_9_3,17,San Rafael - Sausalito,Golden Gate Transit
+17N,Marin Transit,LOCAL,224,35__224_EV_d1_s553,35__224_EV_d1_s553,35_224_EV_d1_s553,Golden Gate Transit,0,GGTransit_2015_9_3,17,San Rafael - Sausalito,Golden Gate Transit
+17N,Marin Transit,LOCAL,224,35__224_MD_d0_s555,35__224_MD_d0_s555,35_224_MD_d0_s555,Golden Gate Transit,0,GGTransit_2015_9_3,17,San Rafael - Sausalito,Golden Gate Transit
+17N,Marin Transit,LOCAL,224,35__224_MD_d1_s553,35__224_MD_d1_s553,35_224_MD_d1_s553,Golden Gate Transit,0,GGTransit_2015_9_3,17,San Rafael - Sausalito,Golden Gate Transit
+17N,Marin Transit,LOCAL,224,35__224_PM_d0_s555,35__224_PM_d0_s555,35_224_PM_d0_s555,Golden Gate Transit,0,GGTransit_2015_9_3,17,San Rafael - Sausalito,Golden Gate Transit
+17N,Marin Transit,LOCAL,224,35__224_PM_d1_s553,35__224_PM_d1_s553,35_224_PM_d1_s553,Golden Gate Transit,0,GGTransit_2015_9_3,17,San Rafael - Sausalito,Golden Gate Transit
+22S,Marin Transit,LOCAL,227,35__227_AM_d0_s563,35__227_AM_d0_s563,35_227_AM_d0_s563,Golden Gate Transit,0,GGTransit_2015_9_3,22,San Rafael - Marin City,Golden Gate Transit
+22S,Marin Transit,LOCAL,227,35__227_AM_d1_s561,35__227_AM_d1_s561,35_227_AM_d1_s561,Golden Gate Transit,0,GGTransit_2015_9_3,22,San Rafael - Marin City,Golden Gate Transit
+22S,Marin Transit,LOCAL,227,35__227_EA_d1_s560,35__227_EA_d1_s560,35_227_EA_d1_s560,Golden Gate Transit,0,GGTransit_2015_9_3,22,San Rafael - Marin City,Golden Gate Transit
+22S,Marin Transit,LOCAL,227,35__227_EV_d0_s562,35__227_EV_d0_s562,35_227_EV_d0_s562,Golden Gate Transit,0,GGTransit_2015_9_3,22,San Rafael - Marin City,Golden Gate Transit
+22S,Marin Transit,LOCAL,227,35__227_EV_d1_s561,35__227_EV_d1_s561,35_227_EV_d1_s561,Golden Gate Transit,0,GGTransit_2015_9_3,22,San Rafael - Marin City,Golden Gate Transit
+22S,Marin Transit,LOCAL,227,35__227_MD_d0_s563,35__227_MD_d0_s563,35_227_MD_d0_s563,Golden Gate Transit,0,GGTransit_2015_9_3,22,San Rafael - Marin City,Golden Gate Transit
+22S,Marin Transit,LOCAL,227,35__227_MD_d1_s561,35__227_MD_d1_s561,35_227_MD_d1_s561,Golden Gate Transit,0,GGTransit_2015_9_3,22,San Rafael - Marin City,Golden Gate Transit
+22S,Marin Transit,LOCAL,227,35__227_PM_d0_s563,35__227_PM_d0_s563,35_227_PM_d0_s563,Golden Gate Transit,0,GGTransit_2015_9_3,22,San Rafael - Marin City,Golden Gate Transit
+22S,Marin Transit,LOCAL,227,35__227_PM_d1_s561,35__227_PM_d1_s561,35_227_PM_d1_s561,Golden Gate Transit,0,GGTransit_2015_9_3,22,San Rafael - Marin City,Golden Gate Transit
+23E,Marin Transit,LOCAL,228,35__228_AM_d0_s564,35__228_AM_d0_s564,35_228_AM_d0_s564,Golden Gate Transit,0,GGTransit_2015_9_3,23,San Rafael/Canal - Fairfax/Manor,Golden Gate Transit
+23E,Marin Transit,LOCAL,228,35__228_AM_d1_s565,35__228_AM_d1_s565,35_228_AM_d1_s565,Golden Gate Transit,0,GGTransit_2015_9_3,23,San Rafael/Canal - Fairfax/Manor,Golden Gate Transit
+23E,Marin Transit,LOCAL,228,35__228_EA_d1_s565,35__228_EA_d1_s565,35_228_EA_d1_s565,Golden Gate Transit,0,GGTransit_2015_9_3,23,San Rafael/Canal - Fairfax/Manor,Golden Gate Transit
+23E,Marin Transit,LOCAL,228,35__228_EV_d0_s564,35__228_EV_d0_s564,35_228_EV_d0_s564,Golden Gate Transit,0,GGTransit_2015_9_3,23,San Rafael/Canal - Fairfax/Manor,Golden Gate Transit
+23E,Marin Transit,LOCAL,228,35__228_EV_d1_s565,35__228_EV_d1_s565,35_228_EV_d1_s565,Golden Gate Transit,0,GGTransit_2015_9_3,23,San Rafael/Canal - Fairfax/Manor,Golden Gate Transit
+23E,Marin Transit,LOCAL,228,35__228_MD_d0_s564,35__228_MD_d0_s564,35_228_MD_d0_s564,Golden Gate Transit,0,GGTransit_2015_9_3,23,San Rafael/Canal - Fairfax/Manor,Golden Gate Transit
+23E,Marin Transit,LOCAL,228,35__228_MD_d1_s565,35__228_MD_d1_s565,35_228_MD_d1_s565,Golden Gate Transit,0,GGTransit_2015_9_3,23,San Rafael/Canal - Fairfax/Manor,Golden Gate Transit
+23E,Marin Transit,LOCAL,228,35__228_PM_d0_s564,35__228_PM_d0_s564,35_228_PM_d0_s564,Golden Gate Transit,0,GGTransit_2015_9_3,23,San Rafael/Canal - Fairfax/Manor,Golden Gate Transit
+23E,Marin Transit,LOCAL,228,35__228_PM_d1_s565,35__228_PM_d1_s565,35_228_PM_d1_s565,Golden Gate Transit,0,GGTransit_2015_9_3,23,San Rafael/Canal - Fairfax/Manor,Golden Gate Transit
+29W,Marin Transit,LOCAL,232,35__232_AM_d0_s584,35__232_AM_d0_s584,35_232_AM_d0_s584,Golden Gate Transit,0,GGTransit_2015_9_3,29,San Rafael - Fairfax/Manor,Golden Gate Transit
+29W,Marin Transit,LOCAL,232,35__232_AM_d1_s586,35__232_AM_d1_s586,35_232_AM_d1_s586,Golden Gate Transit,0,GGTransit_2015_9_3,29,San Rafael - Fairfax/Manor,Golden Gate Transit
+29W,Marin Transit,LOCAL,232,35__232_EV_d0_s584,35__232_EV_d0_s584,35_232_EV_d0_s584,Golden Gate Transit,0,GGTransit_2015_9_3,29,San Rafael - Fairfax/Manor,Golden Gate Transit
+29W,Marin Transit,LOCAL,232,35__232_EV_d1_s586,35__232_EV_d1_s586,35_232_EV_d1_s586,Golden Gate Transit,0,GGTransit_2015_9_3,29,San Rafael - Fairfax/Manor,Golden Gate Transit
+29W,Marin Transit,LOCAL,232,35__232_MD_d0_s584,35__232_MD_d0_s584,35_232_MD_d0_s584,Golden Gate Transit,0,GGTransit_2015_9_3,29,San Rafael - Fairfax/Manor,Golden Gate Transit
+29W,Marin Transit,LOCAL,232,35__232_MD_d1_s586,35__232_MD_d1_s586,35_232_MD_d1_s586,Golden Gate Transit,0,GGTransit_2015_9_3,29,San Rafael - Fairfax/Manor,Golden Gate Transit
+29W,Marin Transit,LOCAL,232,35__232_PM_d0_s584,35__232_PM_d0_s584,35_232_PM_d0_s584,Golden Gate Transit,0,GGTransit_2015_9_3,29,San Rafael - Fairfax/Manor,Golden Gate Transit
+29W,Marin Transit,LOCAL,232,35__232_PM_d1_s586,35__232_PM_d1_s586,35_232_PM_d1_s586,Golden Gate Transit,0,GGTransit_2015_9_3,29,San Rafael - Fairfax/Manor,Golden Gate Transit
+35S,Marin Transit,LOCAL,234,35__234_AM_d0_s592,35__234_AM_d0_s592,35_234_AM_d0_s592,Golden Gate Transit,0,GGTransit_2015_9_3,35,Canal - San Rafael Transit Center,Golden Gate Transit
+35S,Marin Transit,LOCAL,234,35__234_AM_d1_s593,35__234_AM_d1_s593,35_234_AM_d1_s593,Golden Gate Transit,0,GGTransit_2015_9_3,35,Canal - San Rafael Transit Center,Golden Gate Transit
+35S,Marin Transit,LOCAL,234,35__234_EA_d0_s592,35__234_EA_d0_s592,35_234_EA_d0_s592,Golden Gate Transit,0,GGTransit_2015_9_3,35,Canal - San Rafael Transit Center,Golden Gate Transit
+35S,Marin Transit,LOCAL,234,35__234_EA_d1_s593,35__234_EA_d1_s593,35_234_EA_d1_s593,Golden Gate Transit,0,GGTransit_2015_9_3,35,Canal - San Rafael Transit Center,Golden Gate Transit
+35S,Marin Transit,LOCAL,234,35__234_EV_d0_s592,35__234_EV_d0_s592,35_234_EV_d0_s592,Golden Gate Transit,0,GGTransit_2015_9_3,35,Canal - San Rafael Transit Center,Golden Gate Transit
+35S,Marin Transit,LOCAL,234,35__234_EV_d1_s593,35__234_EV_d1_s593,35_234_EV_d1_s593,Golden Gate Transit,0,GGTransit_2015_9_3,35,Canal - San Rafael Transit Center,Golden Gate Transit
+35S,Marin Transit,LOCAL,234,35__234_MD_d0_s592,35__234_MD_d0_s592,35_234_MD_d0_s592,Golden Gate Transit,0,GGTransit_2015_9_3,35,Canal - San Rafael Transit Center,Golden Gate Transit
+35S,Marin Transit,LOCAL,234,35__234_MD_d1_s593,35__234_MD_d1_s593,35_234_MD_d1_s593,Golden Gate Transit,0,GGTransit_2015_9_3,35,Canal - San Rafael Transit Center,Golden Gate Transit
+35S,Marin Transit,LOCAL,234,35__234_PM_d0_s592,35__234_PM_d0_s592,35_234_PM_d0_s592,Golden Gate Transit,0,GGTransit_2015_9_3,35,Canal - San Rafael Transit Center,Golden Gate Transit
+35S,Marin Transit,LOCAL,234,35__234_PM_d1_s593,35__234_PM_d1_s593,35_234_PM_d1_s593,Golden Gate Transit,0,GGTransit_2015_9_3,35,Canal - San Rafael Transit Center,Golden Gate Transit
+36N,Marin Transit,LOCAL,235,35__235_AM_d0_s595,35__235_AM_d0_s595,35_235_AM_d0_s595,Golden Gate Transit,0,GGTransit_2015_9_3,36,Canal - Marin City,Golden Gate Transit
+36N,Marin Transit,LOCAL,235,35__235_AM_d1_s596,35__235_AM_d1_s596,35_235_AM_d1_s596,Golden Gate Transit,0,GGTransit_2015_9_3,36,Canal - Marin City,Golden Gate Transit
+36N,Marin Transit,LOCAL,235,35__235_MD_d1_s597,35__235_MD_d1_s597,35_235_MD_d1_s597,Golden Gate Transit,0,GGTransit_2015_9_3,36,Canal - Marin City,Golden Gate Transit
+36N,Marin Transit,LOCAL,235,35__235_PM_d0_s595,35__235_PM_d0_s595,35_235_PM_d0_s595,Golden Gate Transit,0,GGTransit_2015_9_3,36,Canal - Marin City,Golden Gate Transit
+36N,Marin Transit,LOCAL,235,35__235_PM_d1_s596,35__235_PM_d1_s596,35_235_PM_d1_s596,Golden Gate Transit,0,GGTransit_2015_9_3,36,Canal - Marin City,Golden Gate Transit
+49N,Marin Transit,LOCAL,243,35__243_AM_d0_s623,35__243_AM_d0_s623,35_243_AM_d0_s623,Golden Gate Transit,0,GGTransit_2015_9_3,49,Novato - San Rafael,Golden Gate Transit
+49N,Marin Transit,LOCAL,243,35__243_AM_d1_s624,35__243_AM_d1_s624,35_243_AM_d1_s624,Golden Gate Transit,0,GGTransit_2015_9_3,49,Novato - San Rafael,Golden Gate Transit
+49N,Marin Transit,LOCAL,243,35__243_EV_d0_s623,35__243_EV_d0_s623,35_243_EV_d0_s623,Golden Gate Transit,0,GGTransit_2015_9_3,49,Novato - San Rafael,Golden Gate Transit
+49N,Marin Transit,LOCAL,243,35__243_EV_d1_s624,35__243_EV_d1_s624,35_243_EV_d1_s624,Golden Gate Transit,0,GGTransit_2015_9_3,49,Novato - San Rafael,Golden Gate Transit
+49N,Marin Transit,LOCAL,243,35__243_MD_d0_s623,35__243_MD_d0_s623,35_243_MD_d0_s623,Golden Gate Transit,0,GGTransit_2015_9_3,49,Novato - San Rafael,Golden Gate Transit
+49N,Marin Transit,LOCAL,243,35__243_MD_d1_s624,35__243_MD_d1_s624,35_243_MD_d1_s624,Golden Gate Transit,0,GGTransit_2015_9_3,49,Novato - San Rafael,Golden Gate Transit
+49N,Marin Transit,LOCAL,243,35__243_PM_d0_s623,35__243_PM_d0_s623,35_243_PM_d0_s623,Golden Gate Transit,0,GGTransit_2015_9_3,49,Novato - San Rafael,Golden Gate Transit
+49N,Marin Transit,LOCAL,243,35__243_PM_d1_s624,35__243_PM_d1_s624,35_243_PM_d1_s624,Golden Gate Transit,0,GGTransit_2015_9_3,49,Novato - San Rafael,Golden Gate Transit
+71XN,Marin Transit,LOCAL,248,35__248_AM_d0_s647,35__248_AM_d0_s647,35_248_AM_d0_s647,Golden Gate Transit,0,GGTransit_2015_9_3,71,Novato - Marin City,Golden Gate Transit
+71XN,Marin Transit,LOCAL,248,35__248_AM_d1_s648,35__248_AM_d1_s648,35_248_AM_d1_s648,Golden Gate Transit,0,GGTransit_2015_9_3,71,Novato - Marin City,Golden Gate Transit
+71XN,Marin Transit,LOCAL,248,35__248_EV_d0_s647,35__248_EV_d0_s647,35_248_EV_d0_s647,Golden Gate Transit,0,GGTransit_2015_9_3,71,Novato - Marin City,Golden Gate Transit
+71XN,Marin Transit,LOCAL,248,35__248_MD_d0_s647,35__248_MD_d0_s647,35_248_MD_d0_s647,Golden Gate Transit,0,GGTransit_2015_9_3,71,Novato - Marin City,Golden Gate Transit
+71XN,Marin Transit,LOCAL,248,35__248_MD_d1_s648,35__248_MD_d1_s648,35_248_MD_d1_s648,Golden Gate Transit,0,GGTransit_2015_9_3,71,Novato - Marin City,Golden Gate Transit
+71XN,Marin Transit,LOCAL,248,35__248_PM_d0_s647,35__248_PM_d0_s647,35_248_PM_d0_s647,Golden Gate Transit,0,GGTransit_2015_9_3,71,Novato - Marin City,Golden Gate Transit
+71XN,Marin Transit,LOCAL,248,35__248_PM_d1_s648,35__248_PM_d1_s648,35_248_PM_d1_s648,Golden Gate Transit,0,GGTransit_2015_9_3,71,Novato - Marin City,Golden Gate Transit
+2/8,Union City Transit,LOCAL,539,36_UCT_539_AM_d0_s1610,36_UCT_539_AM_d0_s1610,36_539_AM_d0_s1610,Union City Transit,0,Union_City_Transit_Aug-01-2015 to Jun-30-2017,2,Whipple,Union City Transit
+2/8,Union City Transit,LOCAL,539,36_UCT_539_EA_d0_s1610,36_UCT_539_EA_d0_s1610,36_539_EA_d0_s1610,Union City Transit,0,Union_City_Transit_Aug-01-2015 to Jun-30-2017,2,Whipple,Union City Transit
+2/8,Union City Transit,LOCAL,539,36_UCT_539_EV_d0_s1610,36_UCT_539_EV_d0_s1610,36_539_EV_d0_s1610,Union City Transit,0,Union_City_Transit_Aug-01-2015 to Jun-30-2017,2,Whipple,Union City Transit
+2/8,Union City Transit,LOCAL,539,36_UCT_539_MD_d0_s1610,36_UCT_539_MD_d0_s1610,36_539_MD_d0_s1610,Union City Transit,0,Union_City_Transit_Aug-01-2015 to Jun-30-2017,2,Whipple,Union City Transit
+2/8,Union City Transit,LOCAL,539,36_UCT_539_PM_d0_s1610,36_UCT_539_PM_d0_s1610,36_539_PM_d0_s1610,Union City Transit,0,Union_City_Transit_Aug-01-2015 to Jun-30-2017,2,Whipple,Union City Transit
+3/4,Union City Transit,LOCAL,541,36_UCT_541_AM_d0_s1611,36_UCT_541_AM_d0_s1611,36_541_AM_d0_s1611,Union City Transit,0,Union_City_Transit_Aug-01-2015 to Jun-30-2017,3,Almaden,Union City Transit
+3/4,Union City Transit,LOCAL,541,36_UCT_541_EV_d0_s1611,36_UCT_541_EV_d0_s1611,36_541_EV_d0_s1611,Union City Transit,0,Union_City_Transit_Aug-01-2015 to Jun-30-2017,3,Almaden,Union City Transit
+3/4,Union City Transit,LOCAL,541,36_UCT_541_MD_d0_s1611,36_UCT_541_MD_d0_s1611,36_541_MD_d0_s1611,Union City Transit,0,Union_City_Transit_Aug-01-2015 to Jun-30-2017,3,Almaden,Union City Transit
+3/4,Union City Transit,LOCAL,541,36_UCT_541_PM_d0_s1611,36_UCT_541_PM_d0_s1611,36_541_PM_d0_s1611,Union City Transit,0,Union_City_Transit_Aug-01-2015 to Jun-30-2017,3,Almaden,Union City Transit

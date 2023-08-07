@@ -51,7 +51,6 @@ class Simulated:
     standard_nodes_gdf: gpd.GeoDataFrame
     standard_to_emme_transit_nodes_df: pd.DataFrame
 
-    # TODO: make this for all bridges
     simulated_bridge_details_df = pd.DataFrame(
         [
             ["Bay Bridge", "WB", 3082623, True],
