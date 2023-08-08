@@ -759,7 +759,7 @@ class Observed:
         out_file = self.observed_dict["roadway"]["reduced_transactions_file"]
 
         if os.path.isfile(out_file) and read_file_from_disk:
-            return_df = pd.read_csv(
+            return_df = pd.read_pickle(
                 os.path.join(file_root, out_file),
             )
         else:
@@ -792,6 +792,8 @@ class Observed:
                 .rename(columns={"Plaza Name": "plaza_name"})
             )
             return_df = pd.concat([time_period_df, daily_df]).reset_index(drop=True)
+
+            return_df.to_pickle(os.path.join(file_root, out_file))
 
         self.observed_bridge_transactions_df = return_df
 
@@ -826,9 +828,8 @@ class Observed:
         out_file = self.observed_dict["roadway"]["reduced_pems_summaries_file"]
 
         if os.path.isfile(out_file) and read_file_from_disk:
-            return_df = pd.read_csv(
+            return_df = pd.read_pickle(
                 os.path.join(file_root, out_file),
-                dtype=self.reduced_traffic_counts_df.dtypes.to_dict(),
             )
         else:
             in_df = pd.read_csv(os.path.join(file_root, in_file))
@@ -907,7 +908,7 @@ class Observed:
 
             return_df["source"] = "PeMS"
 
-            return_df.to_csv(os.path.join(file_root, out_file))
+            return_df.to_pickle(os.path.join(file_root, out_file))
 
         return return_df
 
@@ -952,6 +953,9 @@ class Observed:
 
         out_df = pd.concat([out_cars_df, out_trucks_df]).reset_index(drop=True)
         out_df = out_df[out_df["observed_flow"].notna()]
+
+        # convert to one-way flow
+        out_df["observed_flow"] = out_df["observed_flow"]/2.0
 
         return_df = self._join_tm2_node_ids(out_df)
         return_df["time_period"] = self.c.ALL_DAY_WORD
