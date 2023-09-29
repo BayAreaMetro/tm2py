@@ -1,0 +1,132 @@
+---
+title: "Quick Roadway Summaries for 2.2.0"
+output: html_notebook
+---
+
+# Overhead
+```{r overhead, include = FALSE}
+packages_vector <- c("tidyverse",
+                     "sf")
+
+need_to_install <- packages_vector[!(packages_vector %in% installed.packages()[,"Package"])]
+
+if (length(need_to_install)) install.packages(need_to_install)
+
+for (package in packages_vector) {
+  library(package, character.only = TRUE)
+}
+
+```
+
+# Remote I/O
+```{r remote-io}
+interim_dir <- "../data/interim/"
+crosswalk_dir <- "../examples/temp_acceptance/"
+pems_dir <- "/Users/wsp/Box Sync/"
+
+am_shape_filename <- paste0(interim_dir, "emme_links.shp")
+crosswalk_filename <- paste0(crosswalk_dir, "pems_station_to_TM2_links_crosswalk.csv")
+pems_filename <- paste0(pems_dir, "PeMS/pems_period.csv")
+
+```
+
+# Parameters
+```{r parameters}
+
+```
+
+
+# Data Reads
+```{r read}
+am_assign_sf <- read_sf(am_shape_filename)
+crosswalk_df <- read_csv(crosswalk_filename, col_types = cols(
+  station = col_double(),
+  district = col_double(),
+  route = col_double(),
+  direction = col_character(),
+  type = col_character(),
+  latitude = col_double(),
+  longitude = col_double(),
+  distlink = col_double(),
+  pemsonlink = col_double(),
+  shstReferenceId = col_character(),
+  A = col_double(),
+  B = col_double(),
+  model_link_id = col_double(),
+  A_B = col_character()))
+pems_df <- read_csv(pems_filename, col_types = cols(
+  station = col_double(),
+  district = col_double(),
+  route = col_double(),
+  direction = col_character(),
+  type = col_character(),
+  time_period = col_character(),
+  lanes = col_double(),
+  median_flow = col_double(),
+  avg_flow = col_double(),
+  sd_flow = col_double(),
+  median_speed = col_double(),
+  avg_speed = col_double(),
+  sd_speed = col_double(),
+  median_occup = col_double(),
+  avg_occup = col_double(),
+  sd_occupancy = col_double(),
+  days_observed = col_double(),
+  state_pm = col_character(),
+  abs_pm = col_double(),
+  latitude = col_double(),
+  longitude = col_double(),
+  year = col_double()
+))
+```
+
+# Reductions 
+```{r reductions}
+working_df <- am_assign_sf %>%
+  st_drop_geometry(.) %>%
+  select(., simulated_flow = VOLAU, facility_type = `@ft`, model_link_id = `#link_id`) %>%
+  left_join(., select(crosswalk_df, model_link_id, station), by = c("model_link_id")) %>%
+  filter(!is.na(station))
+
+join_df <- pems_df %>%
+  filter(year %in% c(2013, 2014, 2015, 2016, 2017)) %>%
+  filter(time_period == "AM") %>%
+  group_by(station) %>%
+  summarise(observed_flow = mean(avg_flow), .groups = "drop") %>%
+  filter(!is.na(observed_flow))
+
+error_df <- left_join(working_df, join_df, by = c("station")) %>%
+  mutate(error = observed_flow - simulated_flow) %>%
+  mutate(abs_error = abs(error)) %>%
+  filter(!is.na(observed_flow))
+
+output_df <- error_df %>%
+  group_by(model_link_id, facility_type) %>%
+  summarise(abs_error = min(abs_error), .groups = "drop") %>%
+  left_join(., select(error_df, model_link_id, facility_type, simulated_flow, observed_flow, error), by = c("model_link_id", "facility_type"))
+
+summary_df <- output_df %>%
+  group_by(facility_type) %>%
+  summarise(observations = n(),
+            total_observed = sum(observed_flow),
+            total_simulated = sum(simulated_flow),
+            total_error = sum(error),
+            percent_error = sum(error)/sum(observed_flow),
+            average_observed = mean(observed_flow),
+            average_simulated = mean(simulated_flow),
+            average_error = mean(error),
+            average_abs_error = mean(abs_error),
+            .groups = "drop")
+
+summary_df
+
+
+  
+
+```
+
+# Write
+```{r write}
+write_csv(output_df, path = output_file_name, na = "")
+```
+
