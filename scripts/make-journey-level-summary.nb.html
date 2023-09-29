@@ -11,7 +11,7 @@
 
 
 
-<title>Look at All Network</title>
+<title>Summarize Journey Level Assumptions</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -1746,7 +1746,7 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">Look at All Network</h1>
+<h1 class="title toc-ignore">Summarize Journey Level Assumptions</h1>
 
 </div>
 
@@ -1800,21 +1800,22 @@ journey_df &lt;- read_csv(paste0(journey_filename), col_types = cols(.default = 
 <h1>Reductions</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuam9pbl9kZiA8LSBqb3VybmV5X2RmICU+JVxuICBzZXBhcmF0ZSguLCBMaW5lLCBpbnRvID0gYyhcImFnZW5jeV9pZFwiLCBcImFnZW5jeV9uYW1lXCIsIFwicm91dGVfaWRcIiwgXCJ0aW1lX3BlcmlvZFwiLCBcImRpcmVjdGlvblwiLCBcInNoYXBlX2lkXCIpLCBleHRyYSA9IFwiZHJvcFwiLCBmaWxsID0gXCJ3YXJuXCIpICU+JVxuICBzZWxlY3QoLiwgcm91dGVfaWQsIGVtbWVfdGVtcF9tb2RlID0gTW9kZSkgJT4lXG4gIG11dGF0ZShyb3V0ZV9pZCA9IGFzLmludGVnZXIocm91dGVfaWQpKSAlPiVcbiAgbGVmdF9qb2luKC4sIHNlbGVjdChyb3V0ZXNfZGYsIHJvdXRlX2lkLCBhZ2VuY3lfcmF3X25hbWUsIHJvdXRlX3R5cGUpLCBieSA9IGMoXCJyb3V0ZV9pZFwiKSkgJT4lXG4gIG11dGF0ZShyb3V0ZV90eXBlID0gcGFzdGUwKHJvdXRlX3R5cGUpKSAlPiVcbiAgbGVmdF9qb2luKC4sIHNlbGVjdChjcm9zc3dhbGtfZGYsIGFnZW5jeV9yYXdfbmFtZSwgYWdlbmN5X25hbWUsIHJvdXRlX3R5cGUsIHRlY2hub2xvZ3kgPSBUTTJfbGluZV9oYXVsX25hbWUsIGZhcmVfc3lzdGVtID0gVE0yX2ZhcmVzeXN0ZW0pLCBieSA9IGMoXCJhZ2VuY3lfcmF3X25hbWVcIiwgXCJyb3V0ZV90eXBlXCIpKSAlPiVcbiAgZGlzdGluY3QoZW1tZV90ZW1wX21vZGUsIGFnZW5jeV9yYXdfbmFtZSwgYWdlbmN5X25hbWUsIHRlY2hub2xvZ3ksIGZhcmVfc3lzdGVtKVxuYGBgIn0= -->
-<pre class="r"><code>join_df &lt;- journey_df %&gt;%
-  separate(., Line, into = c(&quot;agency_id&quot;, &quot;agency_name&quot;, &quot;route_id&quot;, &quot;time_period&quot;, &quot;direction&quot;, &quot;shape_id&quot;), extra = &quot;drop&quot;, fill = &quot;warn&quot;) %&gt;%
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxub3V0cHV0X2RmIDwtIGpvdXJuZXlfZGYgJT4lXG4gIGZpbHRlcighc3RyX3N0YXJ0cyhMaW5lLCBcInBucl9cIikpICU+JVxuICBzZXBhcmF0ZSguLCBMaW5lLCBpbnRvID0gYyhcImFnZW5jeV9pZFwiLCBcImFnZW5jeV9uYW1lXCIsIFwicm91dGVfaWRcIiwgXCJ0aW1lX3BlcmlvZFwiLCBcImRpcmVjdGlvblwiLCBcInNoYXBlX2lkXCIpLCBzZXAgPSBcIl9cIiwgZXh0cmEgPSBcImRyb3BcIiwgZmlsbCA9IFwibGVmdFwiLCByZW1vdmUgPSBGQUxTRSkgJT4lXG4gIHNlbGVjdCguLCByb3V0ZV9pZCwgZW1tZV90ZW1wX21vZGUgPSBNb2RlKSAlPiVcbiAgbXV0YXRlKHJvdXRlX2lkID0gYXMuaW50ZWdlcihyb3V0ZV9pZCkpICU+JVxuICBkaXN0aW5jdCguKSAlPiVcbiAgbGVmdF9qb2luKC4sIHNlbGVjdChyb3V0ZXNfZGYsIHJvdXRlX2lkLCBhZ2VuY3lfcmF3X25hbWUsIHJvdXRlX3R5cGUpLCBieSA9IGMoXCJyb3V0ZV9pZFwiKSkgJT4lXG4gIG11dGF0ZShyb3V0ZV90eXBlID0gcGFzdGUwKHJvdXRlX3R5cGUpKSAlPiVcbiAgc2VsZWN0KC1yb3V0ZV9pZCkgJT4lXG4gIGRpc3RpbmN0KC4pICU+JVxuICBsZWZ0X2pvaW4oLiwgZGlzdGluY3QoY3Jvc3N3YWxrX2RmLCBhZ2VuY3lfcmF3X25hbWUsIGFnZW5jeV9uYW1lLCByb3V0ZV90eXBlLCB0ZWNobm9sb2d5ID0gVE0yX2xpbmVfaGF1bF9uYW1lLCBmYXJlX3N5c3RlbSA9IFRNMl9mYXJlc3lzdGVtKSwgYnkgPSBjKFwiYWdlbmN5X3Jhd19uYW1lXCIsIFwicm91dGVfdHlwZVwiKSkgJT4lXG4gIHNlbGVjdChlbW1lX3RlbXBfbW9kZSwgYWdlbmN5X25hbWUsIHRlY2hub2xvZ3ksIGZhcmVfc3lzdGVtKVxuYGBgIn0= -->
+<pre class="r"><code>output_df &lt;- journey_df %&gt;%
+  filter(!str_starts(Line, &quot;pnr_&quot;)) %&gt;%
+  separate(., Line, into = c(&quot;agency_id&quot;, &quot;agency_name&quot;, &quot;route_id&quot;, &quot;time_period&quot;, &quot;direction&quot;, &quot;shape_id&quot;), sep = &quot;_&quot;, extra = &quot;drop&quot;, fill = &quot;left&quot;, remove = FALSE) %&gt;%
   select(., route_id, emme_temp_mode = Mode) %&gt;%
   mutate(route_id = as.integer(route_id)) %&gt;%
+  distinct(.) %&gt;%
   left_join(., select(routes_df, route_id, agency_raw_name, route_type), by = c(&quot;route_id&quot;)) %&gt;%
   mutate(route_type = paste0(route_type)) %&gt;%
-  left_join(., select(crosswalk_df, agency_raw_name, agency_name, route_type, technology = TM2_line_haul_name, fare_system = TM2_faresystem), by = c(&quot;agency_raw_name&quot;, &quot;route_type&quot;)) %&gt;%
-  distinct(emme_temp_mode, agency_raw_name, agency_name, technology, fare_system)</code></pre>
+  select(-route_id) %&gt;%
+  distinct(.) %&gt;%
+  left_join(., distinct(crosswalk_df, agency_raw_name, agency_name, route_type, technology = TM2_line_haul_name, fare_system = TM2_faresystem), by = c(&quot;agency_raw_name&quot;, &quot;route_type&quot;)) %&gt;%
+  select(emme_temp_mode, agency_name, technology, fare_system)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiV2FybmluZzogRXhwZWN0ZWQgNiBwaWVjZXMuIE1pc3NpbmcgcGllY2VzIGZpbGxlZCB3aXRoIGBOQWAgaW4gMjA3IHJvd3MgWzQxLCA0MiwgNDMsIDQ0LCA0NSwgNDYsIDQ3LCA0OCwgNDksIDUwLCA1MSwgNTIsIDUzLCA1NCwgNTUsIDU2LCA1NywgNTgsIDU5LCA2MCwgLi4uXS5XYXJuaW5nOiBUaGVyZSB3YXMgMSB3YXJuaW5nIGluIGBtdXRhdGUoKWAuXG7ihLkgSW4gYXJndW1lbnQ6IGByb3V0ZV9pZCA9IGFzLmludGVnZXIocm91dGVfaWQpYC5cbkNhdXNlZCBieSB3YXJuaW5nOlxuISBOQXMgaW50cm9kdWNlZCBieSBjb2VyY2lvbldhcm5pbmc6IERldGVjdGVkIGFuIHVuZXhwZWN0ZWQgbWFueS10by1tYW55IHJlbGF0aW9uc2hpcCBiZXR3ZWVuIGB4YCBhbmQgYHlgLlxuIn0= -->
-<pre><code>Warning: Expected 6 pieces. Missing pieces filled with `NA` in 207 rows [41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, ...].Warning: There was 1 warning in `mutate()`.
-ℹ In argument: `route_id = as.integer(route_id)`.
-Caused by warning:
-! NAs introduced by coercionWarning: Detected an unexpected many-to-many relationship between `x` and `y`.</code></pre>
+<!-- rnb-output-begin eyJkYXRhIjoiV2FybmluZzogRGV0ZWN0ZWQgYW4gdW5leHBlY3RlZCBtYW55LXRvLW1hbnkgcmVsYXRpb25zaGlwIGJldHdlZW4gYHhgIGFuZCBgeWAuXG4ifQ== -->
+<pre><code>Warning: Detected an unexpected many-to-many relationship between `x` and `y`.</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
@@ -1823,15 +1824,15 @@ Caused by warning:
 <h1>Write</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxud3JpdGVfY3N2KG91dHB1dF9kZiwgcGF0aCA9IG91dHB1dF9maWxlX25hbWUsIG5hID0gXCJcIilcbmBgYCJ9 -->
-<pre class="r"><code>write_csv(output_df, path = output_file_name, na = &quot;&quot;)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxud3JpdGVfY3N2KG91dHB1dF9kZiwgZmlsZSA9IG91dHB1dF9maWxlbmFtZSwgbmEgPSBcIlwiKVxuYGBgIn0= -->
+<pre class="r"><code>write_csv(output_df, file = output_filename, na = &quot;&quot;)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 </div>
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiTG9vayBhdCBBbGwgTmV0d29yayIKb3V0cHV0OiBodG1sX25vdGVib29rCi0tLQoKIyBPdmVyaGVhZApgYGB7ciBvdmVyaGVhZCwgaW5jbHVkZSA9IEZBTFNFfQpwYWNrYWdlc192ZWN0b3IgPC0gYygidGlkeXZlcnNlIiwKICAgICAgICAgICAgICAgICAgICAgInNmIikKCm5lZWRfdG9faW5zdGFsbCA8LSBwYWNrYWdlc192ZWN0b3JbIShwYWNrYWdlc192ZWN0b3IgJWluJSBpbnN0YWxsZWQucGFja2FnZXMoKVssIlBhY2thZ2UiXSldCgppZiAobGVuZ3RoKG5lZWRfdG9faW5zdGFsbCkpIGluc3RhbGwucGFja2FnZXMobmVlZF90b19pbnN0YWxsKQoKZm9yIChwYWNrYWdlIGluIHBhY2thZ2VzX3ZlY3RvcikgewogIGxpYnJhcnkocGFja2FnZSwgY2hhcmFjdGVyLm9ubHkgPSBUUlVFKQp9CgpgYGAKCiMgUmVtb3RlIEkvTwpgYGB7ciByZW1vdGUtaW99Cm5ldHdvcmtfZGlyIDwtICIuLi8uLi90cmF2ZWwtbW9kZWwtdHdvLW5ldHdvcmtzL2RhdGEvcHJvY2Vzc2VkLyIKaW50ZXJpbV9kaXIgPC0gIi4uL2RhdGEvaW50ZXJpbS8iCmNyb3Nzd2Fsa19kaXIgPC0gIi4uL2V4YW1wbGVzL3RlbXBfYWNjZXB0YW5jZS8iCgpqb3VybmV5X2ZpbGVuYW1lIDwtIHBhc3RlMChpbnRlcmltX2RpciwgInRyYW5zaXRfbGlua3Nfc3VtbWFyeS5jc3YiKQpjcm9zc3dhbGtfZmlsZW5hbWUgPC0gcGFzdGUwKGNyb3Nzd2Fsa19kaXIsICJndGZzX3RvX3RtMl9tb2RlX2Nyb3Nzd2Fsay5jc3YiKQoKb3V0cHV0X2ZpbGVuYW1lIDwtIHBhc3RlMChpbnRlcmltX2RpciwgImpvdXJuZXktbGV2ZWxzLWZvci10YWJsZWF1LmNzdiIpCmBgYAoKIyBQYXJhbWV0ZXJzCmBgYHtyIHBhcmFtZXRlcnN9ClZFUlNJT04gPC0gInZlcnNpb25fMTEiCmBgYAoKCiMgRGF0YSBSZWFkcwpgYGB7ciByZWFkfQpyb3V0ZXNfZGYgPC0gcmVhZF9jc3YocGFzdGUwKG5ldHdvcmtfZGlyLCBWRVJTSU9OLCAiLyIsICJyb3V0ZXMudHh0IiksIGNvbF90eXBlcyA9ICJjY2NjY2ljY2NjY2NjY2NpIikKY3Jvc3N3YWxrX2RmIDwtIHJlYWRfY3N2KHBhc3RlMChjcm9zc3dhbGtfZmlsZW5hbWUpLCBjb2xfdHlwZXMgPSBjb2xzKC5kZWZhdWx0ID0gY29sX2NoYXJhY3RlcigpKSkKam91cm5leV9kZiA8LSByZWFkX2NzdihwYXN0ZTAoam91cm5leV9maWxlbmFtZSksIGNvbF90eXBlcyA9IGNvbHMoLmRlZmF1bHQgPSBjb2xfY2hhcmFjdGVyKCkpKQpgYGAKCiMgUmVkdWN0aW9ucyAKYGBge3IgcmVkdWN0aW9uc30Kam9pbl9kZiA8LSBqb3VybmV5X2RmICU+JQogIHNlcGFyYXRlKC4sIExpbmUsIGludG8gPSBjKCJhZ2VuY3lfaWQiLCAiYWdlbmN5X25hbWUiLCAicm91dGVfaWQiLCAidGltZV9wZXJpb2QiLCAiZGlyZWN0aW9uIiwgInNoYXBlX2lkIiksIGV4dHJhID0gImRyb3AiLCBmaWxsID0gIndhcm4iKSAlPiUKICBzZWxlY3QoLiwgcm91dGVfaWQsIGVtbWVfdGVtcF9tb2RlID0gTW9kZSkgJT4lCiAgbXV0YXRlKHJvdXRlX2lkID0gYXMuaW50ZWdlcihyb3V0ZV9pZCkpICU+JQogIGxlZnRfam9pbiguLCBzZWxlY3Qocm91dGVzX2RmLCByb3V0ZV9pZCwgYWdlbmN5X3Jhd19uYW1lLCByb3V0ZV90eXBlKSwgYnkgPSBjKCJyb3V0ZV9pZCIpKSAlPiUKICBtdXRhdGUocm91dGVfdHlwZSA9IHBhc3RlMChyb3V0ZV90eXBlKSkgJT4lCiAgIyBzZXBhcmF0ZSBvdXQgdGhvc2Ugd2l0aCBtaXNzaW5nIGFnZW5jeV9yYXdfbmFtZSBoZXJlIHRvIGV4YW1pbmUgd2hpY2ggYXJlIG1pc3NpbmcKICBsZWZ0X2pvaW4oLiwgc2VsZWN0KGNyb3Nzd2Fsa19kZiwgYWdlbmN5X3Jhd19uYW1lLCBhZ2VuY3lfbmFtZSwgcm91dGVfdHlwZSwgdGVjaG5vbG9neSA9IFRNMl9saW5lX2hhdWxfbmFtZSwgZmFyZV9zeXN0ZW0gPSBUTTJfZmFyZXN5c3RlbSksIGJ5ID0gYygiYWdlbmN5X3Jhd19uYW1lIiwgInJvdXRlX3R5cGUiKSkgJT4lCiAgZGlzdGluY3QoZW1tZV90ZW1wX21vZGUsIGFnZW5jeV9yYXdfbmFtZSwgYWdlbmN5X25hbWUsIHRlY2hub2xvZ3ksIGZhcmVfc3lzdGVtKQoKYGBgCgojIFdyaXRlCmBgYHtyIHdyaXRlfQp3cml0ZV9jc3Yob3V0cHV0X2RmLCBwYXRoID0gb3V0cHV0X2ZpbGVfbmFtZSwgbmEgPSAiIikKYGBgCgo=</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiU3VtbWFyaXplIEpvdXJuZXkgTGV2ZWwgQXNzdW1wdGlvbnMiCm91dHB1dDogaHRtbF9ub3RlYm9vawotLS0KCiMgT3ZlcmhlYWQKYGBge3Igb3ZlcmhlYWQsIGluY2x1ZGUgPSBGQUxTRX0KcGFja2FnZXNfdmVjdG9yIDwtIGMoInRpZHl2ZXJzZSIpCgpuZWVkX3RvX2luc3RhbGwgPC0gcGFja2FnZXNfdmVjdG9yWyEocGFja2FnZXNfdmVjdG9yICVpbiUgaW5zdGFsbGVkLnBhY2thZ2VzKClbLCJQYWNrYWdlIl0pXQoKaWYgKGxlbmd0aChuZWVkX3RvX2luc3RhbGwpKSBpbnN0YWxsLnBhY2thZ2VzKG5lZWRfdG9faW5zdGFsbCkKCmZvciAocGFja2FnZSBpbiBwYWNrYWdlc192ZWN0b3IpIHsKICBsaWJyYXJ5KHBhY2thZ2UsIGNoYXJhY3Rlci5vbmx5ID0gVFJVRSkKfQoKYGBgCgojIFJlbW90ZSBJL08KYGBge3IgcmVtb3RlLWlvfQpuZXR3b3JrX2RpciA8LSAiLi4vLi4vdHJhdmVsLW1vZGVsLXR3by1uZXR3b3Jrcy9kYXRhL3Byb2Nlc3NlZC8iCmludGVyaW1fZGlyIDwtICIuLi9kYXRhL2ludGVyaW0vIgpjcm9zc3dhbGtfZGlyIDwtICIuLi9leGFtcGxlcy90ZW1wX2FjY2VwdGFuY2UvIgoKam91cm5leV9maWxlbmFtZSA8LSBwYXN0ZTAoaW50ZXJpbV9kaXIsICJ0cmFuc2l0X2xpbmtzX3N1bW1hcnkuY3N2IikKY3Jvc3N3YWxrX2ZpbGVuYW1lIDwtIHBhc3RlMChjcm9zc3dhbGtfZGlyLCAiZ3Rmc190b190bTJfbW9kZV9jcm9zc3dhbGsuY3N2IikKCm91dHB1dF9maWxlbmFtZSA8LSBwYXN0ZTAoaW50ZXJpbV9kaXIsICJqb3VybmV5LWxldmVscy1mb3ItdGFibGVhdS5jc3YiKQpgYGAKCiMgUGFyYW1ldGVycwpgYGB7ciBwYXJhbWV0ZXJzfQpWRVJTSU9OIDwtICJ2ZXJzaW9uXzExIgpgYGAKCgojIERhdGEgUmVhZHMKYGBge3IgcmVhZH0Kcm91dGVzX2RmIDwtIHJlYWRfY3N2KHBhc3RlMChuZXR3b3JrX2RpciwgVkVSU0lPTiwgIi8iLCAicm91dGVzLnR4dCIpLCBjb2xfdHlwZXMgPSAiY2NjY2NpY2NjY2NjY2NjaSIpCmNyb3Nzd2Fsa19kZiA8LSByZWFkX2NzdihwYXN0ZTAoY3Jvc3N3YWxrX2ZpbGVuYW1lKSwgY29sX3R5cGVzID0gY29scyguZGVmYXVsdCA9IGNvbF9jaGFyYWN0ZXIoKSkpCmpvdXJuZXlfZGYgPC0gcmVhZF9jc3YocGFzdGUwKGpvdXJuZXlfZmlsZW5hbWUpLCBjb2xfdHlwZXMgPSBjb2xzKC5kZWZhdWx0ID0gY29sX2NoYXJhY3RlcigpKSkKYGBgCgojIFJlZHVjdGlvbnMgCmBgYHtyIHJlZHVjdGlvbnN9Cm91dHB1dF9kZiA8LSBqb3VybmV5X2RmICU+JQogIGZpbHRlcighc3RyX3N0YXJ0cyhMaW5lLCAicG5yXyIpKSAlPiUKICBzZXBhcmF0ZSguLCBMaW5lLCBpbnRvID0gYygiYWdlbmN5X2lkIiwgImFnZW5jeV9uYW1lIiwgInJvdXRlX2lkIiwgInRpbWVfcGVyaW9kIiwgImRpcmVjdGlvbiIsICJzaGFwZV9pZCIpLCBzZXAgPSAiXyIsIGV4dHJhID0gImRyb3AiLCBmaWxsID0gImxlZnQiLCByZW1vdmUgPSBGQUxTRSkgJT4lCiAgc2VsZWN0KC4sIHJvdXRlX2lkLCBlbW1lX3RlbXBfbW9kZSA9IE1vZGUpICU+JQogIG11dGF0ZShyb3V0ZV9pZCA9IGFzLmludGVnZXIocm91dGVfaWQpKSAlPiUKICBkaXN0aW5jdCguKSAlPiUKICBsZWZ0X2pvaW4oLiwgc2VsZWN0KHJvdXRlc19kZiwgcm91dGVfaWQsIGFnZW5jeV9yYXdfbmFtZSwgcm91dGVfdHlwZSksIGJ5ID0gYygicm91dGVfaWQiKSkgJT4lCiAgbXV0YXRlKHJvdXRlX3R5cGUgPSBwYXN0ZTAocm91dGVfdHlwZSkpICU+JQogIHNlbGVjdCgtcm91dGVfaWQpICU+JQogIGRpc3RpbmN0KC4pICU+JQogIGxlZnRfam9pbiguLCBkaXN0aW5jdChjcm9zc3dhbGtfZGYsIGFnZW5jeV9yYXdfbmFtZSwgYWdlbmN5X25hbWUsIHJvdXRlX3R5cGUsIHRlY2hub2xvZ3kgPSBUTTJfbGluZV9oYXVsX25hbWUsIGZhcmVfc3lzdGVtID0gVE0yX2ZhcmVzeXN0ZW0pLCBieSA9IGMoImFnZW5jeV9yYXdfbmFtZSIsICJyb3V0ZV90eXBlIikpICU+JQogIHNlbGVjdChlbW1lX3RlbXBfbW9kZSwgYWdlbmN5X25hbWUsIHRlY2hub2xvZ3ksIGZhcmVfc3lzdGVtKQoKYGBgCgojIFdyaXRlCmBgYHtyIHdyaXRlfQp3cml0ZV9jc3Yob3V0cHV0X2RmLCBmaWxlID0gb3V0cHV0X2ZpbGVuYW1lLCBuYSA9ICIiKQpgYGAKCg==</div>
 
 
 
