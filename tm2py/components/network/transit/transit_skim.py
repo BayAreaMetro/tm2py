@@ -214,6 +214,8 @@ class TransitSkim(Component):
                 )
             else:
                 _matrix.description = _desc
+            #_name = f"{_skprop.name}"
+
             self._skim_matrices[_name] = _matrix
             _tp_tclass_skprop_list.append(_name)
 
@@ -247,11 +249,11 @@ class TransitSkim(Component):
             self.skim_walk_wait_boards_fares(time_period, transit_class)
         with self.controller.emme_manager.logbook_trace("In-vehicle time by mode"):
             self.skim_invehicle_time_by_mode(time_period, transit_class, use_ccr)
-        with self.controller.emme_manager.logbook_trace(
-            "Transfer boarding time penalty",
-            "Drive toll"
-        ):
-            self.skim_penalty_toll(time_period, transit_class)
+        #with self.controller.emme_manager.logbook_trace(
+        #    "Transfer boarding time penalty",
+        #    "Drive toll"
+        #):
+        #    self.skim_penalty_toll(time_period, transit_class)
         with self.controller.emme_manager.logbook_trace(
             "Drive distance and time",
             "Walk auxiliary time, walk access time and walk egress time"
@@ -806,7 +808,7 @@ class TransitSkim(Component):
                 "sub_strategies_to_retain": "ALL",
                 "selection_threshold": {"lower": -999999, "upper": 999999},
             },
-            "analyzed_demand": None,
+            "analyzed_demand": f"mfTRN_{transit_class.name}_{time_period}",
             "constraint": None,
             "results": {"strategy_values": _matrix_name},
             "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS",
