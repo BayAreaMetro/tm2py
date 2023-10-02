@@ -5,30 +5,35 @@
 [[time_periods]]
     name = "ea"
     length_hours = 3
+    start_period = 1
     highway_capacity_factor = 3
     emme_scenario_id = 11
     congested_transit_assn_max_iteration = 1
 [[time_periods]]
     name = "am"
     length_hours = 4
+    start_period = 4
     highway_capacity_factor = 3.65
     emme_scenario_id = 12
     congested_transit_assn_max_iteration = 10
 [[time_periods]]
     name = "md"
     length_hours = 5
+    start_period = 12	
     highway_capacity_factor = 5
     emme_scenario_id = 13
     congested_transit_assn_max_iteration = 1
 [[time_periods]]
     name = "pm"
     length_hours = 4
+    start_period = 22
     highway_capacity_factor = 3.65
     emme_scenario_id = 14
     congested_transit_assn_max_iteration = 10
 [[time_periods]]
     name = "ev"
     length_hours = 8
+    start_period = 30
     highway_capacity_factor = 8
     emme_scenario_id = 15
     congested_transit_assn_max_iteration = 1
@@ -42,10 +47,19 @@
 [household]
     highway_demand_file = "demand_matrices/highway/household/TAZ_Demand_{period}_{iter}.omx"
     # transit_demand_file = "demand_matrices/transit/TAP_Demand_{set}_{period}_{iter}.omx"
-    transit_demand_file = "demand_matrices/transit/trn_demand_v9_trim_{period}.omx" #temp name format, add iteration?
+    active_demand_file = "demand_matrices/active/nm_demand_{period}.omx"
+    transit_demand_file = "demand_matrices/transit/trn_demand_{period}.omx" #temp name format, add iteration?
     highway_taz_ctramp_output_file = "ctramp_output/{mode_agg}_{period}_{mode}_{period}.omx"
     highway_maz_ctramp_output_file = "ctramp_output/auto_{period}_MAZ_AUTO_{number}_{period}.omx"
     transit_tap_ctramp_output_file = "ctramp_output/{mode_agg}_{period}_{mode}_TRN_{set}_{period}.omx"
+	transit_taz_ctramp_output_file = "ctramp_output/{mode_agg}_{period}_{mode}_TRN_{period}.omx"
+    ctramp_indiv_trip_file = "ctramp_output/indivTripData_{iteration}.csv"
+    ctramp_joint_trip_file = "ctramp_output/jointTripData_{iteration}.csv"
+	ctramp_run_dir = 'ctramp_output'	
+    OwnedAV_ZPV_factor = 0.7
+    TNC_ZPV_factor = 0.7
+	ctramp_hh_file = "ctramp_output/householdData_{iteration}.csv"
+	
     [[household.mode_agg]]
         name = "auto"
         modes = [
@@ -67,7 +81,46 @@
     [[household.mode_agg]]
         name = "transit"
         modes = ["KNRPRV", "KNRTNC", "PNR", "WLK"]
-
+    [household.rideshare_mode_split]
+        "taxi"=0.08
+        "single_tnc"=0.72
+        "shared_tnc"=0.20
+    [household.taxi_split]
+        "da"= 0.00
+        "sr2"= 0.53
+        "sr3"= 0.47
+    [household.single_tnc_split]
+        "da"= 0.00
+        "sr2"= 0.53
+        "sr3"= 0.47
+    [household.shared_tnc_split]
+        "da"= 0.00
+        "sr2"= 0.18
+        "sr3"= 0.82
+    [household.ctramp_mode_names]
+        1 = 'sov_gp'
+        2 = 'sov_pay'
+        3 = 'sr2_gp'
+        4 = 'sr2_hov'
+        5 = 'sr2_pay'
+        6 = 'sr3_gp'
+        7 = 'sr3_hov'
+        8 = 'sr3_pay'
+        9 = 'walk'
+        10 = 'bike'
+        11 = 'wlk'
+        12 = 'pnr'
+        13 = 'knr'
+        14 = 'knr'
+        15 = 'taxi'
+        16 = 'tnc'
+        17 = 'schlbus'
+	[household.income_segment]
+        enabled = false
+        segment_suffixes = ["LowInc", "MedInc", "HighInc", "XHighInc"]
+        cutoffs = [0, 30000, 60000, 100000]
+		
+		
 [air_passenger]
     output_trip_table_directory = "demand_matrices/highway/air_passenger"
     outfile_trip_table_tmp = "tripsAirPax{period}.omx"
@@ -755,12 +808,12 @@
     drive_perception_factor = 3.0
     max_transfers = 3
     # fare option
-    use_fares = true
+    use_fares = false
     fare_2015_to_2000_deflator = 0.698 #180.20/258.27
     fares_path = "inputs/trn/fares.far"
     fare_matrix_path = "inputs/trn/fareMatrix.txt"
     # max expected transfer distance for mode-to-mode transfer fare table generation
-    fare_max_transfer_distance_miles = 3.0
+    fare_max_transfer_distance_miles = 3
     # for TAZ instead of TAPs
     ## set to true if use TAZ
     override_connector_times = false
