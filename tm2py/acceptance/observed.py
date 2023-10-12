@@ -22,7 +22,7 @@ class Observed:
     census_tract_centroids_gdf: gpd.GeoDataFrame
 
     RELEVANT_PEMS_OBSERVED_YEARS_LIST = [2014, 2015, 2016]
-    RELEVANT_BRIDGE_TRANSACTIONS_YEARS_LIST = [2014, 215, 2016]
+    RELEVANT_BRIDGE_TRANSACTIONS_YEARS_LIST = [2014, 2015, 2016] # ch
     RELEVANT_PEMS_VEHICLE_CLASSES_FOR_LARGE_TRUCK = [6, 7, 8, 9, 10, 11, 12]
 
     ohio_rmse_standards_df = pd.DataFrame(
