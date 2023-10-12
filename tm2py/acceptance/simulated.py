@@ -6,6 +6,7 @@ import numpy as np
 import os
 import geopandas as gpd
 import itertools
+
 import openmatrix as omx
 import pandas as pd
 import toml
@@ -154,21 +155,21 @@ class Simulated:
 
         file_prefix = "boardings_by_segment_"
         file_root = self.scenario_dict["scenario"]["root_dir"]
-        time_period = "am"
+        time_period = "am"   # am only
         gdf = gpd.read_file(
             os.path.join(file_root, file_prefix + time_period + ".geojson")
         )
 
-        gdf["first_row_in_line"] = gdf.groupby("line").cumcount() == 0
+        gdf["first_row_in_line"] = gdf.groupby("line").cumcount() == 0   # line value includes node 
 
         # Compute v/c ratio, excluding pnr dummy routes
         df = pd.DataFrame(gdf.drop(columns=["geometry"]))
         a_df = df[~(df["line"].str.contains("pnr_"))].reset_index().copy()
         a_df["am_segment_capacity_total"] = (
-            a_df["capt"] * self.model_morning_capacity_factor
+            a_df["vcapt"] * self.model_morning_capacity_factor 
         )
         a_df["am_segment_capacity_seated"] = (
-            a_df["caps"] * self.model_morning_capacity_factor
+            a_df["vcaps"] * self.model_morning_capacity_factor 
         )
         a_df["am_segment_vc_ratio_total"] = (
             a_df["voltr"] / a_df["am_segment_capacity_total"]
@@ -219,7 +220,7 @@ class Simulated:
 
         station_list = input_df[input_column_name].unique().tolist()
 
-        x_df = self.c.standard_to_emme_transit_nodes_df.copy()
+        x_df = self.c.standard_to_emme_transit_nodes_df.copy()  
         n_gdf = self.standard_nodes_gdf.copy()
 
         df = x_df[x_df["emme_node_id"].isin(station_list)].copy().reset_index(drop=True)
@@ -243,8 +244,8 @@ class Simulated:
     def _read_standard_node(self):
 
         root_dir = self.scenario_dict["scenario"]["root_dir"]
-        in_file = os.path.join(root_dir, "node.feather")
-        gdf = gpd.read_feather(in_file)
+        in_file = os.path.join(root_dir,"inputs","network","standard","node.geojson") 
+        gdf = gpd.read_file(in_file) # does not work
 
         self.standard_nodes_gdf = gdf
 
@@ -331,11 +332,11 @@ class Simulated:
     def _make_simulated_maz_data(self):
 
         root_dir = self.scenario_dict["scenario"]["root_dir"]
-        in_file = os.path.join(root_dir, "inputs", "landuse", "maz_data.csv")
+        in_file = os.path.join(root_dir, "inputs", "landuse", "maz_data.csv")  
 
         df = pd.read_csv(in_file)
 
-        index_file = os.path.join(root_dir, "hwy", "mtc_final_network_zone_seq.csv")
+        index_file = os.path.join(root_dir,"inputs","hwy", "mtc_final_network_zone_seq.csv")
 
         index_df = pd.read_csv(index_file)
         join_df = index_df.rename(columns={"N": "MAZ_ORIGINAL"})[
@@ -359,116 +360,127 @@ class Simulated:
         file_prefix = "transit_segment_"
         file_root = self.scenario_dict["scenario"]["root_dir"]
 
+        out_df = pd.DataFrame() 
+
         # AM for now
-        time_period = "am"
-        df = pd.read_csv(
-            os.path.join(file_root, "trn", file_prefix + time_period + ".csv"),
-            dtype={"stop_name": str, "mdesc": str},
-            low_memory=False,
-        )
-
-        rail_df = df[
-            df["mdesc"].isin(
-                [
-                    self.HEAVY_RAIL_NETWORK_MODE_DESCR,
-                    self.COMMUTER_RAIL_NETWORK_MODE_DESCR,
-                ]
+        # time_period = "am"   #
+        for time_period in self.model_time_periods:
+        
+            df = pd.read_csv(
+                os.path.join(file_root, "trn", file_prefix + time_period + ".csv"),
+                dtype={"stop_name": str, "mdesc": str},
+                low_memory=False,
             )
-        ].copy()
 
-        a_df = rail_df["line"].str.split(pat="_", expand=True).copy()
-        rail_df["operator"] = a_df[1]
-        rail_df["operator"] = rail_df["operator"].map(
-            self.c.canonical_agency_names_dict
-        )
+            rail_df = df[
+                df["mdesc"].isin(
+                    [
+                        self.HEAVY_RAIL_NETWORK_MODE_DESCR,  # check
+                        self.COMMUTER_RAIL_NETWORK_MODE_DESCR,
+                    ]
+                )
+            ].copy()
 
-        i_df = (
-            rail_df[["operator", "i_node"]]
-            .rename(columns={"i_node": "boarding"})
-            .copy()
-        )
-        i_df["boarding"] = i_df["boarding"].astype(int)
-        i_df = i_df[i_df["boarding"] > 0].copy()
-        i_df = i_df.reset_index(drop=True)
-
-        j_df = (
-            rail_df[["operator", "j_node"]]
-            .rename(columns={"j_node": "boarding"})
-            .copy()
-        )
-        j_df = j_df[j_df["boarding"] != "None"].copy()
-        j_df["boarding"] = j_df["boarding"].astype(int)
-        j_df = j_df[j_df["boarding"] > 0].copy()
-        j_df = j_df.reset_index(drop=True)
-
-        i_j_df = pd.concat([i_df, j_df]).drop_duplicates()
-        names_df = self._get_station_names_from_standard_network(i_j_df)
-        if "level_0" in names_df.columns:
-            names_df = names_df.drop(columns=["level_0", "index"])
-        station_list = names_df.boarding.astype(str).unique().tolist()
-
-        access_df = df.copy()
-        access_df = access_df[access_df["j_node"].isin(station_list)].copy()
-        access_df = access_df[
-            ["i_node", "board_ptw", "board_wtp", "board_ktw", "board_wtk", "board_wtw"]
-        ].copy()
-        access_df["i_node"] = access_df.i_node.astype(int)
-
-        access_dict = {
-            "board_ptw": self.c.PARK_AND_RIDE_ACCESS_WORD,
-            "board_wtp": self.c.WALK_ACCESS_WORD,
-            "board_ktw": self.c.KISS_AND_RIDE_ACCESS_WORD,
-            "board_wtk": self.c.WALK_ACCESS_WORD,
-            "board_wtw": self.c.WALK_ACCESS_WORD,
-        }
-        long_df = pd.melt(
-            access_df,
-            id_vars=["i_node"],
-            value_vars=[
-                "board_ptw",
-                "board_wtp",
-                "board_ktw",
-                "board_wtk",
-                "board_wtw",
-            ],
-            var_name="mode",
-            value_name="boardings",
-        )
-        long_df["access_mode"] = long_df["mode"].map(access_dict)
-
-        join_df = pd.merge(
-            long_df,
-            names_df,
-            how="left",
-            left_on=["i_node"],
-            right_on=["boarding"],
-        ).reset_index(drop=True)
-
-        out_df = (
-            join_df.groupby(
-                [
-                    "operator",
-                    "i_node",
-                    "boarding_name",
-                    "boarding_standard_node_id",
-                    "access_mode",
-                ]
+            a_df = rail_df["line"].str.split(pat="_", expand=True).copy()  
+            rail_df["operator"] = a_df[1]  # check
+            rail_df["operator"] = rail_df["operator"].map(
+                self.c.canonical_agency_names_dict
             )
-            .agg({"boardings": "sum"})
-            .reset_index()
-        )
-        out_df = out_df.rename(
-            columns={"boardings": "simulated_boardings", "i_node": "boarding"}
-        )
 
-        out_df["time_period"] = "am"
+            i_df = (
+                rail_df[["operator", "i_node"]]
+                .rename(columns={"i_node": "boarding"})
+                .copy()
+            )
+            i_df["boarding"] = i_df["boarding"].astype(int)
+            i_df = i_df[i_df["boarding"] > 0].copy()
+            i_df = i_df.reset_index(drop=True)
+
+            j_df = (
+                rail_df[["operator", "j_node"]]
+                .rename(columns={"j_node": "boarding"})
+                .copy()
+            )
+            j_df = j_df[j_df["boarding"] != "None"].copy()
+            j_df["boarding"] = j_df["boarding"].astype(int)
+            j_df = j_df[j_df["boarding"] > 0].copy()
+            j_df = j_df.reset_index(drop=True)
+
+            i_j_df = pd.concat([i_df, j_df]).drop_duplicates()
+
+            names_df = self._get_station_names_from_standard_network(i_j_df)
+            if "level_0" in names_df.columns:
+                names_df = names_df.drop(columns=["level_0", "index"])
+            station_list = names_df.boarding.astype(str).unique().tolist()
+
+            access_df = df.copy()
+            access_df = access_df[access_df["j_node"].isin(station_list)].copy()
+            access_df["board_ptw"] = access_df["initial_board_ptw"] + access_df["direct_transfer_board_ptw"]  
+            access_df["board_wtp"] = access_df["initial_board_wtp"] + access_df["direct_transfer_board_wtp"]
+            access_df["board_ktw"] = access_df["initial_board_ktw"] + access_df["direct_transfer_board_ktw"]
+            access_df["board_wtk"] = access_df["initial_board_wtk"] + access_df["direct_transfer_board_wtk"]
+            access_df["board_wtw"] = access_df["initial_board_wtw"] + access_df["direct_transfer_board_wtw"]
+            access_df = access_df[
+                ["i_node", "board_ptw", "board_wtp", "board_ktw", "board_wtk", "board_wtw"] 
+            ].copy()
+            access_df["i_node"] = access_df.i_node.astype(int)
+
+            access_dict = {
+                "board_ptw": self.c.PARK_AND_RIDE_ACCESS_WORD,
+                "board_wtp": self.c.WALK_ACCESS_WORD,
+                "board_ktw": self.c.KISS_AND_RIDE_ACCESS_WORD,
+                "board_wtk": self.c.WALK_ACCESS_WORD,
+                "board_wtw": self.c.WALK_ACCESS_WORD,
+            }
+            long_df = pd.melt(
+                access_df,
+                id_vars=["i_node"],
+                value_vars=[
+                    "board_ptw",
+                    "board_wtp",
+                    "board_ktw",
+                    "board_wtk",
+                    "board_wtw",
+                ],
+                var_name="mode",
+                value_name="boardings",
+            )
+            long_df["access_mode"] = long_df["mode"].map(access_dict) # check
+
+            join_df = pd.merge(
+                long_df,
+                names_df,
+                how="left",
+                left_on=["i_node"],
+                right_on=["boarding"],
+            ).reset_index(drop=True)
+
+            out_df = (
+                join_df.groupby(
+                    [
+                        "operator",
+                        "i_node",
+                        "boarding_name",
+                        "boarding_standard_node_id",
+                        "access_mode",
+                    ]
+                )
+                .agg({"boardings": "sum"})
+                .reset_index()
+            )
+            out_df = out_df.rename(
+                columns={"boardings": "simulated_boardings", "i_node": "boarding"}
+            )
+
+            out_df["time_period"] = time_period 
+
+            out_df = out_df.append(out_df)
 
         self.simulated_transit_access_df = out_df
 
         return
 
-    def _reduce_simulated_station_to_station(self):
-
+    def _reduce_simulated_station_to_station(self): 
         if self.model_time_periods is None:
             self._get_model_time_periods()
 
@@ -500,23 +512,24 @@ class Simulated:
                 root_dir,
                 "trn",
                 f"{operator}_station_to_station_{path}_{time_period}.txt",
-            )
+             )
             file = open(input_file_name, "r")
+     
             while True:
                 line = file.readline()
                 if not line:
                     break
-                if line[0] == "c" or line[0] == "t" or line[0] == "d" or line[0] == "a":
-                    continue
-                else:
+                if line[0] == "c" or line[0] == "t" or line[0] == "d" or line[0] == "a":  
+                    continue 
+                else: 
                     data = line.split()
                     subject_df = pd.DataFrame(
                         [[operator, time_period, data[0], data[1], data[2]]],
                         columns=[
                             "operator",
                             "time_period",
-                            "boarding",
-                            "alighting",
+                            "boarding", 
+                            "alighting", 
                             "simulated",
                         ],
                     )
@@ -638,7 +651,7 @@ class Simulated:
 
         return
 
-    def _reduce_simulated_zero_vehicle_households(self):
+    def _reduce_simulated_zero_vehicle_households(self):  # duplicate 
 
         root_dir = self.scenario_dict["scenario"]["root_dir"]
         in_file = os.path.join(root_dir, "ctramp_output", "householdData_3.csv")
@@ -675,10 +688,10 @@ class Simulated:
         the standard network stops file (`stops.txt`) to get the station names and lat/lon coordinates for each subject station. The canonical station name is returned.
 
         Args:
-            input_df (pd.DataFrame): A pandas dataframe with columns "boarding" and/or "alighting" that contain the node numbers of rail stations from the simulation.
+            input_df (pd.DataFrame): A pandas datting" columns are present, then name and coordinate columns are added for both the boarding and alighting station.aframe with columns "boarding" and/or "alighting" that contain the node numbers of rail stations from the simulation.
 
         Returns:
-            pd.DataFrame: The input_df with the canonical station name and lat/lon coordinates added as columns. If "boarding" and "alighting" columns are present, then name and coordinate columns are added for both the boarding and alighting station.
+            pd.DataFrame: The input_df with the canonical station name and lat/lon coordinates added as columns. If "boarding" and "aligh
         """
 
         x_df = self.c.standard_to_emme_transit_nodes_df.copy()
@@ -796,14 +809,14 @@ class Simulated:
 
         return return_df
 
-    def _make_transit_mode_dict(self):
+    def _make_transit_mode_dict(self): # check
 
         transit_mode_dict = {}
         for lil_dict in self.model_dict["transit"]["modes"]:
             add_dict = {lil_dict["mode_id"]: lil_dict["name"]}
             transit_mode_dict.update(add_dict)
 
-        # TODO: this will be in model_config in TM2.2
+        # TODO: this will be in model_config in TM2.2      
         transit_mode_dict.update({"p": "pnr"})
 
         self.HEAVY_RAIL_NETWORK_MODE_DESCR = transit_mode_dict["h"]
@@ -840,7 +853,7 @@ class Simulated:
             "KNR_TRN_WLK",
             "WLK_TRN_KNR",
         ]
-        path_list = ["WLK_TRN_WLK"]
+        
         tech_list = self.c.transit_technology_abbreviation_dict.keys()
 
         skim_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "skims")
@@ -964,7 +977,9 @@ class Simulated:
     def _make_district_to_district_transit_summaries(self):
 
         # TODO: placeholder with link21 demand, so using link21 taz to district mapping for now
-        link21_district_dict = self.c.taz_to_district_df.set_index("taz_link21")[
+      
+
+        taz_district_dict = self.c.taz_to_district_df.set_index("taz_tm1")[
             "district_tm1"
         ].to_dict()
 
@@ -991,8 +1006,8 @@ class Simulated:
                 / s_df["IVT"]
             )
 
-        s_df["orig_district"] = s_df["origin"].map(link21_district_dict)
-        s_df["dest_district"] = s_df["destination"].map(link21_district_dict)
+        s_df["orig_district"] = s_df["origin"].map(self.taz_district_dict) 
+        s_df["dest_district"] = s_df["destination"].map(self.taz_district_dict) 
 
         agg_dict = {"simulated_flow": "sum"}
         rename_dict = {"simulated_flow": "total"}
@@ -1019,16 +1034,16 @@ class Simulated:
 
         file_root = self.scenario_dict["scenario"]["root_dir"]
         time_of_day_df = pd.DataFrame()
-        time_periods = ["AM"]  # temporary
+        
 
-        # for time_period in self.model_time_periods:
-        for time_period in time_periods:
+        for time_period in self.model_time_periods:
+      
 
             gdf = gpd.read_file(
                 os.path.join(file_root + time_period + "/" + "emme_links.shp")
             )
             df = gdf[
-                ["ID", "@flow_da", "@flow_lrgt", "@flow_s2", "@flow_s3", "@flow_trk"]
+                ["ID", "@flow_da", "@flow_lrgt", "@flow_sr2", "@flow_sr3", "@flow_trk", "@flow_dato",  "@flow_lrg0","@flow_sr2t", "@flow_sr3t", "@flow_trkt"]  
             ]
             df = df.rename(columns={"ID": "model_link_id"})
             df["time_period"] = time_period
@@ -1037,15 +1052,18 @@ class Simulated:
             )  # one file with selected vars for all the time periods
 
         time_of_day_df["simulated_flow_auto"] = time_of_day_df[
-            ["@flow_da", "@flow_s2", "@flow_s3"]
+            ["@flow_da", "@flow_sr2", "@flow_sr3","@flow_dato","@flow_sr2t", "@flow_sr3t"] 
         ].sum(
             axis=1
-        )  # include @flow_lrgt?
-        time_of_day_df = time_of_day_df.rename(
-            columns={"@flow_trk": "simulated_flow_truck"}
+        )  
+
+        time_of_day_df["simulated_flow_truck"] = time_of_day_df[
+            ["@flow_trk", "@flow_trkt"]
+        ].sum(
+            axis=1
         )
         time_of_day_df["simulated_flow"] = time_of_day_df[
-            ["simulated_flow_auto", "simulated_flow_truck", "@flow_lrgt"]
+            ["simulated_flow_auto", "simulated_flow_truck", "@flow_lrgt", "@flow_lrg0"]
         ].sum(axis=1)
 
         all_day_df = (
@@ -1124,14 +1142,19 @@ class Simulated:
                     "@tollseg",
                     "@ft",
                     "@flow_da",
-                    "@flow_s2",
-                    "@flow_s3",
+                    "@flow_sr2", 
+                    "@flow_sr3",
                     "@flow_lrgt",
                     "@flow_trk",
-                    "@ffs",
+                    "@free_flow", 
+                    "@flow_dato", 
+                    "@flow_sr2t", 
+                    "@flow_sr3t", 
+                    "@flow_lrg0",
+                    "@flow_trkt",
                 ]
             ]
-            df = df.rename(
+            df = df.rename( 
                 columns={
                     "INODE": "emme_a_node_id",
                     "JNODE": "emme_b_node_id",
@@ -1145,19 +1168,25 @@ class Simulated:
                     "@useclass": "useclass",
                     "@capacity": "capacity",
                     "@lanes": "lanes",
-                    "@flow_da": "flow_da",
-                    "@flow_s2": "flow_s2",
-                    "@flow_s3": "flow_s3",
-                    "@flow_lrgt": "flow_lrgt",
-                    "@flow_trk": "flow_trk",
+                    #"@flow_da": "flow_da",
+                    #"@flow_sr2": "flow_s2",
+                    #"@flow_sr3": "flow_s3",
+                    #"@flow_lrgt": "flow_lrgt",
+                    #"@flow_trk": "flow_trk",
                 }
             )
+
+            df['flow_da'] = df['@flow_da'] + df["@flow_dato"] 
+            df['flow_s2'] = df['@flow_sr2'] + df["@flow_sr2t"] 
+            df['flow_s3'] = df['@flow_sr3'] + df["@flow_sr3t"] 
+            df['flow_lrgt'] = df['@flow_lrgt'] + df['@flow_lrg0'] 
+            df['flow_trk'] =  df['@flow_trk'] + df['@flow_trkt'] 
 
             df["time_period"] = t
             df["speed_mph"] = np.where(
                 df["distance_in_miles"] > 0,
                 df["distance_in_miles"] / (df["time_in_minutes"] / 60.0),
-                df["@ffs"],
+                df["@free_flow"], 
             )
             df["flow_total"] = df[
                 [col for col in df.columns if col.startswith("flow_")]
