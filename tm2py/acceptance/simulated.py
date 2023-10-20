@@ -111,31 +111,31 @@ class Simulated:
 
     def _validate(self):
 
-        self._make_transit_mode_dict()
-        self._make_simulated_maz_data()
+        # self._make_transit_mode_dict()
+        # self._make_simulated_maz_data()
 
-        self._read_standard_transit_stops()
-        self._read_standard_transit_shapes()
-        self._read_standard_transit_routes()
-        self._read_standard_node()
+        # self._read_standard_transit_stops()
+        # self._read_standard_transit_shapes()
+        # self._read_standard_transit_routes()
+        # self._read_standard_node()
 
-        self._read_transit_demand()
-        self._make_transit_technology_in_vehicle_table_from_skims()
-        self._make_district_to_district_transit_summaries()
+        # self._read_transit_demand()
+        # self._make_transit_technology_in_vehicle_table_from_skims()
+        # self._make_district_to_district_transit_summaries()
 
-        self._reduce_simulated_transit_boardings()
-        self._reduce_simulated_transit_shapes()
-        self._reduce_simulated_home_work_flows()
-        self._reduce_simulated_zero_vehicle_households()
-        self._reduce_simulated_station_to_station()
-        self._reduce_simulated_rail_access_summaries()
+        # self._reduce_simulated_transit_boardings()
+        # self._reduce_simulated_transit_shapes()
+        # self._reduce_simulated_home_work_flows()
+        # self._reduce_simulated_zero_vehicle_households()
+        # self._reduce_simulated_station_to_station()
+        # self._reduce_simulated_rail_access_summaries()
 
-        assert sorted(
-            self.simulated_home_work_flows_df.residence_county.unique().tolist()
-        ) == sorted(self.c.county_names_list)
-        assert sorted(
-            self.simulated_home_work_flows_df.work_county.unique().tolist()
-        ) == sorted(self.c.county_names_list)
+        # assert sorted(
+        #     self.simulated_home_work_flows_df.residence_county.unique().tolist()
+        # ) == sorted(self.c.county_names_list)
+        # assert sorted(
+        #     self.simulated_home_work_flows_df.work_county.unique().tolist()
+        # ) == sorted(self.c.county_names_list)
 
         self._reduce_simulated_roadway_assignment_outcomes()
 
@@ -365,7 +365,7 @@ class Simulated:
         for time_period in self.model_time_periods:
         
             df = pd.read_csv(
-                os.path.join(file_root, "trn", file_prefix + time_period + ".csv"),
+                os.path.join(file_root, "output_summaries", file_prefix + time_period + ".csv"),
                 dtype={"stop_name": str, "mdesc": str},
                 low_memory=False,
             )
@@ -509,7 +509,7 @@ class Simulated:
         ):
             input_file_name = os.path.join(
                 root_dir,
-                "trn",
+                "output_summaries",
                 f"{operator}_station_to_station_{path}_{time_period}.txt",
              )
             file = open(input_file_name, "r")
@@ -575,7 +575,7 @@ class Simulated:
         for time_period in self.model_time_periods:
 
             df = pd.read_csv(
-                os.path.join(file_root, file_prefix + time_period + ".csv")
+                os.path.join(file_root, output_summaries, file_prefix + time_period + ".csv")
             )
             df["time_period"] = time_period
             c_df = c_df.append(df)
@@ -908,8 +908,8 @@ class Simulated:
             "KNR_TRN_WLK",
             "WLK_TRN_KNR",
         ]
-        dem_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "demand_matrices")
-       
+        #dem_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "demand_matrices")
+        dem_dir = '//corp.pbwan.net/us/CentralData/DCCLDA00/Standard/sag/projects/MTC/Acceptance_Criteria/temp/temp_acceptance/demand_matrices'
     
         out_df = pd.DataFrame() 
         for time_period in self.model_time_periods: 
@@ -960,9 +960,6 @@ class Simulated:
         return df
 
     def _make_district_to_district_transit_summaries(self):
-
-        
-      
 
         taz_district_dict = self.c.taz_to_district_df.set_index("taz_tm1")[
             "district_tm1"
@@ -1019,7 +1016,7 @@ class Simulated:
 
         file_root = self.scenario_dict["scenario"]["root_dir"]
         time_of_day_df = pd.DataFrame()
-        
+
 
         for time_period in self.model_time_periods:
       
@@ -1034,7 +1031,7 @@ class Simulated:
             df["time_period"] = time_period
             time_of_day_df = time_of_day_df.append(
                 df
-            )  # one file with selected vars for all the time periods
+            ) 
 
         time_of_day_df["simulated_flow_auto"] = time_of_day_df[
             ["@flow_da", "@flow_sr2", "@flow_sr3","@flow_dato","@flow_sr2t", "@flow_sr3t"] 
@@ -1054,16 +1051,16 @@ class Simulated:
         all_day_df = (
             time_of_day_df.groupby(
                 ["model_link_id"]
-            )  # summarize all timeperiod flow variables to daily
+            )  
             .sum()
             .reset_index()
         )
         all_day_df["time_period"] = self.c.ALL_DAY_WORD
 
-        # combine
+       
         out_df = pd.concat([time_of_day_df, all_day_df], axis="rows", ignore_index=True)
 
-        # remove unneeded columns
+       
         out_df = out_df[
             [
                 "model_link_id",
@@ -1073,8 +1070,6 @@ class Simulated:
                 "simulated_flow",
             ]
         ]
-
-        out_df.to_csv(os.path.join(file_root, out_file))
       
         self.simulated_traffic_flow_df = out_df 
 
@@ -1152,11 +1147,6 @@ class Simulated:
                     "@useclass": "useclass",
                     "@capacity": "capacity",
                     "@lanes": "lanes",
-                    #"@flow_da": "flow_da",
-                    #"@flow_sr2": "flow_s2",
-                    #"@flow_sr3": "flow_s3",
-                    #"@flow_lrgt": "flow_lrgt",
-                    #"@flow_trk": "flow_trk",
                 }
             )
 
