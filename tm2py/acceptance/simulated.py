@@ -475,6 +475,7 @@ class Simulated:
             out_df["time_period"] = time_period 
 
             out_df = out_df.append(out_df)
+            
 
         self.simulated_transit_access_df = out_df
 
@@ -857,8 +858,8 @@ class Simulated:
         
         tech_list = self.c.transit_technology_abbreviation_dict.keys()
 
-        #skim_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "skims")
-        skim_dir = "//corp.pbwan.net/us/CentralData/DCCLDA00/Standard/sag/projects/MTC/Acceptance_Criteria/temp/temp_acceptance\skim_matrices/transit/"  # temporary location
+        skim_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "skims_matrices")   
+        
 
         running_df = None
         for (path, time_period) in itertools.product(
@@ -871,7 +872,7 @@ class Simulated:
                 omx_handle = omx.open_file(filename)
 
                 # IVT
-                #matrix_name = "IVT"   #  #AM_KNR_TNR_WLK_IVT"
+               
                 matrix_name = time_period + "_" + path + "_IVT"
                 if matrix_name in omx_handle.listMatrices():
                     ivt_df = self._make_dataframe_from_omx(
@@ -881,7 +882,7 @@ class Simulated:
                     ivt_df.rename(columns={ivt_df.columns[2]: "IVT"}, inplace = True)
 
                 # Transfers to get boardings from trips
-                #matrix_name = "{}_{}_BOARDS"   #AM_KNR_TNR_WLK_BOARDS"
+                
                 matrix_name =  time_period + "_" + path + "_BOARDS"
                 if matrix_name in omx_handle.listMatrices():
                     boards_df = self._make_dataframe_from_omx(
@@ -897,7 +898,7 @@ class Simulated:
                 path_time_df["time_period"] = time_period
 
                 for tech in tech_list:
-                    #matrix_name = "IVT{}".format(tech)  #AM_KNR_TNR_WLK_IVTCOM"
+                   
                     matrix_name =  time_period + "_" + path + "_IVT" + tech
                     if matrix_name in omx_handle.listMatrices():
                         df = self._make_dataframe_from_omx(
@@ -935,32 +936,36 @@ class Simulated:
             "WLK_TRN_KNR",
         ]
         dem_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "demand")
+       
+    
+        out_df = pd.DataFrame() 
+        for time_period in self.model_time_periods: 
+            filename = os.path.join(
+                dem_dir, "trn_demand_{}.omx".format(time_period)  
+            )
+            omx_handle = omx.open_file(filename)
 
-        time_period = "am"  # need to change to all time_periods
-        filename = os.path.join(
-            dem_dir, "trn_demand_{}.omx".format(time_period)  
-        )
-        omx_handle = omx.open_file(filename)
+            running_df = None
+            for path in path_list:
+                if path in omx_handle.listMatrices():
+                    df = self._make_dataframe_from_omx(omx_handle[path], path)
+                    df = df[df[path] > 0.0].copy()
+                    df = df.rename(columns={path: "simulated_flow"})
+                    df["path"] = path
+                    df["time_period"] = time_period
 
-        running_df = None
-        for path in path_list:
-            if path in omx_handle.listMatrices():
-                df = self._make_dataframe_from_omx(omx_handle[path], path)
-                df = df[df[path] > 0.0].copy()
-                df = df.rename(columns={path: "simulated_flow"})
-                df["path"] = path
-                df["time_period"] = time_period
+                    if running_df is None:
+                        running_df = df.copy()
+                    else:
+                        running_df = pd.concat(
+                            [running_df, df], axis="rows", ignore_index=True
+                        ).reset_index(drop=True)
 
-                if running_df is None:
-                    running_df = df.copy()
-                else:
-                    running_df = pd.concat(
-                        [running_df, df], axis="rows", ignore_index=True
-                    ).reset_index(drop=True)
+            out_df = pd.concat([out_df, running_df], axis="rows", ignore_index=True)
 
-        omx_handle.close()
+            omx_handle.close()
 
-        self.simulated_transit_demand_df = running_df.fillna(0).copy()
+        self.simulated_transit_demand_df = out_df.fillna(0).copy()
 
         return
 
