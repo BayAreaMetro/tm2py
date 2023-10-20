@@ -290,7 +290,7 @@ class Simulated:
         #    self._make_simulated_maz_data()
 
         root_dir = self.scenario_dict["scenario"]["root_dir"]
-        in_file = os.path.join(root_dir, "ctramp_output", "wsLocResults_3.csv")
+        in_file = os.path.join(root_dir, "ctramp_output", "wsLocResults_1.csv")
 
         df = pd.read_csv(in_file)
 
@@ -361,9 +361,7 @@ class Simulated:
         file_root = self.scenario_dict["scenario"]["root_dir"]
 
         out_df = pd.DataFrame() 
-
-        # AM for now
-        # time_period = "am"   
+ 
         for time_period in self.model_time_periods:
         
             df = pd.read_csv(
@@ -629,7 +627,7 @@ class Simulated:
     def _reduce_simulated_zero_vehicle_households(self):
 
         root_dir = self.scenario_dict["scenario"]["root_dir"]
-        in_file = os.path.join(root_dir, "ctramp_output", "householdData_3.csv")
+        in_file = os.path.join(root_dir, "ctramp_output", "householdData_1.csv")
 
         df = pd.read_csv(in_file)
 
@@ -652,31 +650,6 @@ class Simulated:
 
         return
 
-    def _reduce_simulated_zero_vehicle_households(self):  # duplicate 
-
-        root_dir = self.scenario_dict["scenario"]["root_dir"]
-        in_file = os.path.join(root_dir, "ctramp_output", "householdData_3.csv")
-
-        df = pd.read_csv(in_file)
-
-        sum_df = df.groupby(["home_mgra", "autos"]).size().reset_index(name="count")
-        sum_df["vehicle_share"] = sum_df["count"] / sum_df.groupby("home_mgra")[
-            "count"
-        ].transform("sum")
-
-        self.simulated_zero_vehicle_hhs_df = (
-            sum_df[sum_df["autos"] == 0]
-            .rename(
-                columns={
-                    "home_mgra": "maz",
-                    "vehicle_share": "simulated_zero_vehicle_share",
-                    "count": "simulated_households",
-                }
-            )[["maz", "simulated_zero_vehicle_share", "simulated_households"]]
-            .copy()
-        )
-
-        return
 
     def _get_station_names_from_standard_network(
         self,
@@ -927,7 +900,7 @@ class Simulated:
 
     def _read_transit_demand(self):
 
-        # TODO: placeholder demand for now
+      
         path_list = [
             "WLK_TRN_WLK",
             "PNR_TRN_WLK",
@@ -935,7 +908,7 @@ class Simulated:
             "KNR_TRN_WLK",
             "WLK_TRN_KNR",
         ]
-        dem_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "demand")
+        dem_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "demand_matrices")
        
     
         out_df = pd.DataFrame() 
@@ -988,7 +961,7 @@ class Simulated:
 
     def _make_district_to_district_transit_summaries(self):
 
-        # TODO: placeholder with link21 demand, so using link21 taz to district mapping for now
+        
       
 
         taz_district_dict = self.c.taz_to_district_df.set_index("taz_tm1")[
@@ -1101,10 +1074,9 @@ class Simulated:
             ]
         ]
 
-        # out_df.to_csv(os.path.join(file_root, out_file))
-        out_df.to_csv("simulated_traffic_flow_temp.csv")
-
-        self.simulated_traffic_flow_df = out_df  # model_link_id, time_period (which includes each of the timeperiods and daily) and flow vars (including simulated_flow)
+        out_df.to_csv(os.path.join(file_root, out_file))
+      
+        self.simulated_traffic_flow_df = out_df 
 
         return
 
