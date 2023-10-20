@@ -245,7 +245,7 @@ class Simulated:
 
         root_dir = self.scenario_dict["scenario"]["root_dir"]
         in_file = os.path.join(root_dir,"inputs","network","standard","node.geojson") 
-        gdf = gpd.read_file(in_file) # does not work
+        gdf = gpd.read_file(in_file, driver = "GEOJSON") 
 
         self.standard_nodes_gdf = gdf
 
@@ -254,7 +254,7 @@ class Simulated:
     def _read_standard_transit_stops(self):
 
         root_dir = self.scenario_dict["scenario"]["root_dir"]
-        in_file = os.path.join(root_dir, "inputs", "network", "standard", "stops.txt")
+        in_file = os.path.join(root_dir, "inputs", "network", "standard", "v12_stops.txt")
 
         df = pd.read_csv(in_file)
 
@@ -265,7 +265,7 @@ class Simulated:
     def _read_standard_transit_shapes(self):
 
         root_dir = self.scenario_dict["scenario"]["root_dir"]
-        in_file = os.path.join(root_dir, "inputs", "network", "standard", "shapes.txt")
+        in_file = os.path.join(root_dir, "inputs", "network", "standard", "v12_shapes.txt")
 
         df = pd.read_csv(in_file)
 
@@ -276,7 +276,7 @@ class Simulated:
     def _read_standard_transit_routes(self):
 
         root_dir = self.scenario_dict["scenario"]["root_dir"]
-        in_file = os.path.join(root_dir, "inputs", "network", "standard", "routes.txt")
+        in_file = os.path.join(root_dir, "inputs", "network", "standard", "v12_routes.txt")
 
         df = pd.read_csv(in_file)
 
@@ -363,7 +363,7 @@ class Simulated:
         out_df = pd.DataFrame() 
 
         # AM for now
-        # time_period = "am"   #
+        # time_period = "am"   
         for time_period in self.model_time_periods:
         
             df = pd.read_csv(
@@ -844,6 +844,7 @@ class Simulated:
 
         return
 
+
     def _make_transit_technology_in_vehicle_table_from_skims(self):
 
         path_list = [
@@ -856,7 +857,8 @@ class Simulated:
         
         tech_list = self.c.transit_technology_abbreviation_dict.keys()
 
-        skim_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "skims")
+        #skim_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "skims")
+        skim_dir = "//corp.pbwan.net/us/CentralData/DCCLDA00/Standard/sag/projects/MTC/Acceptance_Criteria/temp/temp_acceptance\skim_matrices/transit/"  # temporary location
 
         running_df = None
         for (path, time_period) in itertools.product(
@@ -869,20 +871,24 @@ class Simulated:
                 omx_handle = omx.open_file(filename)
 
                 # IVT
-                matrix_name = "IVT"
+                #matrix_name = "IVT"   #  #AM_KNR_TNR_WLK_IVT"
+                matrix_name = time_period + "_" + path + "_IVT"
                 if matrix_name in omx_handle.listMatrices():
                     ivt_df = self._make_dataframe_from_omx(
                         omx_handle[matrix_name], matrix_name
                     )
                     ivt_df = ivt_df[ivt_df[matrix_name] > 0.0].copy()
+                    ivt_df.rename(columns={ivt_df.columns[2]: "IVT"}, inplace = True)
 
                 # Transfers to get boardings from trips
-                matrix_name = "BOARDS"
+                #matrix_name = "{}_{}_BOARDS"   #AM_KNR_TNR_WLK_BOARDS"
+                matrix_name =  time_period + "_" + path + "_BOARDS"
                 if matrix_name in omx_handle.listMatrices():
                     boards_df = self._make_dataframe_from_omx(
                         omx_handle[matrix_name], matrix_name
                     )
                     boards_df = boards_df[boards_df[matrix_name] > 0.0].copy()
+                    boards_df.rename(columns={boards_df.columns[2]: "BOARDS"}, inplace = True)
 
                 path_time_df = pd.merge(
                     ivt_df, boards_df, on=["origin", "destination"], how="left"
@@ -891,7 +897,8 @@ class Simulated:
                 path_time_df["time_period"] = time_period
 
                 for tech in tech_list:
-                    matrix_name = "IVT{}".format(tech)
+                    #matrix_name = "IVT{}".format(tech)  #AM_KNR_TNR_WLK_IVTCOM"
+                    matrix_name =  time_period + "_" + path + "_IVT" + tech
                     if matrix_name in omx_handle.listMatrices():
                         df = self._make_dataframe_from_omx(
                             omx_handle[matrix_name], matrix_name
@@ -929,9 +936,9 @@ class Simulated:
         ]
         dem_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "demand")
 
-        time_period = "am"
+        time_period = "am"  # need to change to all time_periods
         filename = os.path.join(
-            dem_dir, "trn_demand_v12_trim_{}.omx".format(time_period)
+            dem_dir, "trn_demand_{}.omx".format(time_period)  
         )
         omx_handle = omx.open_file(filename)
 
