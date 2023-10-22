@@ -36,7 +36,7 @@ class Canonical:
     transit_technology_abbreviation_dict = {
         "LOC": "Local Bus",
         "EXP": "Express Bus",
-        "LRT": "Light Rail",
+        "LTR": "Light Rail",
         "FRY": "Ferry",
         "HVY": "Heavy Rail",
         "COM": "Commuter Rail",
@@ -243,3 +243,4 @@ class Canonical:
         self.standard_to_emme_node_crosswalk_df = df
 
         return
+
