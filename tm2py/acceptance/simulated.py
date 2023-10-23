@@ -71,6 +71,14 @@ class Simulated:
         ],
         columns=["plaza_name", "direction", "standard_link_id", "pay_toll"],
     )
+ 
+    network_shapefile_names_dict  = {
+        "ea":"Scenario_11",
+        "am":"Scenario_12",
+        "md":"Scenario_13",
+        "pm":"Scenario_14",
+        "ev":"Scenario_15"}
+
 
     def _load_configs(self):
 
@@ -111,31 +119,31 @@ class Simulated:
 
     def _validate(self):
 
-        # self._make_transit_mode_dict()
-        # self._make_simulated_maz_data()
+        self._make_transit_mode_dict()
+        self._make_simulated_maz_data()
 
-        # self._read_standard_transit_stops()
-        # self._read_standard_transit_shapes()
-        # self._read_standard_transit_routes()
-        # self._read_standard_node()
+        self._read_standard_transit_stops()
+        self._read_standard_transit_shapes()
+        self._read_standard_transit_routes()
+        self._read_standard_node()
 
-        # self._read_transit_demand()
-        # self._make_transit_technology_in_vehicle_table_from_skims()
-        # self._make_district_to_district_transit_summaries()
+        self._read_transit_demand()
+        self._make_transit_technology_in_vehicle_table_from_skims()
+        self._make_district_to_district_transit_summaries()
 
-        # self._reduce_simulated_transit_boardings()
-        # self._reduce_simulated_transit_shapes()
-        # self._reduce_simulated_home_work_flows()
-        # self._reduce_simulated_zero_vehicle_households()
-        # self._reduce_simulated_station_to_station()
-        # self._reduce_simulated_rail_access_summaries()
+        self._reduce_simulated_transit_boardings()
+        self._reduce_simulated_transit_shapes()
+        self._reduce_simulated_home_work_flows()
+        self._reduce_simulated_zero_vehicle_households()
+        self._reduce_simulated_station_to_station()
+        self._reduce_simulated_rail_access_summaries()
 
-        # assert sorted(
-        #     self.simulated_home_work_flows_df.residence_county.unique().tolist()
-        # ) == sorted(self.c.county_names_list)
-        # assert sorted(
-        #     self.simulated_home_work_flows_df.work_county.unique().tolist()
-        # ) == sorted(self.c.county_names_list)
+        assert sorted(
+            self.simulated_home_work_flows_df.residence_county.unique().tolist()
+        ) == sorted(self.c.county_names_list)
+        assert sorted(
+            self.simulated_home_work_flows_df.work_county.unique().tolist()
+        ) == sorted(self.c.county_names_list)
 
         self._reduce_simulated_roadway_assignment_outcomes()
 
@@ -157,42 +165,42 @@ class Simulated:
         file_root = self.scenario_dict["scenario"]["root_dir"]
         time_period = "am"   # am only
         gdf = gpd.read_file(
-            os.path.join(file_root, file_prefix + time_period + ".geojson")
+            os.path.join(file_root, "output_summaries", file_prefix + time_period + ".geojson")
         )
 
-        gdf["first_row_in_line"] = gdf.groupby("line").cumcount() == 0   # line value includes node 
+        gdf["first_row_in_line"] = gdf.groupby("LINE_ID").cumcount() == 0    
 
         # Compute v/c ratio, excluding pnr dummy routes
         df = pd.DataFrame(gdf.drop(columns=["geometry"]))
-        a_df = df[~(df["line"].str.contains("pnr_"))].reset_index().copy()
+        a_df = df[~(df["LINE_ID"].str.contains("pnr_"))].reset_index().copy()
         a_df["am_segment_capacity_total"] = (
-            a_df["vcapt"] * self.model_morning_capacity_factor 
+            a_df["capt"] * self.model_morning_capacity_factor 
         )
         a_df["am_segment_capacity_seated"] = (
-            a_df["vcaps"] * self.model_morning_capacity_factor 
+            a_df["caps"] * self.model_morning_capacity_factor 
         )
         a_df["am_segment_vc_ratio_total"] = (
-            a_df["voltr"] / a_df["am_segment_capacity_total"]
+            a_df["VOLTR"] / a_df["am_segment_capacity_total"]
         )
         a_df["am_segment_vc_ratio_seated"] = (
-            a_df["voltr"] / a_df["am_segment_capacity_seated"]
+            a_df["VOLTR"] / a_df["am_segment_capacity_seated"]
         )
-        a_df = a_df.rename(columns={"voltr": "am_segment_volume"})
+        a_df = a_df.rename(columns={"VOLTR": "am_segment_volume"})
 
         sum_df = (
-            a_df.groupby(["line"])
+            a_df.groupby(["LINE_ID"])
             .agg({"am_segment_vc_ratio_total": "mean"})
             .reset_index()
         )
         sum_df.columns = [
-            "line",
+            "LINE_ID",
             "mean_am_segment_vc_ratio_total",
         ]
 
         a_gdf = pd.merge(
             gdf,
             sum_df,
-            on="line",
+            on="LINE_ID",
             how="left",
         )
 
@@ -200,9 +208,9 @@ class Simulated:
             a_gdf,
             a_df[
                 [
-                    "line",
-                    "i_node",
-                    "j_node",
+                    "LINE_ID",
+                    "INODE",
+                    "JNODE",
                     "am_segment_volume",
                     "am_segment_capacity_total",
                     "am_segment_capacity_seated",
@@ -210,7 +218,7 @@ class Simulated:
                     "am_segment_vc_ratio_seated",
                 ]
             ],
-            on=["line", "i_node", "j_node"],
+            on=["LINE_ID", "INODE", "JNODE"],
             how="left",
         )
 
@@ -336,7 +344,7 @@ class Simulated:
 
         df = pd.read_csv(in_file)
 
-        index_file = os.path.join(root_dir,"inputs","hwy", "mtc_final_network_zone_seq.csv")
+        index_file = os.path.join(root_dir,"inputs","highway", "mtc_final_network_zone_seq.csv")
 
         index_df = pd.read_csv(index_file)
         join_df = index_df.rename(columns={"N": "MAZ_ORIGINAL"})[
@@ -575,7 +583,7 @@ class Simulated:
         for time_period in self.model_time_periods:
 
             df = pd.read_csv(
-                os.path.join(file_root, output_summaries, file_prefix + time_period + ".csv")
+                os.path.join(file_root, "output_summaries", file_prefix + time_period + ".csv")
             )
             df["time_period"] = time_period
             c_df = c_df.append(df)
@@ -831,7 +839,7 @@ class Simulated:
         
         tech_list = self.c.transit_technology_abbreviation_dict.keys()
 
-        skim_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "skims_matrices")   
+        skim_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "skim_matrices","transit")   
         
 
         running_df = None
@@ -845,8 +853,8 @@ class Simulated:
                 omx_handle = omx.open_file(filename)
 
                 # IVT
-               
-                matrix_name = time_period + "_" + path + "_IVT"
+                TIME_PERIOD = time_period.upper()
+                matrix_name = TIME_PERIOD + "_" + path + "_IVT"
                 if matrix_name in omx_handle.listMatrices():
                     ivt_df = self._make_dataframe_from_omx(
                         omx_handle[matrix_name], matrix_name
@@ -856,7 +864,7 @@ class Simulated:
 
                 # Transfers to get boardings from trips
                 
-                matrix_name =  time_period + "_" + path + "_BOARDS"
+                matrix_name =  TIME_PERIOD + "_" + path + "_BOARDS"
                 if matrix_name in omx_handle.listMatrices():
                     boards_df = self._make_dataframe_from_omx(
                         omx_handle[matrix_name], matrix_name
@@ -872,15 +880,16 @@ class Simulated:
 
                 for tech in tech_list:
                    
-                    matrix_name =  time_period + "_" + path + "_IVT" + tech
+                    matrix_name =  TIME_PERIOD + "_" + path + "_IVT" + tech
                     if matrix_name in omx_handle.listMatrices():
                         df = self._make_dataframe_from_omx(
                             omx_handle[matrix_name], matrix_name
                         )
                         df = df[df[matrix_name] > 0.0].copy()
-                        col_name = "{}".format(tech.lower())
-                        df[col_name] = df[matrix_name]
-                        df = df.drop(columns=[matrix_name]).copy()
+                        df.rename(columns={df.columns[2]: tech.lower()}, inplace = True)
+                        #col_name = "{}".format(tech.lower())
+                        #df[col_name] = df[matrix_name]
+                        #df = df.drop(columns=[matrix_name]).copy()
                         path_time_df = pd.merge(
                             path_time_df, df, how="left", on=["origin", "destination"]
                         )
@@ -988,8 +997,8 @@ class Simulated:
                 / s_df["IVT"]
             )
 
-        s_df["orig_district"] = s_df["origin"].map(self.taz_district_dict) 
-        s_df["dest_district"] = s_df["destination"].map(self.taz_district_dict) 
+        s_df["orig_district"] = s_df["origin"].map(taz_district_dict) 
+        s_df["dest_district"] = s_df["destination"].map(taz_district_dict) 
 
         agg_dict = {"simulated_flow": "sum"}
         rename_dict = {"simulated_flow": "total"}
@@ -1020,9 +1029,9 @@ class Simulated:
 
         for time_period in self.model_time_periods:
       
-
+            emme_scenario = self.network_shapefile_names_dict[time_period]
             gdf = gpd.read_file(
-                os.path.join(file_root + time_period + "/" + "emme_links.shp")
+                os.path.join(file_root + "emme_project/Media/" + emme_scenario + "/" + "emme_links.shp")
             )
             df = gdf[
                 ["ID", "@flow_da", "@flow_lrgt", "@flow_sr2", "@flow_sr3", "@flow_trk", "@flow_dato",  "@flow_lrg0","@flow_sr2t", "@flow_sr3t", "@flow_trkt"]  
@@ -1081,8 +1090,9 @@ class Simulated:
 
         # step 1: get the shape
         shape_period = "am"
+        emme_scenario = self.network_shapefile_names_dict[shape_period]
         shape_gdf = gpd.read_file(
-            os.path.join(file_root + shape_period + "/" + "emme_links.shp")
+            os.path.join(file_root +"emme_project/Media/" + emme_scenario +  "/" + "emme_links.shp")
         )
         self.simulated_roadway_am_shape_gdf = (
             shape_gdf[["INODE", "JNODE", "#link_id", "geometry"]]
@@ -1099,11 +1109,13 @@ class Simulated:
         # step 2: fetch the roadway volumes
         across_df = pd.DataFrame()
         for t in self.model_time_periods:
+
             if t == shape_period:
                 gdf = shape_gdf
             else:
+                emme_scenario = self.network_shapefile_names_dict[t]
                 gdf = gpd.read_file(
-                    os.path.join(file_root + t.upper() + "/" + "emme_links.shp")
+                    os.path.join(file_root + "emme_project/Media/" + emme_scenario + "/" + "emme_links.shp")
                 )
 
             df = pd.DataFrame(gdf)[
