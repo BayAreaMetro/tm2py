@@ -47,6 +47,7 @@ class Canonical:
         "Caltrain",
         "ACE",
         "Sonoma-Marin Area Rail Transit",
+        "SMART",
     ]
 
     county_names_list = [
