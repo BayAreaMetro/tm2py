@@ -905,7 +905,10 @@
             name = "WLK_TRN_KNR"
 
 [emme]
-    num_processors = "MAX-1"
+    #num_processors_highway = "MAX-1"
+	#num_processors_transit = "16"
+	num_processors = "MAX-1"
+	
     all_day_scenario_id = 1
     project_path = "emme_project/mtc_emme.emp"
     highway_database_path = "emme_project/Database_highway/emmebank"
@@ -919,18 +922,18 @@
 	capacity = 0
 	free_flow_speed = 0
 	critical_speed = 0
-
+#freeway
 [[highway.capclass_lookup]]
 	capclass = 1
 	capacity = 2050
 	free_flow_speed = 55
-	critical_speed = 18.835
-
+	critical_speed = 25.898
+#
 [[highway.capclass_lookup]]
 	capclass = 2
 	capacity = 1450
 	free_flow_speed = 40
-	critical_speed = 25.898
+	critical_speed = 11.772
 
 [[highway.capclass_lookup]]
 	capclass = 3
@@ -942,175 +945,164 @@
 	capclass = 4
 	capacity = 900
 	free_flow_speed = 20
-	critical_speed = 4.709
+	critical_speed = 7.063
 
 [[highway.capclass_lookup]]
 	capclass = 5
 	capacity = 900
 	free_flow_speed = 20
-	critical_speed = 11.772
+	critical_speed = 7.063
+
 
 [[highway.capclass_lookup]]
 	capclass = 6
 	capacity = 600
-	free_flow_speed = 15
-	critical_speed = 47.087
+	free_flow_speed = 10
+	critical_speed = 4.709
+
 
 [[highway.capclass_lookup]]
 	capclass = 7
 	capacity = 600
-	free_flow_speed = 15
-	critical_speed = 7.063
+	free_flow_speed = 10
+	critical_speed = 4.709
+
 
 [[highway.capclass_lookup]]
 	capclass = 8
 	capacity = 2050
 	free_flow_speed = 18
-	critical_speed = 9.417
+	critical_speed = 47.087
 
-[[highway.capclass_lookup]]
-	capclass = 9
-	capacity = 0
-	free_flow_speed = 0
-	critical_speed = 25.898
 
-[[highway.capclass_lookup]]
-	capclass = 10
-	capacity = 0
-	free_flow_speed = 18
-	critical_speed = 14.126
 
 [[highway.capclass_lookup]]
 	capclass = 11
 	capacity = 2050
 	free_flow_speed = 55
-	critical_speed = 7.063
+	critical_speed = 25.898
+
 
 [[highway.capclass_lookup]]
 	capclass = 12
 	capacity = 1450
 	free_flow_speed = 40
-	critical_speed = 4.709
+	critical_speed = 11.772
+
 
 [[highway.capclass_lookup]]
 	capclass = 13
 	capacity = 1500
 	free_flow_speed = 30
-	critical_speed = 4.709
+	critical_speed = 11.772
+
 
 [[highway.capclass_lookup]]
 	capclass = 14
 	capacity = 950
 	free_flow_speed = 25
-	critical_speed = 3.0
+	critical_speed = 9.417
+
 
 [[highway.capclass_lookup]]
 	capclass = 15
 	capacity = 950
 	free_flow_speed = 25
-	critical_speed = 3.0
+	critical_speed = 9.417
+
 
 [[highway.capclass_lookup]]
 	capclass = 16
 	capacity = 650
-	free_flow_speed = 20
-	critical_speed = 18.835
+	free_flow_speed = 15
+	critical_speed = 4.709
+
 
 [[highway.capclass_lookup]]
 	capclass = 17
 	capacity = 650
-	free_flow_speed = 20
-	critical_speed = 25.898
+	free_flow_speed = 15
+	critical_speed = 4.709
+
 
 [[highway.capclass_lookup]]
 	capclass = 18
 	capacity = 2050
 	free_flow_speed = 18
-	critical_speed = 11.772
+	critical_speed = 47.087
 
-[[highway.capclass_lookup]]
-	capclass = 19
-	capacity = 0
-	free_flow_speed = 0
-	critical_speed = 4.709
 
-[[highway.capclass_lookup]]
-	capclass = 20
-	capacity = 0
-	free_flow_speed = 18
-	critical_speed = 11.772
+
 
 [[highway.capclass_lookup]]
 	capclass = 21
 	capacity = 2100
 	free_flow_speed = 60
-	critical_speed = 47.087
+	critical_speed = 28.252
+
 
 [[highway.capclass_lookup]]
 	capclass = 22
 	capacity = 1600
 	free_flow_speed = 45
-	critical_speed = 9.417
+	critical_speed = 14.126
+
 
 [[highway.capclass_lookup]]
 	capclass = 23
 	capacity = 1550
 	free_flow_speed = 35
-	critical_speed = 9.417
+	critical_speed = 14.126
+
 
 [[highway.capclass_lookup]]
 	capclass = 24
 	capacity = 1000
 	free_flow_speed = 30
-	critical_speed = 28.252
+	critical_speed = 11.772
+
 
 [[highway.capclass_lookup]]
 	capclass = 25
 	capacity = 1000
 	free_flow_speed = 30
-	critical_speed = 16.48
+	critical_speed = 11.772
+
 
 [[highway.capclass_lookup]]
 	capclass = 26
 	capacity = 700
-	free_flow_speed = 25
-	critical_speed = 9.417
+	free_flow_speed = 20
+	critical_speed = 7.063
+
 
 [[highway.capclass_lookup]]
 	capclass = 27
 	capacity = 700
-	free_flow_speed = 25
-	critical_speed = 4.709
+	free_flow_speed = 20
+	critical_speed = 7.063
+
 
 [[highway.capclass_lookup]]
 	capclass = 28
-	capacity = 700
+	capacity = 2100
 	free_flow_speed = 18
-	critical_speed = 4.709
+	critical_speed = 47.087
 
-[[highway.capclass_lookup]]
-	capclass = 29
-	capacity = 0
-	free_flow_speed = 0
-	critical_speed = 3.0
-
-[[highway.capclass_lookup]]
-	capclass = 30
-	capacity = 0
-	free_flow_speed = 18
-	critical_speed = 3.0
 
 [[highway.capclass_lookup]]
 	capclass = 31
 	capacity = 2100
 	free_flow_speed = 60
-	critical_speed = 21.189
+	critical_speed = 28.252
+
 
 [[highway.capclass_lookup]]
 	capclass = 32
 	capacity = 1600
 	free_flow_speed = 45
-	critical_speed = 28.252
+	critical_speed = 14.126
+
 
 [[highway.capclass_lookup]]
 	capclass = 33
@@ -1118,383 +1110,156 @@
 	free_flow_speed = 35
 	critical_speed = 14.126
 
+
+
 [[highway.capclass_lookup]]
 	capclass = 34
 	capacity = 1000
-	free_flow_speed = 35
-	critical_speed = 7.063
+	free_flow_speed = 30
+	critical_speed = 11.772
+
 
 [[highway.capclass_lookup]]
 	capclass = 35
 	capacity = 1000
-	free_flow_speed = 35
-	critical_speed = 14.126
+	free_flow_speed = 30
+	critical_speed = 11.772
+
 
 [[highway.capclass_lookup]]
 	capclass = 36
 	capacity = 700
-	free_flow_speed = 30
-	critical_speed = 47.087
+	free_flow_speed = 25
+	critical_speed = 9.417
+
 
 [[highway.capclass_lookup]]
 	capclass = 37
 	capacity = 700
-	free_flow_speed = 30
-	critical_speed = 11.772
+	free_flow_speed = 25
+	critical_speed = 9.417
+
 
 [[highway.capclass_lookup]]
 	capclass = 38
 	capacity = 2100
 	free_flow_speed = 18
-	critical_speed = 11.772
+	critical_speed = 47.087
 
-[[highway.capclass_lookup]]
-	capclass = 39
-	capacity = 0
-	free_flow_speed = 0
-	critical_speed = 30.607
 
-[[highway.capclass_lookup]]
-	capclass = 40
-	capacity = 0
-	free_flow_speed = 18
-	critical_speed = 18.835
 
 [[highway.capclass_lookup]]
 	capclass = 41
 	capacity = 2150
 	free_flow_speed = 65
-	critical_speed = 11.772
+	critical_speed = 30.607
+
 
 [[highway.capclass_lookup]]
 	capclass = 42
 	capacity = 1650
 	free_flow_speed = 50
-	critical_speed = 7.063
+	critical_speed = 16.480
+
 
 [[highway.capclass_lookup]]
 	capclass = 43
 	capacity = 1550
 	free_flow_speed = 40
-	critical_speed = 7.063
+	critical_speed = 16.480
+
 
 [[highway.capclass_lookup]]
 	capclass = 44
 	capacity = 1050
 	free_flow_speed = 35
-	critical_speed = 3.0
+	critical_speed = 14.126
+
 
 [[highway.capclass_lookup]]
 	capclass = 45
 	capacity = 1050
 	free_flow_speed = 35
-	critical_speed = 3.0
+	critical_speed = 14.126
+
 
 [[highway.capclass_lookup]]
 	capclass = 46
 	capacity = 900
 	free_flow_speed = 30
-	critical_speed = 21.189
+	critical_speed = 11.772
+
 
 [[highway.capclass_lookup]]
 	capclass = 47
 	capacity = 900
 	free_flow_speed = 30
-	critical_speed = 28.252
+	critical_speed = 11.772
+
 
 [[highway.capclass_lookup]]
 	capclass = 48
 	capacity = 2150
 	free_flow_speed = 18
-	critical_speed = 14.126
+	critical_speed = 47.087
 
-[[highway.capclass_lookup]]
-	capclass = 49
-	capacity = 0
-	free_flow_speed = 0
-	critical_speed = 9.417
-
-[[highway.capclass_lookup]]
-	capclass = 50
-	capacity = 0
-	free_flow_speed = 18
-	critical_speed = 14.126
 
 [[highway.capclass_lookup]]
 	capclass = 51
 	capacity = 2150
 	free_flow_speed = 65
-	critical_speed = 47.087
+	critical_speed = 30.607
+
 
 [[highway.capclass_lookup]]
 	capclass = 52
 	capacity = 1650
 	free_flow_speed = 55
-	critical_speed = 11.772
+	critical_speed = 16.480
+
 
 [[highway.capclass_lookup]]
 	capclass = 53
 	capacity = 1550
 	free_flow_speed = 40
-	critical_speed = 11.772
+	critical_speed = 16.480
+
 
 [[highway.capclass_lookup]]
 	capclass = 54
 	capacity = 1050
 	free_flow_speed = 40
-	critical_speed = 23.543
+	critical_speed = 16.480
+
 
 [[highway.capclass_lookup]]
 	capclass = 55
 	capacity = 1050
 	free_flow_speed = 40
-	critical_speed = 9.417
+	critical_speed = 16.480
+
 
 [[highway.capclass_lookup]]
 	capclass = 56
 	capacity = 950
 	free_flow_speed = 35
-	critical_speed = 11.772
+	critical_speed = 14.126
+
 
 [[highway.capclass_lookup]]
 	capclass = 57
 	capacity = 950
 	free_flow_speed = 35
-	critical_speed = 9.417
+	critical_speed = 14.126
+
 
 [[highway.capclass_lookup]]
 	capclass = 58
 	capacity = 2150
 	free_flow_speed = 18
-	critical_speed = 9.417
-
-[[highway.capclass_lookup]]
-	capclass = 59
-	capacity = 0
-	free_flow_speed = 0
-	critical_speed = 3.0
-
-[[highway.capclass_lookup]]
-	capclass = 60
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 3.0
-
-[[highway.capclass_lookup]]
-	capclass = 61
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 23.543
-
-[[highway.capclass_lookup]]
-	capclass = 62
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 30.607
-
-[[highway.capclass_lookup]]
-	capclass = 63
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 16.48
-
-[[highway.capclass_lookup]]
-	capclass = 64
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 11.772
-
-[[highway.capclass_lookup]]
-	capclass = 65
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 16.48
-
-[[highway.capclass_lookup]]
-	capclass = 66
-    capacity = 0
-    free_flow_speed = 0
 	critical_speed = 47.087
 
-[[highway.capclass_lookup]]
-	capclass = 67
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 14.126
 
-[[highway.capclass_lookup]]
-	capclass = 68
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 14.126
-
-[[highway.capclass_lookup]]
-	capclass = 69
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 21.189
-
-[[highway.capclass_lookup]]
-	capclass = 70
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 11.772
-
-[[highway.capclass_lookup]]
-	capclass = 71
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 14.126
-
-[[highway.capclass_lookup]]
-	capclass = 72
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 11.772
-
-[[highway.capclass_lookup]]
-	capclass = 73
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 11.772
-
-[[highway.capclass_lookup]]
-	capclass = 74
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 3.0
-
-[[highway.capclass_lookup]]
-	capclass = 75
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 3.0
-
-[[highway.capclass_lookup]]
-	capclass = 76
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 23.543
-
-[[highway.capclass_lookup]]
-	capclass = 77
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 30.607
-
-[[highway.capclass_lookup]]
-	capclass = 78
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 16.48
-
-[[highway.capclass_lookup]]
-	capclass = 79
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 14.126
-
-[[highway.capclass_lookup]]
-	capclass = 80
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 16.48
-
-[[highway.capclass_lookup]]
-	capclass = 81
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 47.087
-
-[[highway.capclass_lookup]]
-	capclass = 82
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 16.48
-
-[[highway.capclass_lookup]]
-	capclass = 83
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 14.126
-
-[[highway.capclass_lookup]]
-	capclass = 84
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 23.543
-
-[[highway.capclass_lookup]]
-	capclass = 85
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 16.48
-
-[[highway.capclass_lookup]]
-	capclass = 86
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 16.48
-
-[[highway.capclass_lookup]]
-	capclass = 87
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 14.126
-
-[[highway.capclass_lookup]]
-	capclass = 88
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 14.126
-
-[[highway.capclass_lookup]]
-	capclass = 89
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 3.0
-
-[[highway.capclass_lookup]]
-	capclass = 90
-    capacity = 0
-    free_flow_speed = 0
-	critical_speed = 3.0
-
-[[highway.capclass_lookup]]
-	capclass = 99
-	capacity = 0
-	free_flow_speed = 10
-	critical_speed = 3.0
-
-[[highway.capclass_lookup]]
-	capclass = 109
-	capacity = 0
-	free_flow_speed = 10
-	critical_speed = 3.0
-
-[[highway.capclass_lookup]]
-	capclass = 119
-	capacity = 0
-	free_flow_speed = 10
-	critical_speed = 3.0
-
-[[highway.capclass_lookup]]
-	capclass = 129
-	capacity = 0
-	free_flow_speed = 10
-	critical_speed = 3.0
-
-[[highway.capclass_lookup]]
-	capclass = 139
-	capacity = 0
-	free_flow_speed = 10
-	critical_speed = 3.0
-
-[[highway.capclass_lookup]]
-	capclass = 149
-	capacity = 0
-	free_flow_speed = 10
-	critical_speed = 3.0
 
 [[transit.modes]]
     mode_id = "D"
