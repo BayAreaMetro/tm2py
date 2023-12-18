@@ -562,47 +562,53 @@ class TransitAssignment(Component):
                     self.run_transit_assign(time_period, use_ccr, congested_transit_assignment)
                     #TODO: run skim
                     #TODO: trim_demand
-
-                    congested_transit_assignment = self.config.congested_transit_assignment
-                    # apply peaking factor
-                    if self.config.congested.use_peaking_factor:
-                        path_boardings = self.get_abs_path(
-                            self.config.output_transit_boardings_path
-                            )
-                        ea_df_path = path_boardings.format(period='ea_pnr')
-                        if (time_period.lower() == 'am') and (os.path.isfile(ea_df_path)==False):
-                            raise Exception("run ea period first to account for the am peaking factor")
-                        if (time_period.lower() == 'am') and (os.path.isfile(ea_df_path)==True):
-                            print("peaking_factor")
-                            ea_df = pd.read_csv(ea_df_path)
-                            self._apply_peaking_factor(time_period, ea_df=ea_df)
-                        if (time_period.lower() == 'pm'):
-                            self._apply_peaking_factor(time_period)
-                    print("congested")
-                    self.run_transit_assign(time_period, use_ccr, congested_transit_assignment)
-                    if self.config.congested.use_peaking_factor and (time_period.lower() == 'ea'):
-                        self._apply_peaking_factor(time_period)
+                    # create ccost attribute for skimming
+                    scenario = self.transit_emmebank.scenario(time_period)
+                    self._add_ccost_to_scenario(scenario)
+                    # congested_transit_assignment = self.config.congested_transit_assignment
+                    # # apply peaking factor
+                    # if self.config.congested.use_peaking_factor:
+                    #     path_boardings = self.get_abs_path(
+                    #         self.config.output_transit_boardings_path
+                    #         )
+                    #     ea_df_path = path_boardings.format(period='ea_pnr')
+                    #     if (time_period.lower() == 'am') and (os.path.isfile(ea_df_path)==False):
+                    #         raise Exception("run ea period first to account for the am peaking factor")
+                    #     if (time_period.lower() == 'am') and (os.path.isfile(ea_df_path)==True):
+                    #         print("peaking_factor")
+                    #         ea_df = pd.read_csv(ea_df_path)
+                    #         self._apply_peaking_factor(time_period, ea_df=ea_df)
+                    #     if (time_period.lower() == 'pm'):
+                    #         self._apply_peaking_factor(time_period)
+                    # print("congested")
+                    # self.run_transit_assign(time_period, use_ccr, congested_transit_assignment)
+                    # if self.config.congested.use_peaking_factor and (time_period.lower() == 'ea'):
+                    #     self._apply_peaking_factor(time_period)
                 else:
                     self.transit_emmebank.zero_matrix #TODO: need further test
                 
             else: # iteration >=1
                 use_ccr = self.config.use_ccr
-                congested_transit_assignment = self.config.congested_transit_assignment
+                if (time_period in ['EA','EV','MD']):
+                    congested_transit_assignment = False
+                else:
+                    congested_transit_assignment = self.config.congested_transit_assignment
                 # update auto times
                 self.transit_network.update_auto_times(time_period)
                 # import transit demands
                 self.sub_components["prepare transit demand"].run()
 
-                if (self.config.congested.trim_demand_before_congested_transit_assignment and 
-                    congested_transit_assignment):
-                    use_ccr = False
-                    congested_transit_assignment =  False                   
-                    self.run_transit_assign(time_period, use_ccr, congested_transit_assignment)
-                    #TODO: run skim
-                    #TODO: trim_demand
+#                if (self.config.congested.trim_demand_before_congested_transit_assignment and 
+#                    congested_transit_assignment):
+#                    use_ccr = False
+#                    congested_transit_assignment =  False                   
+#                    self.run_transit_assign(time_period, use_ccr, congested_transit_assignment)
+#                    #TODO: run skim
+#                    #TODO: trim_demand
                 
                 self.run_transit_assign(time_period, use_ccr, congested_transit_assignment)
-                            
+                
+                                    
             # output_summaries
             if self.config.output_stop_usage_path is not None:
                 network, class_stop_attrs = self._calc_connector_flows(time_period)
@@ -1255,6 +1261,25 @@ class TransitAssignment(Component):
             overwrite=True,
             scenario=emme_scenario,
         )
+
+
+    def _add_ccost_to_scenario(self, emme_scenario: "EmmeScenario") -> None:
+        """Add Extra Added Wait Time and Capacity Penalty to emme scenario.
+
+        Args:
+            emme_scenario : EmmeScenario
+        """
+        create_extra = self.controller.emme_manager.tool(
+            "inro.emme.data.extra_attribute.create_extra_attribute"
+        )
+        create_extra(
+            "TRANSIT_SEGMENT",
+            "@ccost",
+            "congested cost",
+            overwrite=True,
+            scenario=emme_scenario,
+        )
+
 
     def _get_network_with_ccr_scenario_attributes(self, emme_scenario):
 

@@ -240,7 +240,7 @@ class OMXManager:
             n_zones = len(numpy_array)
             numpy_array = resize(numpy_array, (n_zones, 1))
         attrs = {"description": matrix.description}
-        self.write_array(numpy_array, name, "float32", attrs)
+        self.write_array(numpy_array, name, "float64", attrs)
 
     def write_clipped_array(
         self,
@@ -263,10 +263,10 @@ class OMXManager:
             numpy_array = numpy_array.clip(a_min, a_max)
         else:
             numpy_array = numpy_array.clip(a_min)
-        self.write_array(numpy_array, name, "float32", attrs)
+        self.write_array(numpy_array, name, "float64", attrs)
 
     def write_array(
-        self, numpy_array: NumpyArray, name: str, data_type: str = "float32", attrs: Dict[str, str] = None
+        self, numpy_array: NumpyArray, name: str, data_type: str = "float64", attrs: Dict[str, str] = None
     ):
         """Write array with name and optional attrs to OMX file.
 

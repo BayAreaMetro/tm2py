@@ -48,10 +48,13 @@ class ScenarioConfig(ConfigItem):
             components
         name: scenario name string
         year: model year, must be at least 2005
+        landuse_file: TAZ file
     """
 
     maz_landuse_file: pathlib.Path
     zone_seq_file: pathlib.Path
+    landuse_file: pathlib.Path
+    landuse_index_column: str    
     name: str
     year: int = Field(ge=2005)
     verify: Optional[bool] = Field(default=False)
@@ -229,6 +232,7 @@ class TimePeriodConfig(ConfigItem):
     """
 
     name: str = Field(max_length=4)
+    start_period: float = Field(gt=0)
     length_hours: float = Field(gt=0)
     highway_capacity_factor: float = Field(gt=0)
     emme_scenario_id: int = Field(ge=1)
@@ -309,6 +313,20 @@ class HouseholdConfig(ConfigItem):
     mode_agg: List[HouseholdModeAgg]
     highway_maz_ctramp_output_file: pathlib.Path
     transit_tap_ctramp_output_file: pathlib.Path
+    transit_taz_ctramp_output_file: pathlib.Path
+    active_demand_file: pathlib.Path
+    OwnedAV_ZPV_factor: float
+    TNC_ZPV_factor: float
+    ctramp_indiv_trip_file: str
+    ctramp_joint_trip_file: str
+    ctramp_run_dir: pathlib.Path
+    rideshare_mode_split: Dict[str,float]
+    taxi_split: Dict[str,float]
+    single_tnc_split: Dict[str,float]
+    shared_tnc_split: Dict[str,float]
+    ctramp_mode_names: Dict[float,str]
+    income_segment: Dict[str, Union[float, str, list]]
+    ctramp_hh_file : str
 
 
 @dataclass(frozen=True)
