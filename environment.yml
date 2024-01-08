@@ -304,3 +304,4 @@ dependencies:
     - virtualenv==20.13.3
     - watchdog==2.1.6
     - wcmatch==8.3
+prefix: /Users/elizabeth/opt/miniconda3/envs/tm2py

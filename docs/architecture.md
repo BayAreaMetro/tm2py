@@ -13,7 +13,9 @@ classDiagram
         +write_top_sheet()
     }
 ```
+
 ## Controllers
+
 ``` mermaid
 classDiagram
     Controller <|-- ModelController

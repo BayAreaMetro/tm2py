@@ -6,6 +6,7 @@ labels: enhancement
 assignees: ''
 ---
 ### User Story
+
 *As a ...insert type of user... I'd like to ...insert desired feature or behavior...*
 
 Progress:
