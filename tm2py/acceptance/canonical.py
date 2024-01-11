@@ -3,6 +3,7 @@
 import os
 import pandas as pd
 import toml
+import geopandas as gpd
 
 
 class Canonical:
@@ -27,7 +28,6 @@ class Canonical:
     PARK_AND_RIDE_ACCESS_WORD = "Park and Ride"
     KISS_AND_RIDE_ACCESS_WORD = "Kiss and Ride"
     BIKE_ACCESS_WORD = "Bike"
-
     ALL_VEHICLE_TYPE_WORD = "All Vehicles"
     LARGE_TRUCK_VEHICLE_TYPE_WORD = "Large Trucks"
 
@@ -198,12 +198,12 @@ class Canonical:
 
         return
 
-    def aggregate_line_names_across_time_of_day(
-        self, input_df: pd.DataFrame, input_column_name: str
+    def aggregate_line_names_across_time_of_day(   
+        self, input_df: pd.DataFrame, input_column_name: str  
     ) -> pd.DataFrame:
 
         df = input_df[input_column_name].str.split(pat="_", expand=True).copy()
-        df["daily_line_name"] = df[0] + "_" + df[1] + "_" + df[2]
+        df["daily_line_name"] = df[0] + "_" + df[1] + "_" + df[2] 
         return_df = pd.concat([input_df, df["daily_line_name"]], axis="columns")
 
         return return_df
@@ -224,12 +224,6 @@ class Canonical:
         in_file = self.canonical_dict["crosswalks"]["pems_station_to_tm2_links_file"]
 
         df = pd.read_csv(os.path.join(file_root, in_file))
-
-        df["pems_station_id"] = df["station"].astype(str) + "_" + df["direction"]
-
-        assert df["pems_station_id"].is_unique  # validate crosswalk - correct location?
-
-        df = df[["pems_station_id", "A", "B"]]
 
         self.pems_to_link_crosswalk_df = df
 
