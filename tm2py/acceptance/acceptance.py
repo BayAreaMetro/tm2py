@@ -66,24 +66,25 @@ class Acceptance:
             "odot_flow_category": pd.Series(dtype="int"),
             "odot_maximum_error": pd.Series(dtype="float"),
             "geometry": pd.Series(dtype="str"),  # line
+
         }
     )
 
     transit_network_gdf = gpd.GeoDataFrame(
         {
-            "model_link_id": pd.Series(dtype="int"),
+            "model_link_id": pd.Series(dtype="int"), 
             "model_line_id": pd.Series(dtype="str"),
             "operator": pd.Series(dtype="str"),
             "technology": pd.Series(dtype="str"),
-            "route_short_name": pd.Series(dtype="str"),
+            "route_short_name": pd.Series(dtype="str"), 
             "route_long_name": pd.Series(dtype="str"),
-            "trip_headsign": pd.Series(dtype="str"),
+            "trip_headsign": pd.Series(dtype="str"), 
             "time_period": pd.Series(dtype="str"),
             "route_observed_boardings": pd.Series(dtype="float"),
             "route_simulated_boardings": pd.Series(dtype="float"),
             "florida_threshold": pd.Series(dtype="float"),
-            "am_segment_simulated_boardings": pd.Series(dtype="float"),
-            "am_segment_volume": pd.Series(dtype="float"),
+            "am_segment_simulated_boardings": pd.Series(dtype="float"),  
+            "am_segment_volume": pd.Series(dtype="float"), 
             "am_segment_capacity_total": pd.Series(dtype="float"),
             "am_segment_vc_ratio_total": pd.Series(dtype="float"),
             "am_segment_capacity_seated": pd.Series(dtype="float"),
@@ -122,7 +123,7 @@ class Acceptance:
         self.o = observed
         self.acceptance_output_folder_root = output_file_root
 
-    def make_acceptance(self, make_transit=True, make_roadway=True, make_other=False):
+    def make_acceptance(self, make_transit=True, make_roadway=False, make_other=True):
         if make_roadway:
             self._make_roadway_network_comparisons()
         if make_transit:
@@ -165,6 +166,7 @@ class Acceptance:
         s_bridge_df = self.s.simulated_bridge_details_df.copy()
 
         o_df["time_period"] = o_df.time_period.str.lower()
+        o_df = o_df.drop(columns = ["standard_link_id"]) 
         s_trim_df = s_df[
             s_df["ft"] <= self.MAX_FACILITY_TYPE_FOR_ROADWAY_COMPARISONS
         ].copy()
@@ -199,10 +201,11 @@ class Acceptance:
             out_df["odot_flow_category_daily"],
             out_df["odot_flow_category_hourly"],
         )
+  
         out_df = out_df[
             [
-                "emme_a_node_id",
-                "emme_b_node_id",
+                "emme_a_node_id", 
+                "emme_b_node_id", 
                 "standard_link_id",
                 "station_id",
                 "plaza_name",
@@ -312,37 +315,41 @@ class Acceptance:
             ]
             .groupby(["tm2_mode", "line_mode", "operator", "technology", "time_period"])
             .agg({"total_boarding": "sum"})
-            .reset_index()
-        )
+            .reset_index())
+            
+        sim_df = self._fix_technology_labels(sim_df, "technology")
 
         rail_df = pd.merge(
             sim_df,
             obs_df,
-            how="outer",
+            how="outer", 
             on=["operator", "technology", "time_period"],
         )
-
+    
         # step 2: left merge for non-rail operators
         obs_df = self.o.reduced_transit_on_board_df[
             ~self.o.reduced_transit_on_board_df["survey_operator"].isin(
                 self.c.rail_operators_vector
             )
         ].copy()
+
         sim_df = self.s.simulated_boardings_df[
             ~self.s.simulated_boardings_df["operator"].isin(
                 self.c.rail_operators_vector
             )
         ].copy()
 
+        sim_df = self._fix_technology_labels(sim_df, "technology")
+
         non_df = pd.merge(
             sim_df,
             obs_df,
             how="left",
-            left_on=["line_name", "daily_line_name", "time_period"],
+            left_on=["line_name", "daily_line_name", "time_period"], 
             right_on=["standard_line_name", "daily_line_name", "time_period"],
         )
 
-        boards_df = pd.concat([rail_df, non_df])
+        boards_df = pd.concat([rail_df, non_df], axis = "rows",ignore_index=True) 
 
         boards_df["operator"] = np.where(
             boards_df["operator"].isnull(),
@@ -354,25 +361,26 @@ class Acceptance:
             boards_df["survey_tech"],
             boards_df["technology"],
         )
-
+ 
         # step 3 -- create a daily shape
         df = pd.DataFrame(self.s.simulated_transit_segments_gdf).copy()
-        am_shape_df = df[~(df["line"].str.contains("pnr_"))].reset_index().copy()
+        am_shape_df = df[~(df["LINE_ID"].str.contains("pnr_"))].reset_index().copy()
         am_shape_df = self.c.aggregate_line_names_across_time_of_day(
-            am_shape_df, "line"
+        am_shape_df, "LINE_ID"
         )
         b_df = (
             am_shape_df.groupby("daily_line_name")
-            .agg({"line": "first"})
+            .agg({"LINE_ID": "first"})
             .reset_index()
             .copy()
         )
         c_df = pd.DataFrame(
             self.s.simulated_transit_segments_gdf[
-                self.s.simulated_transit_segments_gdf["line"].isin(b_df["line"])
+                self.s.simulated_transit_segments_gdf["LINE_ID"].isin(b_df["LINE_ID"])
             ].copy()
         )
-        daily_shape_df = pd.merge(c_df, b_df, how="left", on="line")
+        daily_shape_df = pd.merge(c_df, b_df, how="left", on="LINE_ID")
+        daily_shape_df = daily_shape_df.rename(columns={"INODE":"emme_a_node_id","JNODE":"emme_b_node_id"})
 
         # step 4 -- join the shapes to the boardings
         # for daily, join boardings to shape, as I care about the boardings more than the daily shapes
@@ -391,18 +399,19 @@ class Acceptance:
 
         # for am, join shapes to boardings, as I care more about the shapes volumes than the am boardings
         am_join_df = pd.merge(
-            am_shape_df,
-            boards_df[boards_df["time_period"] == "am"],
-            how="left",
-            right_on=["line_name", "daily_line_name"],
-            left_on=["line", "daily_line_name"],
+            am_shape_df,  
+            boards_df[boards_df["time_period"] == "am"], 
+            how = "outer", 
+            left_on=["LINE_ID", "daily_line_name"],  
+            right_on=["line_name", "daily_line_name"],  
         )
-        am_join_df["model_line_id"] = am_join_df["line_name"]
+
+        am_join_df["model_line_id"] = am_join_df["line_name"]  
         am_join_df["time_period"] = np.where(
             am_join_df["time_period"].isnull(), "am", am_join_df["time_period"]
         )
         am_join_df = self.s._get_operator_name_from_line_name(
-            am_join_df, "line", "temp_operator"
+            am_join_df, "LINE_ID", "temp_operator"
         )
         am_join_df["operator"] = np.where(
             am_join_df["operator"].isnull()
@@ -415,16 +424,17 @@ class Acceptance:
             [daily_join_df, am_join_df], axis="rows", ignore_index=True
         )
 
+
         return_df = return_df.rename(
             columns={
-                "#link_id": "model_link_id",
+                "#link_id": "model_link_id", 
                 "standard_route_short_name": "route_short_name",
                 "standard_route_long_name": "route_long_name",
                 "standard_headsign": "trip_headsign",
                 "description": "line_description",
                 "survey_boardings": "route_observed_boardings",
                 "total_boarding": "route_simulated_boardings",
-                "board": "am_segment_simulated_boardings",
+                "board": "am_segment_simulated_boardings", 
             }
         )
 
@@ -436,12 +446,14 @@ class Acceptance:
             return_df["first_row_in_line"], return_df["route_observed_boardings"], 0
         )
 
-        # TODO: remove this once the crosswalk with direction is made
+
+        # TODO: remove this once the crosswalk with direction is made  -
         return_df["route_observed_boardings"] = np.where(
-            return_df["time_period"] == "am", 0, return_df["route_observed_boardings"]
-        )
+             return_df["time_period"] == "am", 0, return_df["route_observed_boardings"]
+         )
 
         return_df = self._fix_technology_labels(return_df, "technology")
+        #return_df = return_df.rename(columns = {"INODE": "emme_a_node_id", "JNODE":"emme_b_node_id"})
 
         return_df = return_df[self.transit_network_gdf.columns]
 
@@ -450,6 +462,7 @@ class Acceptance:
         )
 
         self._write_transit_network()
+
 
         return
 
@@ -530,50 +543,8 @@ class Acceptance:
         return df
 
     def _make_zero_vehicle_household_comparisons(self):
-
-        # prepare simulated data
-        a_df = (
-            pd.merge(
-                self.s.simulated_zero_vehicle_hhs_df,
-                self.s.simulated_maz_data_df[["MAZ_ORIGINAL", "MAZSEQ"]],
-                left_on="maz",
-                right_on="MAZSEQ",
-                how="left",
-            )
-            .drop(columns=["maz", "MAZSEQ"])
-            .rename(columns={"MAZ_ORIGINAL": "maz"})
-        )
-
-        # TODO: probably better if this is done in Simulated, to avoid using Canonical in this class
-        a_df = pd.merge(
-            a_df,
-            self.c.census_2010_to_maz_crosswalk_df,
-            how="left",
-            on="maz",
-        )
-
-        a_df["product"] = a_df["simulated_zero_vehicle_share"] * a_df["maz_share"]
-
-        b_df = (
-            a_df.groupby("blockgroup")
-            .agg({"product": "sum", "simulated_households": "sum"})
-            .reset_index()
-            .rename(columns={"product": "simulated_zero_vehicle_share"})
-        )
-        b_df["tract"] = b_df["blockgroup"].astype("str").str.slice(stop=-1)
-        b_df["product"] = (
-            b_df["simulated_zero_vehicle_share"] * b_df["simulated_households"]
-        )
-
-        c_df = (
-            b_df.groupby("tract")
-            .agg({"product": "sum", "simulated_households": "sum"})
-            .reset_index()
-        )
-        c_df["simulated_zero_vehicle_share"] = (
-            c_df["product"] / c_df["simulated_households"]
-        )
-
+        # simulated data
+        c_df = self.s.reduced_simulated_zero_vehicle_hhs_df
         # prepare the observed data
         join_df = self.o.census_2017_zero_vehicle_hhs_df.copy()
         join_df["tract"] = join_df["geoid"].str.replace("1400000US0", "")
