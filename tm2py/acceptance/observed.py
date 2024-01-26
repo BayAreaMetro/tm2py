@@ -22,7 +22,7 @@ class Observed:
     census_tract_centroids_gdf: gpd.GeoDataFrame
 
     RELEVANT_PEMS_OBSERVED_YEARS_LIST = [2014, 2015, 2016]
-    RELEVANT_BRIDGE_TRANSACTIONS_YEARS_LIST = [2014, 2015, 2016] # ch
+    RELEVANT_BRIDGE_TRANSACTIONS_YEARS_LIST = [2014, 2015, 2016]
     RELEVANT_PEMS_VEHICLE_CLASSES_FOR_LARGE_TRUCK = [6, 7, 8, 9, 10, 11, 12]
 
     ohio_rmse_standards_df = pd.DataFrame(
@@ -325,7 +325,7 @@ class Observed:
                 dtype=self.reduced_transit_on_board_df.dtypes.to_dict(),
             )
         else:
-            in_df = pd.read_feather(os.path.join(file_root, in_file))
+            in_df = pd.read_csv(os.path.join(file_root, in_file))
             temp_df = in_df[
                 (in_df["weekpart"].isna()) | (in_df["weekpart"] != "WEEKEND")
             ].copy()
@@ -553,11 +553,11 @@ class Observed:
         o_df = self.reduced_transit_spatial_flow_df.copy()
         o_df = o_df[o_df["time_period"] == "am"].copy()
 
-        tm1_district_dict = self.c.taz_to_district_df.set_index("taz_tm1")[
-            "district_tm1"
+        tm2_district_dict = self.c.taz_to_district_df.set_index("taz_tm2")[
+            "district_tm2"
         ].to_dict()
-        o_df["orig_district"] = o_df["orig_taz"].map(tm1_district_dict)
-        o_df["dest_district"] = o_df["dest_taz"].map(tm1_district_dict)
+        o_df["orig_district"] = o_df["orig_taz"].map(tm2_district_dict)
+        o_df["dest_district"] = o_df["dest_taz"].map(tm2_district_dict)
 
         for prefix in self.c.transit_technology_abbreviation_dict.keys():
             o_df["{}".format(prefix.lower())] = (
@@ -872,9 +872,8 @@ class Observed:
                 self.c.pems_to_link_crosswalk_df,
                 out_df,
                 how="left",
-                left_on="pems_station_id",
-                right_on="station_id",
-            ).drop(columns=["pems_station_id"])
+                on="station_id"
+            )
 
             out_df = self._join_tm2_node_ids(out_df)
 
@@ -894,15 +893,16 @@ class Observed:
                 .reset_index()
             )
             join_df = out_df[
-                ["A", "B", "observed_flow", "station_id", "type", "vehicle_class"]
+                ["emme_a_node_id","emme_b_node_id", "time_period", "station_id", "type", "vehicle_class"]
             ].copy()
             return_df = pd.merge(
                 median_df,
                 join_df,
                 how="left",
-                on=["A", "B", "observed_flow", "vehicle_class"],
+                on=["emme_a_node_id","emme_b_node_id", "time_period", "vehicle_class"]
             ).reset_index(drop=True)
 
+            #return_df = return_df.rename(columns = {"model_link_id" : "standard_link_id"})
             return_df = self._join_ohio_standards(return_df)
             return_df = self._identify_key_arterials_and_bridges(return_df)
 

@@ -225,11 +225,7 @@ class Canonical:
 
         df = pd.read_csv(os.path.join(file_root, in_file))
 
-        df["pems_station_id"] = df["station"].astype(str) + "_" + df["direction"]
-
-        assert df["pems_station_id"].is_unique  # validate crosswalk - correct location?
-
-        df = df[["pems_station_id", "A", "B"]]
+        df = df[["station_id", "A", "B"]]
 
         self.pems_to_link_crosswalk_df = df
 

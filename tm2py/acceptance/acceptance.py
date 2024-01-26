@@ -165,6 +165,7 @@ class Acceptance:
         s_bridge_df = self.s.simulated_bridge_details_df.copy()
 
         o_df["time_period"] = o_df.time_period.str.lower()
+        #o_df = o_df.drop(columns = ["standard_link_id"]) 
         s_trim_df = s_df[
             s_df["ft"] <= self.MAX_FACILITY_TYPE_FOR_ROADWAY_COMPARISONS
         ].copy()
@@ -315,6 +316,8 @@ class Acceptance:
             .reset_index()
         )
 
+        sim_df = self._fix_technology_labels(sim_df, "technology")
+
         rail_df = pd.merge(
             sim_df,
             obs_df,
@@ -334,6 +337,8 @@ class Acceptance:
             )
         ].copy()
 
+        sim_df = self._fix_technology_labels(sim_df, "technology")
+
         non_df = pd.merge(
             sim_df,
             obs_df,
@@ -342,7 +347,7 @@ class Acceptance:
             right_on=["standard_line_name", "daily_line_name", "time_period"],
         )
 
-        boards_df = pd.concat([rail_df, non_df])
+        boards_df = pd.concat([rail_df, non_df], axis = "rows",ignore_index=True)
 
         boards_df["operator"] = np.where(
             boards_df["operator"].isnull(),
@@ -357,22 +362,23 @@ class Acceptance:
 
         # step 3 -- create a daily shape
         df = pd.DataFrame(self.s.simulated_transit_segments_gdf).copy()
-        am_shape_df = df[~(df["line"].str.contains("pnr_"))].reset_index().copy()
+        am_shape_df = df[~(df["LINE_ID"].str.contains("pnr_"))].reset_index().copy()
         am_shape_df = self.c.aggregate_line_names_across_time_of_day(
-            am_shape_df, "line"
+            am_shape_df, "LINE_ID"
         )
         b_df = (
             am_shape_df.groupby("daily_line_name")
-            .agg({"line": "first"})
+            .agg({"LINE_ID": "first"})
             .reset_index()
             .copy()
         )
         c_df = pd.DataFrame(
             self.s.simulated_transit_segments_gdf[
-                self.s.simulated_transit_segments_gdf["line"].isin(b_df["line"])
+                self.s.simulated_transit_segments_gdf["LINE_ID"].isin(b_df["LINE_ID"])
             ].copy()
         )
-        daily_shape_df = pd.merge(c_df, b_df, how="left", on="line")
+        daily_shape_df = pd.merge(c_df, b_df, how="left", on="LINE_ID")
+        daily_shape_df = daily_shape_df.rename(columns={"INODE":"emme_a_node_id","JNODE":"emme_b_node_id"})
 
         # step 4 -- join the shapes to the boardings
         # for daily, join boardings to shape, as I care about the boardings more than the daily shapes
@@ -393,16 +399,16 @@ class Acceptance:
         am_join_df = pd.merge(
             am_shape_df,
             boards_df[boards_df["time_period"] == "am"],
-            how="left",
+            how="outer",
             right_on=["line_name", "daily_line_name"],
-            left_on=["line", "daily_line_name"],
+            left_on=["LINE_ID", "daily_line_name"],
         )
         am_join_df["model_line_id"] = am_join_df["line_name"]
         am_join_df["time_period"] = np.where(
             am_join_df["time_period"].isnull(), "am", am_join_df["time_period"]
         )
         am_join_df = self.s._get_operator_name_from_line_name(
-            am_join_df, "line", "temp_operator"
+            am_join_df, "LINE_ID", "temp_operator"
         )
         am_join_df["operator"] = np.where(
             am_join_df["operator"].isnull()
@@ -531,48 +537,7 @@ class Acceptance:
 
     def _make_zero_vehicle_household_comparisons(self):
 
-        # prepare simulated data
-        a_df = (
-            pd.merge(
-                self.s.simulated_zero_vehicle_hhs_df,
-                self.s.simulated_maz_data_df[["MAZ_ORIGINAL", "MAZSEQ"]],
-                left_on="maz",
-                right_on="MAZSEQ",
-                how="left",
-            )
-            .drop(columns=["maz", "MAZSEQ"])
-            .rename(columns={"MAZ_ORIGINAL": "maz"})
-        )
-
-        # TODO: probably better if this is done in Simulated, to avoid using Canonical in this class
-        a_df = pd.merge(
-            a_df,
-            self.c.census_2010_to_maz_crosswalk_df,
-            how="left",
-            on="maz",
-        )
-
-        a_df["product"] = a_df["simulated_zero_vehicle_share"] * a_df["maz_share"]
-
-        b_df = (
-            a_df.groupby("blockgroup")
-            .agg({"product": "sum", "simulated_households": "sum"})
-            .reset_index()
-            .rename(columns={"product": "simulated_zero_vehicle_share"})
-        )
-        b_df["tract"] = b_df["blockgroup"].astype("str").str.slice(stop=-1)
-        b_df["product"] = (
-            b_df["simulated_zero_vehicle_share"] * b_df["simulated_households"]
-        )
-
-        c_df = (
-            b_df.groupby("tract")
-            .agg({"product": "sum", "simulated_households": "sum"})
-            .reset_index()
-        )
-        c_df["simulated_zero_vehicle_share"] = (
-            c_df["product"] / c_df["simulated_households"]
-        )
+        c_df = self.s.reduced_simulated_zero_vehicle_hhs_df
 
         # prepare the observed data
         join_df = self.o.census_2017_zero_vehicle_hhs_df.copy()
