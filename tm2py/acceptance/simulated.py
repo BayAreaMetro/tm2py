@@ -148,8 +148,7 @@ class Simulated:
         return
 
     def _add_model_link_id(self): 
-        file_root = self.scenario_dict["scenario"]["root_dir"]
-        df = pd.read_csv(os.path.join(file_root, "acceptance", "crosswalks", "transit_link_id_mapping_am.csv"))  
+        df = pd.read_csv(os.path.join("acceptance", "crosswalks", "transit_link_id_mapping_am.csv"))  
 
         df = df.rename(
                 columns={
@@ -161,12 +160,11 @@ class Simulated:
 
     def _reduce_simulated_transit_by_segment(self):   
         file_prefix = "transit_segment_"
-        file_root = self.scenario_dict["scenario"]["root_dir"]
 
         time_period = "am" # am only
 
         df = pd.read_csv(
-            os.path.join(file_root, "output_summaries", file_prefix + time_period + ".csv"),
+            os.path.join("output_summaries", file_prefix + time_period + ".csv"),
             low_memory=False,
         )
 
@@ -196,10 +194,9 @@ class Simulated:
     def _reduce_simulated_transit_shapes(self):
 
         file_prefix = "boardings_by_segment_"
-        file_root = self.scenario_dict["scenario"]["root_dir"]
         time_period = "am"   # am only
         gdf = gpd.read_file(
-            os.path.join(file_root, "output_summaries", file_prefix + time_period + ".geojson")
+            os.path.join("output_summaries", file_prefix + time_period + ".geojson")
         )
 
         gdf["first_row_in_line"] = gdf.groupby("LINE_ID").cumcount() == 0    
@@ -305,8 +302,7 @@ class Simulated:
 
     def _read_standard_node(self):
 
-        root_dir = self.scenario_dict["scenario"]["root_dir"]
-        in_file = os.path.join(root_dir,"inputs","trn","standard","v12_node.geojson") 
+        in_file = os.path.join("inputs","trn","standard","v12_node.geojson") 
         gdf = gpd.read_file(in_file, driver = "GEOJSON") 
 
         self.standard_nodes_gdf = gdf
@@ -314,9 +310,8 @@ class Simulated:
         return
 
     def _read_standard_transit_stops(self):
-
-        root_dir = self.scenario_dict["scenario"]["root_dir"]
-        in_file = os.path.join(root_dir, "inputs", "trn", "standard", "v12_stops.txt")
+        
+        in_file = os.path.join("inputs", "trn", "standard", "v12_stops.txt")
 
         df = pd.read_csv(in_file)
 
@@ -326,8 +321,7 @@ class Simulated:
 
     def _read_standard_transit_shapes(self):
 
-        root_dir = self.scenario_dict["scenario"]["root_dir"]
-        in_file = os.path.join(root_dir, "inputs", "trn", "standard", "v12_shapes.txt")
+        in_file = os.path.join("inputs", "trn", "standard", "v12_shapes.txt")
 
         df = pd.read_csv(in_file)
 
@@ -337,8 +331,7 @@ class Simulated:
 
     def _read_standard_transit_routes(self):
 
-        root_dir = self.scenario_dict["scenario"]["root_dir"]
-        in_file = os.path.join(root_dir, "inputs", "trn", "standard", "v12_routes.txt")
+        in_file = os.path.join("inputs", "trn", "standard", "v12_routes.txt")
 
         df = pd.read_csv(in_file)
 
@@ -351,8 +344,7 @@ class Simulated:
         # if self.simulated_maz_data_df.empty:
         #    self._make_simulated_maz_data()
 
-        root_dir = self.scenario_dict["scenario"]["root_dir"]
-        in_file = os.path.join(root_dir, "ctramp_output", "wsLocResults_1.csv")
+        in_file = os.path.join("ctramp_output", "wsLocResults_1.csv")
 
         df = pd.read_csv(in_file)
 
@@ -393,12 +385,11 @@ class Simulated:
 
     def _make_simulated_maz_data(self):
 
-        root_dir = self.scenario_dict["scenario"]["root_dir"]
-        in_file = os.path.join(root_dir, "inputs", "landuse", "maz_data.csv")  
+        in_file = os.path.join("inputs", "landuse", "maz_data.csv")  
 
         df = pd.read_csv(in_file)
 
-        index_file = os.path.join(root_dir,"inputs", "landuse", "mtc_final_network_zone_seq.csv")
+        index_file = os.path.join("inputs", "landuse", "mtc_final_network_zone_seq.csv")
 
         index_df = pd.read_csv(index_file)
         join_df = index_df.rename(columns={"N": "MAZ_ORIGINAL"})[
@@ -420,14 +411,13 @@ class Simulated:
             self._make_transit_mode_dict()
 
         file_prefix = "transit_segment_"
-        file_root = self.scenario_dict["scenario"]["root_dir"]
 
         out_df = pd.DataFrame() 
  
         for time_period in self.model_time_periods:
         
             df = pd.read_csv(
-                os.path.join(file_root, "output_summaries", file_prefix + time_period + ".csv"),
+                os.path.join("output_summaries", file_prefix + time_period + ".csv"),
                 dtype={"stop_name": str, "mdesc": str},
                 low_memory=False,
             )
@@ -545,8 +535,6 @@ class Simulated:
         # if self.model_time_periods is None:
         #     self._get_model_time_periods()
 
-        root_dir = self.scenario_dict["scenario"]["root_dir"]
-
         path_list = [
             "WLK_TRN_WLK",
             "WLK_TRN_KNR",
@@ -570,7 +558,6 @@ class Simulated:
             operator_list, self.model_time_periods, path_list
         ):
             input_file_name = os.path.join(
-                root_dir,
                 "output_summaries",
                 f"{operator}_station_to_station_{path}_{time_period}.txt",
              )
@@ -633,13 +620,12 @@ class Simulated:
     def _reduce_simulated_transit_boardings(self):
 
         file_prefix = "boardings_by_line_"
-        file_root = self.scenario_dict["scenario"]["root_dir"]
 
         c_df = pd.DataFrame()
         for time_period in self.model_time_periods:
 
             df = pd.read_csv(
-                os.path.join(file_root, "output_summaries", file_prefix + time_period + ".csv")
+                os.path.join("output_summaries", file_prefix + time_period + ".csv")
             )
             df["time_period"] = time_period
             c_df = pd.concat([c_df,df],axis="rows", ignore_index=True)
@@ -690,8 +676,7 @@ class Simulated:
 
     def _reduce_simulated_zero_vehicle_households(self):
 
-        root_dir = self.scenario_dict["scenario"]["root_dir"]
-        in_file = os.path.join(root_dir, "ctramp_output", "householdData_1.csv")
+        in_file = os.path.join("ctramp_output", "householdData_1.csv")
 
         df = pd.read_csv(in_file)
 
@@ -939,7 +924,7 @@ class Simulated:
         
         tech_list = self.c.transit_technology_abbreviation_dict.keys()
 
-        skim_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "skim_matrices","transit")   
+        skim_dir = os.path.join("skim_matrices", "transit")   
         
 
         running_df = None
@@ -1019,8 +1004,7 @@ class Simulated:
             "KNR_TRN_WLK",
             "WLK_TRN_KNR",
         ]
-        dem_dir = os.path.join(self.scenario_dict["scenario"]["root_dir"], "demand_matrices", "transit")
-        #dem_dir = '//corp.pbwan.net/us/CentralData/DCCLDA00/Standard/sag/projects/MTC/Acceptance_Criteria/temp/temp_acceptance/demand_matrices'
+        dem_dir = os.path.join("demand_matrices", "transit")
     
         out_df = pd.DataFrame() 
         for time_period in self.model_time_periods: 
@@ -1123,16 +1107,13 @@ class Simulated:
         return
 
     def _reduce_simulated_traffic_flow(self):
-        #TODO:AK - CHeck this
-        file_root = self.scenario_dict["scenario"]["root_dir"]
         time_of_day_df = pd.DataFrame()
-
 
         for time_period in self.model_time_periods:
       
             emme_scenario = self.network_shapefile_names_dict[time_period]
             gdf = gpd.read_file(
-                os.path.join(file_root, "emme_project", "Media", emme_scenario, "emme_links.shp")
+                os.path.join("output_summaries", emme_scenario, "emme_links.shp")
             )
             df = gdf[
                 ["ID", "@flow_da", "@flow_lrgt", "@flow_sr2", "@flow_sr3", "@flow_trk", "@flow_dato",  "@flow_lrg0","@flow_sr2t", "@flow_sr3t", "@flow_trkt"]  
@@ -1184,13 +1165,11 @@ class Simulated:
 
     def _reduce_simulated_roadway_assignment_outcomes(self):
 
-        file_root = self.scenario_dict["scenario"]["root_dir"]
-
         # step 1: get the shape
         shape_period = "am"
         emme_scenario = self.network_shapefile_names_dict[shape_period]
         shape_gdf = gpd.read_file(
-            os.path.join(file_root, "emme_project", "Media", emme_scenario, "emme_links.shp")
+            os.path.join("output_summaries", emme_scenario, "emme_links.shp")
         )
         self.simulated_roadway_am_shape_gdf = (
             shape_gdf[["INODE", "JNODE", "#link_id", "geometry"]]
@@ -1213,7 +1192,7 @@ class Simulated:
             else:
                 emme_scenario = self.network_shapefile_names_dict[t]
                 gdf = gpd.read_file(
-                    os.path.join(file_root, "emme_project", "Media", emme_scenario, "emme_links.shp")
+                    os.path.join("output_summaries", emme_scenario, "emme_links.shp")
                 )
 
             df = pd.DataFrame(gdf)[
