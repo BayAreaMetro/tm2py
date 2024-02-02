@@ -1073,6 +1073,8 @@ class Simulated:
             right_on=["origin", "destination", "time_period"],
         )
 
+        s_df = s_df[s_df["time_period"] == "am"].copy()
+
         for tech in self.c.transit_technology_abbreviation_dict.keys():
             column_name = "simulated_{}_flow".format(tech.lower())
             s_df[column_name] = (
