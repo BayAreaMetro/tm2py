@@ -6,6 +6,7 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
     strategy:
       matrix:
         python-version: [3.8]
@@ -41,10 +42,10 @@ jobs:
     - name: Test with pytest
       run: |
         pytest -s -m "not skipci"
-    - name: Configure Git user
-      run: |
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
-    - name: Build docs
-      run: |
-        mike deploy --push --rebase ${{ github.ref_name }}
+    - name: Test documentation build
+      uses: Tiryoh/actions-mkdocs@v0
+      with:
+        mkdocs_version: 'latest' 
+        requirements: 'docs/requirements.txt' 
+        configfile: 'mkdocs.yml' 
+

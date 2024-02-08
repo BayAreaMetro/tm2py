@@ -84,7 +84,6 @@ if TYPE_CHECKING:
 
 class HighwayAssignment(Component):
     """Highway assignment and skims.
-
     Args:
         controller: parent RunController object
     """

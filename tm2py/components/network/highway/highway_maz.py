@@ -42,12 +42,13 @@ from tm2py.emme.manager import EmmeNode
 from tm2py.emme.matrix import OMXManager
 from tm2py.emme.network import NetworkCalculator
 from tm2py.logger import LogStartEnd
+from tm2py.tools import parse_num_processors
 
 # from tables import NoSuchNodeError
 
-
 if TYPE_CHECKING:
     from tm2py.controller import RunController
+
 
 _default_bin_edges = [0.0, 0.9, 1.2, 1.8, 2.5, 5.0, 10.0]
 # Using text file format for now, can upgrade to binary format (faster) once

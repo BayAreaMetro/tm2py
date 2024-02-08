@@ -1,7 +1,6 @@
 # Architecture
 
 ## Abstract Component
-
 ``` mermaid
 classDiagram
     class Component{
@@ -54,7 +53,6 @@ classDiagram
         +log()
     }
 ```
-
 ## Configs
 
 ```mermaid
@@ -110,7 +108,6 @@ classDiagram
     }
 
 ```
-
 ## Demand
 
 ``` mermaid

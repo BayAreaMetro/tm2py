@@ -11,7 +11,7 @@ ECHO "Retreiving %TEST_DATA_NAME% data from %TEST_DATA_LOCATION%
 
 SET OUTDIR=%1
 if "%OUTDIR%"=="" SET OUTDIR=DEFAULT_DIRECTORY
-if not exist %OUTDIR% mkdir %OUTDIR%
+if not exist %OUTDIR% mkdir %OUTDIR%  
 CD %OUTDIR%
 ECHO "Writing to %CD%"
 

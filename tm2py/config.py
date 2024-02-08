@@ -48,10 +48,13 @@ class ScenarioConfig(ConfigItem):
             components
         name: scenario name string
         year: model year, must be at least 2005
+        landuse_file: TAZ file
     """
 
     maz_landuse_file: pathlib.Path
     zone_seq_file: pathlib.Path
+    landuse_file: pathlib.Path
+    landuse_index_column: str    
     name: str
     year: int = Field(ge=2005)
     verify: Optional[bool] = Field(default=False)
@@ -76,6 +79,28 @@ ComponentNames = Literal[
 ]
 EmptyString = Literal[""]
 
+@dataclass(frozen=True)
+class WarmStartConfig(ConfigItem):
+    """Warm start parameters.
+
+    Note that the components will be executed in the order listed.
+
+    Properties:
+        warmstart: Boolean indicating whether warmstart demand matrices are used.
+        warmstart_check: if on, check that demand matrix files exist.
+        household_highway_demand_file: file name template of warmstart household highway demand matrices.
+        household_transit_demand_file: file name template of warmstart household transit demand matrices.
+        air_passenger_highway_demand_file: file name template of warmstart airport highway demand matrices.
+        internal_external_highway_demand_file: file name template of warmstart internal-external highway demand matrices.
+    """
+
+    warmstart: Optional[bool] = Field(default=False)
+    warmstart_check: Optional[bool] = Field(default=False)
+    household_highway_demand_file: Optional[str] = Field(default="")
+    household_transit_demand_file: Optional[str] = Field(default="")
+    air_passenger_highway_demand_file: Optional[str] = Field(default="")
+    internal_external_highway_demand_file: Optional[str] = Field(default="")
+    truck_highway_demand_file: Optional[str] = Field(default="")
 
 @dataclass(frozen=True)
 class RunConfig(ConfigItem):
@@ -92,6 +117,7 @@ class RunConfig(ConfigItem):
         global_iteration_components: list of component to run at every subsequent
             iteration (max(1, start_iteration) to end_iteration), in order.
         final_components: list of components to run after final iteration, in order
+        warmstart: warmstart configuration, including file locations.
     """
 
     initial_components: Tuple[ComponentNames, ...]
@@ -99,6 +125,7 @@ class RunConfig(ConfigItem):
     final_components: Tuple[ComponentNames, ...]
     start_iteration: int = Field(ge=0)
     end_iteration: int = Field(gt=0)
+    warmstart: WarmStartConfig = WarmStartConfig()
     start_component: Optional[Union[ComponentNames, EmptyString]] = Field(default="")
 
     @validator("end_iteration", allow_reuse=True)
@@ -200,12 +227,16 @@ class TimePeriodConfig(ConfigItem):
             capacites in the highway network
         emme_scenario_id: scenario ID to use for Emme per-period
             assignment (highway and transit) scenarios
+        congested_transit_assn_max_iteration: max iterations in congested 
+            transit assignment stopping criteria
     """
 
     name: str = Field(max_length=4)
+    start_period: float = Field(gt=0)
     length_hours: float = Field(gt=0)
     highway_capacity_factor: float = Field(gt=0)
     emme_scenario_id: int = Field(ge=1)
+    congested_transit_assn_max_iteration: int = Field(ge=1)
     description: Optional[str] = Field(default="")
 
 
@@ -282,6 +313,20 @@ class HouseholdConfig(ConfigItem):
     mode_agg: List[HouseholdModeAgg]
     highway_maz_ctramp_output_file: pathlib.Path
     transit_tap_ctramp_output_file: pathlib.Path
+    transit_taz_ctramp_output_file: pathlib.Path
+    active_demand_file: pathlib.Path
+    OwnedAV_ZPV_factor: float
+    TNC_ZPV_factor: float
+    ctramp_indiv_trip_file: str
+    ctramp_joint_trip_file: str
+    ctramp_run_dir: pathlib.Path
+    rideshare_mode_split: Dict[str,float]
+    taxi_split: Dict[str,float]
+    single_tnc_split: Dict[str,float]
+    shared_tnc_split: Dict[str,float]
+    ctramp_mode_names: Dict[float,str]
+    income_segment: Dict[str, Union[float, str, list]]
+    ctramp_hh_file : str
 
 
 @dataclass(frozen=True)
@@ -1009,13 +1054,17 @@ class HighwayConfig(ConfigItem):
 class TransitModeConfig(ConfigItem):
     """Transit mode definition (see also mode in the Emme API)."""
 
-    type: Literal["WALK", "ACCESS", "EGRESS", "LOCAL", "PREMIUM"]
+    type: Literal["WALK", "ACCESS", "EGRESS", "LOCAL", "PREMIUM", "DRIVE", "PNR_dummy","KNR_dummy"]
     assign_type: Literal["TRANSIT", "AUX_TRANSIT"]
     mode_id: str = Field(min_length=1, max_length=1)
     name: str = Field(max_length=10)
     description: Optional[str] = ""
     in_vehicle_perception_factor: Optional[float] = Field(default=None, ge=0)
-    speed_miles_per_hour: Optional[float] = Field(default=None, gt=0)
+    speed_or_time_factor: Optional[str] = Field(default="")
+    initial_boarding_penalty: Optional[float] = Field(default=None, ge=0)
+    transfer_boarding_penalty: Optional[float] = Field(default=None, ge=0)
+    headway_fraction: Optional[float] = Field(default=None, ge=0)
+    transfer_wait_perception_factor: Optional[float] = Field(default=None, ge=0)
     eawt_factor: Optional[float] = Field(default=1)
 
     @validator("in_vehicle_perception_factor", always=True)
@@ -1025,15 +1074,43 @@ class TransitModeConfig(ConfigItem):
             assert value is not None, "must be specified when assign_type==TRANSIT"
         return value
 
-    @validator("speed_miles_per_hour", always=True)
-    def speed_miles_per_hour_valid(cls, value, values):
-        """Validate speed_miles_per_hour exists if assign_type is AUX_TRANSIT."""
+    @validator("speed_or_time_factor", always=True)
+    def speed_or_time_factor_valid(cls, value, values):
+        """Validate speed_or_time_factor exists if assign_type is AUX_TRANSIT."""
         if "assign_type" in values and values["assign_type"] == "AUX_TRANSIT":
             assert value is not None, "must be specified when assign_type==AUX_TRANSIT"
         return value
 
+    @validator("initial_boarding_penalty", always=True)
+    def initial_boarding_penalty_valid(value, values):
+        """Validate initial_boarding_penalty exists if assign_type is TRANSIT."""
+        if "assign_type" in values and values["assign_type"] == "TRANSIT":
+            assert value is not None, "must be specified when assign_type==TRANSIT"
+        return value
+
+    @validator("transfer_boarding_penalty", always=True)
+    def transfer_boarding_penalty_valid(value, values):
+        """Validate transfer_boarding_penalty exists if assign_type is TRANSIT."""
+        if "assign_type" in values and values["assign_type"] == "TRANSIT":
+            assert value is not None, "must be specified when assign_type==TRANSIT"
+        return value
+
+    @validator("headway_fraction", always=True)
+    def headway_fraction_valid(value, values):
+        """Validate headway_fraction exists if assign_type is TRANSIT."""
+        if "assign_type" in values and values["assign_type"] == "TRANSIT":
+            assert value is not None, "must be specified when assign_type==TRANSIT"
+        return value
+
+    @validator("transfer_wait_perception_factor", always=True)
+    def transfer_wait_perception_factor_valid(value, values):
+        """Validate transfer_wait_perception_factor exists if assign_type is TRANSIT."""
+        if "assign_type" in values and values["assign_type"] == "TRANSIT":
+            assert value is not None, "must be specified when assign_type==TRANSIT"
+        return value
+
     @classmethod
-    @validator("speed_miles_per_hour")
+    @validator("mode_id")
     def mode_id_valid(cls, value):
         """Validate mode_id."""
         assert len(value) == 1, "mode_id must be one character"
@@ -1044,9 +1121,9 @@ class TransitModeConfig(ConfigItem):
 class TransitVehicleConfig(ConfigItem):
     """Transit vehicle definition (see also transit vehicle in the Emme API)."""
 
-    vehicle_id: int
-    mode: str
-    name: str
+    vehicle_id: Optional[int] = Field(default=None, ge=0)
+    mode: Optional[str] = Field(default="")
+    name: Optional[str] = Field(default="")
     auto_equivalent: Optional[float] = Field(default=0, ge=0)
     seated_capacity: Optional[int] = Field(default=None, ge=0)
     total_capacity: Optional[int] = Field(default=None, ge=0)
@@ -1084,6 +1161,17 @@ class CcrWeightsConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class CongestedWeightsConfig(ConfigItem):
+    "Weights for Congested Transit Assignment Configuration."
+    min_seat: float = Field(default=1.0)
+    max_seat: float = Field(default=1.4)
+    power_seat: float = Field(default=2.2)
+    min_stand: float = Field(default=1.4)
+    max_stand: float = Field(default=1.6)
+    power_stand: float = Field(default=3.4)
+
+
+@dataclass(frozen=True)
 class EawtWeightsConfig(ConfigItem):
     "Weights for calculating extra added wait time Configuration."
     constant: float = Field(default=0.259625)
@@ -1094,38 +1182,63 @@ class EawtWeightsConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class CongestedAssnConfig(ConfigItem):
+    "Congested transit assignment Configuration."
+    trim_demand_before_congested_transit_assignment: bool = False
+    output_trimmed_demand_report_path: str = Field(default=None)
+    normalized_gap: float = Field(default=0.25)
+    relative_gap: float = Field(default=0.25)
+    use_peaking_factor: bool = False
+    am_peaking_factor: float = Field(default=1.219)
+    pm_peaking_factor: float = Field(default=1.262)
+
+
+@dataclass(frozen=True)
 class TransitConfig(ConfigItem):
     """Transit assignment parameters."""
 
     modes: Tuple[TransitModeConfig, ...]
-    vehicles: Tuple[TransitVehicleConfig, ...]
     classes: Tuple[TransitClassConfig, ...]
+    apply_msa_demand: bool
     value_of_time: float
+    walk_speed: float
+    transit_speed: float    
     effective_headway_source: str
     initial_wait_perception_factor: float
     transfer_wait_perception_factor: float
     walk_perception_factor: float
-    initial_boarding_penalty: float
-    transfer_boarding_penalty: float
+    walk_perception_factor: float
+    walk_perception_factor_cbd: float
+    drive_perception_factor: float
     max_transfers: int
-    output_skim_path: pathlib.Path
+    use_fares: bool
+    fare_2015_to_2000_deflator: float
     fares_path: pathlib.Path
     fare_matrix_path: pathlib.Path
     fare_max_transfer_distance_miles: float
-    use_fares: bool
+    override_connector_times: bool
     use_ccr: bool
     ccr_stop_criteria: Optional[AssignmentStoppingCriteriaConfig]
     ccr_weights: CcrWeightsConfig
     eawt_weights: EawtWeightsConfig
-    override_connector_times: bool
-    apply_msa_demand: bool
-    max_ccr_iterations: float = None
-    split_connectors_to_prevent_walk: bool = True
-    input_connector_access_times_path: Optional[str] = Field(default=None)
-    input_connector_egress_times_path: Optional[str] = Field(default=None)
+    congested_transit_assignment: bool
+    congested: CongestedAssnConfig
+    congested_weights: CongestedWeightsConfig
+    output_skim_path: pathlib.Path
+    output_skim_filename_tmpl: str = Field()
+    output_skim_matrixname_tmpl: str = Field()
     output_stop_usage_path: Optional[str] = Field(default=None)
     output_transit_boardings_path: Optional[str] = Field(default=None)
-
+    output_transit_segment_path: Optional[str] = Field(default=None)
+    output_station_to_station_flow_path: Optional[str] = Field(default=None)
+    output_transfer_at_station_path: Optional[str] = Field(default=None)
+    timed_transfer_nodes: Tuple[int, ...] = Field()
+    output_transfer_at_station_node_ids: Dict[str, int] = Field()
+    max_ccr_iterations: float = None
+    split_connectors_to_prevent_walk: bool = False
+    input_connector_access_times_path: Optional[str] = Field(default=None)
+    input_connector_egress_times_path: Optional[str] = Field(default=None)
+    vehicles: Optional[TransitVehicleConfig] = Field(default_factory=TransitVehicleConfig)
 
 @dataclass(frozen=True)
 class EmmeConfig(ConfigItem):
@@ -1219,7 +1332,6 @@ def _merge_dicts(right, left, path=None):
     """Merges the contents of nested dict left into nested dict right.
 
     Raises errors in case of namespace conflicts.
-
     Args:
         right: dict, modified in place
         left: dict to be merged into right

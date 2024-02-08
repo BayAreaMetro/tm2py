@@ -1,0 +1,48 @@
+####################################
+#     SCENARIO CONFIGURATION       #
+####################################
+
+[scenario]
+    name = "UnionCity"
+    year = 2015
+    verify = false
+    maz_landuse_file = "inputs/landuse/maz_data.csv"
+    zone_seq_file = "inputs/landuse/mtc_final_network_zone_seq.csv"
+    landuse_file = "inputs/landuse/maz_data_withDensity.csv"
+    landuse_index_column = "TAZ"
+[run]
+    start_component = ""
+    initial_components = [
+        #"create_tod_scenarios", 
+        #"active_modes",
+        #"air_passenger",
+        #"prepare_network_highway",
+        #"highway",
+        #"highway_maz_skim",
+        #"prepare_network_transit", 
+        #"drive_access_skims", 
+        #"transit_assign", 
+        #"transit_skim" 
+    ]
+    global_iteration_components = [
+        "household",
+        #"internal_external",
+        #"truck",
+        #"highway_maz_assign",
+        #"highway",
+        #"drive_access_skims",
+        #"transit_assign",
+        #"transit_skim",
+    ]
+    final_components = []
+    start_iteration = 0
+    end_iteration = 1
+
+    [run.warmstart]
+        warmstart = true
+        warmstart_check = true
+        household_highway_demand_file = "warmstart/demand_matrices/highway/household/TAZ_Demand_{period}.omx"
+        household_transit_demand_file = "warmstart/demand_matrices/transit/trn_demand_{period}.omx"
+        air_passenger_highway_demand_file = "warmstart/demand_matrices/highway/air_passenger/2015_tripsAirPax{period}.omx"
+        internal_external_highway_demand_file = "warmstart/demand_matrices/highway/internal_external/tripsIx{period}.omx"
+        truck_highway_demand_file = "warmstart/demand_matrices/highway/commercial/tripstrk{period}.omx"

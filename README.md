@@ -58,6 +58,13 @@ In troubleshooting, sometimes DLL load failure errors would occur which may be r
 
 At load time, the EMME API will always load the geos_c co-located with the EMME API, unless it was already loaded from some other location, which is the case when you import GDAL first. EMME API seems to be compatible with the newer GDAL/geos_c (reminder: not tested!). But this does not appear to be the case the other way around (newer GDAL is not compatible with older geos_c).
 
+Copy and unzip [example_union_test_highway.zip](https://mtcdrive.box.com/s/3entr016e9teq2wt46x1os3fjqylfoge) to a local
+drive and from within that directory run:
+
+```sh
+get_test_data <location>
+tm2py -s scenario.toml -m model.toml
+```
 
 See [starting out](http://bayareametro.github.com/tm2py) section of documentation for more details.
 

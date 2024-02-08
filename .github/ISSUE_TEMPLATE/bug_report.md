@@ -1,19 +1,25 @@
 ---
-name: Bug report
+name: 🐛 Bug report
 about: Create a report to help us improve
-title: "[BUG] Description of problem"
+title: "🐛 Bug: "
 labels: bug
 assignees: ''
-
 ---
 
 ## Describe the bug
-
-A clear and concise description of what the bug is or the error code you got. e.g.
-
-```python
+<!--A clear and concise description of what the bug is or the error code you got. e.g. 
+```python 
 KeyError: 'Passing list-likes to .loc or [] with any missing labels is no longer supported, see https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#deprecate-loc-reindex-listlike'
 ```
+-->
+
+Progress:
+
+- [ ] Sufficient information provided
+- [ ] Cause identified/found
+- [ ] Test developed/identified 
+- [ ] Approach determined 
+- [ ] Test passes
 
 ## To Reproduce
 
@@ -27,7 +33,7 @@ Steps to reproduce the behavior:
 ### Failing tests
 
 - [ ] No applicable test failed, need to create.
-- [ ]
+- [ ] other...specify
 
 ### Triggering line of code
 

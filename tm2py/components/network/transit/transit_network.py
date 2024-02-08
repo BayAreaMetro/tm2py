@@ -93,7 +93,8 @@ class PrepareTransitNetwork(Component):
                     scenario.publish_network(network)
 
         for time_period in self.time_period_names:
-            self._update_auto_times(time_period)
+            # self.update_auto_times(time_period) # run in transit_assign component 
+            self._update_pnr_penalty(time_period)
             if self.config.override_connector_times:
                 self._update_connector_times(time_period)
 
@@ -154,7 +155,7 @@ class PrepareTransitNetwork(Component):
             )
         return self._egress_connector_df
 
-    def _update_auto_times(self, time_period: str):
+    def update_auto_times(self, time_period: str):
         """Update the auto travel times from the last auto assignment to the transit scenario.
 
         TODO Document steps more when understand them.
@@ -165,11 +166,51 @@ class PrepareTransitNetwork(Component):
             time_period: time period name abbreviation
         """
 
-        _highway_ttime_dict = self._get_highway_travel_times(time_period)
+        _highway_link_dict = self._get_highway_links(time_period)
         _transit_link_dict = self._get_transit_links(time_period)
 
-        for _link_id in _highway_ttime_dict.keys() & _transit_link_dict.keys():
-            _transit_link_dict[_link_id]["@trantime"] = _highway_ttime_dict[_link_id]
+        for _link_id in _highway_link_dict.keys() & _transit_link_dict.keys():
+            auto_time = _highway_link_dict[_link_id].auto_time
+            area_type = _highway_link_dict[_link_id]["@area_type"]
+            # use @valuetoll_dam (cents/mile) here to represent the drive alone toll
+            #sov_toll_per_mile = _highway_link_dict[_link_id]['@valuetoll_dam']
+            link_length = _transit_link_dict[_link_id].length
+            facility_type = _transit_link_dict[_link_id]['@ft']
+            #sov_toll = sov_toll_per_mile * link_length/100
+
+            # using the @valuetoll_da to get drive alone toll
+            sov_toll = _highway_link_dict[_link_id]['@valuetoll_da']
+
+            _transit_link_dict[_link_id]["@drive_toll"] = sov_toll 
+            
+            if auto_time > 0:
+                # https://github.com/BayAreaMetro/travel-model-one/blob/master/model-files/scripts/skims/PrepHwyNet.job#L106
+                tran_speed = 60 * link_length/auto_time
+                if (facility_type<=4 or facility_type==8) and (tran_speed<6):
+                    tran_speed = 6
+                    _transit_link_dict[_link_id]["@trantime"] = 60 * link_length/tran_speed
+                elif (tran_speed<3):
+                    tran_speed = 3
+                    _transit_link_dict[_link_id]["@trantime"] = 60 * link_length/tran_speed
+                else:
+                    _transit_link_dict[_link_id]["@trantime"] = auto_time
+                # data1 is the auto time used in Mixed-Mode transit assigment
+                _transit_link_dict[_link_id].data1 = (_transit_link_dict[_link_id]["@trantime"] + 
+                                                      60*sov_toll/self.config.value_of_time)
+                # bus time calculation
+                if facility_type in [1,2,3,8]:
+                    delayfactor = 0.0
+                else:
+                    if area_type in [0,1]: 
+                        delayfactor = 2.46
+                    elif area_type in [2,3]: 
+                        delayfactor = 1.74
+                    elif area_type==4:
+                        delayfactor = 1.14
+                    else:
+                        delayfactor = 0.08
+                bus_time = _transit_link_dict[_link_id]["@trantime"] + (delayfactor * link_length)
+                _transit_link_dict[_link_id]["@trantime"] = bus_time                 
 
         # TODO document this! Consider copying to another method.
         # set us1 (segment data1), used in ttf expressions, from @trantime
@@ -184,7 +225,33 @@ class PrepareTransitNetwork(Component):
 
         _update_attributes = {
             "TRANSIT_SEGMENT": ["@trantime_seg", "data1"],
-            "LINK": ["@trantime"],
+            "LINK": ["@trantime", "@drive_toll"],
+        }
+        self.emme_manager.copy_attribute_values(
+            _transit_net, _transit_scenario, _update_attributes
+        )
+
+    def _update_pnr_penalty(self, time_period: str):
+        """Add the parking penalties to pnr parking lots.
+
+        Args:
+            time_period: time period name abbreviation
+        """
+        _transit_net = self._transit_networks[time_period]
+        _transit_scenario = self.transit_scenarios[time_period]
+        deflator = self.config.fare_2015_to_2000_deflator
+
+        for segment in _transit_net.transit_segments():
+            if "BART_acc" in segment.id:
+                if "West Oakland" in segment.id:
+                    segment["@board_cost"] = 12.4 * deflator        
+                else:
+                    segment["@board_cost"] = 3.0 * deflator
+            elif "Caltrain_acc" in segment.id:
+                segment["@board_cost"] = 5.5 * deflator
+
+        _update_attributes = {
+            "TRANSIT_SEGMENT": ["@board_cost"]
         }
         self.emme_manager.copy_attribute_values(
             _transit_net, _transit_scenario, _update_attributes
@@ -302,7 +369,7 @@ class PrepareTransitNetwork(Component):
         _transit_scenario = self.transit_scenarios[time_period]
         _transit_net = self.transit_networks[time_period]
         transit_attributes = {
-            "LINK": ["#link_id", "@trantime"],
+            "LINK": ["#link_id", "@trantime", "@ft"],
             "TRANSIT_SEGMENT": ["@schedule_time", "@trantime_seg", "data1"],
         }
         self.emme_manager.copy_attribute_values(
@@ -313,7 +380,7 @@ class PrepareTransitNetwork(Component):
         }
         return _transit_link_dict
 
-    def _get_highway_travel_times(
+    def _get_highway_links(
         self,
         time_period: str,
     ):
@@ -328,20 +395,22 @@ class PrepareTransitNetwork(Component):
         _highway_net = _highway_scenario.get_partial_network(
             ["LINK"], include_attributes=False
         )
-        travel_time_attributes = {"LINK": ["#link_id", "auto_time", "@lanes"]}
+
+        highway_attributes = {"LINK": ["#link_id", 
+                                        "auto_time",
+                                        "@lanes",
+                                        "@area_type",
+                                        "@valuetoll_da"]}
+                                        
         self.emme_manager.copy_attribute_values(
-            _highway_scenario, _highway_net, travel_time_attributes
+            _highway_scenario, _highway_net, highway_attributes
         )
         # TODO can we just get the link attributes as a DataFrame and merge them?
-        # if the link does not have meaningful travel time in highway assigned network
-        # such as bus only link, managed lanes, etc.
-        # assume default bus speed of 30 mph
-        auto_link_time_dict = {
-            auto_link["#link_id"] : ( auto_link.auto_time
-            if auto_link["@lanes"] > 0 else 60*auto_link["length"]/30 )
+        auto_link_dict = {
+            auto_link["#link_id"]: auto_link
             for auto_link in _highway_net.links()
         }
-        return auto_link_time_dict
+        return auto_link_dict
 
     def prepare_connectors(self, network, period):
         for node in network.centroids():
@@ -701,21 +770,21 @@ class ApplyFares(Component):
                 faresystems, faresystem_groups, network
             )
             self.save_journey_levels("ALLPEN", journey_levels)
-            local_modes = []
-            premium_modes = []
-            for mode in self.config.modes:
-                if mode.type == "LOCAL":
-                    local_modes.extend(mode_map[mode.mode_id])
-                if mode.type == "PREMIUM":
-                    premium_modes.extend(mode_map[mode.mode_id])
-            local_levels = self.filter_journey_levels_by_mode(
-                local_modes, journey_levels
-            )
-            self.save_journey_levels("BUS", local_levels)
-            premium_levels = self.filter_journey_levels_by_mode(
-                premium_modes, journey_levels
-            )
-            self.save_journey_levels("PREM", premium_levels)
+            # local_modes = []
+            # premium_modes = []
+            # for mode in self.config.modes:
+            #     if mode.type == "LOCAL":
+            #         local_modes.extend(mode_map[mode.mode_id])
+            #     if mode.type == "PREMIUM":
+            #         premium_modes.extend(mode_map[mode.mode_id])
+            # local_levels = self.filter_journey_levels_by_mode(
+            #     local_modes, journey_levels
+            # )
+            # self.save_journey_levels("BUS", local_levels)
+            # premium_levels = self.filter_journey_levels_by_mode(
+            #     premium_modes, journey_levels
+            # )
+            # self.save_journey_levels("PREM", premium_levels)
 
         except Exception as error:
             self._log.append({"type": "text", "content": "error during apply fares"})
@@ -922,12 +991,12 @@ class ApplyFares(Component):
             self.station_to_station_approx(
                 valid_farezones, fare_matrix, zone_nodes, valid_links, network
             )
-
-        # copy costs from links to segments
-        for line in lines:
-            for segment in line.segments():
-                segment["@invehicle_cost"] = max(segment.link.invehicle_cost, 0)
-                segment["@board_cost"] = max(segment.link.board_cost, 0)
+            # copy costs from links to segments
+            for line in lines:
+                for segment in line.segments():
+                    segment["@invehicle_cost"] = max(segment.link.invehicle_cost, 0)
+                    segment["@board_cost"] = max(segment.link.board_cost, 0)
+        
         network.delete_attribute("LINK", "invehicle_cost")
         network.delete_attribute("LINK", "board_cost")
 
@@ -1032,8 +1101,7 @@ class ApplyFares(Component):
                                 {"type": "text3", "content": farezone_warning4}
                             )
                         same_farezone_missing_cost = farezone
-                    if seg.link:
-                        seg.link.board_cost = max(board_cost, seg.link.board_cost)
+                    seg["@board_cost"] = max(board_cost, seg["@board_cost"])
 
                 farezone = int(seg.i_node["@farezone"])
                 # Set the zone-to-zone fare increment from the previous stop
@@ -1041,10 +1109,10 @@ class ApplyFares(Component):
                     try:
                         invehicle_cost = (
                             fare_matrix[prev_farezone][farezone]
-                            - prev_seg.link.board_cost
+                            - prev_seg["@board_cost"]
                         )
-                        prev_seg.link.invehicle_cost = max(
-                            invehicle_cost, prev_seg.link.invehicle_cost
+                        prev_seg["@invehicle_cost"] = max(
+                            invehicle_cost, prev_seg["@invehicle_cost"]
                         )
                     except KeyError:
                         self._log.append(
@@ -1312,7 +1380,14 @@ class ApplyFares(Component):
                         if fare1 != fare2 and (
                             fare1 != "TOO_FAR" and fare2 != "TOO_FAR"
                         ):
-                            return False
+                            # if the difference between two fares are less than a number, 
+                            # then treat them as the same fare
+                            if isinstance(fare1, float) and isinstance(fare2, float) and (
+                                abs(fare1 - fare2)<=2.0
+                                ):
+                                continue
+                            else:
+                                return False
             return True
 
         # group faresystems together which have the same transfer-to pattern,
@@ -1365,7 +1440,14 @@ class ApplyFares(Component):
             xfer_fares = {}
             for fs_id in faresystems.keys():
                 to_fares = [f[fs_id] for f in xfer_fares_list if f[fs_id] != "TOO_FAR"]
-                fare = to_fares[0] if len(to_fares) > 0 else 0.0
+                # fare = to_fares[0] if len(to_fares) > 0 else 0.0
+                if len(to_fares) == 0:
+                    fare = 0.0
+                elif all(isinstance(item, float) for item in to_fares): 
+                    # caculate the average here becasue of the edits in matching_xfer_fares function
+                    fare = round(sum(to_fares)/len(to_fares),2)
+                else:
+                    fare = to_fares[0]
                 xfer_fares[fs_id] = fare
             faresystem_groups.append((group, xfer_fares))
             for fs_id in group:
@@ -1405,6 +1487,8 @@ class ApplyFares(Component):
         )
 
         transit_modes = set([m for m in network.modes() if m.type == "TRANSIT"])
+        #remove PNR dummy route from transit modes
+        transit_modes -= set([m for m in network.modes() if m.description == "pnrdummy"])
         mode_desc = {m.id: m.description for m in transit_modes}
         get_mode_id = network.available_mode_identifier
         get_vehicle_id = network.available_transit_vehicle_identifier
@@ -1416,22 +1500,24 @@ class ApplyFares(Component):
                 link.modes |= set([meta_mode])
         lines = _defaultdict(lambda: [])
         for line in network.transit_lines():
-            lines[line.vehicle.id].append(line)
+            if line.mode.id != "p": #remove PNR dummy mode
+                lines[line.vehicle.id].append(line)
             line["#src_mode"] = line.mode.id
             line["#src_veh"] = line.vehicle.id
         for vehicle in network.transit_vehicles():
-            temp_veh = network.create_transit_vehicle(get_vehicle_id(), vehicle.mode.id)
-            veh_id = vehicle.id
-            attributes = {a: vehicle[a] for a in network.attributes("TRANSIT_VEHICLE")}
-            for line in lines[veh_id]:
-                line.vehicle = temp_veh
-            network.delete_transit_vehicle(vehicle)
-            new_veh = network.create_transit_vehicle(veh_id, meta_mode.id)
-            for a, v in attributes.items():
-                new_veh[a] = v
-            for line in lines[veh_id]:
-                line.vehicle = new_veh
-            network.delete_transit_vehicle(temp_veh)
+            if vehicle.mode.id != "p": #remove PNR dummy mode
+                temp_veh = network.create_transit_vehicle(get_vehicle_id(), vehicle.mode.id)
+                veh_id = vehicle.id
+                attributes = {a: vehicle[a] for a in network.attributes("TRANSIT_VEHICLE")}
+                for line in lines[veh_id]:
+                    line.vehicle = temp_veh
+                network.delete_transit_vehicle(vehicle)
+                new_veh = network.create_transit_vehicle(veh_id, meta_mode.id)
+                for a, v in attributes.items():
+                    new_veh[a] = v
+                for line in lines[veh_id]:
+                    line.vehicle = new_veh
+                network.delete_transit_vehicle(temp_veh)
         for link in network.links():
             link.modes -= transit_modes
         for mode in transit_modes:
@@ -1440,14 +1526,14 @@ class ApplyFares(Component):
         # transition rules will be the same for every journey level
         transition_rules = []
         journey_levels = [
-            {
-                "description": "base",
-                "destinations_reachable": True,
-                "transition_rules": transition_rules,
-                "waiting_time": None,
-                "boarding_time": None,
-                "boarding_cost": None,
-            }
+            # {
+            #     "description": "base",
+            #     "destinations_reachable": True,
+            #     "transition_rules": transition_rules,
+            #     "waiting_time": None,
+            #     "boarding_time": None,
+            #     "boarding_cost": None,
+            # }
         ]
         mode_map = _defaultdict(lambda: [])
         level = 1
