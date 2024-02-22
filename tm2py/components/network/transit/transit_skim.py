@@ -620,7 +620,7 @@ class TransitSkim(Component):
                     "type": "MATRIX_CALCULATION",
                     "constraint": None,
                     "result": f'mf"{_tp_tclass}_DTIME"',
-                    "expression": f'mf"{_tp_tclass}_DTIME" - 60*mf"{_tp_tclass}_DTOLL"/{vot}',
+                    "expression": f'mf"{_tp_tclass}_DTIME"',
                 },
                 {
                     "type": "MATRIX_CALCULATION",
