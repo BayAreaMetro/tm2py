@@ -134,6 +134,7 @@ class TransitSkim(Component):
                 ("WEGR", "egress walk time"),
                 ("IVT", "total in-vehicle time"),
                 ("IN_VEHICLE_COST", "in-vehicle cost"),
+                ("CROWD", "Crowding penalty")
             ]
             self._skim_properties += [
                 Skimproperty(_name, _desc) for _name, _desc in _basic_skims
@@ -151,7 +152,6 @@ class TransitSkim(Component):
                 self._skim_properties.extend(
                     [
                         Skimproperty("LINKREL", "Link reliability"),
-                        Skimproperty("CROWD", "Crowding penalty"),
                         Skimproperty("EAWT", "Extra added wait time"),
                         Skimproperty("CAPPEN", "Capacity penalty"),
                     ]
@@ -159,7 +159,6 @@ class TransitSkim(Component):
             if self.config.congested_transit_assignment:
                 self._skim_properties.extend(
                     [
-                        Skimproperty("CROWD", "Crowding penalty"),
                         Skimproperty("TRIM", "used to trim demands"),
                         Skimproperty("XBOATIME", "transfer boarding time penalty"),
                         Skimproperty("DTOLL", "drive access or egress toll price"),
