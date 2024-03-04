@@ -165,7 +165,7 @@ class Acceptance:
         s_bridge_df = self.s.simulated_bridge_details_df.copy()
 
         o_df["time_period"] = o_df.time_period.str.lower()
-        #o_df = o_df.drop(columns = ["standard_link_id"]) 
+        # o_df = o_df.drop(columns = ["standard_link_id"])
         s_trim_df = s_df[
             s_df["ft"] <= self.MAX_FACILITY_TYPE_FOR_ROADWAY_COMPARISONS
         ].copy()
@@ -284,7 +284,15 @@ class Acceptance:
 
         return
 
-    def _make_transit_network_comparisons(self):
+    def compare_transit_boardings(self) -> pd.DataFrame:
+        """Compare transit boardings
+
+        Method created to compare simulated transit boardings generated
+        by assigning demand from the on-board survey.
+
+        Returns:
+            pd.DataFrame: Observed and simulated transit boardings
+        """
 
         # step 1: outer merge for rail operators (ignore route)
         obs_df = self.o.reduced_transit_on_board_df[
@@ -347,7 +355,7 @@ class Acceptance:
             right_on=["standard_line_name", "daily_line_name", "time_period"],
         )
 
-        boards_df = pd.concat([rail_df, non_df], axis = "rows",ignore_index=True)
+        boards_df = pd.concat([rail_df, non_df], axis="rows", ignore_index=True)
 
         boards_df["operator"] = np.where(
             boards_df["operator"].isnull(),
@@ -360,7 +368,15 @@ class Acceptance:
             boards_df["technology"],
         )
 
-        # step 3 -- create a daily shape
+        return boards_df
+
+    def _make_transit_network_comparisons(self):
+
+        # step 1: outer merge for rail operators (ignore route)
+        # step 2: left merge for non-rail operators
+        boards_df = self.compare_transit_boardings()
+
+        # step 3: create a daily shape
         df = pd.DataFrame(self.s.simulated_transit_segments_gdf).copy()
         am_shape_df = df[~(df["LINE_ID"].str.contains("pnr_"))].reset_index().copy()
         am_shape_df = self.c.aggregate_line_names_across_time_of_day(
@@ -378,7 +394,9 @@ class Acceptance:
             ].copy()
         )
         daily_shape_df = pd.merge(c_df, b_df, how="left", on="LINE_ID")
-        daily_shape_df = daily_shape_df.rename(columns={"INODE":"emme_a_node_id","JNODE":"emme_b_node_id"})
+        daily_shape_df = daily_shape_df.rename(
+            columns={"INODE": "emme_a_node_id", "JNODE": "emme_b_node_id"}
+        )
 
         # step 4 -- join the shapes to the boardings
         # for daily, join boardings to shape, as I care about the boardings more than the daily shapes

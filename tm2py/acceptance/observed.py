@@ -149,11 +149,18 @@ class Observed:
 
         return
 
-    def __init__(self, canonical: Canonical, observed_file: str) -> None:
+    def __init__(
+        self,
+        canonical: Canonical,
+        observed_file: str,
+        on_board_assign_summary: bool = False,
+    ) -> None:
         self.c = canonical
         self.observed_file = observed_file
         self._load_configs()
-        self._validate()
+
+        if not on_board_assign_summary:
+            self._validate()
 
     def _validate(self):
 
@@ -304,7 +311,7 @@ class Observed:
         # TODO: replace with the summary from the on-board survey repo once the crosswalk is updated
 
         if not self.c.canonical_agency_names_dict:
-            self._make_canonical_agency_names_dict()
+            self.c._make_canonical_agency_names_dict()
 
         time_period_dict = {
             "EARLY AM": "ea",
@@ -325,7 +332,7 @@ class Observed:
                 dtype=self.reduced_transit_on_board_df.dtypes.to_dict(),
             )
         else:
-            in_df = pd.read_csv(os.path.join(file_root, in_file))
+            in_df = pd.read_feather(os.path.join(file_root, in_file))
             temp_df = in_df[
                 (in_df["weekpart"].isna()) | (in_df["weekpart"] != "WEEKEND")
             ].copy()
@@ -869,10 +876,7 @@ class Observed:
             )
 
             out_df = pd.merge(
-                self.c.pems_to_link_crosswalk_df,
-                out_df,
-                how="left",
-                on="station_id"
+                self.c.pems_to_link_crosswalk_df, out_df, how="left", on="station_id"
             )
 
             out_df = self._join_tm2_node_ids(out_df)
@@ -893,16 +897,23 @@ class Observed:
                 .reset_index()
             )
             join_df = out_df[
-                ["emme_a_node_id","emme_b_node_id", "time_period", "station_id", "type", "vehicle_class"]
+                [
+                    "emme_a_node_id",
+                    "emme_b_node_id",
+                    "time_period",
+                    "station_id",
+                    "type",
+                    "vehicle_class",
+                ]
             ].copy()
             return_df = pd.merge(
                 median_df,
                 join_df,
                 how="left",
-                on=["emme_a_node_id","emme_b_node_id", "time_period", "vehicle_class"]
+                on=["emme_a_node_id", "emme_b_node_id", "time_period", "vehicle_class"],
             ).reset_index(drop=True)
 
-            #return_df = return_df.rename(columns = {"model_link_id" : "standard_link_id"})
+            # return_df = return_df.rename(columns = {"model_link_id" : "standard_link_id"})
             return_df = self._join_ohio_standards(return_df)
             return_df = self._identify_key_arterials_and_bridges(return_df)
 
@@ -955,7 +966,7 @@ class Observed:
         out_df = out_df[out_df["observed_flow"].notna()]
 
         # convert to one-way flow
-        out_df["observed_flow"] = out_df["observed_flow"]/2.0
+        out_df["observed_flow"] = out_df["observed_flow"] / 2.0
 
         return_df = self._join_tm2_node_ids(out_df)
         return_df["time_period"] = self.c.ALL_DAY_WORD

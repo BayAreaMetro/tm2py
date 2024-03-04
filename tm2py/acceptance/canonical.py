@@ -69,18 +69,22 @@ class Canonical:
 
         return
 
-    def __init__(self, canonical_file: str) -> None:
+    def __init__(
+        self, canonical_file: str, on_board_assign_summary: bool = False
+    ) -> None:
         self.canonical_file = canonical_file
         self._load_configs()
         self._make_canonical_agency_names_dict()
         self._make_canonical_station_names_dict()
-        self._make_census_maz_crosswalk()
         self._read_standard_to_emme_transit()
         self._make_tm2_to_gtfs_mode_crosswalk()
         self._read_standard_transit_to_survey_crosswalk()
-        self._read_taz_to_district_crosswalk()
-        self._read_pems_to_link_crosswalk()
-        self._read_standard_to_emme_node_crosswalk()
+
+        if not on_board_assign_summary:
+            self._make_census_maz_crosswalk()
+            self._read_taz_to_district_crosswalk()
+            self._read_pems_to_link_crosswalk()
+            self._read_standard_to_emme_node_crosswalk()
 
         return
 
@@ -240,4 +244,3 @@ class Canonical:
         self.standard_to_emme_node_crosswalk_df = df
 
         return
-
