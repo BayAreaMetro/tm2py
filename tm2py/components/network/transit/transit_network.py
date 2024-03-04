@@ -93,7 +93,7 @@ class PrepareTransitNetwork(Component):
                     scenario.publish_network(network)
 
         for time_period in self.time_period_names:
-            # self.update_auto_times(time_period) # run in transit_assign component 
+            # self.update_auto_times(time_period) # run in transit_assign component
             self._update_pnr_penalty(time_period)
             if self.config.override_connector_times:
                 self._update_connector_times(time_period)
@@ -173,44 +173,52 @@ class PrepareTransitNetwork(Component):
             auto_time = _highway_link_dict[_link_id].auto_time
             area_type = _highway_link_dict[_link_id]["@area_type"]
             # use @valuetoll_dam (cents/mile) here to represent the drive alone toll
-            #sov_toll_per_mile = _highway_link_dict[_link_id]['@valuetoll_dam']
+            # sov_toll_per_mile = _highway_link_dict[_link_id]['@valuetoll_dam']
             link_length = _transit_link_dict[_link_id].length
-            facility_type = _transit_link_dict[_link_id]['@ft']
-            #sov_toll = sov_toll_per_mile * link_length/100
+            facility_type = _transit_link_dict[_link_id]["@ft"]
+            # sov_toll = sov_toll_per_mile * link_length/100
 
             # using the @valuetoll_da to get drive alone toll
-            sov_toll = _highway_link_dict[_link_id]['@valuetoll_da']
+            sov_toll = _highway_link_dict[_link_id]["@valuetoll_da"]
 
-            _transit_link_dict[_link_id]["@drive_toll"] = sov_toll 
-            
+            _transit_link_dict[_link_id]["@drive_toll"] = sov_toll
+
             if auto_time > 0:
                 # https://github.com/BayAreaMetro/travel-model-one/blob/master/model-files/scripts/skims/PrepHwyNet.job#L106
-                tran_speed = 60 * link_length/auto_time
-                if (facility_type<=4 or facility_type==8) and (tran_speed<6):
+                tran_speed = 60 * link_length / auto_time
+                if (facility_type <= 4 or facility_type == 8) and (tran_speed < 6):
                     tran_speed = 6
-                    _transit_link_dict[_link_id]["@trantime"] = 60 * link_length/tran_speed
-                elif (tran_speed<3):
+                    _transit_link_dict[_link_id]["@trantime"] = (
+                        60 * link_length / tran_speed
+                    )
+                elif tran_speed < 3:
                     tran_speed = 3
-                    _transit_link_dict[_link_id]["@trantime"] = 60 * link_length/tran_speed
+                    _transit_link_dict[_link_id]["@trantime"] = (
+                        60 * link_length / tran_speed
+                    )
                 else:
                     _transit_link_dict[_link_id]["@trantime"] = auto_time
                 # data1 is the auto time used in Mixed-Mode transit assigment
-                _transit_link_dict[_link_id].data1 = (_transit_link_dict[_link_id]["@trantime"] + 
-                                                      60*sov_toll/self.config.value_of_time)
+                _transit_link_dict[_link_id].data1 = (
+                    _transit_link_dict[_link_id]["@trantime"]
+                    + 60 * sov_toll / self.config.value_of_time
+                )
                 # bus time calculation
-                if facility_type in [1,2,3,8]:
+                if facility_type in [1, 2, 3, 8]:
                     delayfactor = 0.0
                 else:
-                    if area_type in [0,1]: 
+                    if area_type in [0, 1]:
                         delayfactor = 2.46
-                    elif area_type in [2,3]: 
+                    elif area_type in [2, 3]:
                         delayfactor = 1.74
-                    elif area_type==4:
+                    elif area_type == 4:
                         delayfactor = 1.14
                     else:
                         delayfactor = 0.08
-                bus_time = _transit_link_dict[_link_id]["@trantime"] + (delayfactor * link_length)
-                _transit_link_dict[_link_id]["@trantime"] = bus_time                 
+                bus_time = _transit_link_dict[_link_id]["@trantime"] + (
+                    delayfactor * link_length
+                )
+                _transit_link_dict[_link_id]["@trantime"] = bus_time
 
         # TODO document this! Consider copying to another method.
         # set us1 (segment data1), used in ttf expressions, from @trantime
@@ -244,15 +252,13 @@ class PrepareTransitNetwork(Component):
         for segment in _transit_net.transit_segments():
             if "BART_acc" in segment.id:
                 if "West Oakland" in segment.id:
-                    segment["@board_cost"] = 12.4 * deflator        
+                    segment["@board_cost"] = 12.4 * deflator
                 else:
                     segment["@board_cost"] = 3.0 * deflator
             elif "Caltrain_acc" in segment.id:
                 segment["@board_cost"] = 5.5 * deflator
 
-        _update_attributes = {
-            "TRANSIT_SEGMENT": ["@board_cost"]
-        }
+        _update_attributes = {"TRANSIT_SEGMENT": ["@board_cost"]}
         self.emme_manager.copy_attribute_values(
             _transit_net, _transit_scenario, _update_attributes
         )
@@ -396,19 +402,16 @@ class PrepareTransitNetwork(Component):
             ["LINK"], include_attributes=False
         )
 
-        highway_attributes = {"LINK": ["#link_id", 
-                                        "auto_time",
-                                        "@lanes",
-                                        "@area_type",
-                                        "@valuetoll_da"]}
-                                        
+        highway_attributes = {
+            "LINK": ["#link_id", "auto_time", "@lanes", "@area_type", "@valuetoll_da"]
+        }
+
         self.emme_manager.copy_attribute_values(
             _highway_scenario, _highway_net, highway_attributes
         )
         # TODO can we just get the link attributes as a DataFrame and merge them?
         auto_link_dict = {
-            auto_link["#link_id"]: auto_link
-            for auto_link in _highway_net.links()
+            auto_link["#link_id"]: auto_link for auto_link in _highway_net.links()
         }
         return auto_link_dict
 
@@ -996,7 +999,7 @@ class ApplyFares(Component):
                 for segment in line.segments():
                     segment["@invehicle_cost"] = max(segment.link.invehicle_cost, 0)
                     segment["@board_cost"] = max(segment.link.board_cost, 0)
-        
+
         network.delete_attribute("LINK", "invehicle_cost")
         network.delete_attribute("LINK", "board_cost")
 
@@ -1380,11 +1383,13 @@ class ApplyFares(Component):
                         if fare1 != fare2 and (
                             fare1 != "TOO_FAR" and fare2 != "TOO_FAR"
                         ):
-                            # if the difference between two fares are less than a number, 
+                            # if the difference between two fares are less than a number,
                             # then treat them as the same fare
-                            if isinstance(fare1, float) and isinstance(fare2, float) and (
-                                abs(fare1 - fare2)<=2.0
-                                ):
+                            if (
+                                isinstance(fare1, float)
+                                and isinstance(fare2, float)
+                                and (abs(fare1 - fare2) <= 2.0)
+                            ):
                                 continue
                             else:
                                 return False
@@ -1443,9 +1448,9 @@ class ApplyFares(Component):
                 # fare = to_fares[0] if len(to_fares) > 0 else 0.0
                 if len(to_fares) == 0:
                     fare = 0.0
-                elif all(isinstance(item, float) for item in to_fares): 
+                elif all(isinstance(item, float) for item in to_fares):
                     # caculate the average here becasue of the edits in matching_xfer_fares function
-                    fare = round(sum(to_fares)/len(to_fares),2)
+                    fare = round(sum(to_fares) / len(to_fares), 2)
                 else:
                     fare = to_fares[0]
                 xfer_fares[fs_id] = fare
@@ -1487,8 +1492,10 @@ class ApplyFares(Component):
         )
 
         transit_modes = set([m for m in network.modes() if m.type == "TRANSIT"])
-        #remove PNR dummy route from transit modes
-        transit_modes -= set([m for m in network.modes() if m.description == "pnrdummy"])
+        # remove PNR dummy route from transit modes
+        transit_modes -= set(
+            [m for m in network.modes() if m.description == "pnrdummy"]
+        )
         mode_desc = {m.id: m.description for m in transit_modes}
         get_mode_id = network.available_mode_identifier
         get_vehicle_id = network.available_transit_vehicle_identifier
@@ -1500,15 +1507,19 @@ class ApplyFares(Component):
                 link.modes |= set([meta_mode])
         lines = _defaultdict(lambda: [])
         for line in network.transit_lines():
-            if line.mode.id != "p": #remove PNR dummy mode
+            if line.mode.id != "p":  # remove PNR dummy mode
                 lines[line.vehicle.id].append(line)
             line["#src_mode"] = line.mode.id
             line["#src_veh"] = line.vehicle.id
         for vehicle in network.transit_vehicles():
-            if vehicle.mode.id != "p": #remove PNR dummy mode
-                temp_veh = network.create_transit_vehicle(get_vehicle_id(), vehicle.mode.id)
+            if vehicle.mode.id != "p":  # remove PNR dummy mode
+                temp_veh = network.create_transit_vehicle(
+                    get_vehicle_id(), vehicle.mode.id
+                )
                 veh_id = vehicle.id
-                attributes = {a: vehicle[a] for a in network.attributes("TRANSIT_VEHICLE")}
+                attributes = {
+                    a: vehicle[a] for a in network.attributes("TRANSIT_VEHICLE")
+                }
                 for line in lines[veh_id]:
                     line.vehicle = temp_veh
                 network.delete_transit_vehicle(vehicle)

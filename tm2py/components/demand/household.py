@@ -32,7 +32,7 @@ class HouseholdModel(Component):
         self._start_matrix_manager()
         self._run_resident_model()
         self._stop_java()
-        #self._consolidate_demand_for_assign()
+        # self._consolidate_demand_for_assign()
         self._prepare_demand_for_assignment()
 
     def _prepare_demand_for_assignment(self):
@@ -146,7 +146,7 @@ class HouseholdModel(Component):
                 _shutil.copyfile(input_path, output_path)
 
         # transit TAP
-        #for period in time_period_names:
+        # for period in time_period_names:
         #    for set in ["set1", "set2", "set3"]:
         #        output_path = (
         #            self.controller.get_abs_path(self.config.transit_demand_file)
@@ -174,7 +174,7 @@ class HouseholdModel(Component):
         #                core_name = mode + "_TRN_" + set + "_" + period.upper()
         #                output_omx[core_name] = input_omx[core_name][:, :]
         #                input_omx.close()
-#
+        #
         #        output_omx.close()
         # transit TAZ
         for period in time_period_names:
@@ -200,7 +200,7 @@ class HouseholdModel(Component):
                         )
                     )
                     input_omx = omx.open_file(input_path, "r")
-                    core_name = mode + "_TRN_"  + period.upper()
+                    core_name = mode + "_TRN_" + period.upper()
                     output_omx[core_name] = input_omx[core_name][:, :]
                     input_omx.close()
 

@@ -134,7 +134,7 @@ class TransitSkim(Component):
                 ("WEGR", "egress walk time"),
                 ("IVT", "total in-vehicle time"),
                 ("IN_VEHICLE_COST", "in-vehicle cost"),
-                ("CROWD", "Crowding penalty")
+                ("CROWD", "Crowding penalty"),
             ]
             self._skim_properties += [
                 Skimproperty(_name, _desc) for _name, _desc in _basic_skims
@@ -213,7 +213,7 @@ class TransitSkim(Component):
                 )
             else:
                 _matrix.description = _desc
-            #_name = f"{_skprop.name}"
+            # _name = f"{_skprop.name}"
 
             self._skim_matrices[_name] = _matrix
             _tp_tclass_skprop_list.append(_name)
@@ -248,14 +248,14 @@ class TransitSkim(Component):
             self.skim_walk_wait_boards_fares(time_period, transit_class)
         with self.controller.emme_manager.logbook_trace("In-vehicle time by mode"):
             self.skim_invehicle_time_by_mode(time_period, transit_class, use_ccr)
-        #with self.controller.emme_manager.logbook_trace(
+        # with self.controller.emme_manager.logbook_trace(
         #    "Transfer boarding time penalty",
         #    "Drive toll"
-        #):
+        # ):
         #    self.skim_penalty_toll(time_period, transit_class)
         with self.controller.emme_manager.logbook_trace(
             "Drive distance and time",
-            "Walk auxiliary time, walk access time and walk egress time"
+            "Walk auxiliary time, walk access time and walk egress time",
         ):
             self.skim_drive_walk(time_period, transit_class)
         with self.controller.emme_manager.logbook_trace("Calculate crowding"):
@@ -263,7 +263,7 @@ class TransitSkim(Component):
         if use_ccr:
             with self.controller.emme_manager.logbook_trace("CCR related skims"):
                 self.skim_reliability_crowding_capacity(time_period, transit_class)
-        #if congested_transit_assignment:
+        # if congested_transit_assignment:
 
         # self.mask_above_max_transfers(time_period, transit_class) #TODO: need to test
         # self.mask_if_not_required_modes(time_period, transit_class) #TODO: need to test
@@ -357,7 +357,7 @@ class TransitSkim(Component):
         TODO convert this type of calculation to numpy
         """
         _tp_tclass = f"{time_period}_{transit_class_name}"
-        if ("PNR_TRN_WLK" in _tp_tclass) or ("WLK_TRN_PNR"in _tp_tclass):
+        if ("PNR_TRN_WLK" in _tp_tclass) or ("WLK_TRN_PNR" in _tp_tclass):
             spec = {
                 "type": "MATRIX_CALCULATION",
                 "constraint": {
@@ -535,160 +535,160 @@ class TransitSkim(Component):
             num_processors=self.controller.num_processors,
         )
 
-    def skim_drive_walk(
-            self, time_period: str, transit_class: str
-        ) -> None:
-            """
-            """
-            _tp_tclass = f"{time_period}_{transit_class.name}"
-            # _network = self.networks[time_period]
+    def skim_drive_walk(self, time_period: str, transit_class: str) -> None:
+        """"""
+        _tp_tclass = f"{time_period}_{transit_class.name}"
+        # _network = self.networks[time_period]
 
-            # drive time here is perception factor*(drive time + toll penalty), 
-            # will calculate the actual drive time and substract toll penalty in the following steps
-            spec1 = {
-                "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
-                "by_mode_subset": {
-                    "modes": ["D"],
-                    "actual_aux_transit_times": f'mf"{_tp_tclass}_DTIME"',
-                    "distance": f'mf"{_tp_tclass}_DDIST"',
+        # drive time here is perception factor*(drive time + toll penalty),
+        # will calculate the actual drive time and substract toll penalty in the following steps
+        spec1 = {
+            "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
+            "by_mode_subset": {
+                "modes": ["D"],
+                "actual_aux_transit_times": f'mf"{_tp_tclass}_DTIME"',
+                "distance": f'mf"{_tp_tclass}_DDIST"',
+            },
+        }
+        # skim walk distance in walk time matrices first,
+        # will calculate the actual walk time and overwrite the distance in the following steps
+        spec2 = {
+            "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
+            "by_mode_subset": {
+                "modes": ["w"],
+                "distance": f'mf"{_tp_tclass}_WAUX"',
+            },
+        }
+        spec3 = {
+            "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
+            "by_mode_subset": {
+                "modes": ["a"],
+                "distance": f'mf"{_tp_tclass}_WACC"',
+            },
+        }
+        spec4 = {
+            "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
+            "by_mode_subset": {
+                "modes": ["e"],
+                "distance": f'mf"{_tp_tclass}_WEGR"',
+            },
+        }
+
+        self.controller.emme_manager.matrix_results(
+            spec1,
+            class_name=transit_class.name,
+            scenario=self.scenarios[time_period],
+            num_processors=self.controller.num_processors,
+        )
+        self.controller.emme_manager.matrix_results(
+            spec2,
+            class_name=transit_class.name,
+            scenario=self.scenarios[time_period],
+            num_processors=self.controller.num_processors,
+        )
+        self.controller.emme_manager.matrix_results(
+            spec3,
+            class_name=transit_class.name,
+            scenario=self.scenarios[time_period],
+            num_processors=self.controller.num_processors,
+        )
+        self.controller.emme_manager.matrix_results(
+            spec4,
+            class_name=transit_class.name,
+            scenario=self.scenarios[time_period],
+            num_processors=self.controller.num_processors,
+        )
+
+        drive_perception_factor = self.config.drive_perception_factor
+        walk_speed = self.config.walk_speed
+        vot = self.config.value_of_time
+        # divide drive time by mode specific perception factor to get the actual time
+        # for walk time, use walk distance/walk speed
+        # because the mode specific perception factors are hardcoded in the mode definition
+        spec_list = [
+            {
+                "type": "MATRIX_CALCULATION",
+                "constraint": None,
+                "result": f'mf"{_tp_tclass}_DTIME"',
+                "expression": f'mf"{_tp_tclass}_DTIME"/{drive_perception_factor}',
+            },
+            {
+                "type": "MATRIX_CALCULATION",
+                "constraint": None,
+                "result": f'mf"{_tp_tclass}_DTIME"',
+                "expression": f'mf"{_tp_tclass}_DTIME"',
+            },
+            {
+                "type": "MATRIX_CALCULATION",
+                "constraint": None,
+                "result": f'mf"{_tp_tclass}_WAUX"',
+                "expression": f'mf"{_tp_tclass}_WAUX"/({walk_speed}/60)',
+            },
+            {
+                "type": "MATRIX_CALCULATION",
+                "constraint": None,
+                "result": f'mf"{_tp_tclass}_WACC"',
+                "expression": f'mf"{_tp_tclass}_WACC"/({walk_speed}/60)',
+            },
+            {
+                "type": "MATRIX_CALCULATION",
+                "constraint": None,
+                "result": f'mf"{_tp_tclass}_WEGR"',
+                "expression": f'mf"{_tp_tclass}_WEGR"/({walk_speed}/60)',
+            },
+        ]
+        self.controller.emme_manager.matrix_calculator(
+            spec_list,
+            scenario=self.scenarios[time_period],
+            num_processors=self.controller.num_processors,
+        )
+
+    def skim_penalty_toll(self, time_period: str, transit_class: str) -> None:
+        """"""
+        # transfer boarding time penalty
+        self._run_strategy_analysis(
+            time_period, transit_class, {"boarding": "@xboard_nodepen"}, "XBOATIME"
+        )
+
+        _tp_tclass = f"{time_period}_{transit_class.name}"
+        if ("PNR_TRN_WLK" in _tp_tclass) or ("WLK_TRN_PNR" in _tp_tclass):
+            spec = {  # subtract PNR boarding from total transfer boarding time penalty
+                "type": "MATRIX_CALCULATION",
+                "constraint": {
+                    "by_value": {
+                        "od_values": f'mf"{_tp_tclass}_XBOATIME"',
+                        "interval_min": 0,
+                        "interval_max": 9999999,
+                        "condition": "INCLUDE",
+                    }
                 },
-            }
-            # skim walk distance in walk time matrices first, 
-            # will calculate the actual walk time and overwrite the distance in the following steps
-            spec2 = {
-                "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
-                "by_mode_subset": {
-                    "modes": ["w"],
-                    "distance": f'mf"{_tp_tclass}_WAUX"',
-                },
-            }
-            spec3 = {
-                "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
-                "by_mode_subset": {
-                    "modes": ["a"],
-                    "distance": f'mf"{_tp_tclass}_WACC"',
-                },
-            }
-            spec4 = {
-                "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
-                "by_mode_subset": {
-                    "modes": ["e"],
-                    "distance": f'mf"{_tp_tclass}_WEGR"',
-                },
+                "result": f'mf"{_tp_tclass}_XBOATIME"',
+                "expression": f'(mf"{_tp_tclass}_XBOATIME" - 1).max.0',
             }
 
-            self.controller.emme_manager.matrix_results(
-                spec1,
-                class_name=transit_class.name,
-                scenario=self.scenarios[time_period],
-                num_processors=self.controller.num_processors,
-            )
-            self.controller.emme_manager.matrix_results(
-                spec2,
-                class_name=transit_class.name,
-                scenario=self.scenarios[time_period],
-                num_processors=self.controller.num_processors,
-            )
-            self.controller.emme_manager.matrix_results(
-                spec3,
-                class_name=transit_class.name,
-                scenario=self.scenarios[time_period],
-                num_processors=self.controller.num_processors,
-            )
-            self.controller.emme_manager.matrix_results(
-                spec4,
-                class_name=transit_class.name,
-                scenario=self.scenarios[time_period],
-                num_processors=self.controller.num_processors,
-            )
-
-            drive_perception_factor = self.config.drive_perception_factor
-            walk_speed = self.config.walk_speed
-            vot = self.config.value_of_time 
-            # divide drive time by mode specific perception factor to get the actual time
-            # for walk time, use walk distance/walk speed
-            # because the mode specific perception factors are hardcoded in the mode definition
-            spec_list = [
-                {
-                    "type": "MATRIX_CALCULATION",
-                    "constraint": None,
-                    "result": f'mf"{_tp_tclass}_DTIME"',
-                    "expression": f'mf"{_tp_tclass}_DTIME"/{drive_perception_factor}',
-                },
-                {
-                    "type": "MATRIX_CALCULATION",
-                    "constraint": None,
-                    "result": f'mf"{_tp_tclass}_DTIME"',
-                    "expression": f'mf"{_tp_tclass}_DTIME"',
-                },
-                {
-                    "type": "MATRIX_CALCULATION",
-                    "constraint": None,
-                    "result": f'mf"{_tp_tclass}_WAUX"',
-                    "expression": f'mf"{_tp_tclass}_WAUX"/({walk_speed}/60)',
-                },
-                {
-                    "type": "MATRIX_CALCULATION",
-                    "constraint": None,
-                    "result": f'mf"{_tp_tclass}_WACC"',
-                    "expression": f'mf"{_tp_tclass}_WACC"/({walk_speed}/60)',
-                },
-                {
-                    "type": "MATRIX_CALCULATION",
-                    "constraint": None,
-                    "result": f'mf"{_tp_tclass}_WEGR"',
-                    "expression": f'mf"{_tp_tclass}_WEGR"/({walk_speed}/60)',
-                },
-            ]
             self.controller.emme_manager.matrix_calculator(
-                spec_list,
+                spec,
                 scenario=self.scenarios[time_period],
                 num_processors=self.controller.num_processors,
             )
 
-    def skim_penalty_toll(
-            self, time_period: str, transit_class: str
-        ) -> None:
-            """
-            """
-            # transfer boarding time penalty
-            self._run_strategy_analysis(
-                time_period, transit_class, {"boarding": "@xboard_nodepen"}, "XBOATIME"
+        # drive toll
+        if ("PNR_TRN_WLK" in _tp_tclass) or ("KNR_TRN_WLK" in _tp_tclass):
+            self._run_path_analysis(
+                time_period,
+                transit_class,
+                "ORIGIN_TO_INITIAL_BOARDING",
+                {"aux_transit": "@drive_toll"},
+                "DTOLL",
             )
-
-            _tp_tclass = f"{time_period}_{transit_class.name}"
-            if ("PNR_TRN_WLK" in _tp_tclass) or ("WLK_TRN_PNR"in _tp_tclass):
-                spec = { # subtract PNR boarding from total transfer boarding time penalty
-                    "type": "MATRIX_CALCULATION",
-                    "constraint": {
-                        "by_value": {
-                            "od_values": f'mf"{_tp_tclass}_XBOATIME"',
-                            "interval_min": 0,
-                            "interval_max": 9999999,
-                            "condition": "INCLUDE",
-                        }
-                    },
-                    "result": f'mf"{_tp_tclass}_XBOATIME"',
-                    "expression": f'(mf"{_tp_tclass}_XBOATIME" - 1).max.0',
-                }
-
-                self.controller.emme_manager.matrix_calculator(
-                    spec,
-                    scenario=self.scenarios[time_period],
-                    num_processors=self.controller.num_processors,
-                )      
-
-            # drive toll
-            if ("PNR_TRN_WLK" in _tp_tclass) or ("KNR_TRN_WLK" in _tp_tclass):
-                self._run_path_analysis(
-                    time_period, transit_class, "ORIGIN_TO_INITIAL_BOARDING", 
-                    {"aux_transit": "@drive_toll"}, "DTOLL"
-                )
-            elif ("WLK_TRN_PNR" in _tp_tclass) or ("WLK_TRN_KNR" in _tp_tclass):
-                self._run_path_analysis(
-                    time_period, transit_class, "FINAL_ALIGHTING_TO_DESTINATION", 
-                    {"aux_transit": "@drive_toll"}, "DTOLL"
-                )
+        elif ("WLK_TRN_PNR" in _tp_tclass) or ("WLK_TRN_KNR" in _tp_tclass):
+            self._run_path_analysis(
+                time_period,
+                transit_class,
+                "FINAL_ALIGHTING_TO_DESTINATION",
+                {"aux_transit": "@drive_toll"},
+                "DTOLL",
+            )
 
     def _get_emme_mode_ids(
         self, transit_class, time_period
@@ -720,7 +720,9 @@ class TransitSkim(Component):
         valid_modes = [
             mode
             for mode in self.config.modes
-            if mode.type in transit_class.mode_types and mode.assign_type == "TRANSIT" and mode.type != "PNR_dummy"
+            if mode.type in transit_class.mode_types
+            and mode.assign_type == "TRANSIT"
+            and mode.type != "PNR_dummy"
         ]
         if self.config.use_fares:
             # map to used modes in apply fares case
@@ -769,11 +771,8 @@ class TransitSkim(Component):
             time_period, transit_class, {"boarding": "@capacity_penalty"}, "CAPPEN"
         )
 
-    def skim_crowding(
-        self, time_period: str, transit_class
-    ) -> None:
-        """
-        """
+    def skim_crowding(self, time_period: str, transit_class) -> None:
+        """"""
         # Crowding penalty
         self._run_strategy_analysis(
             time_period, transit_class, {"in_vehicle": "@ccost"}, "CROWD"
@@ -821,12 +820,12 @@ class TransitSkim(Component):
         )
 
     def _run_path_analysis(
-            self,
-            time_period: str,
-            transit_class,
-            portion_of_path: str,
-            components: Dict[str, str],
-            matrix_name_suffix: str,
+        self,
+        time_period: str,
+        transit_class,
+        portion_of_path: str,
+        components: Dict[str, str],
+        matrix_name_suffix: str,
     ):
         """Runs path analysis in Emme and stores results in emmebank.
 
@@ -843,19 +842,16 @@ class TransitSkim(Component):
         )
 
         spec = {
-                "portion_of_path": portion_of_path,
-                "trip_components": components,
-                "path_operator": "+",
-                "path_selection_threshold": {
-                    "lower": -999999,
-                    "upper": 999999
-                },
-                "path_to_od_aggregation": {
-                    "operator": "average",
-                    "aggregated_path_values": _matrix_name
-                },
-                "analyzed_demand": None,
-                "constraint": None,
+            "portion_of_path": portion_of_path,
+            "trip_components": components,
+            "path_operator": "+",
+            "path_selection_threshold": {"lower": -999999, "upper": 999999},
+            "path_to_od_aggregation": {
+                "operator": "average",
+                "aggregated_path_values": _matrix_name,
+            },
+            "analyzed_demand": None,
+            "constraint": None,
             "type": "EXTENDED_TRANSIT_PATH_ANALYSIS",
         }
         path_analysis(
@@ -936,23 +932,26 @@ class TransitSkim(Component):
     def _export_skims(self, time_period: str, transit_class: str):
         """Export skims to OMX files by period."""
         # NOTE: skims in separate file by period
-        output_skim_path = self.get_abs_path(
-            self.config.output_skim_path
-        )
+        output_skim_path = self.get_abs_path(self.config.output_skim_path)
         omx_file_path = os.path.join(
             output_skim_path,
-            self.config.output_skim_filename_tmpl.format(time_period=time_period, tclass=transit_class.name))
+            self.config.output_skim_filename_tmpl.format(
+                time_period=time_period, tclass=transit_class.name
+            ),
+        )
         os.makedirs(os.path.dirname(omx_file_path), exist_ok=True)
-        
-        _matrices = self.emmebank_skim_matrices(time_periods=[time_period], transit_classes=[transit_class])
-#        matrices = {}
-#        matrices_growth = {} # matrices need to be multiplied by 100
 
-#        for skim in _matrices.keys():
-#            if ("BOARDS" in skim) or ("XBOATIME" in skim):
-#                matrices[skim] = _matrices[skim]
-#            else:
-#                matrices_growth[skim] = _matrices[skim]
+        _matrices = self.emmebank_skim_matrices(
+            time_periods=[time_period], transit_classes=[transit_class]
+        )
+        #        matrices = {}
+        #        matrices_growth = {} # matrices need to be multiplied by 100
+
+        #        for skim in _matrices.keys():
+        #            if ("BOARDS" in skim) or ("XBOATIME" in skim):
+        #                matrices[skim] = _matrices[skim]
+        #            else:
+        #                matrices_growth[skim] = _matrices[skim]
 
         with OMXManager(
             omx_file_path,
@@ -960,19 +959,19 @@ class TransitSkim(Component):
             self.scenarios[time_period],
             matrix_cache=self.matrix_cache[time_period],
             mask_max_value=1e7,
-            growth_factor=1
+            growth_factor=1,
         ) as omx_file:
             omx_file.write_matrices(_matrices)
 
-#        with OMXManager(
-#            omx_file_path,
-#            "a",
-#            self.scenarios[time_period],
-#            matrix_cache=self.matrix_cache[time_period],
-#            mask_max_value=1e7,
-#            growth_factor=100
-#        ) as omx_file:
-#            omx_file.write_matrices(matrices_growth)
+    #        with OMXManager(
+    #            omx_file_path,
+    #            "a",
+    #            self.scenarios[time_period],
+    #            matrix_cache=self.matrix_cache[time_period],
+    #            mask_max_value=1e7,
+    #            growth_factor=100
+    #        ) as omx_file:
+    #            omx_file.write_matrices(matrices_growth)
 
     def _log_debug_report(self, _time_period):
         num_zones = len(self.scenarios[_time_period].zone_numbers)

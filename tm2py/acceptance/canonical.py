@@ -240,4 +240,3 @@ class Canonical:
         self.standard_to_emme_node_crosswalk_df = df
 
         return
-

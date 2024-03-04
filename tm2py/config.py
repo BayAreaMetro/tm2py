@@ -54,7 +54,7 @@ class ScenarioConfig(ConfigItem):
     maz_landuse_file: pathlib.Path
     zone_seq_file: pathlib.Path
     landuse_file: pathlib.Path
-    landuse_index_column: str    
+    landuse_index_column: str
     name: str
     year: int = Field(ge=2005)
     verify: Optional[bool] = Field(default=False)
@@ -79,6 +79,7 @@ ComponentNames = Literal[
 ]
 EmptyString = Literal[""]
 
+
 @dataclass(frozen=True)
 class WarmStartConfig(ConfigItem):
     """Warm start parameters.
@@ -101,6 +102,7 @@ class WarmStartConfig(ConfigItem):
     air_passenger_highway_demand_file: Optional[str] = Field(default="")
     internal_external_highway_demand_file: Optional[str] = Field(default="")
     truck_highway_demand_file: Optional[str] = Field(default="")
+
 
 @dataclass(frozen=True)
 class RunConfig(ConfigItem):
@@ -227,7 +229,7 @@ class TimePeriodConfig(ConfigItem):
             capacites in the highway network
         emme_scenario_id: scenario ID to use for Emme per-period
             assignment (highway and transit) scenarios
-        congested_transit_assn_max_iteration: max iterations in congested 
+        congested_transit_assn_max_iteration: max iterations in congested
             transit assignment stopping criteria
     """
 
@@ -320,13 +322,13 @@ class HouseholdConfig(ConfigItem):
     ctramp_indiv_trip_file: str
     ctramp_joint_trip_file: str
     ctramp_run_dir: pathlib.Path
-    rideshare_mode_split: Dict[str,float]
-    taxi_split: Dict[str,float]
-    single_tnc_split: Dict[str,float]
-    shared_tnc_split: Dict[str,float]
-    ctramp_mode_names: Dict[float,str]
+    rideshare_mode_split: Dict[str, float]
+    taxi_split: Dict[str, float]
+    single_tnc_split: Dict[str, float]
+    shared_tnc_split: Dict[str, float]
+    ctramp_mode_names: Dict[float, str]
     income_segment: Dict[str, Union[float, str, list]]
-    ctramp_hh_file : str
+    ctramp_hh_file: str
 
 
 @dataclass(frozen=True)
@@ -1054,7 +1056,16 @@ class HighwayConfig(ConfigItem):
 class TransitModeConfig(ConfigItem):
     """Transit mode definition (see also mode in the Emme API)."""
 
-    type: Literal["WALK", "ACCESS", "EGRESS", "LOCAL", "PREMIUM", "DRIVE", "PNR_dummy","KNR_dummy"]
+    type: Literal[
+        "WALK",
+        "ACCESS",
+        "EGRESS",
+        "LOCAL",
+        "PREMIUM",
+        "DRIVE",
+        "PNR_dummy",
+        "KNR_dummy",
+    ]
     assign_type: Literal["TRANSIT", "AUX_TRANSIT"]
     mode_id: str = Field(min_length=1, max_length=1)
     name: str = Field(max_length=10)
@@ -1202,7 +1213,7 @@ class TransitConfig(ConfigItem):
     apply_msa_demand: bool
     value_of_time: float
     walk_speed: float
-    transit_speed: float    
+    transit_speed: float
     effective_headway_source: str
     initial_wait_perception_factor: float
     transfer_wait_perception_factor: float
@@ -1238,7 +1249,10 @@ class TransitConfig(ConfigItem):
     split_connectors_to_prevent_walk: bool = False
     input_connector_access_times_path: Optional[str] = Field(default=None)
     input_connector_egress_times_path: Optional[str] = Field(default=None)
-    vehicles: Optional[TransitVehicleConfig] = Field(default_factory=TransitVehicleConfig)
+    vehicles: Optional[TransitVehicleConfig] = Field(
+        default_factory=TransitVehicleConfig
+    )
+
 
 @dataclass(frozen=True)
 class EmmeConfig(ConfigItem):
