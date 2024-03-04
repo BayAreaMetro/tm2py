@@ -869,10 +869,7 @@ class Observed:
             )
 
             out_df = pd.merge(
-                self.c.pems_to_link_crosswalk_df,
-                out_df,
-                how="left",
-                on="station_id"
+                self.c.pems_to_link_crosswalk_df, out_df, how="left", on="station_id"
             )
 
             out_df = self._join_tm2_node_ids(out_df)
@@ -893,16 +890,23 @@ class Observed:
                 .reset_index()
             )
             join_df = out_df[
-                ["emme_a_node_id","emme_b_node_id", "time_period", "station_id", "type", "vehicle_class"]
+                [
+                    "emme_a_node_id",
+                    "emme_b_node_id",
+                    "time_period",
+                    "station_id",
+                    "type",
+                    "vehicle_class",
+                ]
             ].copy()
             return_df = pd.merge(
                 median_df,
                 join_df,
                 how="left",
-                on=["emme_a_node_id","emme_b_node_id", "time_period", "vehicle_class"]
+                on=["emme_a_node_id", "emme_b_node_id", "time_period", "vehicle_class"],
             ).reset_index(drop=True)
 
-            #return_df = return_df.rename(columns = {"model_link_id" : "standard_link_id"})
+            # return_df = return_df.rename(columns = {"model_link_id" : "standard_link_id"})
             return_df = self._join_ohio_standards(return_df)
             return_df = self._identify_key_arterials_and_bridges(return_df)
 
@@ -955,7 +959,7 @@ class Observed:
         out_df = out_df[out_df["observed_flow"].notna()]
 
         # convert to one-way flow
-        out_df["observed_flow"] = out_df["observed_flow"]/2.0
+        out_df["observed_flow"] = out_df["observed_flow"] / 2.0
 
         return_df = self._join_tm2_node_ids(out_df)
         return_df["time_period"] = self.c.ALL_DAY_WORD

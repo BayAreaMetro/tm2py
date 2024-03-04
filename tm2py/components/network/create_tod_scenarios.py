@@ -222,7 +222,7 @@ class CreateTODScenarios(Component):
                 "scenarios": 1 + n_time_periods,
                 "regular_nodes": 650000,
                 "links": 1900000,
-                "transit_vehicles": 600, # pnr vechiles
+                "transit_vehicles": 600,  # pnr vechiles
                 "transit_segments": 1800000,
                 "extra_attribute_values": 200000000,
             }
@@ -247,19 +247,15 @@ class CreateTODScenarios(Component):
                     "@capclass",
                     "@free_flow_speed",
                     "@free_flow_time",
-                    "@drive_toll"
+                    "@drive_toll",
                 ],
                 "TRANSIT_LINE": [
                     "@invehicle_factor",
                     "@iboard_penalty",
                     "@xboard_penalty",
-                    "@orig_hdw"
+                    "@orig_hdw",
                 ],
-                "NODE": [
-                    "@hdw_fraction",
-                    "@wait_pfactor",
-                    "@xboard_nodepen"
-                ]
+                "NODE": ["@hdw_fraction", "@wait_pfactor", "@xboard_nodepen"],
             }
             for domain, attrs in attributes.items():
                 for name in attrs:
@@ -302,8 +298,8 @@ class CreateTODScenarios(Component):
             default_headway_fraction = self.controller.config.transit.get(
                 "headway_fraction", 0.5
             )
-            default_transfer_wait_perception_factor = self.controller.config.transit.get(
-                "transfer_wait_perception_factor", 1
+            default_transfer_wait_perception_factor = (
+                self.controller.config.transit.get("transfer_wait_perception_factor", 1)
             )
             walk_perception_factor = self.controller.config.transit.get(
                 "walk_perception_factor", 2
@@ -330,11 +326,11 @@ class CreateTODScenarios(Component):
                         f"mode {mode_data['id']} already exists with type {mode.type} instead of {mode_data['assign_type']}"
                     )
                 mode.description = mode_data["name"]
-                if mode_data['assign_type'] == "AUX_TRANSIT":
-                    if mode_data['type'] == "DRIVE":
+                if mode_data["assign_type"] == "AUX_TRANSIT":
+                    if mode_data["type"] == "DRIVE":
                         mode.speed = "ul1*%s" % drive_perception_factor
                     else:
-                        mode.speed = mode_data['speed_or_time_factor']
+                        mode.speed = mode_data["speed_or_time_factor"]
                 # if mode_data["assign_type"] == "AUX_TRANSIT":
                 #     mode.speed = mode_data["speed_miles_per_hour"]
                 # if mode_data["type"] == "WALK":
@@ -348,15 +344,21 @@ class CreateTODScenarios(Component):
                 # elif mode_data["type"] == "PREMIUM":
                 #     premium_modes.add(mode.id)
                 in_vehicle_factors[mode.id] = mode_data.get(
-                    "in_vehicle_perception_factor", default_in_vehicle_factor)
+                    "in_vehicle_perception_factor", default_in_vehicle_factor
+                )
                 initial_boarding_penalty[mode.id] = mode_data.get(
-                    "initial_boarding_penalty", default_initial_boarding_penalty)
+                    "initial_boarding_penalty", default_initial_boarding_penalty
+                )
                 transfer_boarding_penalty[mode.id] = mode_data.get(
-                    "transfer_boarding_penalty", default_transfer_boarding_penalty)
+                    "transfer_boarding_penalty", default_transfer_boarding_penalty
+                )
                 headway_fraction[mode.id] = mode_data.get(
-                    "headway_fraction", default_headway_fraction)
+                    "headway_fraction", default_headway_fraction
+                )
                 transfer_wait_perception_factor[mode.id] = mode_data.get(
-                    "transfer_wait_perception_factor", default_transfer_wait_perception_factor)
+                    "transfer_wait_perception_factor",
+                    default_transfer_wait_perception_factor,
+                )
 
             # create vehicles
             # vehicle_table = self.controller.config.transit.vehicles
@@ -382,17 +384,13 @@ class CreateTODScenarios(Component):
                 "LRAIL": 30.0,
                 "FERRY": 15.0,
             }
-            walk_speed = self.controller.config.transit.get(
-                "walk_speed", 3.0
-                )
-            transit_speed = self.controller.config.transit.get(
-                "transit_speed", 30.0
-                )
+            walk_speed = self.controller.config.transit.get("walk_speed", 3.0)
+            transit_speed = self.controller.config.transit.get("transit_speed", 30.0)
             for link in network.links():
                 speed = cntype_speed_map.get(link["#cntype"])
                 if speed is None:
                     # speed = link["@free_flow_speed"]
-                    speed = 30.0 # temp fix, will uncomment it when bring in highway changes
+                    speed = 30.0  # temp fix, will uncomment it when bring in highway changes
                     if link["@ft"] == 1 and speed > 0:
                         link["@trantime"] = 60 * link.length / speed
                     elif speed > 0:
@@ -409,7 +407,9 @@ class CreateTODScenarios(Component):
                 #     link.length = 0.01  # 60.0 / 5280.0
             for line in network.transit_lines():
                 # TODO: may want to set transit line speeds (not necessarily used in the assignment though)
-                line_veh = network.transit_vehicle(line["#vehtype"]) # use #vehtype here instead of #mode (#vehtype is vehtype_num in Lasso\mtc_data\lookups\transitSeatCap.csv)
+                line_veh = network.transit_vehicle(
+                    line["#vehtype"]
+                )  # use #vehtype here instead of #mode (#vehtype is vehtype_num in Lasso\mtc_data\lookups\transitSeatCap.csv)
                 if line_veh is None:
                     raise Exception(
                         f"line {line.id} requires vehicle ('#vehtype') {line['#vehtype']} which does not exist"
@@ -421,7 +421,9 @@ class CreateTODScenarios(Component):
                 # Set the perception factor from the mode table
                 line["@invehicle_factor"] = in_vehicle_factors[line.vehicle.mode.id]
                 line["@iboard_penalty"] = initial_boarding_penalty[line.vehicle.mode.id]
-                line["@xboard_penalty"] = transfer_boarding_penalty[line.vehicle.mode.id]
+                line["@xboard_penalty"] = transfer_boarding_penalty[
+                    line.vehicle.mode.id
+                ]
 
             # # set link modes to the minimum set
             # auto_mode = {self.controller.config.highway.generic_highway_mode_code}
@@ -449,43 +451,64 @@ class CreateTODScenarios(Component):
             #         link.modes = modes
             for link in network.links():
                 # set default values
-                link.i_node['@hdw_fraction'] = default_headway_fraction
-                link.i_node['@wait_pfactor'] = default_transfer_wait_perception_factor
-                link.i_node['@xboard_nodepen'] = 1
-                link.j_node['@hdw_fraction'] = default_headway_fraction
-                link.j_node['@wait_pfactor'] = default_transfer_wait_perception_factor
-                link.j_node['@xboard_nodepen'] = 1               
+                link.i_node["@hdw_fraction"] = default_headway_fraction
+                link.i_node["@wait_pfactor"] = default_transfer_wait_perception_factor
+                link.i_node["@xboard_nodepen"] = 1
+                link.j_node["@hdw_fraction"] = default_headway_fraction
+                link.j_node["@wait_pfactor"] = default_transfer_wait_perception_factor
+                link.j_node["@xboard_nodepen"] = 1
                 # update modes on connectors
-                if (link.i_node.is_centroid) and (link["@drive_link"]==0):
+                if (link.i_node.is_centroid) and (link["@drive_link"] == 0):
                     link.modes = "a"
-                elif (link.j_node.is_centroid) and (link["@drive_link"]==0):
+                elif (link.j_node.is_centroid) and (link["@drive_link"] == 0):
                     link.modes = "e"
-                elif (link.i_node.is_centroid or link.j_node.is_centroid ) and (link["@drive_link"]!=0):
-                    link.modes = set([network.mode('c'), network.mode('D')])  
+                elif (link.i_node.is_centroid or link.j_node.is_centroid) and (
+                    link["@drive_link"] != 0
+                ):
+                    link.modes = set([network.mode("c"), network.mode("D")])
                 # calculate perceived walk time
-                # perceived walk time will be used in walk mode definition "ul2", 
+                # perceived walk time will be used in walk mode definition "ul2",
                 # link.data1 is used to save congested bus time, so use link.data2 here
-                if link["@area_type"] in [0,1]:
-                    link.data2 = 60 * link.length / (walk_speed / walk_perception_factor_cbd)
+                if link["@area_type"] in [0, 1]:
+                    link.data2 = (
+                        60 * link.length / (walk_speed / walk_perception_factor_cbd)
+                    )
                 else:
-                    link.data2 = 60 * link.length / (walk_speed / walk_perception_factor)
+                    link.data2 = (
+                        60 * link.length / (walk_speed / walk_perception_factor)
+                    )
 
             # set headway fraction, transfer wait perception and transfer boarding penalty at specific nodes
             for line in network.transit_lines():
                 if line.vehicle.mode.id == "r":
                     for seg in line.segments():
-                        seg.i_node['@hdw_fraction'] = headway_fraction[line.vehicle.mode.id]
-                        seg.j_node['@hdw_fraction'] = headway_fraction[line.vehicle.mode.id]
+                        seg.i_node["@hdw_fraction"] = headway_fraction[
+                            line.vehicle.mode.id
+                        ]
+                        seg.j_node["@hdw_fraction"] = headway_fraction[
+                            line.vehicle.mode.id
+                        ]
                 elif line.vehicle.mode.id == "f":
                     for seg in line.segments():
-                        seg.i_node['@hdw_fraction'] = headway_fraction[line.vehicle.mode.id]
-                        seg.i_node['@wait_pfactor'] = transfer_wait_perception_factor[line.vehicle.mode.id]
-                        seg.j_node['@hdw_fraction'] = headway_fraction[line.vehicle.mode.id]
-                        seg.j_node['@wait_pfactor'] = transfer_wait_perception_factor[line.vehicle.mode.id]
-                elif line.vehicle.mode.id =="h":
+                        seg.i_node["@hdw_fraction"] = headway_fraction[
+                            line.vehicle.mode.id
+                        ]
+                        seg.i_node["@wait_pfactor"] = transfer_wait_perception_factor[
+                            line.vehicle.mode.id
+                        ]
+                        seg.j_node["@hdw_fraction"] = headway_fraction[
+                            line.vehicle.mode.id
+                        ]
+                        seg.j_node["@wait_pfactor"] = transfer_wait_perception_factor[
+                            line.vehicle.mode.id
+                        ]
+                elif line.vehicle.mode.id == "h":
                     for seg in line.segments():
-                        if seg.i_node['#node_id'] in self.controller.config.transit.timed_transfer_nodes:
-                            seg.i_node['@xboard_nodepen'] = 0            
+                        if (
+                            seg.i_node["#node_id"]
+                            in self.controller.config.transit.timed_transfer_nodes
+                        ):
+                            seg.i_node["@xboard_nodepen"] = 0
 
             ref_scenario.publish_network(network)
 

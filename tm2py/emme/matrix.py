@@ -136,7 +136,7 @@ class OMXManager:
         omx_key: str = "NAME",
         matrix_cache: MatrixCache = None,
         mask_max_value: float = None,
-        growth_factor: float = None
+        growth_factor: float = None,
     ):  # pylint: disable=R0913
         """The OMXManager constructor.
 
@@ -266,7 +266,11 @@ class OMXManager:
         self.write_array(numpy_array, name, "float64", attrs)
 
     def write_array(
-        self, numpy_array: NumpyArray, name: str, data_type: str = "float64", attrs: Dict[str, str] = None
+        self,
+        numpy_array: NumpyArray,
+        name: str,
+        data_type: str = "float64",
+        attrs: Dict[str, str] = None,
     ):
         """Write array with name and optional attrs to OMX file.
 
@@ -286,7 +290,7 @@ class OMXManager:
         if self._mask_max_value:
             numpy_array[numpy_array > self._mask_max_value] = 0
         if self._growth_factor:
-            numpy_array = numpy_array * self._growth_factor       
+            numpy_array = numpy_array * self._growth_factor
         numpy_array = numpy_array.astype(dtype=data_type, copy=False)
         self._omx_file.create_matrix(
             name, obj=numpy_array, chunkshape=chunkshape, attrs=attrs
