@@ -175,7 +175,10 @@ class RunController:
     @property
     def congested_transit_assn_max_iteration(self) -> dict:
         """Return mapping of time periods to max iteration in congested transit assignment."""
-        return dict((p.name, p.congested_transit_assn_max_iteration) for p in self.config.time_periods)
+        return dict(
+            (p.name, p.congested_transit_assn_max_iteration)
+            for p in self.config.time_periods
+        )
 
     @property
     def num_processors(self) -> int:
