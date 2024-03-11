@@ -300,6 +300,13 @@ class Observed:
             right_on=["survey_agency", "survey_route", "time_period"],
         )
 
+        # observed records are not by direction, so we need to scale the boardings by 2
+        time_of_day_df["survey_boardings"] = np.where(
+            time_of_day_df["survey_operator"] == time_of_day_df["survey_route"],
+            time_of_day_df["survey_boardings"],
+            time_of_day_df["survey_boardings"] / 2.0,
+        )
+
         return pd.concat([all_df, time_of_day_df], axis="rows", ignore_index=True)
 
     def reduce_on_board_survey(self, read_file_from_disk=True):

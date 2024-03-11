@@ -603,6 +603,7 @@ class Simulated:
                             "alighting",
                             "simulated",
                         ],
+                    )
 
                     df = pd.concat([df, subject_df], axis="rows", ignore_index=True)
 
