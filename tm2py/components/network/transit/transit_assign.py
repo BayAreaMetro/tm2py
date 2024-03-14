@@ -2231,13 +2231,41 @@ class TransitAssignmentClass:
 
             elif self.name == "WLK_TRN_WLK":
                 new_journey_levels = copy.deepcopy(journey_levels)
-                transition_rules = copy.deepcopy(journey_levels[0]["transition_rules"])
+
+                for i in range(0, len(new_journey_levels)):
+                    jls = new_journey_levels[i]
+                    jls["transition_rules"].extend(
+                        [
+                            {"mode": "e", "next_journey_level": i+1},
+                            {"mode": "w", "next_journey_level": i+1},
+                            {
+                                "mode": "a",
+                                "next_journey_level": i+1,
+                            },
+                        ]
+                    )
+                # level 0: only allow walk access and walk auxilary
+                # must use the trasit modes to get onto the next level, 
+                transition_rules_walk = copy.deepcopy(journey_levels[0]["transition_rules"])
+                transition_rules_walk.extend(
+                    [
+                        {
+                            "mode": "e",
+                            "next_journey_level": 0,
+                        },
+                        {
+                            "mode": "w",
+                            "next_journey_level": 0,
+                        },
+                        {"mode": "a", "next_journey_level": 0},
+                    ]
+                )
                 new_journey_levels.insert(
                     0,
                     {
                         "description": "base",
-                        "destinations_reachable": True,
-                        "transition_rules": transition_rules,
+                        "destinations_reachable": False,
+                        "transition_rules": transition_rules_walk,
                         "waiting_time": None,
                         "boarding_time": None,
                         "boarding_cost": None,
