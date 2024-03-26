@@ -3,8 +3,8 @@
 ####################################
 
 [remote_io]
-    #crosswalk_folder_root = "/Users/wsp/Documents/GitHub/tm2py/examples/temp_acceptance/"
-    crosswalk_folder_root = "/Users/USVA682771/GitHub/tm2py/examples/temp_acceptance/"
+    crosswalk_folder_root = "/Users/wsp/Documents/GitHub/tm2py/examples/temp_acceptance/"
+    #crosswalk_folder_root = "/Users/USVA682771/GitHub/tm2py/examples/temp_acceptance/"
 
 [crosswalks]
     crosswalk_standard_survey_file = "transit-standard-2015-to-survey-crosswalk.csv"

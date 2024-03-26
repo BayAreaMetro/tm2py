@@ -82,13 +82,15 @@ class Simulated:
         "ev": "Scenario_15",
     }
 
-    def _load_configs(self):
+    def _load_configs(self, scenario: bool = True, model: bool = True):
 
-        with open(self.scenario_file, "r", encoding="utf-8") as toml_file:
-            self.scenario_dict = toml.load(toml_file)
+        if scenario:
+            with open(self.scenario_file, "r", encoding="utf-8") as toml_file:
+                self.scenario_dict = toml.load(toml_file)
 
-        with open(self.model_file, "r", encoding="utf-8") as toml_file:
-            self.model_dict = toml.load(toml_file)
+        if model:
+            with open(self.model_file, "r", encoding="utf-8") as toml_file:
+                self.model_dict = toml.load(toml_file)
 
         return
 
@@ -109,15 +111,29 @@ class Simulated:
         return
 
     def __init__(
-        self, canonical: Canonical, scenario_file: str, model_file: str
+        self,
+        canonical: Canonical,
+        scenario_file: str = None,
+        model_file: str = None,
+        on_board_assign_summary: bool = False,
     ) -> None:
+
         self.c = canonical
         self.scenario_file = scenario_file
-        self.model_file = model_file
-        self._load_configs()
-        self._get_model_time_periods()
-        self._get_morning_commute_capacity_factor()
-        self._validate()
+        self._load_configs(scenario=True, model=False)
+
+        if not on_board_assign_summary:
+            self.model_file = model_file
+            self._load_configs()
+            self._get_model_time_periods()
+            self._get_morning_commute_capacity_factor()
+            self._validate()
+
+    def reduce_on_board_assignment_boardings(self, time_period_list: list = ["am"]):
+        self.model_time_periods = time_period_list
+        self._reduce_simulated_transit_boardings()
+
+        return
 
     def _validate(self):
         self._make_transit_mode_dict()
@@ -588,6 +604,7 @@ class Simulated:
                             "simulated",
                         ],
                     )
+
                     df = pd.concat([df, subject_df], axis="rows", ignore_index=True)
 
             df["boarding"] = df["boarding"].astype(int)
@@ -626,13 +643,16 @@ class Simulated:
 
     def _reduce_simulated_transit_boardings(self):
 
+        root_dir = self.scenario_dict["scenario"]["root_dir"]
         file_prefix = "boardings_by_line_"
 
         c_df = pd.DataFrame()
         for time_period in self.model_time_periods:
 
             df = pd.read_csv(
-                os.path.join("output_summaries", file_prefix + time_period + ".csv")
+                os.path.join(
+                    root_dir, "output_summaries", file_prefix + time_period + ".csv"
+                )
             )
             df["time_period"] = time_period
             c_df = pd.concat([c_df, df], axis="rows", ignore_index=True)

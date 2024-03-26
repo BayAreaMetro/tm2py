@@ -149,11 +149,20 @@ class Observed:
 
         return
 
-    def __init__(self, canonical: Canonical, observed_file: str) -> None:
+    def __init__(
+        self,
+        canonical: Canonical,
+        observed_file: str,
+        on_board_assign_summary: bool = False,
+    ) -> None:
         self.c = canonical
         self.observed_file = observed_file
         self._load_configs()
-        self._validate()
+
+        if not on_board_assign_summary:
+            self._validate()
+        elif on_board_assign_summary:
+            self._reduce_observed_rail_access_summaries()
 
     def _validate(self):
 
@@ -291,7 +300,10 @@ class Observed:
             how="left",
             left_on=["survey_operator", "survey_route", "time_period"],
             right_on=["survey_agency", "survey_route", "time_period"],
-        )
+        )  
+
+        # observed records are not by direction, so we need to scale the boardings by 2
+        time_of_day_df["survey_boardings"] = np.where(time_of_day_df["survey_operator"] == time_of_day_df["survey_route"], time_of_day_df["survey_boardings"], time_of_day_df["survey_boardings"]/2.0)
 
         return pd.concat([all_df, time_of_day_df], axis="rows", ignore_index=True)
 
@@ -304,7 +316,7 @@ class Observed:
         # TODO: replace with the summary from the on-board survey repo once the crosswalk is updated
 
         if not self.c.canonical_agency_names_dict:
-            self._make_canonical_agency_names_dict()
+            self.c._make_canonical_agency_names_dict()
 
         time_period_dict = {
             "EARLY AM": "ea",
@@ -325,7 +337,7 @@ class Observed:
                 dtype=self.reduced_transit_on_board_df.dtypes.to_dict(),
             )
         else:
-            in_df = pd.read_csv(os.path.join(file_root, in_file))
+            in_df = pd.read_feather(os.path.join(file_root, in_file))
             temp_df = in_df[
                 (in_df["weekpart"].isna()) | (in_df["weekpart"] != "WEEKEND")
             ].copy()

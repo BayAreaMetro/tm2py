@@ -284,7 +284,15 @@ class Acceptance:
 
         return
 
-    def _make_transit_network_comparisons(self):
+    def compare_transit_boardings(self) -> pd.DataFrame:
+        """Compare transit boardings
+
+        Method created to compare simulated transit boardings generated
+        by assigning demand from the on-board survey.
+
+        Returns:
+            pd.DataFrame: Observed and simulated transit boardings
+        """
 
         # step 1: outer merge for rail operators (ignore route)
         obs_df = self.o.reduced_transit_on_board_df[
@@ -360,7 +368,15 @@ class Acceptance:
             boards_df["technology"],
         )
 
-        # step 3 -- create a daily shape
+        return boards_df
+
+    def _make_transit_network_comparisons(self):
+
+        # step 1: outer merge for rail operators (ignore route)
+        # step 2: left merge for non-rail operators
+        boards_df = self.compare_transit_boardings()
+
+        # step 3: create a daily shape
         df = pd.DataFrame(self.s.simulated_transit_segments_gdf).copy()
         am_shape_df = df[~(df["LINE_ID"].str.contains("pnr_"))].reset_index().copy()
         am_shape_df = self.c.aggregate_line_names_across_time_of_day(
