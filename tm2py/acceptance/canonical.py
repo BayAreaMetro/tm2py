@@ -109,8 +109,30 @@ class Canonical:
             .set_index("alternate_02")
             .to_dict()["canonical_name"]
         )
+        d_dict = (
+            df[(df["alternate_03"].notna())][["canonical_name", "alternate_03"]]
+            .set_index("alternate_03")
+            .to_dict()["canonical_name"]
+        )
+        e_dict = (
+            df[(df["alternate_04"].notna())][["canonical_name", "alternate_04"]]
+            .set_index("alternate_04")
+            .to_dict()["canonical_name"]
+        )
+        f_dict = (
+            df[(df["alternate_05"].notna())][["canonical_name", "alternate_05"]]
+            .set_index("alternate_05")
+            .to_dict()["canonical_name"]
+        )
 
-        self.canonical_agency_names_dict = {**a_dict, **b_dict, **c_dict}
+        self.canonical_agency_names_dict = {
+            **a_dict,
+            **b_dict,
+            **c_dict,
+            **d_dict,
+            **e_dict,
+            **f_dict,
+        }
 
         return
 
@@ -178,10 +200,11 @@ class Canonical:
 
         df = pd.read_csv(os.path.join(file_root, in_file))
 
-        df = df[["TM2_mode", "agency_name", "TM2_line_haul_name"]]
+        df = df[["TM2_mode", "TM2_operator", "agency_name", "TM2_line_haul_name"]]
         df = df.rename(
             columns={
                 "TM2_mode": "tm2_mode",
+                "TM2_operator": "tm2_operator",
                 "agency_name": "operator",
                 "TM2_line_haul_name": "technology",
             }
@@ -197,6 +220,21 @@ class Canonical:
         in_file = self.canonical_dict["crosswalks"]["crosswalk_standard_survey_file"]
 
         df = pd.read_csv(os.path.join(file_root, in_file))
+        df = df[
+            [
+                "survey_route",
+                "survey_agency",
+                "survey_tech",
+                "standard_route_id",
+                "standard_line_name",
+                "standard_operator",
+                "standard_headsign",
+                "standard_agency",
+                "standard_route_short_name",
+                "standard_route_long_name",
+                "canonical_operator",
+            ]
+        ].drop_duplicates()
 
         self.standard_transit_to_survey_df = df
 

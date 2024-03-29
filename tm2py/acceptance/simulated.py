@@ -629,14 +629,20 @@ class Simulated:
     def _join_tm2_mode_codes(self, input_df):
 
         df = self.c.gtfs_to_tm2_mode_codes_df.copy()
-
-        df = df.drop_duplicates(subset=["tm2_mode"], keep="first")  # temporary 10.29
+        i_df = input_df["line_name"].str.split(pat="_", expand=True).copy()
+        i_df["tm2_operator"] = i_df[0]
+        i_df["tm2_operator"] = (
+            pd.to_numeric(i_df["tm2_operator"], errors="coerce")
+            .fillna(0)
+            .astype(np.int64)
+        )
+        j_df = pd.concat([input_df, i_df["tm2_operator"]], axis="columns")
 
         return_df = pd.merge(
-            input_df,
+            j_df,
             df,
             how="left",
-            on="tm2_mode",
+            on=["tm2_operator", "tm2_mode"],
         )
 
         return return_df

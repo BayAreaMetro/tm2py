@@ -200,8 +200,16 @@ class Observed:
         df = df.drop(["boardings"], axis="columns")
         df = df.rename(columns={"threshold": "florida_threshold"})
 
-        all_df = input_df[input_df["time_period"] == self.c.ALL_DAY_WORD].copy()
-        other_df = input_df[input_df["time_period"] != self.c.ALL_DAY_WORD].copy()
+        all_df = (
+            input_df[input_df["time_period"] == self.c.ALL_DAY_WORD]
+            .copy()
+            .reset_index(drop=True)
+        )
+        other_df = (
+            input_df[input_df["time_period"] != self.c.ALL_DAY_WORD]
+            .copy()
+            .reset_index(drop=True)
+        )
         other_df["florida_threshold"] = np.nan
 
         vals = all_df.survey_boardings.values
@@ -212,7 +220,7 @@ class Observed:
 
         return_df = pd.concat(
             [
-                input_df.loc[i, :].reset_index(drop=True),
+                all_df.loc[i, :].reset_index(drop=True),
                 df.loc[j, :].reset_index(drop=True),
             ],
             axis=1,
@@ -300,10 +308,15 @@ class Observed:
             how="left",
             left_on=["survey_operator", "survey_route", "time_period"],
             right_on=["survey_agency", "survey_route", "time_period"],
-        )  
+        )
 
-        # observed records are not by direction, so we need to scale the boardings by 2
-        time_of_day_df["survey_boardings"] = np.where(time_of_day_df["survey_operator"] == time_of_day_df["survey_route"], time_of_day_df["survey_boardings"], time_of_day_df["survey_boardings"]/2.0)
+        # observed records are not by direction, so we need to scale the boardings by 2 when the cases match
+        time_of_day_df["survey_boardings"] = np.where(
+            (time_of_day_df["standard_route_id"].isna())
+            | (time_of_day_df["survey_operator"].isin(self.c.rail_operators_vector)),
+            time_of_day_df["survey_boardings"],
+            time_of_day_df["survey_boardings"] / 2.0,
+        )
 
         return pd.concat([all_df, time_of_day_df], axis="rows", ignore_index=True)
 
@@ -313,19 +326,8 @@ class Observed:
         in the observed configuration.
         """
 
-        # TODO: replace with the summary from the on-board survey repo once the crosswalk is updated
-
         if not self.c.canonical_agency_names_dict:
             self.c._make_canonical_agency_names_dict()
-
-        time_period_dict = {
-            "EARLY AM": "ea",
-            "AM PEAK": "am",
-            "MIDDAY": "md",
-            "PM PEAK": "pm",
-            "EVENING": "ev",
-            "NIGHT": "ev",
-        }
 
         file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["transit"]["on_board_survey_file"]
@@ -337,43 +339,8 @@ class Observed:
                 dtype=self.reduced_transit_on_board_df.dtypes.to_dict(),
             )
         else:
-            in_df = pd.read_feather(os.path.join(file_root, in_file))
-            temp_df = in_df[
-                (in_df["weekpart"].isna()) | (in_df["weekpart"] != "WEEKEND")
-            ].copy()
-            temp_df["time_period"] = temp_df["day_part"].map(time_period_dict)
-            temp_df["route"] = np.where(
-                temp_df["operator"].isin(self.c.rail_operators_vector),
-                temp_df["operator"],
-                temp_df["route"],
-            )
-
-            all_day_df = (
-                temp_df.groupby(["survey_tech", "operator", "route"])["boarding_weight"]
-                .sum()
-                .reset_index()
-            )
-            all_day_df["time_period"] = self.c.ALL_DAY_WORD
-
-            time_of_day_df = (
-                temp_df.groupby(["survey_tech", "operator", "route", "time_period"])[
-                    "boarding_weight"
-                ]
-                .sum()
-                .reset_index()
-            )
-
-            out_df = pd.concat(
-                [all_day_df, time_of_day_df], axis="rows", ignore_index=True
-            )
-
-            out_df = out_df.rename(
-                columns={
-                    "operator": "survey_operator",
-                    "route": "survey_route",
-                    "boarding_weight": "survey_boardings",
-                }
-            )
+            in_df = pd.read_csv(os.path.join(file_root, in_file))
+            out_df = in_df.copy()
             out_df["survey_operator"] = out_df["survey_operator"].map(
                 self.c.canonical_agency_names_dict
             )

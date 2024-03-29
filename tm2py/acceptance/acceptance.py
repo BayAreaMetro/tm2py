@@ -311,6 +311,7 @@ class Acceptance:
                 "florida_threshold",
             ]
         ].rename(columns={"survey_operator": "operator", "survey_tech": "technology"})
+
         obs_df = self._fix_technology_labels(obs_df, "technology")
 
         sim_df = (
@@ -333,12 +334,28 @@ class Acceptance:
             on=["operator", "technology", "time_period"],
         )
 
-        # step 2: left merge for non-rail operators
+        # step 2: outer merge for non-rail operators (still want observed, even if not in network)
         obs_df = self.o.reduced_transit_on_board_df[
             ~self.o.reduced_transit_on_board_df["survey_operator"].isin(
                 self.c.rail_operators_vector
             )
         ].copy()
+
+        obs_df = obs_df[
+            [
+                "survey_tech",
+                "survey_operator",
+                "survey_route",
+                "survey_boardings",
+                "time_period",
+                "florida_threshold",
+                "standard_line_name",
+                "daily_line_name",
+            ]
+        ]
+
+        obs_df = self._fix_technology_labels(obs_df, "survey_tech")
+
         sim_df = self.s.simulated_boardings_df[
             ~self.s.simulated_boardings_df["operator"].isin(
                 self.c.rail_operators_vector
@@ -350,7 +367,7 @@ class Acceptance:
         non_df = pd.merge(
             sim_df,
             obs_df,
-            how="left",
+            how="outer",
             left_on=["line_name", "daily_line_name", "time_period"],
             right_on=["standard_line_name", "daily_line_name", "time_period"],
         )
@@ -503,8 +520,11 @@ class Acceptance:
 
         fix_dict = {
             "local": "Local Bus",
+            "local bus": "Local Bus",
             "express": "Express Bus",
+            "express bus": "Express Bus",
             "light": "Light Rail",
+            "light rail": "Light Rail",
             "ferry": "Ferry",
             "heavy": "Heavy Rail",
             "commuter": "Commuter Rail",
