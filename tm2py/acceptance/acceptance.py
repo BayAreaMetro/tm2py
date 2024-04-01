@@ -351,6 +351,9 @@ class Acceptance:
                 "florida_threshold",
                 "standard_line_name",
                 "daily_line_name",
+                "standard_route_id",
+                "standard_route_short_name",
+                "standard_route_long_name",
             ]
         ]
 
