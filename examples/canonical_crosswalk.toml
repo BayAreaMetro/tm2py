@@ -7,7 +7,7 @@
     #crosswalk_folder_root = "/Users/USVA682771/GitHub/tm2py/examples/temp_acceptance/"
 
 [crosswalks]
-    crosswalk_standard_survey_file = "transit-standard-2015-to-survey-crosswalk-v2.csv"
+    crosswalk_standard_survey_file = "transit-standard-2015-to-survey-crosswalk.csv"
     standard_to_tm2_modes_file = "gtfs_to_tm2_mode_crosswalk.csv"
     standard_to_emme_transit_file = "emme_taz_transit_network_node_id_crosswalk.csv"
     canonical_agency_names_file = "canonical-agency-names.csv"

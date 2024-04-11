@@ -22,7 +22,7 @@ for (package in packages_vector) {
 crosswalk_dir <- "../examples/temp_acceptance/"
 
 input_filename <- paste0(crosswalk_dir, "transit-standard-2015-to-survey-crosswalk.csv")
-output_filename <- paste0(crosswalk_dir, "transit-standard-2015-to-survey-crosswalk-v2.csv")
+output_filename <- paste0(crosswalk_dir, "transit-standard-2015-to-survey-crosswalk-v3.csv")
 ```
 
 # Parameters
@@ -62,17 +62,13 @@ gg_df <- b_df %>%
 output_df <- a_df %>%
   filter(survey_agency != "Golden Gate Transit") %>%
   bind_rows(., gg_df)
+
+# Remove Cloverdale Transit -- appears to just be a duplicate of Sonoma
+output_df <- output_df %>%
+  filter(standard_operator != "Cloverdale Transit")
   
-larkspur_df <- output_df %>%
-  filter(survey_route == "GOLDEN GATE FERRY___Larkspur Ferry")
-
-# SamTrans
-c_df <- input_df %>%
-  filter(survey_agency == "San Mateo County Transit")
-
-
-
 ```
+
 
 # Write
 ```{r write}
