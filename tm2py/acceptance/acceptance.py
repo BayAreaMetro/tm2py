@@ -77,7 +77,7 @@ class Acceptance:
             "technology": pd.Series(dtype="str"),
             "route_short_name": pd.Series(dtype="str"),
             "route_long_name": pd.Series(dtype="str"),
-            "trip_headsign": pd.Series(dtype="str"),
+            #"trip_headsign": pd.Series(dtype="str"),
             "time_period": pd.Series(dtype="str"),
             "route_observed_boardings": pd.Series(dtype="float"),
             "route_simulated_boardings": pd.Series(dtype="float"),

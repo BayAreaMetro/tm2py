@@ -649,7 +649,6 @@ class Simulated:
 
     def _reduce_simulated_transit_boardings(self):
 
-        root_dir = self.scenario_dict["scenario"]["root_dir"]
         file_prefix = "boardings_by_line_"
 
         c_df = pd.DataFrame()
@@ -657,7 +656,7 @@ class Simulated:
 
             df = pd.read_csv(
                 os.path.join(
-                    root_dir, "output_summaries", file_prefix + time_period + ".csv"
+                    "output_summaries", file_prefix + time_period + ".csv"
                 )
             )
             df["time_period"] = time_period
