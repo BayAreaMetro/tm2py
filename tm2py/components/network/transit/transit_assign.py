@@ -1506,7 +1506,7 @@ class TransitAssignmentClass:
             },  # walk and drive perception factors are specified in mode definition "speed_or_time_factor"
             "aux_transit_cost": None,
             "journey_levels": self._journey_levels,
-            "flow_distribution_between_lines": {"consider_total_impedance": False},
+            "flow_distribution_between_lines": {"consider_total_impedance": True},
             "flow_distribution_at_origins": {
                 "fixed_proportions_on_connectors": None,
                 "choices_at_origins": "OPTIMAL_STRATEGY",
