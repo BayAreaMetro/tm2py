@@ -292,7 +292,6 @@ class RunController:
 
         # If start_component specified, remove things before its first occurance
         if self.config.run.start_component:
-
             _queued_c_names = [c.name for c in self._queued_components]
             if self.config.run.start_component not in _queued_c_names:
                 raise ValueError(

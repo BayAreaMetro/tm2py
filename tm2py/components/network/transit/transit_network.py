@@ -92,6 +92,9 @@ class PrepareTransitNetwork(Component):
                     # self.apply_station_attributes(input_dir, network)
                     scenario.publish_network(network)
 
+                    # create ccost attribute for skimming
+                    self._add_ccost_to_scenario(scenario)
+
         for time_period in self.time_period_names:
             # self.update_auto_times(time_period) # run in transit_assign component
             self._update_pnr_penalty(time_period)
@@ -154,6 +157,23 @@ class PrepareTransitNetwork(Component):
                 self.get_abs_path(self.config.input_connector_egress_times_path)
             )
         return self._egress_connector_df
+
+    def _add_ccost_to_scenario(self, emme_scenario: "EmmeScenario") -> None:
+        """Add Extra Added Wait Time and Capacity Penalty to emme scenario.
+
+        Args:
+            emme_scenario : EmmeScenario
+        """
+        create_extra = self.controller.emme_manager.tool(
+            "inro.emme.data.extra_attribute.create_extra_attribute"
+        )
+        create_extra(
+            "TRANSIT_SEGMENT",
+            "@ccost",
+            "congested cost",
+            overwrite=True,
+            scenario=emme_scenario,
+        )
 
     def update_auto_times(self, time_period: str):
         """Update the auto travel times from the last auto assignment to the transit scenario.

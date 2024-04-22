@@ -16,7 +16,6 @@ def create_matrix_factors(
     default_matrix: NumpyArray,
     periods: Optional[float] = None,
 ) -> NumpyArray:
-
     adj_matrix = default_matrix
     for adj in matrix_factors:
         if adj.factor is not None:

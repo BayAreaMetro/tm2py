@@ -293,7 +293,6 @@ class CommercialVehicleTripGeneration(Subcomponent):
         # TODO Do this with multi-indexing rather than relying on column naming
 
         for _c, _pa in _class_pa:
-
             _trip_type = _c.purpose
             _trk_class = _c.name
 
@@ -915,7 +914,6 @@ class CommercialVehicleTollChoice(Subcomponent):
 
         class_demands = defaultdict(dict)
         for _time_period, _tclass in _tclass_time_combos:
-
             _split_demand = self._toll_choice.run(
                 trkclass_tp_demand_dict[_tclass.name][_time_period],
                 _tclass.name,

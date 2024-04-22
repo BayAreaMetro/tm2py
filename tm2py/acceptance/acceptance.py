@@ -12,7 +12,6 @@ import pandas as pd
 
 
 class Acceptance:
-
     s: Simulated
     o: Observed
     c: Canonical
@@ -77,7 +76,7 @@ class Acceptance:
             "technology": pd.Series(dtype="str"),
             "route_short_name": pd.Series(dtype="str"),
             "route_long_name": pd.Series(dtype="str"),
-            "trip_headsign": pd.Series(dtype="str"),
+            # "trip_headsign": pd.Series(dtype="str"),
             "time_period": pd.Series(dtype="str"),
             "route_observed_boardings": pd.Series(dtype="float"),
             "route_simulated_boardings": pd.Series(dtype="float"),
@@ -133,7 +132,6 @@ class Acceptance:
         return
 
     def _write_roadway_network(self):
-
         file_root = self.acceptance_output_folder_root
         out_file = os.path.join(file_root, self.output_roadway_filename)
         self.road_network_gdf.to_file(out_file, driver="GeoJSON")
@@ -141,7 +139,6 @@ class Acceptance:
         return
 
     def _write_transit_network(self):
-
         file_root = self.acceptance_output_folder_root
         out_file = os.path.join(file_root, self.output_transit_filename)
         self.transit_network_gdf.to_file(out_file, driver="GeoJSON")
@@ -149,7 +146,6 @@ class Acceptance:
         return
 
     def _write_other_comparisons(self):
-
         file_root = self.acceptance_output_folder_root
         out_file = os.path.join(file_root, self.output_other_filename)
         self.compare_gdf.to_file(out_file, driver="GeoJSON")
@@ -157,7 +153,6 @@ class Acceptance:
         return
 
     def _make_roadway_network_comparisons(self):
-
         o_df = self.o.reduced_traffic_counts_df.copy()
         o_trans_df = self.o.observed_bridge_transactions_df.copy()
         s_df = self.s.simulated_roadway_assignment_results_df.copy()
@@ -284,7 +279,15 @@ class Acceptance:
 
         return
 
-    def _make_transit_network_comparisons(self):
+    def compare_transit_boardings(self) -> pd.DataFrame:
+        """Compare transit boardings
+
+        Method created to compare simulated transit boardings generated
+        by assigning demand from the on-board survey.
+
+        Returns:
+            pd.DataFrame: Observed and simulated transit boardings
+        """
 
         # step 1: outer merge for rail operators (ignore route)
         obs_df = self.o.reduced_transit_on_board_df[
@@ -303,6 +306,7 @@ class Acceptance:
                 "florida_threshold",
             ]
         ].rename(columns={"survey_operator": "operator", "survey_tech": "technology"})
+
         obs_df = self._fix_technology_labels(obs_df, "technology")
 
         sim_df = (
@@ -325,12 +329,31 @@ class Acceptance:
             on=["operator", "technology", "time_period"],
         )
 
-        # step 2: left merge for non-rail operators
+        # step 2: outer merge for non-rail operators (still want observed, even if not in network)
         obs_df = self.o.reduced_transit_on_board_df[
             ~self.o.reduced_transit_on_board_df["survey_operator"].isin(
                 self.c.rail_operators_vector
             )
         ].copy()
+
+        obs_df = obs_df[
+            [
+                "survey_tech",
+                "survey_operator",
+                "survey_route",
+                "survey_boardings",
+                "time_period",
+                "florida_threshold",
+                "standard_line_name",
+                "daily_line_name",
+                "standard_route_id",
+                "standard_route_short_name",
+                "standard_route_long_name",
+            ]
+        ]
+
+        obs_df = self._fix_technology_labels(obs_df, "survey_tech")
+
         sim_df = self.s.simulated_boardings_df[
             ~self.s.simulated_boardings_df["operator"].isin(
                 self.c.rail_operators_vector
@@ -342,7 +365,7 @@ class Acceptance:
         non_df = pd.merge(
             sim_df,
             obs_df,
-            how="left",
+            how="outer",
             left_on=["line_name", "daily_line_name", "time_period"],
             right_on=["standard_line_name", "daily_line_name", "time_period"],
         )
@@ -360,7 +383,14 @@ class Acceptance:
             boards_df["technology"],
         )
 
-        # step 3 -- create a daily shape
+        return boards_df
+
+    def _make_transit_network_comparisons(self):
+        # step 1: outer merge for rail operators (ignore route)
+        # step 2: left merge for non-rail operators
+        boards_df = self.compare_transit_boardings()
+
+        # step 3: create a daily shape
         df = pd.DataFrame(self.s.simulated_transit_segments_gdf).copy()
         am_shape_df = df[~(df["LINE_ID"].str.contains("pnr_"))].reset_index().copy()
         am_shape_df = self.c.aggregate_line_names_across_time_of_day(
@@ -462,7 +492,6 @@ class Acceptance:
         return
 
     def _make_other_comparisons(self):
-
         a_df = self._make_home_work_flow_comparisons()
         b_gdf = self._make_zero_vehicle_household_comparisons()
         c_gdf = self._make_bart_station_to_station_comparisons()
@@ -480,15 +509,17 @@ class Acceptance:
     def _fix_technology_labels(
         self, input_df: pd.DataFrame, column_name: str
     ) -> pd.DataFrame:
-
         assert column_name in input_df.columns
 
         r_df = input_df.copy()
 
         fix_dict = {
             "local": "Local Bus",
+            "local bus": "Local Bus",
             "express": "Express Bus",
+            "express bus": "Express Bus",
             "light": "Light Rail",
+            "light rail": "Light Rail",
             "ferry": "Ferry",
             "heavy": "Heavy Rail",
             "commuter": "Commuter Rail",
@@ -504,7 +535,6 @@ class Acceptance:
         return r_df
 
     def _make_home_work_flow_comparisons(self):
-
         adjust_observed = (
             self.s.simulated_home_work_flows_df.simulated_flow.sum()
             / self.o.ctpp_2012_2016_df.observed_flow.sum()
@@ -538,7 +568,6 @@ class Acceptance:
         return df
 
     def _make_zero_vehicle_household_comparisons(self):
-
         c_df = self.s.reduced_simulated_zero_vehicle_hhs_df
 
         # prepare the observed data
@@ -578,7 +607,6 @@ class Acceptance:
         return gdf
 
     def _make_bart_station_to_station_comparisons(self):
-
         s_df = self.s.simulated_station_to_station_df.copy()
 
         df = pd.merge(
@@ -612,7 +640,6 @@ class Acceptance:
         return r_gdf
 
     def _make_rail_access_comparisons(self):
-
         PARK_AND_RIDE_OBSERVED_THRESHOLD = 500
 
         s_df = self.s.simulated_transit_access_df.copy()
@@ -715,7 +742,6 @@ class Acceptance:
         return r_gdf
 
     def _make_transit_district_flow_comparisons(self):
-
         s_df = self.s.simulated_transit_district_to_district_by_tech_df.copy()
         o_df = self.o.reduced_transit_district_flows_by_technology_df.copy()
 

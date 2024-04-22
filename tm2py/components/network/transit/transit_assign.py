@@ -572,9 +572,6 @@ class TransitAssignment(Component):
                     )
                     # TODO: run skim
                     # TODO: trim_demand
-                    # create ccost attribute for skimming
-                    scenario = self.transit_emmebank.scenario(time_period)
-                    self._add_ccost_to_scenario(scenario)
                     # congested_transit_assignment = self.config.congested_transit_assignment
                     # # apply peaking factor
                     # if self.config.congested.use_peaking_factor:
@@ -639,7 +636,6 @@ class TransitAssignment(Component):
     def run_transit_assign(
         self, time_period: str, use_ccr: bool, congested_transit_assignment: bool
     ):
-
         if use_ccr:
             self._run_ccr_assign(time_period)
         elif congested_transit_assignment:
@@ -1353,25 +1349,7 @@ class TransitAssignment(Component):
             scenario=emme_scenario,
         )
 
-    def _add_ccost_to_scenario(self, emme_scenario: "EmmeScenario") -> None:
-        """Add Extra Added Wait Time and Capacity Penalty to emme scenario.
-
-        Args:
-            emme_scenario : EmmeScenario
-        """
-        create_extra = self.controller.emme_manager.tool(
-            "inro.emme.data.extra_attribute.create_extra_attribute"
-        )
-        create_extra(
-            "TRANSIT_SEGMENT",
-            "@ccost",
-            "congested cost",
-            overwrite=True,
-            scenario=emme_scenario,
-        )
-
     def _get_network_with_ccr_scenario_attributes(self, emme_scenario):
-
         self._add_ccr_vars_to_scenario(emme_scenario)
 
         _attributes = {
@@ -1526,7 +1504,7 @@ class TransitAssignmentClass:
             },  # walk and drive perception factors are specified in mode definition "speed_or_time_factor"
             "aux_transit_cost": None,
             "journey_levels": self._journey_levels,
-            "flow_distribution_between_lines": {"consider_total_impedance": False},
+            "flow_distribution_between_lines": {"consider_total_impedance": True},
             "flow_distribution_at_origins": {
                 "fixed_proportions_on_connectors": None,
                 "choices_at_origins": "OPTIMAL_STRATEGY",
@@ -2231,13 +2209,43 @@ class TransitAssignmentClass:
 
             elif self.name == "WLK_TRN_WLK":
                 new_journey_levels = copy.deepcopy(journey_levels)
-                transition_rules = copy.deepcopy(journey_levels[0]["transition_rules"])
+
+                for i in range(0, len(new_journey_levels)):
+                    jls = new_journey_levels[i]
+                    jls["transition_rules"].extend(
+                        [
+                            {"mode": "e", "next_journey_level": i + 1},
+                            {"mode": "w", "next_journey_level": i + 1},
+                            {
+                                "mode": "a",
+                                "next_journey_level": i + 1,
+                            },
+                        ]
+                    )
+                # level 0: only allow walk access and walk auxilary
+                # must use the trasit modes to get onto the next level,
+                transition_rules_walk = copy.deepcopy(
+                    journey_levels[0]["transition_rules"]
+                )
+                transition_rules_walk.extend(
+                    [
+                        {
+                            "mode": "e",
+                            "next_journey_level": 0,
+                        },
+                        {
+                            "mode": "w",
+                            "next_journey_level": 0,
+                        },
+                        {"mode": "a", "next_journey_level": 0},
+                    ]
+                )
                 new_journey_levels.insert(
                     0,
                     {
                         "description": "base",
-                        "destinations_reachable": True,
-                        "transition_rules": transition_rules,
+                        "destinations_reachable": False,
+                        "transition_rules": transition_rules_walk,
                         "waiting_time": None,
                         "boarding_time": None,
                         "boarding_cost": None,

@@ -13,7 +13,6 @@ import toml
 
 
 class Simulated:
-
     c: Canonical
 
     scenario_dict: dict
@@ -82,13 +81,14 @@ class Simulated:
         "ev": "Scenario_15",
     }
 
-    def _load_configs(self):
+    def _load_configs(self, scenario: bool = True, model: bool = True):
+        if scenario:
+            with open(self.scenario_file, "r", encoding="utf-8") as toml_file:
+                self.scenario_dict = toml.load(toml_file)
 
-        with open(self.scenario_file, "r", encoding="utf-8") as toml_file:
-            self.scenario_dict = toml.load(toml_file)
-
-        with open(self.model_file, "r", encoding="utf-8") as toml_file:
-            self.model_dict = toml.load(toml_file)
+        if model:
+            with open(self.model_file, "r", encoding="utf-8") as toml_file:
+                self.model_dict = toml.load(toml_file)
 
         return
 
@@ -109,15 +109,28 @@ class Simulated:
         return
 
     def __init__(
-        self, canonical: Canonical, scenario_file: str, model_file: str
+        self,
+        canonical: Canonical,
+        scenario_file: str = None,
+        model_file: str = None,
+        on_board_assign_summary: bool = False,
     ) -> None:
         self.c = canonical
         self.scenario_file = scenario_file
-        self.model_file = model_file
-        self._load_configs()
-        self._get_model_time_periods()
-        self._get_morning_commute_capacity_factor()
-        self._validate()
+        self._load_configs(scenario=True, model=False)
+
+        if not on_board_assign_summary:
+            self.model_file = model_file
+            self._load_configs()
+            self._get_model_time_periods()
+            self._get_morning_commute_capacity_factor()
+            self._validate()
+
+    def reduce_on_board_assignment_boardings(self, time_period_list: list = ["am"]):
+        self.model_time_periods = time_period_list
+        self._reduce_simulated_transit_boardings()
+
+        return
 
     def _validate(self):
         self._make_transit_mode_dict()
@@ -186,7 +199,6 @@ class Simulated:
     def _get_operator_name_from_line_name(
         self, input_df: pd.DataFrame, input_column_name: str, output_column_name: str
     ) -> pd.DataFrame:
-
         df = input_df[input_column_name].str.split(pat="_", expand=True).copy()
         df[output_column_name] = df[1]
         return_df = pd.concat([input_df, df[output_column_name]], axis="columns")
@@ -194,7 +206,6 @@ class Simulated:
         return return_df
 
     def _reduce_simulated_transit_shapes(self):
-
         file_prefix = "boardings_by_segment_"
         time_period = "am"  # am only
         gdf = gpd.read_file(
@@ -274,7 +285,6 @@ class Simulated:
         return
 
     def _join_coordinates_to_stations(self, input_df, input_column_name):
-
         station_list = input_df[input_column_name].unique().tolist()
 
         x_df = self.c.standard_to_emme_transit_nodes_df.copy()
@@ -299,7 +309,6 @@ class Simulated:
         return return_df
 
     def _read_standard_node(self):
-
         in_file = os.path.join("inputs", "trn", "standard", "v12_node.geojson")
         gdf = gpd.read_file(in_file, driver="GEOJSON")
 
@@ -308,7 +317,6 @@ class Simulated:
         return
 
     def _read_standard_transit_stops(self):
-
         in_file = os.path.join("inputs", "trn", "standard", "v12_stops.txt")
 
         df = pd.read_csv(in_file)
@@ -318,7 +326,6 @@ class Simulated:
         return
 
     def _read_standard_transit_shapes(self):
-
         in_file = os.path.join("inputs", "trn", "standard", "v12_shapes.txt")
 
         df = pd.read_csv(in_file)
@@ -328,7 +335,6 @@ class Simulated:
         return
 
     def _read_standard_transit_routes(self):
-
         in_file = os.path.join("inputs", "trn", "standard", "v12_routes.txt")
 
         df = pd.read_csv(in_file)
@@ -338,7 +344,6 @@ class Simulated:
         return
 
     def _reduce_simulated_home_work_flows(self):
-
         # if self.simulated_maz_data_df.empty:
         #    self._make_simulated_maz_data()
 
@@ -382,7 +387,6 @@ class Simulated:
         return
 
     def _make_simulated_maz_data(self):
-
         in_file = os.path.join("inputs", "landuse", "maz_data.csv")
 
         df = pd.read_csv(in_file)
@@ -404,7 +408,6 @@ class Simulated:
         return
 
     def _reduce_simulated_rail_access_summaries(self):
-
         if not self.transit_mode_dict:
             self._make_transit_mode_dict()
 
@@ -413,7 +416,6 @@ class Simulated:
         out_df = pd.DataFrame()
 
         for time_period in self.model_time_periods:
-
             df = pd.read_csv(
                 os.path.join("output_summaries", file_prefix + time_period + ".csv"),
                 dtype={"stop_name": str, "mdesc": str},
@@ -561,7 +563,7 @@ class Simulated:
             }
         )
 
-        for (operator, time_period, path) in itertools.product(
+        for operator, time_period, path in itertools.product(
             operator_list, self.model_time_periods, path_list
         ):
             input_file_name = os.path.join(
@@ -588,6 +590,7 @@ class Simulated:
                             "simulated",
                         ],
                     )
+
                     df = pd.concat([df, subject_df], axis="rows", ignore_index=True)
 
             df["boarding"] = df["boarding"].astype(int)
@@ -610,27 +613,30 @@ class Simulated:
         return
 
     def _join_tm2_mode_codes(self, input_df):
-
         df = self.c.gtfs_to_tm2_mode_codes_df.copy()
-
-        df = df.drop_duplicates(subset=["tm2_mode"], keep="first")  # temporary 10.29
+        i_df = input_df["line_name"].str.split(pat="_", expand=True).copy()
+        i_df["tm2_operator"] = i_df[0]
+        i_df["tm2_operator"] = (
+            pd.to_numeric(i_df["tm2_operator"], errors="coerce")
+            .fillna(0)
+            .astype(np.int64)
+        )
+        j_df = pd.concat([input_df, i_df["tm2_operator"]], axis="columns")
 
         return_df = pd.merge(
-            input_df,
+            j_df,
             df,
             how="left",
-            on="tm2_mode",
+            on=["tm2_operator", "tm2_mode"],
         )
 
         return return_df
 
     def _reduce_simulated_transit_boardings(self):
-
         file_prefix = "boardings_by_line_"
 
         c_df = pd.DataFrame()
         for time_period in self.model_time_periods:
-
             df = pd.read_csv(
                 os.path.join("output_summaries", file_prefix + time_period + ".csv")
             )
@@ -682,7 +688,6 @@ class Simulated:
         return
 
     def _reduce_simulated_zero_vehicle_households(self):
-
         in_file = os.path.join("ctramp_output", "householdData_1.csv")
 
         df = pd.read_csv(in_file)
@@ -883,7 +888,6 @@ class Simulated:
         return return_df
 
     def _make_transit_mode_dict(self):  # check
-
         transit_mode_dict = {}
         for lil_dict in self.model_dict["transit"]["modes"]:
             add_dict = {lil_dict["mode_id"]: lil_dict["name"]}
@@ -918,7 +922,6 @@ class Simulated:
         return
 
     def _make_transit_technology_in_vehicle_table_from_skims(self):
-
         path_list = [
             "WLK_TRN_WLK",
             "PNR_TRN_WLK",
@@ -932,9 +935,7 @@ class Simulated:
         skim_dir = os.path.join("skim_matrices", "transit")
 
         running_df = None
-        for (path, time_period) in itertools.product(
-            path_list, self.model_time_periods
-        ):
+        for path, time_period in itertools.product(path_list, self.model_time_periods):
             filename = os.path.join(
                 skim_dir, "trnskm{}_{}.omx".format(time_period.upper(), path)
             )
@@ -970,7 +971,6 @@ class Simulated:
                 path_time_df["time_period"] = time_period
 
                 for tech in tech_list:
-
                     matrix_name = TIME_PERIOD + "_" + path + "_IVT" + tech
                     if matrix_name in omx_handle.listMatrices():
                         df = self._make_dataframe_from_omx(
@@ -1001,7 +1001,6 @@ class Simulated:
         return
 
     def _read_transit_demand(self):
-
         path_list = [
             "WLK_TRN_WLK",
             "PNR_TRN_WLK",
@@ -1063,7 +1062,6 @@ class Simulated:
         return df
 
     def _make_district_to_district_transit_summaries(self):
-
         taz_district_dict = self.c.taz_to_district_df.set_index("taz_tm2")[
             "district_tm2"
         ].to_dict()
@@ -1121,7 +1119,6 @@ class Simulated:
         time_of_day_df = pd.DataFrame()
 
         for time_period in self.model_time_periods:
-
             emme_scenario = self.network_shapefile_names_dict[time_period]
             gdf = gpd.read_file(
                 os.path.join("output_summaries", emme_scenario, "emme_links.shp")
@@ -1192,7 +1189,6 @@ class Simulated:
         return
 
     def _reduce_simulated_roadway_assignment_outcomes(self):
-
         # step 1: get the shape
         shape_period = "am"
         emme_scenario = self.network_shapefile_names_dict[shape_period]
@@ -1214,7 +1210,6 @@ class Simulated:
         # step 2: fetch the roadway volumes
         across_df = pd.DataFrame()
         for t in self.model_time_periods:
-
             if t == shape_period:
                 gdf = shape_gdf
             else:

@@ -493,7 +493,6 @@ class PrepareHighwayDemand(EmmeDemand):
 
             # Highway modes: one matrix per suffix (income class) per time period per mode
             for suffix in suffixes:
-
                 highway_cache = {}
 
                 if (time_period, suffix) in it_grp.groups.keys():

@@ -480,30 +480,17 @@ class CreateTODScenarios(Component):
 
             # set headway fraction, transfer wait perception and transfer boarding penalty at specific nodes
             for line in network.transit_lines():
-                if line.vehicle.mode.id == "r":
-                    for seg in line.segments():
-                        seg.i_node["@hdw_fraction"] = headway_fraction[
-                            line.vehicle.mode.id
-                        ]
-                        seg.j_node["@hdw_fraction"] = headway_fraction[
-                            line.vehicle.mode.id
-                        ]
-                elif line.vehicle.mode.id == "f":
-                    for seg in line.segments():
-                        seg.i_node["@hdw_fraction"] = headway_fraction[
-                            line.vehicle.mode.id
-                        ]
-                        seg.i_node["@wait_pfactor"] = transfer_wait_perception_factor[
-                            line.vehicle.mode.id
-                        ]
-                        seg.j_node["@hdw_fraction"] = headway_fraction[
-                            line.vehicle.mode.id
-                        ]
-                        seg.j_node["@wait_pfactor"] = transfer_wait_perception_factor[
-                            line.vehicle.mode.id
-                        ]
-                elif line.vehicle.mode.id == "h":
-                    for seg in line.segments():
+                for seg in line.segments():
+                    seg.i_node["@hdw_fraction"] = headway_fraction[line.vehicle.mode.id]
+                    seg.j_node["@hdw_fraction"] = headway_fraction[line.vehicle.mode.id]
+                    seg.i_node["@wait_pfactor"] = transfer_wait_perception_factor[
+                        line.vehicle.mode.id
+                    ]
+                    seg.j_node["@wait_pfactor"] = transfer_wait_perception_factor[
+                        line.vehicle.mode.id
+                    ]
+
+                    if line.vehicle.mode.id == "h":
                         if (
                             seg.i_node["#node_id"]
                             in self.controller.config.transit.timed_transfer_nodes

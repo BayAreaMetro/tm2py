@@ -10,7 +10,6 @@ import toml
 
 
 class Observed:
-
     c: Canonical
 
     observed_dict: dict
@@ -143,20 +142,27 @@ class Observed:
     reduced_transit_district_flows_by_technology_df: pd.DataFrame
 
     def _load_configs(self):
-
         with open(self.observed_file, "r", encoding="utf-8") as toml_file:
             self.observed_dict = toml.load(toml_file)
 
         return
 
-    def __init__(self, canonical: Canonical, observed_file: str) -> None:
+    def __init__(
+        self,
+        canonical: Canonical,
+        observed_file: str,
+        on_board_assign_summary: bool = False,
+    ) -> None:
         self.c = canonical
         self.observed_file = observed_file
         self._load_configs()
-        self._validate()
+
+        if not on_board_assign_summary:
+            self._validate()
+        elif on_board_assign_summary:
+            self._reduce_observed_rail_access_summaries()
 
     def _validate(self):
-
         if self.reduced_transit_on_board_df.empty:
             self.reduce_on_board_survey()
 
@@ -184,15 +190,22 @@ class Observed:
         return
 
     def _join_florida_thresholds(self, input_df: pd.DataFrame) -> pd.DataFrame:
-
         df = self.florida_transit_guidelines_df.copy()
         df["high"] = df["boardings"].shift(-1)
         df["low"] = df["boardings"]
         df = df.drop(["boardings"], axis="columns")
         df = df.rename(columns={"threshold": "florida_threshold"})
 
-        all_df = input_df[input_df["time_period"] == self.c.ALL_DAY_WORD].copy()
-        other_df = input_df[input_df["time_period"] != self.c.ALL_DAY_WORD].copy()
+        all_df = (
+            input_df[input_df["time_period"] == self.c.ALL_DAY_WORD]
+            .copy()
+            .reset_index(drop=True)
+        )
+        other_df = (
+            input_df[input_df["time_period"] != self.c.ALL_DAY_WORD]
+            .copy()
+            .reset_index(drop=True)
+        )
         other_df["florida_threshold"] = np.nan
 
         vals = all_df.survey_boardings.values
@@ -203,7 +216,7 @@ class Observed:
 
         return_df = pd.concat(
             [
-                input_df.loc[i, :].reset_index(drop=True),
+                all_df.loc[i, :].reset_index(drop=True),
                 df.loc[j, :].reset_index(drop=True),
             ],
             axis=1,
@@ -214,7 +227,6 @@ class Observed:
         return pd.concat([return_df, other_df], axis="rows", ignore_index=True)
 
     def _join_standard_route_id(self, input_df: pd.DataFrame) -> pd.DataFrame:
-
         df = self.c.standard_transit_to_survey_df.copy()
 
         df["survey_agency"] = df["survey_agency"].map(
@@ -293,6 +305,14 @@ class Observed:
             right_on=["survey_agency", "survey_route", "time_period"],
         )
 
+        # observed records are not by direction, so we need to scale the boardings by 2 when the cases match
+        time_of_day_df["survey_boardings"] = np.where(
+            (time_of_day_df["standard_route_id"].isna())
+            | (time_of_day_df["survey_operator"].isin(self.c.rail_operators_vector)),
+            time_of_day_df["survey_boardings"],
+            time_of_day_df["survey_boardings"] / 2.0,
+        )
+
         return pd.concat([all_df, time_of_day_df], axis="rows", ignore_index=True)
 
     def reduce_on_board_survey(self, read_file_from_disk=True):
@@ -301,19 +321,8 @@ class Observed:
         in the observed configuration.
         """
 
-        # TODO: replace with the summary from the on-board survey repo once the crosswalk is updated
-
         if not self.c.canonical_agency_names_dict:
-            self._make_canonical_agency_names_dict()
-
-        time_period_dict = {
-            "EARLY AM": "ea",
-            "AM PEAK": "am",
-            "MIDDAY": "md",
-            "PM PEAK": "pm",
-            "EVENING": "ev",
-            "NIGHT": "ev",
-        }
+            self.c._make_canonical_agency_names_dict()
 
         file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["transit"]["on_board_survey_file"]
@@ -326,42 +335,7 @@ class Observed:
             )
         else:
             in_df = pd.read_csv(os.path.join(file_root, in_file))
-            temp_df = in_df[
-                (in_df["weekpart"].isna()) | (in_df["weekpart"] != "WEEKEND")
-            ].copy()
-            temp_df["time_period"] = temp_df["day_part"].map(time_period_dict)
-            temp_df["route"] = np.where(
-                temp_df["operator"].isin(self.c.rail_operators_vector),
-                temp_df["operator"],
-                temp_df["route"],
-            )
-
-            all_day_df = (
-                temp_df.groupby(["survey_tech", "operator", "route"])["boarding_weight"]
-                .sum()
-                .reset_index()
-            )
-            all_day_df["time_period"] = self.c.ALL_DAY_WORD
-
-            time_of_day_df = (
-                temp_df.groupby(["survey_tech", "operator", "route", "time_period"])[
-                    "boarding_weight"
-                ]
-                .sum()
-                .reset_index()
-            )
-
-            out_df = pd.concat(
-                [all_day_df, time_of_day_df], axis="rows", ignore_index=True
-            )
-
-            out_df = out_df.rename(
-                columns={
-                    "operator": "survey_operator",
-                    "route": "survey_route",
-                    "boarding_weight": "survey_boardings",
-                }
-            )
+            out_df = in_df.copy()
             out_df["survey_operator"] = out_df["survey_operator"].map(
                 self.c.canonical_agency_names_dict
             )
@@ -373,7 +347,6 @@ class Observed:
         return
 
     def _reduce_census_zero_car_households(self):
-
         file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["census"]["vehicles_by_block_group_file"]
 
@@ -399,7 +372,6 @@ class Observed:
         return
 
     def _reduce_observed_bart_boardings(self):
-
         file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["transit"]["bart_boardings_file"]
 
@@ -428,7 +400,6 @@ class Observed:
         return
 
     def _make_census_geo_crosswalk(self):
-
         file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         pickle_file = self.observed_dict["census"]["census_geographies_pickle"]
         tract_geojson_file = self.observed_dict["census"][
@@ -474,7 +445,6 @@ class Observed:
     def _make_tract_centroids(
         self, input_gdf: gpd.GeoDataFrame, out_file: str
     ) -> gpd.GeoDataFrame:
-
         t_gdf = input_gdf.dissolve(by="TRACTCE10")
         c_gdf = t_gdf.to_crs(3857).centroid.to_crs(4326).reset_index()
         df = pd.DataFrame(t_gdf.reset_index())[["TRACTCE10", "COUNTYFP10", "STATEFP10"]]
@@ -492,7 +462,6 @@ class Observed:
         return
 
     def _reduce_ctpp_2012_2016(self):
-
         file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["census"]["ctpp_2012_2016_file"]
 
@@ -518,7 +487,6 @@ class Observed:
         return
 
     def _reduce_observed_rail_access_summaries(self):
-
         root_dir = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["transit"]["reduced_access_summary_file"]
 
@@ -538,7 +506,6 @@ class Observed:
         return
 
     def _reduce_observed_rail_flow_summaries(self):
-
         root_dir = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["transit"]["reduced_flow_summary_file"]
 
@@ -549,7 +516,6 @@ class Observed:
         return
 
     def _make_district_to_district_transit_flows_by_technology(self):
-
         o_df = self.reduced_transit_spatial_flow_df.copy()
         o_df = o_df[o_df["time_period"] == "am"].copy()
 
@@ -586,7 +552,6 @@ class Observed:
         return
 
     def _join_tm2_node_ids(self, input_df: pd.DataFrame) -> pd.DataFrame:
-
         df = input_df.copy()
         nodes_df = self.c.standard_to_emme_node_crosswalk_df.copy()
 
@@ -613,7 +578,6 @@ class Observed:
         return df
 
     def _join_ohio_standards(self, input_df: pd.DataFrame) -> pd.DataFrame:
-
         df = self.ohio_rmse_standards_df.copy()
 
         df["upper"] = (
@@ -672,7 +636,6 @@ class Observed:
     def _identify_key_arterials_and_bridges(
         self, input_df: pd.DataFrame
     ) -> pd.DataFrame:
-
         df1 = self.key_arterials_df.copy()
         df2 = self.bridges_df.copy()
         df = pd.concat([df1, df2])[["name", "direction", "pems_station_id"]].rename(
@@ -688,7 +651,6 @@ class Observed:
         return out_df
 
     def _reduce_truck_counts(self) -> pd.DataFrame:
-
         file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["roadway"]["pems_truck_count_file"]
 
@@ -917,7 +879,6 @@ class Observed:
         return return_df
 
     def _reduce_caltrans_counts(self):
-
         file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["roadway"]["caltrans_count_file"]
 
