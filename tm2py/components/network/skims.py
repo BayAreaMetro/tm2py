@@ -104,7 +104,6 @@ def get_omx_skim_as_numpy(
 
     # TODO figure out how to get upper() and lower() into actual format string
     if omx_manager is None:
-
         _filename = _config.output_skim_filename_tmpl.format(
             time_period=time_period.lower()
         )

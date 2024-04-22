@@ -636,7 +636,6 @@ class TransitAssignment(Component):
     def run_transit_assign(
         self, time_period: str, use_ccr: bool, congested_transit_assignment: bool
     ):
-
         if use_ccr:
             self._run_ccr_assign(time_period)
         elif congested_transit_assignment:
@@ -1351,7 +1350,6 @@ class TransitAssignment(Component):
         )
 
     def _get_network_with_ccr_scenario_attributes(self, emme_scenario):
-
         self._add_ccr_vars_to_scenario(emme_scenario)
 
         _attributes = {
@@ -2216,17 +2214,19 @@ class TransitAssignmentClass:
                     jls = new_journey_levels[i]
                     jls["transition_rules"].extend(
                         [
-                            {"mode": "e", "next_journey_level": i+1},
-                            {"mode": "w", "next_journey_level": i+1},
+                            {"mode": "e", "next_journey_level": i + 1},
+                            {"mode": "w", "next_journey_level": i + 1},
                             {
                                 "mode": "a",
-                                "next_journey_level": i+1,
+                                "next_journey_level": i + 1,
                             },
                         ]
                     )
                 # level 0: only allow walk access and walk auxilary
-                # must use the trasit modes to get onto the next level, 
-                transition_rules_walk = copy.deepcopy(journey_levels[0]["transition_rules"])
+                # must use the trasit modes to get onto the next level,
+                transition_rules_walk = copy.deepcopy(
+                    journey_levels[0]["transition_rules"]
+                )
                 transition_rules_walk.extend(
                     [
                         {

@@ -10,7 +10,6 @@ import toml
 
 
 class Observed:
-
     c: Canonical
 
     observed_dict: dict
@@ -143,7 +142,6 @@ class Observed:
     reduced_transit_district_flows_by_technology_df: pd.DataFrame
 
     def _load_configs(self):
-
         with open(self.observed_file, "r", encoding="utf-8") as toml_file:
             self.observed_dict = toml.load(toml_file)
 
@@ -165,7 +163,6 @@ class Observed:
             self._reduce_observed_rail_access_summaries()
 
     def _validate(self):
-
         if self.reduced_transit_on_board_df.empty:
             self.reduce_on_board_survey()
 
@@ -193,7 +190,6 @@ class Observed:
         return
 
     def _join_florida_thresholds(self, input_df: pd.DataFrame) -> pd.DataFrame:
-
         df = self.florida_transit_guidelines_df.copy()
         df["high"] = df["boardings"].shift(-1)
         df["low"] = df["boardings"]
@@ -231,7 +227,6 @@ class Observed:
         return pd.concat([return_df, other_df], axis="rows", ignore_index=True)
 
     def _join_standard_route_id(self, input_df: pd.DataFrame) -> pd.DataFrame:
-
         df = self.c.standard_transit_to_survey_df.copy()
 
         df["survey_agency"] = df["survey_agency"].map(
@@ -352,7 +347,6 @@ class Observed:
         return
 
     def _reduce_census_zero_car_households(self):
-
         file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["census"]["vehicles_by_block_group_file"]
 
@@ -378,7 +372,6 @@ class Observed:
         return
 
     def _reduce_observed_bart_boardings(self):
-
         file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["transit"]["bart_boardings_file"]
 
@@ -407,7 +400,6 @@ class Observed:
         return
 
     def _make_census_geo_crosswalk(self):
-
         file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         pickle_file = self.observed_dict["census"]["census_geographies_pickle"]
         tract_geojson_file = self.observed_dict["census"][
@@ -453,7 +445,6 @@ class Observed:
     def _make_tract_centroids(
         self, input_gdf: gpd.GeoDataFrame, out_file: str
     ) -> gpd.GeoDataFrame:
-
         t_gdf = input_gdf.dissolve(by="TRACTCE10")
         c_gdf = t_gdf.to_crs(3857).centroid.to_crs(4326).reset_index()
         df = pd.DataFrame(t_gdf.reset_index())[["TRACTCE10", "COUNTYFP10", "STATEFP10"]]
@@ -471,7 +462,6 @@ class Observed:
         return
 
     def _reduce_ctpp_2012_2016(self):
-
         file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["census"]["ctpp_2012_2016_file"]
 
@@ -497,7 +487,6 @@ class Observed:
         return
 
     def _reduce_observed_rail_access_summaries(self):
-
         root_dir = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["transit"]["reduced_access_summary_file"]
 
@@ -517,7 +506,6 @@ class Observed:
         return
 
     def _reduce_observed_rail_flow_summaries(self):
-
         root_dir = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["transit"]["reduced_flow_summary_file"]
 
@@ -528,7 +516,6 @@ class Observed:
         return
 
     def _make_district_to_district_transit_flows_by_technology(self):
-
         o_df = self.reduced_transit_spatial_flow_df.copy()
         o_df = o_df[o_df["time_period"] == "am"].copy()
 
@@ -565,7 +552,6 @@ class Observed:
         return
 
     def _join_tm2_node_ids(self, input_df: pd.DataFrame) -> pd.DataFrame:
-
         df = input_df.copy()
         nodes_df = self.c.standard_to_emme_node_crosswalk_df.copy()
 
@@ -592,7 +578,6 @@ class Observed:
         return df
 
     def _join_ohio_standards(self, input_df: pd.DataFrame) -> pd.DataFrame:
-
         df = self.ohio_rmse_standards_df.copy()
 
         df["upper"] = (
@@ -651,7 +636,6 @@ class Observed:
     def _identify_key_arterials_and_bridges(
         self, input_df: pd.DataFrame
     ) -> pd.DataFrame:
-
         df1 = self.key_arterials_df.copy()
         df2 = self.bridges_df.copy()
         df = pd.concat([df1, df2])[["name", "direction", "pems_station_id"]].rename(
@@ -667,7 +651,6 @@ class Observed:
         return out_df
 
     def _reduce_truck_counts(self) -> pd.DataFrame:
-
         file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["roadway"]["pems_truck_count_file"]
 
@@ -896,7 +879,6 @@ class Observed:
         return return_df
 
     def _reduce_caltrans_counts(self):
-
         file_root = self.observed_dict["remote_io"]["obs_folder_root"]
         in_file = self.observed_dict["roadway"]["caltrans_count_file"]
 

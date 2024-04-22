@@ -6,7 +6,6 @@ import toml
 
 
 class Canonical:
-
     canonical_dict: dict
     canonical_file: str
 
@@ -63,7 +62,6 @@ class Canonical:
     ]
 
     def _load_configs(self):
-
         with open(self.canonical_file, "r", encoding="utf-8") as toml_file:
             self.canonical_dict = toml.load(toml_file)
 
@@ -89,7 +87,6 @@ class Canonical:
         return
 
     def _make_canonical_agency_names_dict(self):
-
         file_root = self.canonical_dict["remote_io"]["crosswalk_folder_root"]
         in_file = self.canonical_dict["crosswalks"]["canonical_agency_names_file"]
 
@@ -137,7 +134,6 @@ class Canonical:
         return
 
     def _make_canonical_station_names_dict(self):
-
         file_root = self.canonical_dict["remote_io"]["crosswalk_folder_root"]
         in_file = self.canonical_dict["crosswalks"]["canonical_station_names_file"]
 
@@ -149,7 +145,6 @@ class Canonical:
 
         running_operator_dict = {}
         for operator in df["operator"].unique():
-
             o_df = df[df["operator"] == operator].copy()
 
             a_df = o_df[["canonical"]].copy()
@@ -176,14 +171,12 @@ class Canonical:
         return
 
     def _make_census_maz_crosswalk(self):
-
         url_string = self.canonical_dict["crosswalks"]["block_group_to_maz_url"]
         self.census_2010_to_maz_crosswalk_df = pd.read_csv(url_string)
 
         return
 
     def _read_standard_to_emme_transit(self):
-
         root_dir = self.canonical_dict["remote_io"]["crosswalk_folder_root"]
         in_file = self.canonical_dict["crosswalks"]["standard_to_emme_transit_file"]
 
@@ -194,7 +187,6 @@ class Canonical:
         return
 
     def _make_tm2_to_gtfs_mode_crosswalk(self):
-
         file_root = self.canonical_dict["remote_io"]["crosswalk_folder_root"]
         in_file = self.canonical_dict["crosswalks"]["standard_to_tm2_modes_file"]
 
@@ -215,7 +207,6 @@ class Canonical:
         return
 
     def _read_standard_transit_to_survey_crosswalk(self):
-
         file_root = self.canonical_dict["remote_io"]["crosswalk_folder_root"]
         in_file = self.canonical_dict["crosswalks"]["crosswalk_standard_survey_file"]
 
@@ -243,7 +234,6 @@ class Canonical:
     def aggregate_line_names_across_time_of_day(
         self, input_df: pd.DataFrame, input_column_name: str
     ) -> pd.DataFrame:
-
         df = input_df[input_column_name].str.split(pat="_", expand=True).copy()
         df["daily_line_name"] = df[0] + "_" + df[1] + "_" + df[2]
         return_df = pd.concat([input_df, df["daily_line_name"]], axis="columns")
@@ -251,7 +241,6 @@ class Canonical:
         return return_df
 
     def _read_taz_to_district_crosswalk(self):
-
         file_root = self.canonical_dict["remote_io"]["crosswalk_folder_root"]
         in_file = self.canonical_dict["crosswalks"]["taz_to_district_file"]
 

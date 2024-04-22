@@ -125,7 +125,6 @@ class ExternalDemand(Subcomponent):
     """
 
     def __init__(self, controller, component):
-
         super().__init__(controller, component)
         self.config = self.component.config.demand
         # Loaded lazily
@@ -288,7 +287,6 @@ class ExternalTollChoice(Subcomponent):
 
         class_demands = defaultdict(dict)
         for _time_period, _class in _time_class_combos:
-
             if _time_period in period_demand.keys():
                 None
             elif _time_period.lower() in period_demand.keys():

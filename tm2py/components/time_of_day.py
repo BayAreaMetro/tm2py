@@ -20,7 +20,6 @@ class TimePeriodSplit(Subcomponent):
         component: Component,
         split_configs: Collection[TimeSplitConfig],
     ):
-
         super().__init__(controller, component)
         self.split_configs = split_configs
 
