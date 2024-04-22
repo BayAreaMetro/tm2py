@@ -572,9 +572,6 @@ class TransitAssignment(Component):
                     )
                     # TODO: run skim
                     # TODO: trim_demand
-                    # create ccost attribute for skimming
-                    scenario = self.transit_emmebank.scenario(time_period)
-                    self._add_ccost_to_scenario(scenario)
                     # congested_transit_assignment = self.config.congested_transit_assignment
                     # # apply peaking factor
                     # if self.config.congested.use_peaking_factor:
@@ -1349,23 +1346,6 @@ class TransitAssignment(Component):
             "TRANSIT_SEGMENT",
             "@capacity_penalty",
             "capacity penalty at boarding",
-            overwrite=True,
-            scenario=emme_scenario,
-        )
-
-    def _add_ccost_to_scenario(self, emme_scenario: "EmmeScenario") -> None:
-        """Add Extra Added Wait Time and Capacity Penalty to emme scenario.
-
-        Args:
-            emme_scenario : EmmeScenario
-        """
-        create_extra = self.controller.emme_manager.tool(
-            "inro.emme.data.extra_attribute.create_extra_attribute"
-        )
-        create_extra(
-            "TRANSIT_SEGMENT",
-            "@ccost",
-            "congested cost",
             overwrite=True,
             scenario=emme_scenario,
         )
