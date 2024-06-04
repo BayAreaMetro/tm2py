@@ -97,7 +97,7 @@ class PrepareNetwork(Component):
     @property
     def highway_emmebank(self):
         if not self._highway_emmebank:
-            self._highway_emmebank = self.controller.emme_manager.highway_emmebank
+            self._highway_emmebank = self.controller.emme_manager.highway_taz_emmebank
         return self._highway_emmebank
 
     @property

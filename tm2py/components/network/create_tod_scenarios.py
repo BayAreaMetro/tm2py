@@ -46,7 +46,8 @@ class CreateTODScenarios(Component):
         # emme_app = self._emme_manager.project(project_path)
         # self._emme_manager.init_modeller(emme_app)
         with self._setup():
-            self._create_highway_scenarios()
+            self._create_highway_scenarios(zone_flag="taz")
+            self._create_highway_scenarios(zone_flag="maz")
             self._create_transit_scenarios()
 
     @_context
@@ -90,20 +91,32 @@ class CreateTODScenarios(Component):
             emme_app.project.save()
 
     @LogStartEnd("Create highway time of day scenarios.")
-    def _create_highway_scenarios(self):
-        emmebank = self.controller.emme_manager.highway_emmebank.emmebank
+    def _create_highway_scenarios(self, zone_flag = "taz"):
+        if zone_flag == "taz":
+            emmebank = self.controller.emme_manager.highway_taz_emmebank.emmebank
+        else:
+            emmebank = self.controller.emme_manager.highway_maz_emmebank.emmebank
         ref_scenario = emmebank.scenario(
             self.controller.config.emme.all_day_scenario_id
         )
         self._ref_auto_network = ref_scenario.get_network()
         n_time_periods = len(self.controller.config.time_periods)
-        self.controller.emme_manager.highway_emmebank.change_dimensions(
-            {
-                "scenarios": 1 + n_time_periods,
-                "full_matrices": 9999,
-                "extra_attribute_values": 60000000,
-            }
-        )
+        if zone_flag == "taz":
+            self.controller.emme_manager.highway_taz_emmebank.change_dimensions(
+                {
+                    "scenarios": 1 + n_time_periods,
+                    "full_matrices": 9999,
+                    "extra_attribute_values": 60000000,
+                }
+            )
+        else:
+            self.controller.emme_manager.highway_maz_emmebank.change_dimensions(
+                {
+                    "scenarios": 1 + n_time_periods,
+                    "full_matrices": 9999,
+                    "extra_attribute_values": 60000000,
+                }
+            )
         # create VDFs & set cross-reference function parameters
         emmebank.extra_function_parameters.el1 = "@free_flow_time"
         emmebank.extra_function_parameters.el2 = "@capacity"
