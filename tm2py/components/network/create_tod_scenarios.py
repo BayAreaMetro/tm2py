@@ -628,7 +628,7 @@ class CreateTODScenarios(Component):
             area_type = link["@area_type"]
             if area_type < 0:
                 link["@capclass"] = -1
-            elif (link["@ft"] == 99) & (link["@assignable"] == 1):
+            elif (link["@ft"] == 99):
                 link["@capclass"] = 10 * area_type + 7
             else:
                 link["@capclass"] = 10 * area_type + link["@ft"]
