@@ -16,6 +16,8 @@ def read_matrix_as_long_df(path: Path, run_name):
     index_lables = list(range(am_time.shape[0]))
     return pd.DataFrame(am_time, index=index_lables, columns=index_lables).stack().rename(run_name).to_frame()
 
+a = read_matrix_as_long_df(r"D:\TEMP\TM2.2.1.1-New_network_rerun\TM2.2.1.1_new_taz\skim_matrices\highway\HWYSKMAM_taz.omx", "test")
+#%%
 all_skims = []
 for skim_matrix_path in network_fid_path.rglob("*AM_taz.omx"):
     print(skim_matrix_path)
@@ -25,7 +27,7 @@ for skim_matrix_path in network_fid_path.rglob("*AM_taz.omx"):
 all_skims = pd.concat(all_skims, axis=1)
 # %%
 #%%%
-all_skims.to_csv(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\run_result\consolidated\skims.csv")
+all_skims.to_csv(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\output_summaries\skim_data\skims.csv")
 # %%
 # %%
 import geopandas as gpd

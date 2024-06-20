@@ -18,7 +18,8 @@ output_dir = input_dir / "consolidated_3"
 # print("writing")
 # input[["#link_id", "geometry"]].to_file(output_dir / "test_geom.geojson")
 
-scenarios_to_consolidate = (12, 14)
+scenarios_to_consolidate = (11, 12, 13, 14, 15)
+runs_to_consolidate = (3, 4)
 #%%
 
 def read_file_and_tag(path: Path, columns_to_filter = ("@ft", "VOLAU", "@capacity", "run_number", "scenario_number", "#link_id", "geometry")) -> pd.DataFrame:
@@ -30,6 +31,8 @@ def read_file_and_tag(path: Path, columns_to_filter = ("@ft", "VOLAU", "@capacit
 
     run = file.parent.parent.stem
     run_number = int(run.split("_")[-1])
+    if run_number not in runs_to_consolidate:
+        return None
 
     return_gdf = gpd.read_file(path, engine="pyogrio")
 
@@ -137,10 +140,44 @@ links_wide_table.to_file(
 
 
 #%%
+num_iter = {
+    (3,11): 3,
+    (3,12): 10,
+    (3,13): 10,
+    (3,14): 19,
+    (3,15): 4,
+    (4,12): 20
+}
+#%%
+all_links_no_none = [links for links in all_links if (links is not None)] #and (links["#link_id"].is_unique)]    
+for df in all_links_no_none:
+    df["saturation"] = df["VOLAU"] / df["@capacity"]
+ft6_sat = [(link["run_number"].iloc[0], link["scenario_number"].iloc[0], (link.loc[link["@ft"] == 6, "saturation"] > 1).mean()) for link in all_links_no_none]
+
+y = [val for val in num_iter.values()]
+x = [x[-1] for x in ft6_sat]
+col = [val[0] for val in num_iter.keys()]
+
+#%%
+import matplotlib.pyplot as plt
+plt.scatter(x, y, c=col)
+
+# Calculate the trendline
+z = np.polyfit(x, y, 1)
+p = np.poly1d(z)
+
+# Plot the trendline
+plt.plot(x, p(x), color='red')
+
+plt.xlabel('proportion of ft 6 with saturation > 1')
+plt.ylabel('number of iterations to solve')
+plt.title('Number of iterations to solve (relative gap = 0.05)')
+plt.show()
+#%%
 import matplotlib.pyplot as plt
 data = [links_wide_table[col] for col in links_wide_table.iloc[:, 2:].columns]
 
-fig = plt.boxplot(links_wide_table, y="total_bill")
+fig = plt.boxplot(data)
 fig.show()
 
 # --------------------------------------------------------------------------
@@ -163,111 +200,3 @@ def get_link_counts(df: pd.DataFrame):
 pd.concat(
     [get_link_counts(df) for df in all_links]
 ).sort_values(by=["run_number", "scenario_number"])
-# #%%
-# import geopandas as gpd
-# import pandas as pd
-# from pathlib import Path
-# from tqdm import tqdm
-
-# input_dir = Path(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\run_result")
-# output_dir = input_dir / "consolidated"
-
-
-# # in_file = next(input_dir.rglob('emme_links.shp'))
-# # print("reading", in_file)
-# # input2 = gpd.read_file(in_file, engine="pyogrio", use_arrow=True)
-# # #%%
-# # print("writing")
-# # input[["#link_id", "geometry"]].to_file(output_dir / "test_geom.geojson")
-
-# #%%
-
-# def process_frame(return_gdf: pd.DataFrame, path: Path, columns_to_filter = ("@ft", "VOLAU", "@capacity", "run_number", "scenario_number", "#link_id")) -> pd.DataFrame:
-    
-#     scenario = file.parent.stem
-#     scenario_number = int(scenario.split("_")[-1])
-
-#     run = file.parent.parent.stem
-#     run_number = int(run.split("_")[-1])
-
-#     # return_gdf = #gpd.read_file(path, engine="pyogrio")
-
-#     return_gdf["scenario"] = scenario
-#     return_gdf["scenario_number"] = scenario_number
-#     return_gdf["run"] = run
-#     return_gdf["run_number"] = run_number
-    
-#     return_gdf = return_gdf[list(columns_to_filter)]
-
-#     # assert return_gdf["#link_id"].is_unique
-
-#     return return_gdf
-# #%%
-# geom_file = next(input_dir.rglob('run_*/Scenario*/emme_links.shp'))
-# geometry = gpd.read_file(geom_file, engine="pyogrio")
-# #%%
-# # geometry[["#link_id", "geometry"]].to_file(output_dir / "test_geom.geojson")
-
-# print("Reading Links...", end="")
-# all_links = {}
-# x = 0
-# for file in tqdm(input_dir.rglob('run_*/Scenario*/emme_links.shp')):
-#     print(file)
-#     all_links[file] = gpd.read_file(file)
-
-
-# #%%
-# processed_values = {path: process_frame(df, path) for path, df in all_links.items()}
-
-# temp_iter = iter(processed_values)
-# wide_data = 
-# for path, frame in process_name.values():
-
-
-# #%%
-# links_iter = iter(all_links)
-# for frame in 
-# # %%
-# links_table = pd.concat(all_links)
-# #%%
-# links_table.to_file("links_attr.csv", index=False)
-# # #%%
-# # print("reading Nodes...", end="")
-# # all_nodes = []
-# # for file in tqdm(input_dir.rglob('emme_nodes.shp')):
-# #     all_nodes.append(read_file_and_tag(file))
-
-# # nodes_table = pd.concat(all_nodes)
-# # nodes_table = gpd.GeoDataFrame(nodes_table, geometry="geometry", crs=all_links[0].crs)
-# # print("done")
-
-# # print("outputting files...")
-
-# links_table.to_file(output_dir/"links.geojson")
-# nodes_table.to_file(output_dir/"nodes.geojson")
-
-
-# #%%
-# from pathlib import Path
-# import os
-# import geopandas as gpd
-# import pandas as pd
-# #%%
-# output_paths_to_consolidate = Path(r"D:\TEMP\output_summaries\ss")
-# all_files = []
-# for file in output_paths_to_consolidate.glob("*_roadway_network.geojson"):
-#     run_name = file.name[0:5]
-#     print(run_name)
-#     specific_run = gpd.read_file(file)
-#     specific_run["run_number"] = run_name
-#     all_files.append(specific_run)
-# #%%
-# all_files = pd.concat(all_files)
-# #%%
- 
-# all_files.drop(columns="geometry").to_csv(output_paths_to_consolidate / "data.csv")
-# #%%
-# to_be_shape = all_files[["geometry", "model_link_id"]].drop_duplicates()
-# print("outputting")
-# to_be_shape.to_file(output_paths_to_consolidate / "geom_package")
-# # %%
