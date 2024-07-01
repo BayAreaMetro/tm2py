@@ -16,7 +16,6 @@ class Canonical:
 
     gtfs_to_tm2_mode_codes_df: pd.DataFrame
     standard_transit_to_survey_df: pd.DataFrame
-    taz_to_district_df: pd.DataFrame
 
     standard_to_emme_node_crosswalk_df: pd.DataFrame
     pems_to_link_crosswalk_df: pd.DataFrame
@@ -80,7 +79,6 @@ class Canonical:
 
         if not on_board_assign_summary:
             self._make_census_maz_crosswalk()
-            self._read_taz_to_district_crosswalk()
             self._read_pems_to_link_crosswalk()
             self._read_standard_to_emme_node_crosswalk()
 
@@ -240,23 +238,13 @@ class Canonical:
 
         return return_df
 
-    def _read_taz_to_district_crosswalk(self):
-        file_root = self.canonical_dict["remote_io"]["crosswalk_folder_root"]
-        in_file = self.canonical_dict["crosswalks"]["taz_to_district_file"]
-
-        df = pd.read_csv(os.path.join(file_root, in_file))
-
-        self.taz_to_district_df = df
-
-        return
-
     def _read_pems_to_link_crosswalk(self) -> pd.DataFrame:
         file_root = self.canonical_dict["remote_io"]["crosswalk_folder_root"]
         in_file = self.canonical_dict["crosswalks"]["pems_station_to_tm2_links_file"]
 
         df = pd.read_csv(os.path.join(file_root, in_file))
 
-        df = df[["station_id", "A", "B"]]
+        df = df[["station", "A", "B"]]
 
         self.pems_to_link_crosswalk_df = df
 
