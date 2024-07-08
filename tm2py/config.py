@@ -911,7 +911,8 @@ class HighwayConfig(ConfigItem):
     Properties:
         generic_highway_mode_code: single character unique mode ID for entire
             highway network (no excluded_links)
-        relative_gap: target relative gap stopping criteria
+        relative_gap: target relative gap stopping criteria. specify a single value float
+            for all global iterations or a list with values for each global iteration.
         max_iterations: maximum iterations stopping criteria
         area_type_buffer_dist_miles: used to in calculation to categorize link @areatype
             The area type is determined based on the average density of nearby
@@ -929,10 +930,12 @@ class HighwayConfig(ConfigItem):
             see HighwayClassConfig
         capclass_lookup: index cross-reference table from the link @capclass value
             to the free-flow speed, capacity, and critical speed values
+        interchange_nodes_file: relative path to the interchange nodes file, this is
+            used for calculating highway reliability
     """
 
     generic_highway_mode_code: str = Field(min_length=1, max_length=1)
-    relative_gap: float = Field(ge=0)
+    relative_gap: float | Tuple[float, ...] = Field(ge=0)
     max_iterations: int = Field(ge=0)
     area_type_buffer_dist_miles: float = Field(gt=0)
     drive_access_output_skim_path: Optional[str] = Field(default=None)
@@ -1332,6 +1335,18 @@ class Configuration(ConfigItem):
             assert (
                 value.maz_to_maz.skim_period in time_period_names
             ), "maz_to_maz -> skim_period -> name not found in time_periods list"
+        return value
+
+    @validator("highway_relative_gap")
+    def relative_gap_length(cls, value, values):
+        """Validate highway.relative_gap is a list of the same length as global iterations."""
+        if "end_iteration" in values:
+            if isinstance(value, float):
+                return value
+            assert (
+                len(value) == len(values["end_iteration"]),
+                "relative_gap must be the same length as end_iteration",
+            )
         return value
 
 

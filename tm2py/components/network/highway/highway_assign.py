@@ -298,6 +298,12 @@ class HighwayAssignment(Component):
 
         """
         relative_gap = self.config.relative_gap
+        # if relative is a list, get the corresponding value for the current iteration
+        if relative_gap and isinstance(relative_gap, list):
+            if self.controller.iteration == 0:
+                relative_gap = relative_gap[0]
+            else:
+                relative_gap = relative_gap[self.controller.iteration - 1]
         max_iterations = self.config.max_iterations
         # NOTE: mazmazvol as background traffic in link.data1 ("ul1")
         base_spec = {
