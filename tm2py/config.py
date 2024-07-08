@@ -710,6 +710,19 @@ class ClassDemandConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class HighwayRelativeGapConfig(ConfigItem):
+    """Highway assignment relative gap parameters.
+
+    Properties:
+        global_iteration: global iteration number
+        relative_gap: relative gap
+    """
+
+    global_iteration: int = Field(ge=0)
+    relative_gap: float = Field(gt=0)
+
+
+@dataclass(frozen=True)
 class HighwayClassConfig(ConfigItem):
     """Highway assignment class definition.
 
@@ -935,7 +948,7 @@ class HighwayConfig(ConfigItem):
     """
 
     generic_highway_mode_code: str = Field(min_length=1, max_length=1)
-    relative_gap: float | Tuple[float, ...] = Field(ge=0)
+    relative_gaps: Tuple[HighwayRelativeGapConfig, ...] = Field()
     max_iterations: int = Field(ge=0)
     area_type_buffer_dist_miles: float = Field(gt=0)
     drive_access_output_skim_path: Optional[str] = Field(default=None)
@@ -1341,11 +1354,9 @@ class Configuration(ConfigItem):
     def relative_gap_length(cls, value, values):
         """Validate highway.relative_gap is a list of the same length as global iterations."""
         if "end_iteration" in values:
-            if isinstance(value, float):
-                return value
             assert (
-                len(value) == len(values["end_iteration"]),
-                "relative_gap must be the same length as end_iteration",
+                len(value) == len(values["end_iteration"]+1),
+                "relative_gap must be the same length as end_iteration+1",
             )
         return value
 
