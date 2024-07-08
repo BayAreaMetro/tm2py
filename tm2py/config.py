@@ -924,7 +924,7 @@ class HighwayConfig(ConfigItem):
     Properties:
         generic_highway_mode_code: single character unique mode ID for entire
             highway network (no excluded_links)
-        relative_gap: target relative gap stopping criteria. specify a single value float
+        relative_gaps: target relative gap stopping criteria. specify a single value float
             for all global iterations or a list with values for each global iteration.
         max_iterations: maximum iterations stopping criteria
         area_type_buffer_dist_miles: used to in calculation to categorize link @areatype
@@ -1350,12 +1350,12 @@ class Configuration(ConfigItem):
             ), "maz_to_maz -> skim_period -> name not found in time_periods list"
         return value
 
-    @validator("highway_relative_gap")
+    @validator("highway")
     def relative_gap_length(cls, value, values):
-        """Validate highway.relative_gap is a list of the same length as global iterations."""
+        """Validate highway.relative_gaps is a list of the same length as global iterations."""
         if "end_iteration" in values:
             assert (
-                len(value) == len(values["end_iteration"]+1),
+                len(value.relative_gaps) == len(values["end_iteration"]+1),
                 "relative_gap must be the same length as end_iteration+1",
             )
         return value

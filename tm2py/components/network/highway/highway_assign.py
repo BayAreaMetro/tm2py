@@ -297,13 +297,18 @@ class HighwayAssignment(Component):
             Emme specification for SOLA traffic assignment
 
         """
-        relative_gap = self.config.relative_gap
-        # if relative is a list, get the corresponding value for the current iteration
-        if relative_gap and isinstance(relative_gap, list):
-            if self.controller.iteration == 0:
-                relative_gap = relative_gap[0]
-            else:
-                relative_gap = relative_gap[self.controller.iteration - 1]
+        relative_gaps = self.config.relative_gaps
+        # get the corresponding relative gap for the current iteration
+        relative_gap = None
+        if relative_gaps and isinstance(relative_gaps, tuple):
+            for item in relative_gaps:
+                if item["global_iteration"] == self.controller.iteration:
+                    relative_gap = item["relative_gap"]
+                    break
+            if relative_gap is None:
+                raise ValueError(
+                    f"RelativeGapConfig: Must specifify a value for global iteration {self.controller.iteration}"
+                )
         max_iterations = self.config.max_iterations
         # NOTE: mazmazvol as background traffic in link.data1 ("ul1")
         base_spec = {
