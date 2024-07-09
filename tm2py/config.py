@@ -1350,14 +1350,14 @@ class Configuration(ConfigItem):
             ), "maz_to_maz -> skim_period -> name not found in time_periods list"
         return value
 
-    @validator("highway")
+    @validator("highway", always=True)
     def relative_gap_length(cls, value, values):
         """Validate highway.relative_gaps is a list of the same length as global iterations."""
-        if "end_iteration" in values:
-            assert (
-                len(value.relative_gaps) == len(values["end_iteration"]+1),
-                "relative_gap must be the same length as end_iteration+1",
-            )
+        if "run" in values:
+            assert len(value.relative_gaps) == (
+                values["run"]["end_iteration"] + 1
+            ), f"'highway.relative_gaps must be the same length as end_iteration+1,\
+                that includes global iteration 0 to {values['run']['end_iteration']}'"
         return value
 
 
