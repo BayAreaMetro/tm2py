@@ -272,6 +272,11 @@ class RunController:
             _final_components = [c for c in _final_components if c in run_components]
 
         if self.config.run.start_iteration == 0:
+            if self.config.warmstart.warmstart:
+                if self.config.warmstart.use_warmstart_skim:
+                    _initial_components.remove("highway")
+                    _initial_components.remove("transit_assign")
+                    _initial_components.remove("transit_skim")
             for _c_name in _initial_components:
                 self._add_component_to_queue(0, _c_name)
 
