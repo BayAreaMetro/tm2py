@@ -32,7 +32,7 @@ class HouseholdModel(Component):
         self._start_matrix_manager()
         self._run_resident_model()
         self._stop_java()
-        # self._consolidate_demand_for_assign()
+        # consume ctramp person trip list and create trip tables for assignment
         self._prepare_demand_for_assignment()
 
     def _prepare_demand_for_assignment(self):
