@@ -103,11 +103,13 @@ class HighwayAssignment(Component):
         self._class_config = None
         self._scenario = None
         self._highway_emmebank = None
+        self._highway_maz_scenarios = None
+        self._highway_maz_emmebank = None
 
     @property
     def highway_emmebank(self):
         if not self._highway_emmebank:
-            self._highway_emmebank = self.controller.emme_manager.highway_emmebank
+            self._highway_emmebank = self.controller.emme_manager.highway_taz_emmebank
         return self._highway_emmebank
 
     @property
@@ -122,6 +124,20 @@ class HighwayAssignment(Component):
             self._class_config = {c.name: c for c in self.config.classes}
 
         return self._class_config
+    
+    @property
+    def highway_maz_emmebank(self):
+        if not self._highway_maz_emmebank:
+            self._highway_maz_emmebank = self.controller.emme_manager.highway_maz_emmebank
+        return self._highway_maz_emmebank
+    
+    @property
+    def highway_maz_scenarios(self):
+        if self._highway_maz_scenarios is None:
+            self._highway_maz_scenarios = {
+                tp: self.highway_maz_emmebank.scenario(tp) for tp in self.time_period_names
+            }
+        return self._highway_maz_scenarios
 
     def validate_inputs(self):
         """Validate inputs files are correct, raise if an error is found."""
@@ -144,7 +160,7 @@ class HighwayAssignment(Component):
                     AssignmentClass(c, time, iteration) for c in self.config.classes
                 ]
                 if iteration > 0:
-                    self._copy_maz_flow(scenario)
+                    self._copy_maz_flow(scenario, time)
                 else:
                     self._reset_background_traffic(scenario)
                 self._create_skim_matrices(scenario, assign_classes)
@@ -232,16 +248,72 @@ class HighwayAssignment(Component):
                 self._matrix_cache.clear()
                 self._matrix_cache = None
                 self._skim_matrices = []
+    
+    def _get_maz_links(
+        self,
+        time_period: str,
+    ):
+        """Create dictionary of link ids mapped to maz network.
 
-    def _copy_maz_flow(self, scenario: EmmeScenario):
+        Args:
+            time_period (str): time period abbreviation
+        """
+        _highway_maz_scenario = self.highway_maz_scenarios[time_period]
+        if not _highway_maz_scenario.has_traffic_results:
+            return {}
+        _highway_maz_net = _highway_maz_scenario.get_partial_network(
+            ["LINK"], include_attributes=False
+        )
+
+        highway_attributes = {
+            "LINK": ["#link_id", "@maz_flow"]
+        }
+
+        self.emme_manager.copy_attribute_values(
+            _highway_maz_scenario, _highway_maz_net, highway_attributes
+        )
+
+        # TODO can we just get the link attributes as a DataFrame and merge them?
+        maz_link_dict = {
+            maz_link["#link_id"]: maz_link for maz_link in _highway_maz_net.links()
+        }
+        
+        return maz_link_dict
+
+    def _copy_maz_flow(self, scenario: EmmeScenario, time_period: str):
         """Copy maz_flow from MAZ demand assignment to ul1 for background traffic.
 
         Args:
             scenario: Emme scenario object
+            time_period (str): time period abbreviation
         """
+
+        _highway_net = scenario.get_partial_network(
+            ["LINK"], include_attributes=False
+        )
+        highway_attributes = {
+            "LINK": ["#link_id", "@maz_flow"]
+        }
+        self.emme_manager.copy_attribute_values(
+            scenario, _highway_net, highway_attributes
+        )
+
+        _maz_link_dict = self._get_maz_links(time_period)
+
         self.logger.log(
             "Copy @maz_flow to ul1 for background traffic", indent=True, level="DETAIL"
         )
+        for link in _highway_net.links():
+            if link["#link_id"] in _maz_link_dict.keys():
+                link["@maz_flow"] = _maz_link_dict[link["#link_id"]]["@maz_flow"]
+
+        _update_attributes = {
+            "LINK": ["@maz_flow"],
+        }
+        self.emme_manager.copy_attribute_values(
+            _highway_net, scenario, _update_attributes
+        )
+
         net_calc = NetworkCalculator(self.controller, scenario)
         net_calc("ul1", "@maz_flow")
 

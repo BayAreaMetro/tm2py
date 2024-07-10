@@ -146,8 +146,11 @@ class EmmeManager:
         self.project_path = self.controller.get_abs_path(self.config.project_path)
 
         # see if works without os.path.normcase(os.path.realpath(project_path))
-        self.highway_database_path = self.controller.get_abs_path(
-            self.config.highway_database_path
+        self.highway_taz_database_path = self.controller.get_abs_path(
+            self.config.highway_taz_database_path
+        )
+        self.highway_maz_database_path = self.controller.get_abs_path(
+            self.config.highway_maz_database_path
         )
         self.transit_database_path = self.controller.get_abs_path(
             self.config.transit_database_path
@@ -163,7 +166,8 @@ class EmmeManager:
         self._project = None
         self._modeller = None
 
-        self._highway_emmebank = None
+        self._highway_taz_emmebank = None
+        self._highway_maz_emmebank = None
         self._transit_emmebank = None
         self._active_north_emmebank = None
         self._active_south_emmebank = None
@@ -221,10 +225,16 @@ class EmmeManager:
         return self._modeller
 
     @property
-    def highway_emmebank(self) -> EmmeBank:
-        if self._highway_emmebank is None:
-            self._highway_emmebank = EmmeBank(self, self.highway_database_path)
-        return self._highway_emmebank
+    def highway_taz_emmebank(self) -> EmmeBank:
+        if self._highway_taz_emmebank is None:
+            self._highway_taz_emmebank = EmmeBank(self, self.highway_taz_database_path)
+        return self._highway_taz_emmebank
+    
+    @property
+    def highway_maz_emmebank(self) -> EmmeBank:
+        if self._highway_maz_emmebank is None:
+            self._highway_maz_emmebank = EmmeBank(self, self.highway_maz_database_path)
+        return self._highway_maz_emmebank
 
     @property
     def transit_emmebank(self) -> EmmeBank:

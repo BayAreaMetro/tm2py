@@ -199,7 +199,7 @@ class DriveAccessSkims(Component):
 
     def _get_drive_costs(self, period: TimePeriodConfig) -> pd.DataFrame:
         """Load the drive costs from OMX matrix files, return as pandas dataframe."""
-        emmebank = self.controller.emme_manager.highway_emmebank.emmebank
+        emmebank = self.controller.emme_manager.highway_taz_emmebank.emmebank
         scenario = emmebank.scenario(period.emme_scenario_id)
         zone_numbers = scenario.zone_numbers
         network = self.controller.emme_manager.get_network(

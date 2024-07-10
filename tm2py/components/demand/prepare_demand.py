@@ -164,7 +164,7 @@ class PrepareHighwayDemand(EmmeDemand):
     @property
     def highway_emmebank(self):
         if self._highway_emmebank == None:
-            self._highway_emmebank = self.controller.emme_manager.highway_emmebank
+            self._highway_emmebank = self.controller.emme_manager.highway_taz_emmebank
             self._emmebank = self._highway_emmebank
         return self._highway_emmebank
 
@@ -584,7 +584,7 @@ class PrepareHighwayDemand(EmmeDemand):
     @property
     def num_total_zones(self):
         self._emmebank_path = self.controller.get_abs_path(
-            self.controller.config.emme.highway_database_path
+            self.controller.config.emme.highway_taz_database_path
         )
         self._emmebank = self.controller.emme_manager.emmebank(self._emmebank_path)
         time_period = self.controller.config.time_periods[0].name
