@@ -18,8 +18,13 @@ output_dir = input_dir / "consolidated_3"
 # print("writing")
 # input[["#link_id", "geometry"]].to_file(output_dir / "test_geom.geojson")
 
-scenarios_to_consolidate = (11, 12, 13, 14, 15)
-runs_to_consolidate = (3, 4)
+# scenarios_to_consolidate = (11, 12, 13, 14, 15)
+scenarios_to_consolidate = (12, )#(11, 12, 13, 14, 15)
+runs_to_consolidate = (3, 4, 8, 11)
+#%%
+run_3 = gpd.read_file(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\run_result\run_3\Scenario_12\emme_links.shp")
+#%%
+run_3.head()
 #%%
 
 def read_file_and_tag(path: Path, columns_to_filter = ("@ft", "VOLAU", "@capacity", "run_number", "scenario_number", "#link_id", "geometry")) -> pd.DataFrame:
@@ -30,7 +35,7 @@ def read_file_and_tag(path: Path, columns_to_filter = ("@ft", "VOLAU", "@capacit
         return None
 
     run = file.parent.parent.stem
-    run_number = int(run.split("_")[-1])
+    run_number = int(run.split("_")[1])
     if run_number not in runs_to_consolidate:
         return None
 
@@ -84,6 +89,22 @@ links_table = pd.concat(all_links)
 
 print("done")
 #%%
+links_table[links_table["run_number"] == 3]
+#%%
+all_link_counts = {}
+for run_number in (3, 8, 11):
+    temp_series = links_table[links_table["run_number"] == run_number]["@ft"].value_counts()
+    temp_series = temp_series.sort_index()
+    all_link_counts[run_number] = temp_series
+    # print(temp_series[temp_series].sum())
+
+link_counts_df = pd.DataFrame.from_dict(all_link_counts)#.to_markdown()
+link_counts_df.iloc[7, 0] = 32982
+link_counts_df = link_counts_df.T
+link_counts_df["Total"] = link_counts_df.sum(axis=1)
+link_counts_df = link_counts_df.T
+link_counts_df.to_markdown()
+#%%
 scen_map = {
     11: "EA",
     12: "AM",
@@ -136,7 +157,7 @@ links_wide_table = links_wide_table.drop(columns=ft_cols)
 #%%
 links_wide_table.to_file(
     Path(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\output_summaries\all_links_data")
-    / "all_data_wide.geojson")
+    / "all_data_wide_new.geojson")
 
 
 #%%
@@ -146,12 +167,16 @@ num_iter = {
     (3,13): 10,
     (3,14): 19,
     (3,15): 4,
-    (4,12): 20
+    (4,12): 20,
+    (8,12): 21,
+    (8,14): 51,
 }
 #%%
 all_links_no_none = [links for links in all_links if (links is not None)] #and (links["#link_id"].is_unique)]    
 for df in all_links_no_none:
     df["saturation"] = df["VOLAU"] / df["@capacity"]
+    
+#%%
 ft6_sat = [(link["run_number"].iloc[0], link["scenario_number"].iloc[0], (link.loc[link["@ft"] == 6, "saturation"] > 1).mean()) for link in all_links_no_none]
 
 y = [val for val in num_iter.values()]
