@@ -99,7 +99,7 @@ class AssignMAZSPDemand(Component):
     @property
     def highway_emmebank(self):
         if self._highway_emmebank is None:
-            self._highway_emmebank = self.controller.emme_manager.highway_maz_emmebank
+            self._highway_emmebank = self.controller.emme_manager.highway_emmebank
         return self._highway_emmebank
 
     @property
@@ -122,11 +122,6 @@ class AssignMAZSPDemand(Component):
             county_groups[group.number] = group.counties
         for time in self.time_period_names:
             self._scenario = self.highway_emmebank.scenario(time)
-            if self.controller.iteration == 0:
-                create_attribute = self.controller.emme_manager.tool(
-                    "inro.emme.data.extra_attribute.create_extra_attribute"
-                )
-                create_attribute("LINK","@maz_flow","Assigned MAZ-to-MAZ flow",overwrite=True,scenario=self._scenario)
             with self._setup(time):
                 self._prepare_network()
                 for i, names in county_groups.items():
@@ -523,7 +518,7 @@ class AssignMAZSPDemand(Component):
         )
 
         self.controller.emme_manager.copy_attribute_values(
-            self._network, self._scenario, {"LINK": ["temp_flow"]}, {"LINK": ["@maz_flow"]}
+            self._network, self._scenario, {"LINK": ["temp_flow"]}, {"LINK": ["data1"]}
         )
 
     def _load_text_format_paths(
@@ -694,7 +689,7 @@ class SkimMAZCosts(Component):
     @property
     def highway_emmebank(self):
         if self._highway_emmebank is None:
-            self._highway_emmebank = self.controller.emme_manager.highway_maz_emmebank
+            self._highway_emmebank = self.controller.emme_manager.highway_emmebank
         return self._highway_emmebank
 
     @property

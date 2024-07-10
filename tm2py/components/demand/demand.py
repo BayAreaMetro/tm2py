@@ -84,7 +84,7 @@ class PrepareHighwayDemand(PrepareDemand):
     # @LogStartEnd("prepare highway demand")
     def run(self):
         """Open combined demand OMX files from demand models and prepare for assignment."""
-        self._emmebank_path = self.get_abs_path(self.config.emme.highway_taz_database_path)
+        self._emmebank_path = self.get_abs_path(self.config.emme.highway_database_path)
         self._emmebank = self.controller.emme_manager.emmebank(self._emmebank_path)
         self._create_zero_matrix()
         for time in self.time_period_names():

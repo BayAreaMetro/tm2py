@@ -144,7 +144,7 @@ class CommercialVehicleModel(Component):
             This should really be in the controller?
             Or part of network.skims?
         """
-        self._emmebank = self.controller.emme_manager.highway_taz_emmebank
+        self._emmebank = self.controller.emme_manager.highway_emmebank
         return self._emmebank
 
     @property

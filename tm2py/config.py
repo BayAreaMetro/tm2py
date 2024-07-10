@@ -1262,8 +1262,7 @@ class EmmeConfig(ConfigItem):
         all_day_scenario_id: scenario ID to use for all day
             (initial imported) scenario with all time period data
         project_path: relative path from run_dir to Emme desktop project (.emp)
-        highway_taz_database_path: relative path to TAZ highway Emmebank
-        highway_maz_database_path: relative path to MAZ highway Emmebank
+        highway_database_path: relative path to highway Emmebank
         active_north_database_path:  relative paths to active mode Emmebank for north bay
         active_south_database_path:  relative paths to active mode Emmebank for south bay
         transit_database_path: relative path to transit Emmebank
@@ -1275,8 +1274,7 @@ class EmmeConfig(ConfigItem):
 
     all_day_scenario_id: int
     project_path: pathlib.Path
-    highway_taz_database_path: pathlib.Path
-    highway_maz_database_path: pathlib.Path
+    highway_database_path: pathlib.Path
     active_north_database_path: pathlib.Path
     active_south_database_path: pathlib.Path
     transit_database_path: pathlib.Path
