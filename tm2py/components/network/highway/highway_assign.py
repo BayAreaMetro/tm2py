@@ -152,7 +152,7 @@ class HighwayAssignment(Component):
             demand.run()
         else:
             self.highway_emmebank.zero_matrix
-        for time in ["AM"]: #self.time_period_names:
+        for time in self.time_period_names:
             scenario = self.highway_emmebank.scenario(time)
             with self._setup(scenario, time):
                 iteration = self.controller.iteration
