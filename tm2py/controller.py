@@ -257,7 +257,6 @@ class RunController:
             "Components already queued, returning without re-queuing."
             return
 
-        print("RUN COMPOMENTS", run_components)
         _initial_components = self.config.run.initial_components
         _global_iter_components = self.config.run.global_iteration_components
         _final_components = self.config.run.final_components
@@ -305,6 +304,10 @@ class RunController:
                 )
             _start_c_index = _queued_c_names.index(self.config.run.start_component)
             self._queued_components = self._queued_components[_start_c_index:]
+        
+        print("RUN COMPOMENTS:")
+        for _queued_component in self._queued_components:
+            print(f"Global iteration {_queued_component[0]}, {_queued_component[1]}")
 
     def _add_component_to_queue(self, iteration: int, component_name: str):
         """Add component to queue (self._queued_components), first validating its inputs.
