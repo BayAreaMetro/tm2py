@@ -433,30 +433,31 @@ class TransitAssignment(Component):
     def run(self):
         """Run transit assignments."""
 
+        if self.controller.iteration == 0:
+            self.transit_emmebank.zero_matrix
+            if self.controller.config.warmstart.warmstart:
+                if self.controller.config.warmstart.use_warmstart_demand:
+                    self.sub_components["prepare transit demand"].run()
+            else:
+                # give error message to user about not warmstarting transit
+                raise Exception(
+                    f"ERROR: transit has to be warmstarted, please either specify use_warmstart_skim or use_warmstart_demand"
+                )
+        else:
+            self.sub_components["prepare transit demand"].run()
+
         for time_period in self.time_period_names:
+            # update auto times
+            print("updating auto time in transit network")
+            self.transit_network.update_auto_times(time_period)
+
             if self.controller.iteration == 0:
                 use_ccr = False
                 congested_transit_assignment = False
-                # update auto times
-                print("updating auto time in transit network")
-                self.transit_network.update_auto_times(time_period)
-
-                # run extended transit assignment and skimming
-                # if run warm start, trim the demands based on extended transit assignment and run congested assignment
-                # otherwise run with 0 demands
-                # TODO I think the demand import part should be outside of the time period loop
-                if self.controller.config.warmstart.warmstart:
-                    # import transit demands
-                    print(
-                        "running uncongested transit assignment with warmstart demand"
-                    )
-                    self.sub_components["prepare transit demand"].run()
-                    self.run_transit_assign(
-                        time_period, use_ccr, congested_transit_assignment
-                    )
-                else:
-                    self.transit_emmebank.zero_matrix  # TODO: need further test
-                    # TODO is transit assignment needed for skimming?
+                print("running uncongested transit assignment with warmstart demand")
+                self.run_transit_assign(
+                    time_period, use_ccr, congested_transit_assignment
+                )
 
             else:  # iteration >=1
                 use_ccr = self.config.use_ccr
@@ -466,10 +467,6 @@ class TransitAssignment(Component):
                     congested_transit_assignment = (
                         self.config.congested_transit_assignment
                     )
-                # update auto times
-                self.transit_network.update_auto_times(time_period)
-                # import transit demands
-                self.sub_components["prepare transit demand"].run()
 
                 self.run_transit_assign(
                     time_period, use_ccr, congested_transit_assignment
