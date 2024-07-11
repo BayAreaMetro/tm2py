@@ -304,7 +304,7 @@ class RunController:
                 )
             _start_c_index = _queued_c_names.index(self.config.run.start_component)
             self._queued_components = self._queued_components[_start_c_index:]
-        
+
         print("RUN COMPOMENTS:")
         for _queued_component in self._queued_components:
             print(f"Global iteration {_queued_component[0]}, {_queued_component[1]}")

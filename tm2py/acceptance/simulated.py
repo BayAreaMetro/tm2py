@@ -411,9 +411,8 @@ class Simulated:
         self._make_taz_district_crosswalk()
 
         return
-    
-    def _make_taz_district_crosswalk(self):
 
+    def _make_taz_district_crosswalk(self):
         df = self.simulated_maz_data_df[["TAZ_ORIGINAL", "DistID"]].copy()
         df = df.rename(columns={"TAZ_ORIGINAL": "taz", "DistID": "district"})
         self.taz_to_district_df = df.drop_duplicates().reset_index(drop=True)

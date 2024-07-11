@@ -87,7 +87,7 @@ class WarmStartConfig(ConfigItem):
     Note that the components will be executed in the order listed.
 
     Properties:
-        warmstart: Boolean indicating whether warmstart demand matrices are used. If set to True, do not assign zero demand in iteration 0. 
+        warmstart: Boolean indicating whether warmstart demand matrices are used. If set to True, do not assign zero demand in iteration 0.
             If set to False, assign zero demand in iteration 0.
         warmstart_skim: Boolean indicating whether to use warmstart skims. If set to True, then skips warmstart assignment in iteraton 0.
         warmstart_demand: Boolean indicating whether to use warmstart demand. If set to True, then runs warmstart assignment in iteration 0.

@@ -139,14 +139,15 @@ class HighwayAssignment(Component):
                     demand.run()
         else:
             demand.run()
-        
+
         for time in self.time_period_names:
             scenario = self.highway_emmebank.scenario(time)
             with self._setup(scenario, time):
                 iteration = self.controller.iteration
                 warmstart = self.controller.config.warmstart.warmstart
                 assign_classes = [
-                    AssignmentClass(c, time, iteration, warmstart) for c in self.config.classes
+                    AssignmentClass(c, time, iteration, warmstart)
+                    for c in self.config.classes
                 ]
                 if iteration > 0:
                     self._copy_maz_flow(scenario)
