@@ -1143,13 +1143,27 @@ class TransitVehicleConfig(ConfigItem):
 @dataclass(frozen=True)
 class TransitClassConfig(ConfigItem):
     """Transit demand class definition."""
-
     skim_set_id: str
     name: str
     description: str
     mode_types: Tuple[str, ...]
     demand: Tuple[ClassDemandConfig, ...]
     required_mode_combo: Optional[Tuple[str, ...]] = Field(default=None)
+
+
+@dataclass(frozen=True)
+class ManualJourneyLevelsConfig(ConfigItem):
+     """Manual Journey Level Specification"""
+     level_id: int
+     group_fare_systems: Tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class TransitJourneyLevelsConfig(ConfigItem):
+    """Transit manual journey levels structure."""
+    use_algorithm: bool = Field(default = True)
+    specify_manually: bool = Field(default = False)
+    manual: Tuple[ManualJourneyLevelsConfig, ...] = Field(default = None)
 
 
 @dataclass(frozen=True)
@@ -1204,12 +1218,14 @@ class CongestedAssnConfig(ConfigItem):
     pm_peaking_factor: float = Field(default=1.262)
 
 
+
 @dataclass(frozen=True)
 class TransitConfig(ConfigItem):
     """Transit assignment parameters."""
 
     modes: Tuple[TransitModeConfig, ...]
     classes: Tuple[TransitClassConfig, ...]
+    journey_levels: TransitJourneyLevelsConfig
     apply_msa_demand: bool
     value_of_time: float
     walk_speed: float
