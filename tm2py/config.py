@@ -1165,6 +1165,15 @@ class TransitJourneyLevelsConfig(ConfigItem):
     specify_manually: bool = Field(default = False)
     manual: Tuple[ManualJourneyLevelsConfig, ...] = Field(default = None)
 
+    @validator("specify_manually")
+    def check_exclusivity(cls, v, values):
+        """Valdiates that exactly one of specify_manually and use_algorithm is True"""
+        use_algorithm = values.get("use_algorithm")
+        assert (use_algorithm != v), 'Exactly one of "use_algorithm" or "specify_manually" must be True.'
+        return v
+
+
+
 
 @dataclass(frozen=True)
 class AssignmentStoppingCriteriaConfig(ConfigItem):
