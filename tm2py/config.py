@@ -1161,9 +1161,9 @@ class ManualJourneyLevelsConfig(ConfigItem):
 @dataclass(frozen=True)
 class TransitJourneyLevelsConfig(ConfigItem):
     """Transit manual journey levels structure."""
-    use_algorithm: bool = Field(default = True)
-    specify_manually: bool = Field(default = False)
-    manual: Tuple[ManualJourneyLevelsConfig, ...] = Field(default = None)
+    use_algorithm: bool = True
+    specify_manually: bool = False
+    manual: Optional[Tuple[ManualJourneyLevelsConfig, ...]] = None
 
     @validator("specify_manually")
     def check_exclusivity(cls, v, values):
@@ -1172,6 +1172,11 @@ class TransitJourneyLevelsConfig(ConfigItem):
         assert (use_algorithm != v), 'Exactly one of "use_algorithm" or "specify_manually" must be True.'
         return v
 
+    @validator('manual', always=True)
+    def check_manual(cls, v, values):
+        if values.get('specify_manually'):
+            assert v is not None and len(v) > 0, "If 'specify_manually' is True, 'manual' cannot be None or empty."
+        return v
 
 
 

@@ -788,8 +788,13 @@ class ApplyFares(Component):
                     self.generate_fromto_approx(network, lines, fare_matrix, fs_data)
 
             self.faresystem_distances(faresystems)
-            #faresystem_groups = self.group_faresystems(faresystems)
-            faresystem_groups = self.group_faresystems_simplified(faresystems)
+
+            if self.config.journey_levels.use_algorithm == True:
+                faresystem_groups = self.group_faresystems(faresystems)
+
+            if self.config.journey_levels.specify_manually ==True:
+                faresystem_groups = self.group_faresystems_simplified(faresystems)
+
             journey_levels, mode_map = self.generate_transfer_fares(
                 faresystems, faresystem_groups, network
             )
@@ -1504,23 +1509,29 @@ class ApplyFares(Component):
         return faresystem_groups
     
     def group_faresystems_simplified(self, faresystems):
+        """This function allows for manual specification of journey levels/ faresystem groups"""
         self._log.append(
             {"type": "header", "content": "Simplified faresystem groups"}
         )
-        # This method only groups FARESYSTEM 25 (MUNI RAIL AND BUS) in one group and rest into other groups..
 
-        group_xfer_fares_mode = [([], [], []), ([], [], [])]
+        manual_groups = [groups.group_fare_systems for groups in self.config.journey_levels.manual]
+        group_xfer_fares_mode = [([], [], []) for _ in range(len(manual_groups) + 1)]
+
         for fs_id, fs_data in faresystems.items():
             fs_modes = fs_data["MODE_SET"]
             xfers = fs_data["xfer_fares"]
-            if fs_id == 25:
-                group_xfer_fares_mode[0][0].append(xfers)
-                group_xfer_fares_mode[0][1].append(fs_id)
-                group_xfer_fares_mode[0][2].extend(fs_modes)
-            else:
-                group_xfer_fares_mode[1][0].append(xfers)
-                group_xfer_fares_mode[1][1].append(fs_id)
-                group_xfer_fares_mode[1][2].extend(fs_modes)
+            assigned = False
+            for i, fs_ids in enumerate(manual_groups):
+                if fs_id in fs_ids:
+                    group_xfer_fares_mode[i][0].append(xfers)
+                    group_xfer_fares_mode[i][1].append(fs_id)
+                    group_xfer_fares_mode[i][2].extend(fs_modes)
+                    assigned = True
+                    break  
+            if not assigned:
+                group_xfer_fares_mode[-1][0].append(xfers)
+                group_xfer_fares_mode[-1][1].append(fs_id)
+                group_xfer_fares_mode[-1][2].extend(fs_modes)
 
         xfer_fares_table = [["p/q"] + list(faresystems.keys())]
         faresystem_groups = []
