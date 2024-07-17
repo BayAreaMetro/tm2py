@@ -311,11 +311,6 @@ class HouseholdConfig(ConfigItem):
 
     highway_demand_file: pathlib.Path
     transit_demand_file: pathlib.Path
-    highway_taz_ctramp_output_file: pathlib.Path
-    mode_agg: List[HouseholdModeAgg]
-    highway_maz_ctramp_output_file: pathlib.Path
-    transit_tap_ctramp_output_file: pathlib.Path
-    transit_taz_ctramp_output_file: pathlib.Path
     active_demand_file: pathlib.Path
     OwnedAV_ZPV_factor: float
     TNC_ZPV_factor: float
