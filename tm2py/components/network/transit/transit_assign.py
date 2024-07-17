@@ -168,7 +168,7 @@ def func_returns_segment_congestion(
             mode_char = line.mode.id
 
         if mode_char in ["p"]:
-            congestion = 0.25 * ((transit_volume / capacity) ** 8)
+            congestion = 0.25 * ((transit_volume / capacity) ** 10)
         else:
             seated_capacity = (
                 line.vehicle.seated_capacity
