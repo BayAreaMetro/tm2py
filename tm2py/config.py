@@ -1162,8 +1162,42 @@ class ManualJourneyLevelsConfig(ConfigItem):
 class TransitJourneyLevelsConfig(ConfigItem):
     """Transit manual journey levels structure."""
     use_algorithm: bool = True
+    """
+    The original translation from Cube to Emme used an algorithm to, as faithfully as possible, reflect transfer fares via journey levels. 
+    The algorithm examines fare costs and proximity of transit services to create a set of journey levels that reflects transfer costs. 
+    While this algorithm works well, the Bay Area's complex fare system results in numerous journey levels specific to operators with low ridership. 
+    The resulting assignment compute therefore expends a lot of resources on these operators. 
+    Set this parameter to `True` to use the algorithm. Exactly one of `use_algorithm` or `specify_manually` must be `True`. 
+    """
     specify_manually: bool = False
+    """
+    An alternative to using an algorithm to specify the journey levels is to use specify them manually. 
+    If this option is set to `True`, the `manual` parameter can be used to assign fare systems to faresystem groups (or journey levels). 
+    Consider, for example, the following three journey levels: 0 - has yet to board transit; 1 - has boarded SF Muni; 2 - has boarded all other transit systems. 
+    To specify this configuration, a single `manual` entry identifying the SF Muni fare systems is needed. 
+    The other faresystem group is automatically generated in the code with the rest of the faresystems which are not specified in any of the groups.
+    See the `manual` entry for an example.
+    """ 
     manual: Optional[Tuple[ManualJourneyLevelsConfig, ...]] = None
+    """
+    If 'specify_manually' is set to `True`, there should be at least one faresystem group specified here.
+    The format includes two entries: `level_id`, which is the serial number of the group specified, 
+    and `group_fare_system`, which is a list of all faresystems belonging to that group.
+    For example, to specify MUNI as one faresystem group, the right configuration would be:
+    [[transit.journey_levels.manual]]
+    level_id = 1
+    group_fare_systems = [25]
+    If there are multiple groups required to be specified, for example, MUNI in one and Caltrain in the other group,
+    it can be achieved by adding another entry of `manual`, like:
+    [[transit.journey_levels.manual]]
+    level_id = 1
+    group_fare_systems = [25]
+    [[transit.journey_levels.manual]]
+    level_id = 2
+    group_fare_systems = [12,14]
+    
+    """
+    
 
     @validator("specify_manually")
     def check_exclusivity(cls, v, values):
