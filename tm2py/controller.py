@@ -241,6 +241,33 @@ class RunController:
         if self._iteration != iteration:
             self.logger.log(f"Start iteration {iteration}")
         self._iteration = iteration
+
+        # check wamrstart files exist
+        if iteration == 0:
+            if self.config.warmstart.warmstart:
+                if self.config.warmstart.use_warmstart_demand:
+                    for source in ["household","truck","air_passenger","internal_external"]:
+                        path = self.get_abs_path(
+                            self.config[source].highway_demand_file
+                        ).__str__()
+                        for time in self.config["time_periods"]:
+                            path = path.format(period=time.name, iter=iteration)
+                            assert os.path.isfile(path)
+                elif self.config.warmstart.use_warmstart_skim:
+                    highway_skim_file = self.get_abs_path(
+                        self.config["highway"].output_skim_path+self.config["highway"].output_skim_filename_tmpl
+                    ).__str__()
+                    for time in self.config["time_periods"]:
+                        path = highway_skim_file.format(period=time.name)
+                        assert os.path.isfile(path)
+                    transit_skim_file = self.get_abs_path(
+                        self.config["transit"].output_skim_path+self.config["transit"].output_skim_filename_tmpl
+                    ).__str__()
+                    for time in self.config["time_periods"]:
+                        for tclass in self.config["transit"]["classes"]:
+                            path = transit_skim_file.format(period=time.name, iter=tclass.name)
+                            assert os.path.isfile(path)
+
         self._component = component
         component.run()
         self.completed_components.append((iteration, name, component))
