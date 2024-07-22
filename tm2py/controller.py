@@ -246,32 +246,43 @@ class RunController:
         if iteration == 0:
             if self.config.warmstart.warmstart:
                 if self.config.warmstart.use_warmstart_demand:
-                    for source in ["household","truck","air_passenger","internal_external"]:
+                    for source in [
+                        "household",
+                        "truck",
+                        "air_passenger",
+                        "internal_external",
+                    ]:
                         highway_demand_file = self.get_abs_path(
                             self.config[source].highway_demand_file
                         ).__str__()
                         for time in self.config["time_periods"]:
-                            path = highway_demand_file.format(period=time.name, iter=iteration)
-                            assert (
-                                os.path.isfile(path)
+                            path = highway_demand_file.format(
+                                period=time.name, iter=iteration
+                            )
+                            assert os.path.isfile(
+                                path
                             ), f"{path} required as warmstart demand does not exist"
                 elif self.config.warmstart.use_warmstart_skim:
                     highway_skim_file = self.get_abs_path(
-                        self.config["highway"].output_skim_path+self.config["highway"].output_skim_filename_tmpl
+                        self.config["highway"].output_skim_path
+                        + self.config["highway"].output_skim_filename_tmpl
                     ).__str__()
                     for time in self.config["time_periods"]:
                         path = highway_skim_file.format(period=time.name)
-                        assert (
-                            os.path.isfile(path)
+                        assert os.path.isfile(
+                            path
                         ), f"{path} required as warmstart skim does not exist"
                     transit_skim_file = self.get_abs_path(
-                        self.config["transit"].output_skim_path+self.config["transit"].output_skim_filename_tmpl
+                        self.config["transit"].output_skim_path
+                        + self.config["transit"].output_skim_filename_tmpl
                     ).__str__()
                     for time in self.config["time_periods"]:
                         for tclass in self.config["transit"]["classes"]:
-                            path = transit_skim_file.format(period=time.name, iter=tclass.name)
-                            assert (
-                                os.path.isfile(path)
+                            path = transit_skim_file.format(
+                                period=time.name, iter=tclass.name
+                            )
+                            assert os.path.isfile(
+                                path
                             ), f"{path} required as warmstart skim does not exist"
 
         self._component = component
@@ -306,9 +317,12 @@ class RunController:
         if self.config.run.start_iteration == 0:
             if self.config.warmstart.warmstart:
                 if self.config.warmstart.use_warmstart_skim:
-                    if "highway" in _initial_components: _initial_components.remove("highway")
-                    if "transit_assign" in _initial_components: _initial_components.remove("transit_assign")
-                    if "transit_skim" in _initial_components: _initial_components.remove("transit_skim")
+                    if "highway" in _initial_components:
+                        _initial_components.remove("highway")
+                    if "transit_assign" in _initial_components:
+                        _initial_components.remove("transit_assign")
+                    if "transit_skim" in _initial_components:
+                        _initial_components.remove("transit_skim")
             for _c_name in _initial_components:
                 self._add_component_to_queue(0, _c_name)
 
