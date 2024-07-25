@@ -31,7 +31,6 @@ class Simulated:
     transit_access_mode_dict = {}
     transit_mode_dict = {}
 
-    taz_to_district_df: pd.DataFrame
 
     simulated_boardings_df: pd.DataFrame
     simulated_home_work_flows_df: pd.DataFrame
@@ -136,7 +135,6 @@ class Simulated:
 
     def _validate(self):
         self._make_transit_mode_dict()
-        self._make_simulated_maz_data()
         self._read_standard_transit_stops()
         self._read_standard_transit_shapes()
         self._read_standard_transit_routes()
@@ -356,7 +354,7 @@ class Simulated:
         b_df = (
             pd.merge(
                 df[["HHID", "HomeMGRA", "WorkLocation"]].copy(),
-                self.simulated_maz_data_df[["MAZSEQ", "CountyName"]].copy(),
+                self.c.simulated_maz_data_df[["MAZSEQ", "CountyName"]].copy(),
                 how="left",
                 left_on="HomeMGRA",
                 right_on="MAZSEQ",
@@ -368,7 +366,7 @@ class Simulated:
         c_df = (
             pd.merge(
                 b_df,
-                self.simulated_maz_data_df[["MAZSEQ", "CountyName"]].copy(),
+                self.c.simulated_maz_data_df[["MAZSEQ", "CountyName"]].copy(),
                 how="left",
                 left_on="WorkLocation",
                 right_on="MAZSEQ",
@@ -388,37 +386,7 @@ class Simulated:
 
         return
 
-    def _make_simulated_maz_data(self):
-        root_dir = self.scenario_dict["scenario"]["root_dir"]
-        in_file = self.scenario_dict["scenario"]["maz_landuse_file"]
-
-        df = pd.read_csv(os.path.join(root_dir, in_file))
-
-        index_file = os.path.join("inputs", "landuse", "mtc_final_network_zone_seq.csv")
-
-        index_df = pd.read_csv(index_file)
-        join_df = index_df.rename(columns={"N": "MAZ_ORIGINAL"})[
-            ["MAZ_ORIGINAL", "MAZSEQ"]
-        ].copy()
-
-        self.simulated_maz_data_df = pd.merge(
-            df,
-            join_df,
-            how="left",
-            on="MAZ_ORIGINAL",
-        )
-
-        self._make_taz_district_crosswalk()
-
-        return
     
-    def _make_taz_district_crosswalk(self):
-
-        df = self.simulated_maz_data_df[["TAZ_ORIGINAL", "DistID"]].copy()
-        df = df.rename(columns={"TAZ_ORIGINAL": "taz", "DistID": "district"})
-        self.taz_to_district_df = df.drop_duplicates().reset_index(drop=True)
-
-        return
 
     def _reduce_simulated_rail_access_summaries(self):
         if not self.transit_mode_dict:
@@ -726,7 +694,7 @@ class Simulated:
         a_df = (
             pd.merge(
                 self.simulated_zero_vehicle_hhs_df,
-                self.simulated_maz_data_df[["MAZ_ORIGINAL", "MAZSEQ"]],
+                self.c.simulated_maz_data_df[["MAZ_ORIGINAL", "MAZSEQ"]],
                 left_on="maz",
                 right_on="MAZSEQ",
                 how="left",
@@ -1075,7 +1043,7 @@ class Simulated:
         return df
 
     def _make_district_to_district_transit_summaries(self):
-        taz_district_dict = self.taz_to_district_df.set_index("taz")[
+        taz_district_dict = self.c.taz_to_district_df.set_index("taz")[
             "district"
         ].to_dict()
 
