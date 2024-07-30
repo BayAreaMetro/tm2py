@@ -792,7 +792,7 @@ class ApplyFares(Component):
             if self.config.journey_levels.use_algorithm == True:
                 faresystem_groups = self.group_faresystems(faresystems)
 
-            if self.config.journey_levels.specify_manually ==True:
+            if self.config.journey_levels.specify_manually == True:
                 faresystem_groups = self.group_faresystems_simplified(faresystems)
 
             journey_levels, mode_map = self.generate_transfer_fares(
@@ -1507,14 +1507,14 @@ class ApplyFares(Component):
         self._log.append({"content": xfer_fares_table, "type": "table"})
 
         return faresystem_groups
-    
+
     def group_faresystems_simplified(self, faresystems):
         """This function allows for manual specification of journey levels/ faresystem groups"""
-        self._log.append(
-            {"type": "header", "content": "Simplified faresystem groups"}
-        )
+        self._log.append({"type": "header", "content": "Simplified faresystem groups"})
 
-        manual_groups = [groups.group_fare_systems for groups in self.config.journey_levels.manual]
+        manual_groups = [
+            groups.group_fare_systems for groups in self.config.journey_levels.manual
+        ]
         group_xfer_fares_mode = [([], [], []) for _ in range(len(manual_groups) + 1)]
 
         for fs_id, fs_data in faresystems.items():
@@ -1527,7 +1527,7 @@ class ApplyFares(Component):
                     group_xfer_fares_mode[i][1].append(fs_id)
                     group_xfer_fares_mode[i][2].extend(fs_modes)
                     assigned = True
-                    break  
+                    break
             if not assigned:
                 group_xfer_fares_mode[-1][0].append(xfers)
                 group_xfer_fares_mode[-1][1].append(fs_id)

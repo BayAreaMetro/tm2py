@@ -1143,6 +1143,7 @@ class TransitVehicleConfig(ConfigItem):
 @dataclass(frozen=True)
 class TransitClassConfig(ConfigItem):
     """Transit demand class definition."""
+
     skim_set_id: str
     name: str
     description: str
@@ -1153,14 +1154,16 @@ class TransitClassConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class ManualJourneyLevelsConfig(ConfigItem):
-     """Manual Journey Level Specification"""
-     level_id: int
-     group_fare_systems: Tuple[int, ...]
+    """Manual Journey Level Specification"""
+
+    level_id: int
+    group_fare_systems: Tuple[int, ...]
 
 
 @dataclass(frozen=True)
 class TransitJourneyLevelsConfig(ConfigItem):
     """Transit manual journey levels structure."""
+
     use_algorithm: bool = False
     """
     The original translation from Cube to Emme used an algorithm to, as faithfully as possible, reflect transfer fares via journey levels. 
@@ -1177,8 +1180,10 @@ class TransitJourneyLevelsConfig(ConfigItem):
     To specify this configuration, a single `manual` entry identifying the SF Muni fare systems is needed. 
     The other faresystem group is automatically generated in the code with the rest of the faresystems which are not specified in any of the groups.
     See the `manual` entry for an example.
-    """ 
-    manual: Optional[Tuple[ManualJourneyLevelsConfig, ...]] = (ManualJourneyLevelsConfig(level_id=1, group_fare_systems=(25,)),)
+    """
+    manual: Optional[Tuple[ManualJourneyLevelsConfig, ...]] = (
+        ManualJourneyLevelsConfig(level_id=1, group_fare_systems=(25,)),
+    )
     """
     If 'specify_manually' is set to `True`, there should be at least one faresystem group specified here.
     The format includes two entries: `level_id`, which is the serial number of the group specified, 
@@ -1197,21 +1202,23 @@ class TransitJourneyLevelsConfig(ConfigItem):
     group_fare_systems = [12,14]
     
     """
-    
 
     @validator("specify_manually")
     def check_exclusivity(cls, v, values):
         """Valdiates that exactly one of specify_manually and use_algorithm is True"""
         use_algorithm = values.get("use_algorithm")
-        assert (use_algorithm != v), 'Exactly one of "use_algorithm" or "specify_manually" must be True.'
+        assert (
+            use_algorithm != v
+        ), 'Exactly one of "use_algorithm" or "specify_manually" must be True.'
         return v
 
-    @validator('manual', always=True)
+    @validator("manual", always=True)
     def check_manual(cls, v, values):
-        if values.get('specify_manually'):
-            assert v is not None and len(v) > 0, "If 'specify_manually' is True, 'manual' cannot be None or empty."
+        if values.get("specify_manually"):
+            assert (
+                v is not None and len(v) > 0
+            ), "If 'specify_manually' is True, 'manual' cannot be None or empty."
         return v
-
 
 
 @dataclass(frozen=True)
@@ -1264,7 +1271,6 @@ class CongestedAssnConfig(ConfigItem):
     use_peaking_factor: bool = False
     am_peaking_factor: float = Field(default=1.219)
     pm_peaking_factor: float = Field(default=1.262)
-
 
 
 @dataclass(frozen=True)
