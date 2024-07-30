@@ -132,16 +132,22 @@ class HighwayAssignment(Component):
     def run(self):
         """Run highway assignment."""
         demand = PrepareHighwayDemand(self.controller)
-        if self.controller.iteration >= 0:
-            demand.run()
-        else:
+        if self.controller.iteration == 0:
             self.highway_emmebank.zero_matrix
+            if self.controller.config.warmstart.warmstart:
+                if self.controller.config.warmstart.use_warmstart_demand:
+                    demand.run()
+        else:
+            demand.run()
+
         for time in self.time_period_names:
             scenario = self.highway_emmebank.scenario(time)
             with self._setup(scenario, time):
                 iteration = self.controller.iteration
+                warmstart = self.controller.config.warmstart.warmstart
                 assign_classes = [
-                    AssignmentClass(c, time, iteration) for c in self.config.classes
+                    AssignmentClass(c, time, iteration, warmstart)
+                    for c in self.config.classes
                 ]
                 if iteration > 0:
                     self._copy_maz_flow(scenario)
@@ -424,17 +430,19 @@ class HighwayAssignment(Component):
 class AssignmentClass:
     """Highway assignment class, represents data from config and conversion to Emme specs."""
 
-    def __init__(self, class_config, time_period, iteration):
+    def __init__(self, class_config, time_period, iteration, warmstart):
         """Constructor of Highway Assignment class.
 
         Args:
             class_config (_type_): _description_
             time_period (_type_): _description_
             iteration (_type_): _description_
+            warmstart (bool): True if assigning warmstart demand
         """
         self.class_config = class_config
         self.time_period = time_period
         self.iteration = iteration
+        self.warmstart = warmstart
         self.name = class_config["name"].lower()
         self.skims = class_config.get("skims", [])
 
@@ -451,7 +459,10 @@ class AssignmentClass:
             class specification used in the SOLA assignment.
         """
         if self.iteration == 0:
-            demand_matrix = 'ms"zero"'
+            if not self.warmstart:
+                demand_matrix = 'ms"zero"'
+            else:
+                demand_matrix = f'mf"{self.time_period}_{self.name}"'
         else:
             demand_matrix = f'mf"{self.time_period}_{self.name}"'
         class_spec = {
@@ -485,7 +496,10 @@ class AssignmentClass:
             class specification used in the SOLA assignment.
         """
         if self.iteration == 0:
-            demand_matrix = 'ms"zero"'
+            if not self.warmstart:
+                demand_matrix = 'ms"zero"'
+            else:
+                demand_matrix = f'mf"{self.time_period}_{self.name}"'
         else:
             demand_matrix = f'mf"{self.time_period}_{self.name}"'
         class_spec = {

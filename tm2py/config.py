@@ -87,7 +87,11 @@ class WarmStartConfig(ConfigItem):
     Note that the components will be executed in the order listed.
 
     Properties:
-        warmstart: Boolean indicating whether warmstart demand matrices are used.
+        warmstart: Boolean indicating whether warmstart demand matrices are used. 
+            If set to True, the global iteration 0 will either assign warmstart demand for highway and transit, or skip the assignment and just use warmstart skims.
+            If set to False, the global iteration 0 will assign zero demand for highway and transit.
+        warmstart_skim: Boolean indicating whether to use warmstart skims. If set to True, then skips warmstart assignment in iteraton 0.
+        warmstart_demand: Boolean indicating whether to use warmstart demand. If set to True, then runs warmstart assignment in iteration 0.
         warmstart_check: if on, check that demand matrix files exist.
         household_highway_demand_file: file name template of warmstart household highway demand matrices.
         household_transit_demand_file: file name template of warmstart household transit demand matrices.
@@ -95,13 +99,24 @@ class WarmStartConfig(ConfigItem):
         internal_external_highway_demand_file: file name template of warmstart internal-external highway demand matrices.
     """
 
-    warmstart: Optional[bool] = Field(default=False)
+    warmstart: bool = Field(default=True)
+    use_warmstart_skim: bool = Field(default=True)
+    use_warmstart_demand: bool = Field(default=False)
     warmstart_check: Optional[bool] = Field(default=False)
     household_highway_demand_file: Optional[str] = Field(default="")
     household_transit_demand_file: Optional[str] = Field(default="")
     air_passenger_highway_demand_file: Optional[str] = Field(default="")
     internal_external_highway_demand_file: Optional[str] = Field(default="")
     truck_highway_demand_file: Optional[str] = Field(default="")
+
+    @validator("warmstart", allow_reuse=True)
+    def check_warmstart_method(cls, value, values):
+        """When warmstart, either skim or demand should be true."""
+        if values.get("warmstart"):
+            assert (
+                values.use_warmstart_skim != values.use_warmstart_demand
+            ), f"'warmstart is on, only one of' {values.use_warmstart_skim} and {values.use_warmstart_demand} can be true"
+        return value
 
 
 @dataclass(frozen=True)
@@ -119,7 +134,6 @@ class RunConfig(ConfigItem):
         global_iteration_components: list of component to run at every subsequent
             iteration (max(1, start_iteration) to end_iteration), in order.
         final_components: list of components to run after final iteration, in order
-        warmstart: warmstart configuration, including file locations.
     """
 
     initial_components: Tuple[ComponentNames, ...]
@@ -127,7 +141,6 @@ class RunConfig(ConfigItem):
     final_components: Tuple[ComponentNames, ...]
     start_iteration: int = Field(ge=0)
     end_iteration: int = Field(gt=0)
-    warmstart: WarmStartConfig = WarmStartConfig()
     start_component: Optional[Union[ComponentNames, EmptyString]] = Field(default="")
 
     @validator("end_iteration", allow_reuse=True)
@@ -1367,6 +1380,7 @@ class Configuration(ConfigItem):
 
     scenario: ScenarioConfig
     run: RunConfig
+    warmstart: WarmStartConfig
     time_periods: Tuple[TimePeriodConfig, ...]
     household: HouseholdConfig
     air_passenger: AirPassengerConfig

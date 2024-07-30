@@ -84,12 +84,6 @@ def func_returns_crowded_segment_cost(time_period_duration, weights: CcrWeightsC
             return 0.0
 
         line = segment.line
-        # segment_capacity = time_period_capacity(
-        #     line.vehicle.total_capacity, line.headway, time_period_duration
-        # )
-        # seated_capacity = time_period_capacity(
-        #     line.vehicle.seated_capacity, line.headway, time_period_duration
-        # )
 
         seated_capacity = (
             line.vehicle.seated_capacity * {time_period_duration} * 60 / line.headway
@@ -113,8 +107,6 @@ def func_returns_crowded_segment_cost(time_period_duration, weights: CcrWeightsC
         normalized_crowded_cost = max(crowded_cost - 1, 0)
 
         return normalized_crowded_cost
-
-    # return textwrap.dedent(inspect.getsource(calc_segment_cost))
 
     return textwrap.dedent(inspect.getsource(calc_segment_cost)).format(
         time_period_duration=time_period_duration, weights=weights
@@ -199,65 +191,6 @@ def func_returns_segment_congestion(
     return textwrap.dedent(inspect.getsource(calc_segment_cost)).format(
         time_period_duration=time_period_duration, weights=weights, use_fares=use_fares
     )
-
-
-# def calc_segment_cost_curry(func, time_period_duration: float, weights):
-#     """
-#     curry function for calc_segment_cost
-#     """
-#     return (lambda y: func(time_period_duration, weights, y))
-
-# def calc_segment_cost(
-#     time_period_duration: float, weights, transit_volume: float, segment
-# ) -> float:
-#     """Calculates crowding factor for a segment.
-
-#     Toronto implementation limited factor between 1.0 and 10.0.
-#     For use with Emme Capacitated assignment normalize by subtracting 1
-
-#     Args:
-#         time_period_duration(float): time period duration in minutes
-#         weights (_type_): transit capacity weights
-#         segment_pax (float): transit passengers for the segment for the time period
-#         segment: emme line segment
-
-#     Returns:
-#         float: crowding factor for a segment
-#     """
-
-#     if transit_volume == 0:
-#         return 0.0
-
-#     line = segment.line
-#     segment_capacity = time_period_capacity(
-#         line.vehicle.total_capacity, line.headway, time_period_duration
-#     )
-#     seated_capacity = time_period_capacity(
-#         line.vehicle.seated_capacity, line.headway, time_period_duration
-#     )
-
-#     seated_pax = min(transit_volume, seated_capacity)
-#     standing_pax = max(transit_volume - seated_pax, 0)
-
-#     seated_cost = (
-#         weights.min_seat
-#         + (weights.max_seat - weights.min_seat)
-#         * (transit_volume / segment_capacity) ** weights.power_seat
-#     )
-
-#     standing_cost = (
-#         weights.min_stand
-#         + (weights.max_stand - weights.min_stand)
-#         * (transit_volume / segment_capacity) ** weights.power_stand
-#     )
-
-#     crowded_cost = (seated_cost * seated_pax + standing_cost * standing_pax) / (
-#         transit_volume + 0.01
-#     )
-
-#     normalized_crowded_cost = max(crowded_cost - 1, 0)
-
-#     return normalized_crowded_cost
 
 
 def calc_total_offs(line) -> float:
@@ -445,57 +378,6 @@ def func_returns_calc_updated_perceived_headway(
     )
 
 
-# def calc_headway_curry(func, time_period_duration: float, eawt_weights, mode_config, use_fares):
-#     """
-#     curry function for calc_segment_cost
-#     """
-#     return lambda y: func(time_period_duration, eawt_weights, mode_config, y, use_fares)
-
-# def calc_headway(
-#     time_period_duration: float,
-#     eawt_weights,
-#     mode_config,
-#     segment,
-#     use_fares: bool = False,
-# ):
-#     """Calculate perceived (???) headway updated by ... and extra added wait time.
-
-#     # TODO Document more fully.
-
-#     Args:
-#         time_period_duration(float): time period duration in minutes
-#         segment: Emme Transit segment object
-#         eawt_weights:
-#         mode_config:
-#         use_fares (bool): if true, will use fares
-
-#     Returns:
-#         _type_: _description_
-#     """
-#     # QUESTION FOR INRO: Kevin separately put segment.line.headway and headway as an arg.
-#     # Would they be different? Why?
-#     # TODO: Either can we label the headways so it is clear what is diff about them or just use single value?
-
-#     _segment_capacity = time_period_capacity(
-#         segment.line.headway, segment.line.vehicle.total_capacity, time_period_duration
-#     )
-
-#     _extra_added_wait_time = calc_extra_wait_time(
-#         segment,
-#         _segment_capacity,
-#         eawt_weights,
-#         mode_config,
-#         use_fares,
-#     )
-
-#     _adjusted_headway = calc_adjusted_headway(
-#         segment,
-#         _segment_capacity,
-#     )
-
-#     return _adjusted_headway + _extra_added_wait_time
-
-
 EmmeTransitJourneyLevelSpec = List[
     Dict[
         str,
@@ -551,48 +433,31 @@ class TransitAssignment(Component):
     def run(self):
         """Run transit assignments."""
 
+        if self.controller.iteration == 0:
+            self.transit_emmebank.zero_matrix
+            if self.controller.config.warmstart.warmstart:
+                if self.controller.config.warmstart.use_warmstart_demand:
+                    self.sub_components["prepare transit demand"].run()
+            else:
+                # give error message to user about not warmstarting transit
+                raise Exception(
+                    f"ERROR: transit has to be warmstarted, please either specify use_warmstart_skim or use_warmstart_demand"
+                )
+        else:
+            self.sub_components["prepare transit demand"].run()
+
         for time_period in self.time_period_names:
+            # update auto times
+            print("updating auto time in transit network")
+            self.transit_network.update_auto_times(time_period)
+
             if self.controller.iteration == 0:
                 use_ccr = False
                 congested_transit_assignment = False
-                # update auto times
-                print("update_auto_times")
-                self.transit_network.update_auto_times(time_period)
-
-                # run extended transit assignment and skimming
-                # if run warm start, trim the demands based on extended transit assignment and run congested assignment
-                # otherwise run with 0 demands
-                if self.controller.config.run.warmstart.warmstart:
-                    # import transit demands
-                    print("warmstart")
-                    self.sub_components["prepare transit demand"].run()
-                    print("uncongested")
-                    self.run_transit_assign(
-                        time_period, use_ccr, congested_transit_assignment
-                    )
-                    # TODO: run skim
-                    # TODO: trim_demand
-                    # congested_transit_assignment = self.config.congested_transit_assignment
-                    # # apply peaking factor
-                    # if self.config.congested.use_peaking_factor:
-                    #     path_boardings = self.get_abs_path(
-                    #         self.config.output_transit_boardings_path
-                    #         )
-                    #     ea_df_path = path_boardings.format(period='ea_pnr')
-                    #     if (time_period.lower() == 'am') and (os.path.isfile(ea_df_path)==False):
-                    #         raise Exception("run ea period first to account for the am peaking factor")
-                    #     if (time_period.lower() == 'am') and (os.path.isfile(ea_df_path)==True):
-                    #         print("peaking_factor")
-                    #         ea_df = pd.read_csv(ea_df_path)
-                    #         self._apply_peaking_factor(time_period, ea_df=ea_df)
-                    #     if (time_period.lower() == 'pm'):
-                    #         self._apply_peaking_factor(time_period)
-                    # print("congested")
-                    # self.run_transit_assign(time_period, use_ccr, congested_transit_assignment)
-                    # if self.config.congested.use_peaking_factor and (time_period.lower() == 'ea'):
-                    #     self._apply_peaking_factor(time_period)
-                else:
-                    self.transit_emmebank.zero_matrix  # TODO: need further test
+                print("running uncongested transit assignment with warmstart demand")
+                self.run_transit_assign(
+                    time_period, use_ccr, congested_transit_assignment
+                )
 
             else:  # iteration >=1
                 use_ccr = self.config.use_ccr
@@ -602,18 +467,6 @@ class TransitAssignment(Component):
                     congested_transit_assignment = (
                         self.config.congested_transit_assignment
                     )
-                # update auto times
-                self.transit_network.update_auto_times(time_period)
-                # import transit demands
-                self.sub_components["prepare transit demand"].run()
-
-                #                if (self.config.congested.trim_demand_before_congested_transit_assignment and
-                #                    congested_transit_assignment):
-                #                    use_ccr = False
-                #                    congested_transit_assignment =  False
-                #                    self.run_transit_assign(time_period, use_ccr, congested_transit_assignment)
-                #                    #TODO: run skim
-                #                    #TODO: trim_demand
 
                 self.run_transit_assign(
                     time_period, use_ccr, congested_transit_assignment
@@ -780,35 +633,9 @@ class TransitAssignment(Component):
         _tclass_specs = [tclass.emme_transit_spec for tclass in transit_classes]
         _tclass_names = [tclass.name for tclass in transit_classes]
 
-        # NOTE TO SIJIA
-        # If sending the actual function doesn't work in EMME and its needs the TEXT of the
-        # function, then you can send it using
-        #
-        # put at top of code:
-        # import inspect.getsource
-        #
-        # replace _cost_func["python_function"]:... with
-        # "python_function":  inspect.getsource(partial.crowded_segment_cost(_duration, _ccr_weights))
-        #
-        # do similar with _headway_cost_function, etc.
-
-        # segment_curry = calc_segment_cost_curry(
-        #     calc_segment_cost, _duration, _ccr_weights
-        # )
-
-        # headway_curry = calc_headway_curry(
-        #         calc_headway,
-        #         _duration,
-        #         _eawt_weights,
-        #         _mode_config,
-        #         use_fares=self.config.use_fares,
-        # )
-
         _cost_func = {
             "segment": {
                 "type": "CUSTOM",
-                # "python_function": textwrap.dedent(inspect.getsource(segment_curry)),
-                # "python_function": textwrap.dedent(inspect.getsource(lambda y: calc_segment_cost(_duration, _ccr_weights, y))),
                 "python_function": func_returns_crowded_segment_cost(
                     _duration, _ccr_weights
                 ),
@@ -817,7 +644,6 @@ class TransitAssignment(Component):
             },
             "headway": {
                 "type": "CUSTOM",
-                # "python_function": textwrap.dedent(inspect.getsource(headway_curry)),
                 "python_function": func_returns_calc_updated_perceived_headway(
                     _duration,
                     _eawt_weights,
@@ -996,7 +822,6 @@ class TransitAssignment(Component):
                     mode = line.mode
                 for segment in line.segments(include_hidden=True):
                     boardings += segment.transit_boardings
-                    # total_board = sum(seg.transit_boardings for seg in line.segments)
                 out_file.write(
                     ",".join(
                         [
@@ -1540,8 +1365,6 @@ class TransitAssignmentClass:
 
     @property
     def _demand_matrix(self) -> str:
-        # if self._iteration < 1:
-        #     return 'ms"zero"'  # zero demand matrix
         return f'mf"TRN_{self._class_config.skim_set_id}_{self._time_period}"'
 
     def _get_used_mode_ids(self, modes: List[TransitModeConfig]) -> List[str]:
@@ -1915,7 +1738,6 @@ class TransitAssignmentClass:
                                 "next_journey_level": len(new_journey_levels) + 2,
                             },
                             {"mode": "w", "next_journey_level": i + 2},
-                            ## {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2},
                             {
                                 "mode": "k",
                                 "next_journey_level": len(new_journey_levels) + 2,
@@ -1939,7 +1761,6 @@ class TransitAssignmentClass:
                             "mode": "w",
                             "next_journey_level": len(new_journey_levels) + 2,
                         },
-                        ## {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2},
                         {"mode": "k", "next_journey_level": 1},
                     ]
                 )
@@ -1963,7 +1784,6 @@ class TransitAssignmentClass:
                             "mode": "w",
                             "next_journey_level": len(new_journey_levels) + 2,
                         },
-                        ## {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2},
                         {"mode": "k", "next_journey_level": 1},
                     ]
                 )
@@ -1987,7 +1807,6 @@ class TransitAssignmentClass:
                             "mode": "w",
                             "next_journey_level": len(new_journey_levels) + 2,
                         },
-                        ## {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2},
                         {
                             "mode": "k",
                             "next_journey_level": len(new_journey_levels) + 2,
@@ -2067,7 +1886,6 @@ class TransitAssignmentClass:
                                 "next_journey_level": len(new_journey_levels) + 2,
                             },
                             {"mode": "w", "next_journey_level": i + 1},
-                            ## {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2},
                             {
                                 "mode": "k",
                                 "next_journey_level": len(new_journey_levels) + 1,
@@ -2091,7 +1909,6 @@ class TransitAssignmentClass:
                             "mode": "w",
                             "next_journey_level": len(new_journey_levels) + 2,
                         },
-                        ## {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2},
                         {
                             "mode": "k",
                             "next_journey_level": len(new_journey_levels) + 2,
@@ -2118,7 +1935,6 @@ class TransitAssignmentClass:
                             "mode": "w",
                             "next_journey_level": len(new_journey_levels) + 2,
                         },
-                        ## {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2},
                         {
                             "mode": "k",
                             "next_journey_level": len(new_journey_levels) + 2,
@@ -2145,7 +1961,6 @@ class TransitAssignmentClass:
                             "mode": "w",
                             "next_journey_level": len(new_journey_levels) + 2,
                         },
-                        ## {'mode': 'p', 'next_journey_level': len(new_journey_levels)+2},
                         {
                             "mode": "k",
                             "next_journey_level": len(new_journey_levels) + 2,

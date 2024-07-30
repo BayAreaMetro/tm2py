@@ -799,21 +799,6 @@ class ApplyFares(Component):
                 faresystems, faresystem_groups, network
             )
             self.save_journey_levels("ALLPEN", journey_levels)
-            # local_modes = []
-            # premium_modes = []
-            # for mode in self.config.modes:
-            #     if mode.type == "LOCAL":
-            #         local_modes.extend(mode_map[mode.mode_id])
-            #     if mode.type == "PREMIUM":
-            #         premium_modes.extend(mode_map[mode.mode_id])
-            # local_levels = self.filter_journey_levels_by_mode(
-            #     local_modes, journey_levels
-            # )
-            # self.save_journey_levels("BUS", local_levels)
-            # premium_levels = self.filter_journey_levels_by_mode(
-            #     premium_modes, journey_levels
-            # )
-            # self.save_journey_levels("PREM", premium_levels)
 
         except Exception as error:
             self._log.append({"type": "text", "content": "error during apply fares"})
@@ -1720,12 +1705,6 @@ class ApplyFares(Component):
                             segment[boarding_cost_id] = max(xferboard_cost, 0)
             level += 1
 
-        # for vehicle in network.transit_vehicles():
-        #     if vehicle.mode == meta_mode:
-        #         network.delete_transit_vehicle(vehicle)
-        # for link in network.links():
-        #     link.modes -= set([meta_mode])
-        # network.delete_mode(meta_mode)
         self._log.append(
             {
                 "type": "header",
@@ -1792,10 +1771,6 @@ class ApplyFares(Component):
         return journey_levels
 
     def log_report(self):
-        # manager = self.controller.emme_manager
-        # emme_project = manager.project
-        # manager.modeller(emme_project)
-        # PageBuilder = _m.PageBuilder
         report = PageBuilder(title="Fare calculation report")
         try:
             for item in self._log:

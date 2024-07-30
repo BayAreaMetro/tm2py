@@ -677,12 +677,12 @@ class PrepareTransitDemand(EmmeDemand):
         # Load demand from cross-referenced source file,
         # the named demand model component under the key highway_demand_file
         if (
-            self.controller.config.run.warmstart.warmstart
+            self.controller.config.warmstart.warmstart
             and self.controller.iteration == 0
         ):
-            source = self.controller.config.run.warmstart
+            source = file_config["source"]
             path = self.controller.get_abs_path(
-                source.household_transit_demand_file
+                self.controller.config[source].transit_demand_file
             ).__str__()
         else:
             source = file_config["source"]
