@@ -788,7 +788,13 @@ class ApplyFares(Component):
                     self.generate_fromto_approx(network, lines, fare_matrix, fs_data)
 
             self.faresystem_distances(faresystems)
-            faresystem_groups = self.group_faresystems(faresystems)
+
+            if self.config.journey_levels.use_algorithm == True:
+                faresystem_groups = self.group_faresystems(faresystems)
+
+            if self.config.journey_levels.specify_manually == True:
+                faresystem_groups = self.group_faresystems_simplified(faresystems)
+
             journey_levels, mode_map = self.generate_transfer_fares(
                 faresystems, faresystem_groups, network
             )
@@ -1462,6 +1468,75 @@ class ApplyFares(Component):
         faresystem_groups = []
         i = 0
         for xfer_fares_list, group, modes in group_xfer_fares:
+            xfer_fares = {}
+            for fs_id in faresystems.keys():
+                to_fares = [f[fs_id] for f in xfer_fares_list if f[fs_id] != "TOO_FAR"]
+                # fare = to_fares[0] if len(to_fares) > 0 else 0.0
+                if len(to_fares) == 0:
+                    fare = 0.0
+                elif all(isinstance(item, float) for item in to_fares):
+                    # caculate the average here becasue of the edits in matching_xfer_fares function
+                    fare = round(sum(to_fares) / len(to_fares), 2)
+                else:
+                    fare = to_fares[0]
+                xfer_fares[fs_id] = fare
+            faresystem_groups.append((group, xfer_fares))
+            for fs_id in group:
+                xfer_fares_table.append(
+                    [fs_id] + list(faresystems[fs_id]["xfer_fares"].values())
+                )
+            i += 1
+            self._log.append(
+                {
+                    "type": "text2",
+                    "content": "Level %s faresystems: %s modes: %s"
+                    % (
+                        i,
+                        ", ".join([str(x) for x in group]),
+                        ", ".join([str(m) for m in modes]),
+                    ),
+                }
+            )
+
+        self._log.append(
+            {
+                "type": "header",
+                "content": "Transfer fares list by faresystem, sorted by group",
+            }
+        )
+        self._log.append({"content": xfer_fares_table, "type": "table"})
+
+        return faresystem_groups
+
+    def group_faresystems_simplified(self, faresystems):
+        """This function allows for manual specification of journey levels/ faresystem groups"""
+        self._log.append({"type": "header", "content": "Simplified faresystem groups"})
+
+        manual_groups = [
+            groups.group_fare_systems for groups in self.config.journey_levels.manual
+        ]
+        group_xfer_fares_mode = [([], [], []) for _ in range(len(manual_groups) + 1)]
+
+        for fs_id, fs_data in faresystems.items():
+            fs_modes = fs_data["MODE_SET"]
+            xfers = fs_data["xfer_fares"]
+            assigned = False
+            for i, fs_ids in enumerate(manual_groups):
+                if fs_id in fs_ids:
+                    group_xfer_fares_mode[i][0].append(xfers)
+                    group_xfer_fares_mode[i][1].append(fs_id)
+                    group_xfer_fares_mode[i][2].extend(fs_modes)
+                    assigned = True
+                    break
+            if not assigned:
+                group_xfer_fares_mode[-1][0].append(xfers)
+                group_xfer_fares_mode[-1][1].append(fs_id)
+                group_xfer_fares_mode[-1][2].extend(fs_modes)
+
+        xfer_fares_table = [["p/q"] + list(faresystems.keys())]
+        faresystem_groups = []
+        i = 0
+        for xfer_fares_list, group, modes in group_xfer_fares_mode:
             xfer_fares = {}
             for fs_id in faresystems.keys():
                 to_fares = [f[fs_id] for f in xfer_fares_list if f[fs_id] != "TOO_FAR"]
