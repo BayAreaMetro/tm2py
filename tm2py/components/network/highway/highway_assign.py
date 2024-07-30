@@ -426,6 +426,7 @@ class AssignmentClass:
             class_config (_type_): _description_
             time_period (_type_): _description_
             iteration (_type_): _description_
+            warmstart (bool): True if assigning warmstart demand
         """
         self.class_config = class_config
         self.time_period = time_period
