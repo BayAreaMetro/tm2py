@@ -705,6 +705,19 @@ class ClassDemandConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class HighwayRelativeGapConfig(ConfigItem):
+    """Highway assignment relative gap parameters.
+
+    Properties:
+        global_iteration: global iteration number
+        relative_gap: relative gap
+    """
+
+    global_iteration: int = Field(ge=0)
+    relative_gap: float = Field(gt=0)
+
+
+@dataclass(frozen=True)
 class HighwayClassConfig(ConfigItem):
     """Highway assignment class definition.
 
@@ -906,7 +919,7 @@ class HighwayConfig(ConfigItem):
     Properties:
         generic_highway_mode_code: single character unique mode ID for entire
             highway network (no excluded_links)
-        relative_gap: target relative gap stopping criteria
+        relative_gaps: relative gaps for assignment convergence, specific to global iteration, see HighwayRelativeGapConfig
         max_iterations: maximum iterations stopping criteria
         area_type_buffer_dist_miles: used to in calculation to categorize link @areatype
             The area type is determined based on the average density of nearby
@@ -924,10 +937,12 @@ class HighwayConfig(ConfigItem):
             see HighwayClassConfig
         capclass_lookup: index cross-reference table from the link @capclass value
             to the free-flow speed, capacity, and critical speed values
+        interchange_nodes_file: relative path to the interchange nodes file, this is
+            used for calculating highway reliability
     """
 
     generic_highway_mode_code: str = Field(min_length=1, max_length=1)
-    relative_gap: float = Field(ge=0)
+    relative_gaps: Tuple[HighwayRelativeGapConfig, ...] = Field()
     max_iterations: int = Field(ge=0)
     area_type_buffer_dist_miles: float = Field(gt=0)
     drive_access_output_skim_path: Optional[str] = Field(default=None)
@@ -1397,6 +1412,16 @@ class Configuration(ConfigItem):
             assert (
                 value.maz_to_maz.skim_period in time_period_names
             ), "maz_to_maz -> skim_period -> name not found in time_periods list"
+        return value
+
+    @validator("highway", always=True)
+    def relative_gap_length(cls, value, values):
+        """Validate highway.relative_gaps is a list of the same length as global iterations."""
+        if "run" in values:
+            assert len(value.relative_gaps) == (
+                values["run"]["end_iteration"] + 1
+            ), f"'highway.relative_gaps must be the same length as end_iteration+1,\
+                that includes global iteration 0 to {values['run']['end_iteration']}'"
         return value
 
 
