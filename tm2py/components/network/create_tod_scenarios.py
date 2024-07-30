@@ -101,7 +101,7 @@ class CreateTODScenarios(Component):
             {
                 "scenarios": 1 + n_time_periods,
                 "full_matrices": 9999,
-                "extra_attribute_values": 60000000,
+                "extra_attribute_values": 100000000,
             }
         )
         # create VDFs & set cross-reference function parameters
