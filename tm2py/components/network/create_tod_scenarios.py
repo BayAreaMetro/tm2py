@@ -101,7 +101,7 @@ class CreateTODScenarios(Component):
             {
                 "scenarios": 1 + n_time_periods,
                 "full_matrices": 9999,
-                "extra_attribute_values": 60000000,
+                "extra_attribute_values": 100000000,
             }
         )
         # create VDFs & set cross-reference function parameters
@@ -628,7 +628,7 @@ class CreateTODScenarios(Component):
             area_type = link["@area_type"]
             if area_type < 0:
                 link["@capclass"] = -1
-            elif (link["@ft"] == 99) & (link["@assignable"] == 1):
+            elif link["@ft"] == 99:
                 link["@capclass"] = 10 * area_type + 7
             else:
                 link["@capclass"] = 10 * area_type + link["@ft"]
