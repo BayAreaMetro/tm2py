@@ -924,8 +924,7 @@ class HighwayConfig(ConfigItem):
     Properties:
         generic_highway_mode_code: single character unique mode ID for entire
             highway network (no excluded_links)
-        relative_gaps: target relative gap stopping criteria. specify a single value float
-            for all global iterations or a list with values for each global iteration.
+        relative_gaps: relative gaps for assignment convergence, specific to global iteration, see HighwayRelativeGapConfig
         max_iterations: maximum iterations stopping criteria
         area_type_buffer_dist_miles: used to in calculation to categorize link @areatype
             The area type is determined based on the average density of nearby
