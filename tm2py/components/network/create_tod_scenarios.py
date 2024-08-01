@@ -152,17 +152,24 @@ class CreateTODScenarios(Component):
                 },
             },
         }
-        # TODO: should have just 3 functions, and map the FT to the vdf
-        # TODO: could optimize expression (to review)
-        bpr_tmplt = "el1 * (1 + 0.20 * ((volau + volad)/el2/0.75)^6)"
-        # "el1 * (1 + 0.20 * put(put((volau + volad)/el2/0.75))*get(1))*get(2)*get(2)"
+        # rewrite bpr_tmplt to use put() and get() for nested functions
+        # keeping the original for reference
+        # bpr_tmplt = "el1 * (1 + 0.20 * ((volau + volad)/el2/0.75)^6)"
+        bpr_tmplt = "el1 * (1 + 0.20 * (put((volau + volad)/el2)/0.75) ** 6)"
+
         fixed_tmplt = "el1"
+
+        # rewrite akcelik_tmplt to use put() and get() for nested functions
+        # keeping the original for reference
+        # akcelik_tmplt = (
+        #     "(el1 + 60 * (0.25 *((volau + volad)/el2 - 1 + "
+        #     "(((volau + volad)/el2 - 1)^2 + el3 * (volau + volad)/el2)^0.5)))"
+        # )
         akcelik_tmplt = (
-            "(el1 + 60 * (0.25 *((volau + volad)/el2 - 1 + "
-            "(((volau + volad)/el2 - 1)^2 + el3 * (volau + volad)/el2)^0.5)))"
-            # "(el1 + 60 * (0.25 *(put(put((volau + volad)/el2) - 1) + "
-            # "(((get(2)*get(2) + (16 * el3 * get(1)^0.5))))"
+            "(el1 + 60 * (0.25 * (put((volau + volad)/el2) - 1 + "
+            "((get(1) - 1) ** 2 + el3 * get(1)) ** 0.5)))"
         )
+        
         for f_id in ["fd1", "fd2"]:
             if emmebank.function(f_id):
                 emmebank.delete_function(f_id)
