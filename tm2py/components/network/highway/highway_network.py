@@ -261,11 +261,17 @@ class PrepareNetwork(Component):
             for tp in self.controller.config.time_periods
         }
         period_capacity_factor = tp_mapping[time_period]
-        akcelik_vdfs = [3, 4, 5, 7, 8, 10, 11, 12, 13, 14]
+        akcelik_vdfs = [3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 70]
         for link in network.links():
             cap_lanehour = capacity_map[link["@capclass"]]
             link["@capacity"] = cap_lanehour * period_capacity_factor * link["@lanes"]
             link.volume_delay_func = int(link["@ft"])
+            # separate out toll plaza links
+            if (
+                link["@tollbooth"] > 0
+                and link["@tollbooth"] < self.config.tolls.valuetoll_start_tollbooth_code
+            ):
+                link.volume_delay_func = 70 # use akcelik for toll plaza
             # re-mapping links with type 99 to type 7 "local road of minor importance"
             if link.volume_delay_func == 99:
                 link.volume_delay_func = 7

@@ -188,6 +188,7 @@ class CreateTODScenarios(Component):
             "fd13",
             "fd14",
             "fd99",
+            "fd70", # separate out toll plaza links
         ]:
             if emmebank.function(f_id):
                 emmebank.delete_function(f_id)
