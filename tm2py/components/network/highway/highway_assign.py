@@ -154,45 +154,49 @@ class HighwayAssignment(Component):
                 else:
                     self._reset_background_traffic(scenario)
                 self._create_skim_matrices(scenario, assign_classes)
-                assign_spec = self._get_assignment_spec(
-                    assign_classes, path_analysis=False
-                )
-                # self.logger.log_dict(assign_spec, level="DEBUG")
-                with self.logger.log_start_end(
-                    "Run SOLA assignment with path analyses", level="INFO"
-                ):
-                    assign = self.controller.emme_manager.tool(
-                        "inro.emme.traffic_assignment.sola_traffic_assignment"
+                # calculate highway reliability in global iteration 0 and 1 only
+                # this requires the assignment to be run twice
+                if iteration <= 1:
+                    # set path analysis to False to avoid skimming
+                    assign_spec = self._get_assignment_spec(
+                        assign_classes, path_analysis=False
                     )
-                    assign(assign_spec, scenario, chart_log_interval=1)
+                
+                    with self.logger.log_start_end(
+                        "Run SOLA assignment with path analyses", level="INFO"
+                    ):
+                        assign = self.controller.emme_manager.tool(
+                            "inro.emme.traffic_assignment.sola_traffic_assignment"
+                        )
+                        assign(assign_spec, scenario, chart_log_interval=1)
 
-                # calucaltes link level LOS based reliability
-                net_calc = NetworkCalculator(self.controller, scenario)
+                    # calucaltes link level LOS based reliability
+                    net_calc = NetworkCalculator(self.controller, scenario)
 
-                exf_pars = scenario.emmebank.extra_function_parameters
-                vdfs = [
-                    f for f in scenario.emmebank.functions() if f.type == "VOLUME_DELAY"
-                ]
-                for function in vdfs:
-                    expression = function.expression
-                    for el in ["el1", "el2", "el3", "el4"]:
-                        expression = expression.replace(el, getattr(exf_pars, el))
-                    if "@static_rel" in expression:
-                        # split function into time component and reliability component
-                        time_expr, reliability_expr = expression.split(
-                            "*(1+@static_rel+"
-                        )
-                        net_calc(
-                            "@auto_time",
-                            time_expr,
-                            {"link": "vdf=%s" % function.id[2:]},
-                        )
-                        net_calc(
-                            "@reliability",
-                            "(@static_rel+" + reliability_expr,
-                            {"link": "vdf=%s" % function.id[2:]},
-                        )
-                        net_calc("@reliability_sq", "@reliability**2", {"link": "all"})
+                    exf_pars = scenario.emmebank.extra_function_parameters
+                    vdfs = [
+                        f for f in scenario.emmebank.functions() if f.type == "VOLUME_DELAY"
+                    ]
+                    for function in vdfs:
+                        expression = function.expression
+                        for el in ["el1", "el2", "el3", "el4"]:
+                            expression = expression.replace(el, getattr(exf_pars, el))
+                        if "@static_rel" in expression:
+                            # split function into time component and reliability component
+                            time_expr, reliability_expr = expression.split(
+                                "*(1+@static_rel+"
+                            )
+                            net_calc(
+                                "@auto_time",
+                                time_expr,
+                                {"link": "vdf=%s" % function.id[2:]},
+                            )
+                            net_calc(
+                                "@reliability",
+                                "(@static_rel+" + reliability_expr,
+                                {"link": "vdf=%s" % function.id[2:]},
+                            )
+                            net_calc("@reliability_sq", "@reliability**2", {"link": "all"})
 
                 assign_spec = self._get_assignment_spec(
                     assign_classes, path_analysis=True
@@ -538,6 +542,11 @@ class AssignmentClass:
         for skim_type in self.skims:
             if skim_type == "time":
                 continue
+            if self.controller.iteration > 1:
+                if skim_type == "rlbty":
+                    continue
+                if skim_type == "autotime":
+                    continue
             if "_" in skim_type:
                 skim_type, group = skim_type.split("_")
                 matrix_name = f"mf{self.time_period}_{self.name}_{skim_type}_{group}"
