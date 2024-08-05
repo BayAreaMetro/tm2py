@@ -20,11 +20,12 @@ output_dir = input_dir / "consolidated_3"
 
 # scenarios_to_consolidate = (11, 12, 13, 14, 15)
 scenarios_to_consolidate = (12, )#(11, 12, 13, 14, 15)
-runs_to_consolidate = (3, 4, 8, 11)
+# runs_to_consolidate = (3, 4, 8, 11, 15)
+runs_to_consolidate = (1, 15, 16, 17)
 #%%
-run_3 = gpd.read_file(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\run_result\run_3\Scenario_12\emme_links.shp")
+# run_3 = gpd.read_file(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\run_result\run_3\Scenario_12\emme_links.shp")
 #%%
-run_3.head()
+# run_3.head()
 #%%
 
 def read_file_and_tag(path: Path, columns_to_filter = ("@ft", "VOLAU", "@capacity", "run_number", "scenario_number", "#link_id", "geometry")) -> pd.DataFrame:
@@ -51,8 +52,8 @@ def read_file_and_tag(path: Path, columns_to_filter = ("@ft", "VOLAU", "@capacit
         print("... No VOLAU, filling with zero")
         return_gdf["VOLAU" ] = 0
 
-
-    return_gdf = return_gdf[list(columns_to_filter)]
+    if len(columns_to_filter) != 0:
+        return_gdf = return_gdf[list(columns_to_filter)]
 
     # assert return_gdf["#link_id"].is_unique
 
@@ -84,15 +85,17 @@ print("Reading Links...", end="")
 all_links = []
 for file in tqdm(input_dir.rglob('run_*/Scenario_*/emme_links.shp')):
     print(file)
-    all_links.append(read_file_and_tag(file))
+    all_links.append(read_file_and_tag(file, columns_to_filter=()))
 links_table = pd.concat(all_links)
 
 print("done")
 #%%
+links_table["@tollbooth"] > 0 & links_table["@tollbooth"] < 11
+#%%
 links_table[links_table["run_number"] == 3]
 #%%
 all_link_counts = {}
-for run_number in (3, 8, 11):
+for run_number in (3, 8, 11, 15):
     temp_series = links_table[links_table["run_number"] == run_number]["@ft"].value_counts()
     temp_series = temp_series.sort_index()
     all_link_counts[run_number] = temp_series

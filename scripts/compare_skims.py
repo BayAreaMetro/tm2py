@@ -2,13 +2,13 @@
 import pandas as pd
 import openmatrix as omx
 from pathlib import Path
+import plotly.express as px
 
 import numpy as np
 
 network_fid_path = Path(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\run_result")
-# network_fid_path = Path(r"D:\TEMP\TM2.2.1.1-0.05")
-
-#%%
+output_path = Path(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\output_summaries\skim_data")
+output_csv = False
 
 def read_matrix_as_long_df(path: Path, run_name):
     run = omx.open_file(path, "r")
@@ -16,41 +16,63 @@ def read_matrix_as_long_df(path: Path, run_name):
     index_lables = list(range(am_time.shape[0]))
     return pd.DataFrame(am_time, index=index_lables, columns=index_lables).stack().rename(run_name).to_frame()
 
-a = read_matrix_as_long_df(r"D:\TEMP\TM2.2.1.1-New_network_rerun\TM2.2.1.1_new_taz\skim_matrices\highway\HWYSKMAM_taz.omx", "test")
 #%%
 all_skims = []
+# runs_to_include = ['run_1\\', 'run_3', 'run_5', 'run_11', 'run_12', 'run_15', 'run_16', 'run_17']
+runs_to_include = ['run_15', 'run_16', 'run_17']
 for skim_matrix_path in network_fid_path.rglob("*AM_taz.omx"):
-    print(skim_matrix_path)
-    run_name = skim_matrix_path.parts[6]
-    all_skims.append(read_matrix_as_long_df(skim_matrix_path, run_name))
+    for run_label in runs_to_include:
+        if run_label in str(skim_matrix_path):
+            print(skim_matrix_path)
+            run_name = skim_matrix_path.parts[6]
+            all_skims.append(read_matrix_as_long_df(skim_matrix_path, run_name))
 
 all_skims = pd.concat(all_skims, axis=1)
 # %%
 #%%%
-all_skims.to_csv(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\output_summaries\skim_data\skims.csv")
+all_skims = all_skims.astype("float32")
+if output_csv:
+    all_skims.to_csv(output_path / "skims.csv")
+else:
+    print("warnin not outputting")
+#%%
+scatterplots = []
+skims_dropped = all_skims.copy()
+for col in skims_dropped.columns:
+    skims_dropped = skims_dropped[skims_dropped[col] <= 1e19]
+
+scatter_plot = px.scatter(skims_dropped.sample(100_000), x="run_15", y="run_16")
+scatter_plot.write_html(output_path / "run_15_and_16.html")
+#%%
+import matplotlib.pyplot as plt
+plt.scatter(skims_dropped["run_15"], skims_dropped["run_16"])
+#%%
+from scipy.stats import pearsonr, linregress
+pearsonr(skims_dropped["run_15"], skims_dropped["run_16"])
+linregress(skims_dropped["run_15"], skims_dropped["run_16"])
 # %%
 # %%
-import geopandas as gpd
-from importlib import Path
-import pandas as pd 
-#%%
-output_paths_to_consolidate = Path(r"D:\TEMP\output_summaries")
-all_files = []
-for file in output_paths_to_consolidate.glob("*_roadway_network.geojson"):
-    run_name = file.name[0:5]
-    print(run_name)
-    specific_run = gpd.read_file(file)
-    specific_run["run_number"] = run_name
-    all_files.append(specific_run)
-#%%
-all_files = pd.concat(all_files)
-#%%
-all_files.to_file(output_paths_to_consolidate / "all_runs_concat.gdb")
+# import geopandas as gpd
+# from importlib import Path
+# import pandas as pd 
+# #%%
+# output_paths_to_consolidate = Path(r"D:\TEMP\output_summaries")
+# all_files = []
+# for file in output_paths_to_consolidate.glob("*_roadway_network.geojson"):
+#     run_name = file.name[0:5]
+#     print(run_name)
+#     specific_run = gpd.read_file(file)
+#     specific_run["run_number"] = run_name
+#     all_files.append(specific_run)
+# #%%
+# all_files = pd.concat(all_files)
+# #%%
+# all_files.to_file(output_paths_to_consolidate / "all_runs_concat.gdb")
  
-#%%
+# #%%
  
-all_files.drop(columns="geometry").to_csv(output_paths_to_consolidate / "data.csv")
-#%%
-to_be_shape = all_files[["geometry", "model_link_id"]].drop_duplicates()
-print("outputting")
-to_be_shape.to_file(output_paths_to_consolidate / "geom_package")
+# all_files.drop(columns="geometry").to_csv(output_paths_to_consolidate / "data.csv")
+# #%%
+# to_be_shape = all_files[["geometry", "model_link_id"]].drop_duplicates()
+# print("outputting")
+# to_be_shape.to_file(output_paths_to_consolidate / "geom_package")
