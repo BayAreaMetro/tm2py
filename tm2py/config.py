@@ -957,6 +957,7 @@ class HighwayConfig(ConfigItem):
     generic_highway_mode_code: str = Field(min_length=1, max_length=1)
     relative_gaps: Tuple[HighwayRelativeGapConfig, ...] = Field()
     max_iterations: int = Field(ge=0)
+    network_acceleration: bool = Field()
     area_type_buffer_dist_miles: float = Field(gt=0)
     drive_access_output_skim_path: Optional[str] = Field(default=None)
     output_skim_path: pathlib.Path = Field()

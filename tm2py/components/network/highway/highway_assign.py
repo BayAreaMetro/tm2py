@@ -332,7 +332,8 @@ class HighwayAssignment(Component):
                 "normalized_gap": 0.0,
             },
             "performance_settings": {
-                "number_of_processors": self.controller.num_processors
+                "number_of_processors": self.controller.num_processors,
+                "network_acceleration": self.config.network_acceleration,
             },
         }
         if not path_analysis:
