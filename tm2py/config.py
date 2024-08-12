@@ -952,6 +952,12 @@ class HighwayConfig(ConfigItem):
             to the free-flow speed, capacity, and critical speed values
         interchange_nodes_file: relative path to the interchange nodes file, this is
             used for calculating highway reliability
+        reliability: bool to skim highway reliability. Default to true. If true, assignment 
+            will be run twice in global iterations 0 (warmstart) and 1, to calculate reliability, 
+            assignment will be run only once in global iterations 2 and 3, 
+            reliability skim will stay the same as global iteration 1. 
+            If false, reliability will not be calculated nor skimmed in all global
+            iterations, and the resulting reliability skims will be 0.
     """
 
     generic_highway_mode_code: str = Field(min_length=1, max_length=1)
@@ -967,6 +973,7 @@ class HighwayConfig(ConfigItem):
     classes: Tuple[HighwayClassConfig, ...] = Field()
     capclass_lookup: Tuple[HighwayCapClassConfig, ...] = Field()
     interchange_nodes_file: str = Field()
+    reliability: bool = Field(default=True)
 
     @validator("output_skim_filename_tmpl")
     def valid_skim_template(value):
