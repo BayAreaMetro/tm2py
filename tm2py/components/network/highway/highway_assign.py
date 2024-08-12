@@ -148,7 +148,9 @@ class HighwayAssignment(Component):
                 iteration = self.controller.iteration
                 warmstart = self.controller.config.warmstart.warmstart
                 assign_classes = [
-                    AssignmentClass(c, time, iteration, calculate_reliability, warmstart)
+                    AssignmentClass(
+                        c, time, iteration, calculate_reliability, warmstart
+                    )
                     for c in self.config.classes
                 ]
                 if iteration > 0:
@@ -163,7 +165,7 @@ class HighwayAssignment(Component):
                     assign_spec = self._get_assignment_spec(
                         assign_classes, path_analysis=False
                     )
-                
+
                     with self.logger.log_start_end(
                         "Run SOLA assignment without path analyses", level="INFO"
                     ):
@@ -177,7 +179,9 @@ class HighwayAssignment(Component):
 
                     exf_pars = scenario.emmebank.extra_function_parameters
                     vdfs = [
-                        f for f in scenario.emmebank.functions() if f.type == "VOLUME_DELAY"
+                        f
+                        for f in scenario.emmebank.functions()
+                        if f.type == "VOLUME_DELAY"
                     ]
                     for function in vdfs:
                         expression = function.expression
@@ -198,7 +202,9 @@ class HighwayAssignment(Component):
                                 "(@static_rel+" + reliability_expr,
                                 {"link": "vdf=%s" % function.id[2:]},
                             )
-                            net_calc("@reliability_sq", "@reliability**2", {"link": "all"})
+                            net_calc(
+                                "@reliability_sq", "@reliability**2", {"link": "all"}
+                            )
 
                 assign_spec = self._get_assignment_spec(
                     assign_classes, path_analysis=True

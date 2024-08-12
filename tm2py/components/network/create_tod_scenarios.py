@@ -171,7 +171,7 @@ class CreateTODScenarios(Component):
             "(el1 + 60 * (0.25 * (put((volau + volad)/el2) - 1 + "
             "((get(1) - 1) ** 2 + el3 * get(1)) ** 0.5)))"
         )
-        
+
         for f_id in ["fd1", "fd2"]:
             if emmebank.function(f_id):
                 emmebank.delete_function(f_id)

@@ -87,7 +87,7 @@ class WarmStartConfig(ConfigItem):
     Note that the components will be executed in the order listed.
 
     Properties:
-        warmstart: Boolean indicating whether warmstart demand matrices are used. 
+        warmstart: Boolean indicating whether warmstart demand matrices are used.
             If set to True, the global iteration 0 will either assign warmstart demand for highway and transit, or skip the assignment and just use warmstart skims.
             If set to False, the global iteration 0 will assign zero demand for highway and transit.
         warmstart_skim: Boolean indicating whether to use warmstart skims. If set to True, then skips warmstart assignment in iteraton 0.
@@ -952,10 +952,10 @@ class HighwayConfig(ConfigItem):
             to the free-flow speed, capacity, and critical speed values
         interchange_nodes_file: relative path to the interchange nodes file, this is
             used for calculating highway reliability
-        reliability: bool to skim highway reliability. Default to true. If true, assignment 
-            will be run twice in global iterations 0 (warmstart) and 1, to calculate reliability, 
-            assignment will be run only once in global iterations 2 and 3, 
-            reliability skim will stay the same as global iteration 1. 
+        reliability: bool to skim highway reliability. Default to true. If true, assignment
+            will be run twice in global iterations 0 (warmstart) and 1, to calculate reliability,
+            assignment will be run only once in global iterations 2 and 3,
+            reliability skim will stay the same as global iteration 1.
             If false, reliability will not be calculated nor skimmed in all global
             iterations, and the resulting reliability skims will be 0.
     """
