@@ -109,13 +109,15 @@ class CreateTODScenarios(Component):
         emmebank.extra_function_parameters.el2 = "@capacity"
         emmebank.extra_function_parameters.el3 = "@ja"
         emmebank.extra_function_parameters.el4 = "@static_rel"
+        # get() and put() did not work for los reliability
+        # remove them from the reliability tmplt
         reliability_tmplt = (
             "* (1 + el4 + "
-            "( {factor[LOS_C]} * ( put(get(1).min.1.5) - {threshold[LOS_C]} + 0.01 ) ) * (get(1) .gt. {threshold[LOS_C]})"
-            "+ ( {factor[LOS_D]} * ( get(2) - {threshold[LOS_D]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_D]})"
-            "+ ( {factor[LOS_E]} * ( get(2) - {threshold[LOS_E]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_E]})"
-            "+ ( {factor[LOS_FL]} * ( get(2) - {threshold[LOS_FL]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_FL]})"
-            "+ ( {factor[LOS_FH]} * ( get(2) - {threshold[LOS_FH]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_FH]})"
+            "( {factor[LOS_C]} * ( ((volau + volad)/el2).min.1.5 - {threshold[LOS_C]} + 0.01 ) ) * (((volau + volad)/el2) .gt. {threshold[LOS_C]})"
+            "+ ( {factor[LOS_D]} * ( ((volau + volad)/el2).min.1.5 - {threshold[LOS_D]} + 0.01 )  ) * (((volau + volad)/el2) .gt. {threshold[LOS_D]})"
+            "+ ( {factor[LOS_E]} * ( ((volau + volad)/el2).min.1.5 - {threshold[LOS_E]} + 0.01 )  ) * (((volau + volad)/el2) .gt. {threshold[LOS_E]})"
+            "+ ( {factor[LOS_FL]} * ( ((volau + volad)/el2).min.1.5 - {threshold[LOS_FL]} + 0.01 )  ) * (((volau + volad)/el2) .gt. {threshold[LOS_FL]})"
+            "+ ( {factor[LOS_FH]} * ( ((volau + volad)/el2).min.1.5 - {threshold[LOS_FH]} + 0.01 )  ) * (((volau + volad)/el2) .gt. {threshold[LOS_FH]})"
             ")"
         )
         parameters = {
