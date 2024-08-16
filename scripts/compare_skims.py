@@ -6,8 +6,11 @@ import plotly.express as px
 
 import numpy as np
 
-network_fid_path = Path(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\run_result")
-output_path = Path(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\output_summaries\skim_data")
+# network_fid_path = Path(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\run_result")
+# output_path = Path(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\output_summaries\skim_data")
+
+network_fid_path = Path(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.2_remove_cosmetic_nodes\run_result")
+output_path = Path(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.2_remove_cosmetic_nodes\output_summaries\skim_data")
 output_csv = False
 
 def read_matrix_as_long_df(path: Path, run_name):
@@ -19,7 +22,7 @@ def read_matrix_as_long_df(path: Path, run_name):
 #%%
 all_skims = []
 # runs_to_include = ['run_1\\', 'run_3', 'run_5', 'run_11', 'run_12', 'run_15', 'run_16', 'run_17']
-runs_to_include = ['run_15', 'run_16', 'run_17']
+runs_to_include = ['run_18', 'run_20']
 for skim_matrix_path in network_fid_path.rglob("*AM_taz.omx"):
     for run_label in runs_to_include:
         if run_label in str(skim_matrix_path):
@@ -34,22 +37,26 @@ all_skims = all_skims.astype("float32")
 if output_csv:
     all_skims.to_csv(output_path / "skims.csv")
 else:
-    print("warnin not outputting")
+    print("warning not outputting")
 #%%
 scatterplots = []
 skims_dropped = all_skims.copy()
 for col in skims_dropped.columns:
     skims_dropped = skims_dropped[skims_dropped[col] <= 1e19]
 
-scatter_plot = px.scatter(skims_dropped.sample(100_000), x="run_15", y="run_16")
-scatter_plot.write_html(output_path / "run_15_and_16.html")
+scatter_plot = px.scatter(skims_dropped.sample(100_000), x="run_18", y="run_20")
+scatter_plot.write_html(output_path / "run_18_and_20.html")
 #%%
 import matplotlib.pyplot as plt
-plt.scatter(skims_dropped["run_15"], skims_dropped["run_16"])
+plt.scatter(skims_dropped["run_18"], skims_dropped["run_20"])
+plt.xlabel("run_18 skim (time)")
+plt.ylabel("run_20 skim (time)")
+
+plt.plot([0, 0], [250, 250], color='red', linestyle='--')
 #%%
 from scipy.stats import pearsonr, linregress
-pearsonr(skims_dropped["run_15"], skims_dropped["run_16"])
-linregress(skims_dropped["run_15"], skims_dropped["run_16"])
+pearsonr(skims_dropped["run_18"], skims_dropped["run_20"])
+linregress(skims_dropped["run_18"], skims_dropped["run_20"])
 # %%
 # %%
 # import geopandas as gpd

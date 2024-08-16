@@ -6,8 +6,8 @@ from pathlib import Path
 from tqdm import tqdm
 from shapely.geometry import LineString
 
-input_dir = Path(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\run_result")
-output_dir = input_dir / "consolidated_3"
+input_dir = Path(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.2_remove_cosmetic_nodes")
+output_dir = Path(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.2_remove_cosmetic_nodes\output_summaries")
 
 
 
@@ -21,7 +21,8 @@ output_dir = input_dir / "consolidated_3"
 # scenarios_to_consolidate = (11, 12, 13, 14, 15)
 scenarios_to_consolidate = (12, )#(11, 12, 13, 14, 15)
 # runs_to_consolidate = (3, 4, 8, 11, 15)
-runs_to_consolidate = (1, 15, 16, 17)
+# runs_to_consolidate = (1, 11, 15, 16, 17)
+runs_to_consolidate = (18, 19, 20)
 #%%
 # run_3 = gpd.read_file(r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\run_result\run_3\Scenario_12\emme_links.shp")
 #%%
@@ -90,8 +91,53 @@ links_table = pd.concat(all_links)
 
 print("done")
 #%%
-links_table["@tollbooth"] > 0 & links_table["@tollbooth"] < 11
+toll_booths = links_table[(links_table["@tollbooth"] > 0) & (links_table["@tollbooth"] < 11)]
+toll_booths_geom = toll_booths[["@tollbooth", "geometry"]].drop_duplicates()
+toll_booths = toll_booths.groupby(["@tollbooth", "run_number", "@capacity", "TIMAU"]).agg({"VOLAU": "sum"})
+toll_booths.to_csv(output_dir / "toll_plaza_summary.csv")
+toll_booths_geom.to_file(output_dir / "toll_booth_geom.shp")
+j
 #%%
+toll_booths_geom
+
+# %% -------------- SCATTER PLOT -------------------------
+
+#%%
+
+length_cutoff = 9999999999
+vc_cutoff = 0
+
+compare_run_1 = 11
+compare_run_2 = 16
+# run_11_and_16 = 
+# [['ID', "#link_id", 'TIMAU', 'INODE', 'JNODE', "run", "run_number", 
+#     "scenario", "scenario_number", "LENGTH", "@capacity", "VOLAU", "geometry"]]
+short_road_high_vc = links_table.copy()
+short_road_high_vc["vc"] = short_road_high_vc["VOLAU"] / short_road_high_vc["@capacity"]
+
+
+short_road_high_vc = short_road_high_vc[(short_road_high_vc["vc"] > vc_cutoff) & (short_road_high_vc["LENGTH"] < length_cutoff) & (short_road_high_vc["@ft"] == 7)]
+
+# short_road_high_vc.to_file(output_dir / "short_links_high_vc" / "short_links_high_vc.shp")
+print(short_road_high_vc["run_number"].value_counts())
+
+only_once = ["geometry", "#link_id", "@ft"]
+columns = ["ID", "@capacity", "VOLAU", "TIMAU", "vc"]
+rename_dict_1 = {"@capacity": f"cap_{compare_run_1}", "VOLAU": f"volau_{compare_run_1}", "vc": f"vc_{compare_run_1}", "TIMAU": f"timeau_{compare_run_1}"}
+rename_dict_2 = {"@capacity": f"cap_{compare_run_2}", "VOLAU": f"volau_{compare_run_2}", "vc": f"vc_{compare_run_2}", "TIMAU": f"timeau_{compare_run_2}"}
+
+compare_run_1_df = short_road_high_vc[short_road_high_vc["run_number"] == compare_run_1][columns + only_once].rename(columns=rename_dict_1)
+compare_run_2_df = short_road_high_vc[short_road_high_vc["run_number"] == compare_run_2][columns].rename(columns=rename_dict_2)
+
+compared_vol_au = pd.merge(compare_run_1_df, compare_run_2_df, how="inner", on=["ID"])
+compared_vol_au["11_over_16"] = (compared_vol_au["timeau_11"] / compared_vol_au["timeau_16"])
+compared_vol_au_slicer = (compared_vol_au["11_over_16"] > 10) & (compared_vol_au["timeau_11"] > 10)
+compared_vol_au = compared_vol_au[compared_vol_au_slicer]
+
+# (compared_vol_au["cap_11"] != compared_vol_au["cap_16"]).sum()
+compared_vol_au.to_file(output_dir / "short_links_high_vc" / "short_links_high_vc.shp")
+#%%
+
 links_table[links_table["run_number"] == 3]
 #%%
 all_link_counts = {}
@@ -131,9 +177,10 @@ def combine_tables(dfs, columns_same):
         scen_number = scen_map[scen_number]
         df["saturation"] = df["VOLAU"] / df["@capacity"]
         
-        df = df[["#link_id", "@capacity", "VOLAU", "geometry", "@ft"]].rename(columns = {
+        df = df[["#link_id", "@capacity", "VOLAU", "TIMAU", "geometry", "@ft"]].rename(columns = {
             "@capacity": f"capacity_run{run_number}_scen{scen_number}",
             "VOLAU": f"@volau_run{run_number}_scen{scen_number}",
+            "TIMAU": f"TIMAU_run{run_number}_scen{scen_number}", 
             "saturation": f"@saturation_run{run_number}_scen{scen_number}",
             "geometry": f"geometry_run{run_number}_scen{scen_number}",
             "@ft": f"ft_run{run_number}_scen{scen_number}"
@@ -151,6 +198,8 @@ all_links_no_none = [links for links in all_links if (links is not None) and (li
 links_wide_table = combine_tables(all_links_no_none, ["#link_id", "geometry"])
 
 links_wide_table["direction"] = links_wide_table["geometry"].apply(get_linestring_direction)
+
+links_wide_table.to_file(output_dir / "wide_links.gpkg")
 #%%
 ft_cols = [col for col in links_wide_table.columns if "ft_" in col]
 
