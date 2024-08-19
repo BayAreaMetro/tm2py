@@ -163,18 +163,24 @@ class CreateTODScenarios(Component):
             # "(el1 + 60 * (0.25 *(put(put((volau + volad)/el2) - 1) + "
             # "(((get(2)*get(2) + (16 * el3 * get(1)^0.5))))"
         )
+        # SFCTA bpr curve https://github.com/BayAreaMetro/tm2py/issues/147#issuecomment-2261058755
+        bpr_local_tmplt="el1 * 1.8 * (1 + 0.60 * ((volau + volad)/el2)^8.5)"
         for f_id in ["fd1", "fd2"]:
             if emmebank.function(f_id):
                 emmebank.delete_function(f_id)
             emmebank.create_function(
                 f_id, bpr_tmplt + reliability_tmplt.format(**parameters["freeway"])
             )
+        for f_id in ["fd6", "fd7"]:
+            if emmebank.function(f_id):
+                emmebank.delete_function(f_id)
+            emmebank.create_function(
+                f_id, bpr_local_tmplt + reliability_tmplt.format(**parameters["road"])
+            )
         for f_id in [
             "fd3",
             "fd4",
             "fd5",
-            "fd6",
-            "fd7",
             "fd9",
             "fd10",
             "fd11",
@@ -182,6 +188,7 @@ class CreateTODScenarios(Component):
             "fd13",
             "fd14",
             "fd99",
+            "fd70", # separate out toll plaza links
         ]:
             if emmebank.function(f_id):
                 emmebank.delete_function(f_id)
