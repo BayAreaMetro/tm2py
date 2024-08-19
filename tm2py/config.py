@@ -1346,6 +1346,13 @@ class TransitConfig(ConfigItem):
         default_factory=TransitVehicleConfig
     )
 
+    @validator("use_ccr")
+    def deprecate_capacitated_assignment(cls, value, values):
+        """Validate use_ccr is false."""
+        assert (
+            not value
+        ), "capacitated transit assignment is deprecated, please set use_ccr to false"
+        return value
 
 @dataclass(frozen=True)
 class EmmeConfig(ConfigItem):
