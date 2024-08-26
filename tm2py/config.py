@@ -1289,11 +1289,15 @@ class CongestedTransitMaxIteration(ConfigItem):
 
     Properties:
         time_period: time period string
-        max_iteration: max iteration integer
+        max_iteration: max iteration specific to time period. In the design of tm2py,
+            congested assignment is run only for AM and PM. For EA, MD, and EV, we run
+            extended assignment. See code here: tm2py/components/network/transit/transit_assign.py#L465-L466
+            Therefore, `max_iteration` here does not impact EA, MD, and EV, this setting
+            is only meaningful for AM and PM.
     """
 
     time_period: str = Field(max_length=4)
-    max_iteration: int = Field(ge=1)
+    max_iteration: int = Field(ge=1, default=1)
 
 
 @dataclass(frozen=True)
