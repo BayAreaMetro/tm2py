@@ -242,8 +242,6 @@ class TimePeriodConfig(ConfigItem):
             capacites in the highway network
         emme_scenario_id: scenario ID to use for Emme per-period
             assignment (highway and transit) scenarios
-        congested_transit_assn_max_iteration: max iterations in congested
-            transit assignment stopping criteria
     """
 
     name: str = Field(max_length=4)
@@ -251,7 +249,6 @@ class TimePeriodConfig(ConfigItem):
     length_hours: float = Field(gt=0)
     highway_capacity_factor: float = Field(gt=0)
     emme_scenario_id: int = Field(ge=1)
-    congested_transit_assn_max_iteration: int = Field(ge=1)
     description: Optional[str] = Field(default="")
 
 
@@ -952,6 +949,7 @@ class HighwayConfig(ConfigItem):
             to the free-flow speed, capacity, and critical speed values
         interchange_nodes_file: relative path to the interchange nodes file, this is
             used for calculating highway reliability
+        apply_msa_demand: average highway demand with previous iterations'. Default to True.
         reliability: bool to skim highway reliability. Default to true. If true, assignment
             will be run twice in global iterations 0 (warmstart) and 1, to calculate reliability,
             assignment will be run only once in global iterations 2 and 3,
@@ -973,6 +971,7 @@ class HighwayConfig(ConfigItem):
     classes: Tuple[HighwayClassConfig, ...] = Field()
     capclass_lookup: Tuple[HighwayCapClassConfig, ...] = Field()
     interchange_nodes_file: str = Field()
+    apply_msa_demand: bool = True
     reliability: bool = Field(default=True)
 
     @validator("output_skim_filename_tmpl")
@@ -1292,12 +1291,45 @@ class EawtWeightsConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class CongestedTransitMaxIteration(ConfigItem):
+    """Congested transit assignment time period specific max iteration parameters.
+
+    Properties:
+        time_period: time period string
+        max_iteration: max iteration specific to time period. In the design of tm2py,
+            congested assignment is run only for AM and PM. For EA, MD, and EV, we run
+            extended assignment. See code here: tm2py/components/network/transit/transit_assign.py#L465-L466
+            Therefore, `max_iteration` here does not impact EA, MD, and EV, this setting
+            is only meaningful for AM and PM.
+    """
+
+    time_period: str = Field(max_length=4)
+    max_iteration: int = Field(ge=1, default=1)
+
+
+@dataclass(frozen=True)
+class CongestedTransitStopCriteria(ConfigItem):
+    """Congested transit assignment stopping criteria parameters.
+
+    Properties:
+        global_iteration: global iteration number
+        normalized_gap: normalized_gap
+        relative_gaps: relative gap
+        max_iterations: max iterations config, one for each time period
+    """
+
+    global_iteration: int = Field(ge=0)
+    normalized_gap: float = Field(gt=0)
+    relative_gap: float = Field(gt=0)
+    max_iterations: Tuple[CongestedTransitMaxIteration, ...] = Field()
+
+
+@dataclass(frozen=True)
 class CongestedAssnConfig(ConfigItem):
     "Congested transit assignment Configuration."
     trim_demand_before_congested_transit_assignment: bool = False
     output_trimmed_demand_report_path: str = Field(default=None)
-    normalized_gap: float = Field(default=0.25)
-    relative_gap: float = Field(default=0.25)
+    stop_criteria: Tuple[CongestedTransitStopCriteria, ...] = Field()
     use_peaking_factor: bool = False
     am_peaking_factor: float = Field(default=1.219)
     pm_peaking_factor: float = Field(default=1.262)
@@ -1352,6 +1384,14 @@ class TransitConfig(ConfigItem):
     vehicles: Optional[TransitVehicleConfig] = Field(
         default_factory=TransitVehicleConfig
     )
+
+    @validator("use_ccr")
+    def deprecate_capacitated_assignment(cls, value, values):
+        """Validate use_ccr is false."""
+        assert (
+            not value
+        ), "capacitated transit assignment is deprecated, please set use_ccr to false"
+        return value
 
 
 @dataclass(frozen=True)
@@ -1443,6 +1483,16 @@ class Configuration(ConfigItem):
                 values["run"]["end_iteration"] + 1
             ), f"'highway.relative_gaps must be the same length as end_iteration+1,\
                 that includes global iteration 0 to {values['run']['end_iteration']}'"
+        return value
+
+    @validator("transit", always=True)
+    def transit_stop_criteria_length(cls, value, values):
+        """Validate transit.congested.stop_criteria is a list of the same length as global iterations."""
+        if ("run" in values) & (value.congested_transit_assignment):
+            assert len(value.congested.stop_criteria) == (
+                values["run"]["end_iteration"]
+            ), f"'transit.relative_gaps must be the same length as end_iteration,\
+                that includes global iteration 1 to {values['run']['end_iteration']}'"
         return value
 
 

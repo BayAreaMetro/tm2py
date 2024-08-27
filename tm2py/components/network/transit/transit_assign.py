@@ -711,13 +711,24 @@ class TransitAssignment(Component):
             "assignment_period": _duration,
         }
 
-        _stop_criteria = {
-            "max_iterations": self.congested_transit_assn_max_iteration[
-                time_period.lower()
-            ],
-            "normalized_gap": self.config.congested.normalized_gap,
-            "relative_gap": self.config.congested.relative_gap,
-        }
+        stop_criteria_settings = self.config.congested.stop_criteria
+        # get the corresponding stop criteria for the global iteration
+        _stop_criteria = None
+        for item in stop_criteria_settings:
+            if item["global_iteration"] == self.controller.iteration:
+                _stop_criteria = {
+                    "max_iterations": [
+                        time.max_iteration
+                        for time in item.max_iterations
+                        if time.time_period.lower() == time_period.lower()
+                    ][0],
+                    "normalized_gap": item.normalized_gap,
+                    "relative_gap": item.relative_gap,
+                }
+        if _stop_criteria is None:
+            raise ValueError(
+                f"transit.congested.stop_criteria: Must specifify stop criteria for global iteration {self.controller.iteration}"
+            )
         add_volumes = False
         assign_transit(
             _tclass_specs,
