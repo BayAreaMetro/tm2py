@@ -109,13 +109,15 @@ class CreateTODScenarios(Component):
         emmebank.extra_function_parameters.el2 = "@capacity"
         emmebank.extra_function_parameters.el3 = "@ja"
         emmebank.extra_function_parameters.el4 = "@static_rel"
+        # get() and put() did not work for los reliability
+        # remove them from the reliability tmplt
         reliability_tmplt = (
             "* (1 + el4 + "
-            "( {factor[LOS_C]} * ( put(get(1).min.1.5) - {threshold[LOS_C]} + 0.01 ) ) * (get(1) .gt. {threshold[LOS_C]})"
-            "+ ( {factor[LOS_D]} * ( get(2) - {threshold[LOS_D]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_D]})"
-            "+ ( {factor[LOS_E]} * ( get(2) - {threshold[LOS_E]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_E]})"
-            "+ ( {factor[LOS_FL]} * ( get(2) - {threshold[LOS_FL]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_FL]})"
-            "+ ( {factor[LOS_FH]} * ( get(2) - {threshold[LOS_FH]} + 0.01 )  ) * (get(1) .gt. {threshold[LOS_FH]})"
+            "( {factor[LOS_C]} * ( ((volau + volad)/el2).min.1.5 - {threshold[LOS_C]} + 0.01 ) ) * (((volau + volad)/el2) .gt. {threshold[LOS_C]})"
+            "+ ( {factor[LOS_D]} * ( ((volau + volad)/el2).min.1.5 - {threshold[LOS_D]} + 0.01 )  ) * (((volau + volad)/el2) .gt. {threshold[LOS_D]})"
+            "+ ( {factor[LOS_E]} * ( ((volau + volad)/el2).min.1.5 - {threshold[LOS_E]} + 0.01 )  ) * (((volau + volad)/el2) .gt. {threshold[LOS_E]})"
+            "+ ( {factor[LOS_FL]} * ( ((volau + volad)/el2).min.1.5 - {threshold[LOS_FL]} + 0.01 )  ) * (((volau + volad)/el2) .gt. {threshold[LOS_FL]})"
+            "+ ( {factor[LOS_FH]} * ( ((volau + volad)/el2).min.1.5 - {threshold[LOS_FH]} + 0.01 )  ) * (((volau + volad)/el2) .gt. {threshold[LOS_FH]})"
             ")"
         )
         parameters = {
@@ -152,17 +154,24 @@ class CreateTODScenarios(Component):
                 },
             },
         }
-        # TODO: should have just 3 functions, and map the FT to the vdf
-        # TODO: could optimize expression (to review)
-        bpr_tmplt = "el1 * (1 + 0.20 * ((volau + volad)/el2/0.75)^6)"
-        # "el1 * (1 + 0.20 * put(put((volau + volad)/el2/0.75))*get(1))*get(2)*get(2)"
+        # rewrite bpr_tmplt to use put() and get() for nested functions
+        # keeping the original for reference
+        # bpr_tmplt = "el1 * (1 + 0.20 * ((volau + volad)/el2/0.75)^6)"
+        bpr_tmplt = "el1 * (1 + 0.20 * (put((volau + volad)/el2)/0.75) ** 6)"
+
         fixed_tmplt = "el1"
+
+        # rewrite akcelik_tmplt to use put() and get() for nested functions
+        # keeping the original for reference
+        # akcelik_tmplt = (
+        #     "(el1 + 60 * (0.25 *((volau + volad)/el2 - 1 + "
+        #     "(((volau + volad)/el2 - 1)^2 + el3 * (volau + volad)/el2)^0.5)))"
+        # )
         akcelik_tmplt = (
-            "(el1 + 60 * (0.25 *((volau + volad)/el2 - 1 + "
-            "(((volau + volad)/el2 - 1)^2 + el3 * (volau + volad)/el2)^0.5)))"
-            # "(el1 + 60 * (0.25 *(put(put((volau + volad)/el2) - 1) + "
-            # "(((get(2)*get(2) + (16 * el3 * get(1)^0.5))))"
+            "(el1 + 60 * (0.25 * (put((volau + volad)/el2) - 1 + "
+            "((get(1) - 1) ** 2 + el3 * get(1)) ** 0.5)))"
         )
+
         for f_id in ["fd1", "fd2"]:
             if emmebank.function(f_id):
                 emmebank.delete_function(f_id)
