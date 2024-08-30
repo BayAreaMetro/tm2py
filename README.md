@@ -12,38 +12,28 @@ A python package to run the San Francisco Bay Area's Travel Model.
 
 ## Installation
 
-Recommended install in a virtual environment.
+It is recommended that tm2install in a virtual environment.
 
 Stable (to come - use bleeding edge for now):
-
 ```bash
 pip install tm2py
 ```
 
-Bleeding edge:
-TODO: Which environment is this?  Does it still work for anyone?
-
-```bash
-conda env create -f environment.yml
-conda activate tm2py
-pip install git+https://github.com/bayareametro/tm2py@develop
-```
-
-The above directions didn't work for the MTC Windows environment.  The following method did work, on a machine with Emme-4.6.0 installed.  This required a compiled GDAL/Fiona package set for python 3.7, this can be found in the [lib directory](/lib/) , consisting of the following:
-
-1. GDAL-3.3.2-cp37-cp37m-win_amd64.whl
-2. pyproj-3.2.1-cp37-cp37m-win_amd64.whl
-3. Fiona-1.8.20-cp37-cp37m-win_amd64.whl
-4. Shapely-1.8.1-cp37-cp37m-win_amd64.whl
-5. geopandas-0.10.2-py2.py3-none-any.whl
-
-With these files in hand, the following installation instructions work:
-
+For Developers, it is recomended that the following instructions are used to install  
+*Note: The Python Environment has recently been updated to python 3.11, there may be some instabilites with current build*
 ```bat
-conda create -n tm2py python=3.7.6
+git clone --branch develop https://github.com/BayAreaMetro/tm2py.git
+
+conda create -n tm2py python=3.11.9
 conda activate tm2py
-pip install [the packages listed above, in that order]
+conda install gdal
+conda install pyproj
+conda install fiona
+conda install shapely
+conda install geopandas
+
 cd <path to tm2py git directory>
+git 
 pip install -e .
 conda env config vars set GDAL_VERSION=3.3.2
 ```
@@ -51,8 +41,16 @@ Finally, install the Emme python packages using the Emme GUI. This effectively c
 `C:\Users\%USERNAME%\.conda\envs\tm2py\Lib\site-packages\emme.pth` with the following contents, so you could create the file yourself.
 
 ```python
-import os, site; site.addsitedir("C:/Program Files/INRO/Emme/Emme 4/Emme-4.6.0/Python37/Lib/site-packages")
+import os, site; site.addsitedir(os.path.join(os.environ["EMMEPATH"], "Python311/Lib/site-packages"))
 ```
+
+*This should start Emme OpenPath, if it does not you should be able to manually set the correct version of emme such as below*
+```python
+import os, site
+os.environ["EMMEPATH"] = r"C:\Program Files\Bentley\OpenPaths\EMME 24.00.00"
+site.addsitedir(os.path.join(os.environ["EMMEPATH"], "Python311/Lib/site-packages"))
+```
+
 
 In troubleshooting, sometimes DLL load failure errors would occur which may be resolved by importing gdal before importing emme packages. Emme support explained this thusly:
 
