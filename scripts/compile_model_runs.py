@@ -7,7 +7,7 @@ from tqdm import tqdm
 from shapely.geometry import LineString
 
 input_dir = Path(
-    r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\run_result"
+    r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.2_remove_cosmetic_nodes\run_result"
 )
 output_dir = input_dir / "consolidated_3"
 
@@ -19,8 +19,8 @@ output_dir = input_dir / "consolidated_3"
 # print("writing")
 # input[["#link_id", "geometry"]].to_file(output_dir / "test_geom.geojson")
 
-scenarios_to_consolidate = (11, 12, 13, 14, 15)
-runs_to_consolidate = (3, 4)
+scenarios_to_consolidate = (12,)
+runs_to_consolidate = (15, 23, 24, 25)
 # %%
 
 
@@ -42,7 +42,7 @@ def read_file_and_tag(
         return None
 
     run = file.parent.parent.stem
-    run_number = int(run.split("_")[-1])
+    run_number = int(run.split("_")[1])
     if run_number not in runs_to_consolidate:
         return None
 
@@ -158,7 +158,59 @@ ft_cols = [col for col in links_wide_table.columns if "ft_" in col]
 
 links_wide_table["ft"] = links_wide_table[ft_cols].max(axis=1)
 links_wide_table = links_wide_table.drop(columns=ft_cols)
+#%%
+plotting_table = links_wide_table.head(10_000_000).dropna()
+print(plotting_table.shape)
 
+import matplotlib.pyplot as plt
+from scipy import stats
+for i in range(1, 7):
+    slicer = plotting_table["ft"] == i 
+    x = plotting_table.loc[slicer, "@volau_run24_scenAM"]
+    y = plotting_table.loc[slicer, "@volau_run25_scenAM"]
+    plt.scatter(x, y)
+    plt.xlabel("run 3")
+    plt.ylabel("run 19")
+    print(stats.linregress(x, y))
+    print(i)
+    # plt.show()
+#%%
+vol_pairs_to_compare = [
+    ("@volau_run23_scenAM", "@volau_run15_scenAM"), 
+    ("@volau_run23_scenAM", "@volau_run24_scenAM"), 
+    ("@volau_run23_scenAM", "@volau_run25_scenAM"), 
+]
+
+bases = []
+comparisons = []
+func_types = []
+slopes = []
+r_vals = []
+for base, compare in vol_pairs_to_compare:
+    print(base, compare)
+    stats_table = links_wide_table.dropna()
+    for i in range(1, 7):
+        slicer = stats_table["ft"] == i 
+        x = stats_table.loc[slicer, "@volau_run24_scenAM"]
+        y = stats_table.loc[slicer, "@volau_run25_scenAM"]
+        lingress = stats.linregress(x, y)
+        bases.append(base)
+        comparisons.append(compare)
+        func_types.append(i)
+        slopes.append(lingress.slope)
+        r_vals.append(lingress.rvalue)
+
+print(pd.DataFrame.from_dict(
+    dict(
+        bases = bases,
+        comparisons = comparisons,
+        func_types = func_types,
+        slopes = slopes,
+        r_vals = r_vals,
+    )
+).to_markdown())
+#%%
+import pyperclip
 # %%
 links_wide_table.to_file(
     Path(

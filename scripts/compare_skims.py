@@ -25,10 +25,10 @@ def read_matrix_as_long_df(path: Path, run_name):
     )
 
 
-a = read_matrix_as_long_df(
-    r"D:\TEMP\TM2.2.1.1-New_network_rerun\TM2.2.1.1_new_taz\skim_matrices\highway\HWYSKMAM_taz.omx",
-    "test",
-)
+# a = read_matrix_as_long_df(
+#     r"D:\TEMP\TM2.2.1.1-New_network_rerun\TM2.2.1.1_new_taz\skim_matrices\highway\HWYSKMAM_taz.omx",
+#     "test",
+# )
 # %%
 all_skims = []
 for skim_matrix_path in network_fid_path.rglob("*AM_taz.omx"):
