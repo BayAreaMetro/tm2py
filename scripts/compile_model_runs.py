@@ -21,6 +21,7 @@ output_dir = input_dir / "consolidated_3"
 
 scenarios_to_consolidate = (12,)
 runs_to_consolidate = (15, 23, 24, 25)
+# runs_to_consolidate = (15, 22)
 # %%
 
 
@@ -166,20 +167,30 @@ import matplotlib.pyplot as plt
 from scipy import stats
 for i in range(1, 7):
     slicer = plotting_table["ft"] == i 
-    x = plotting_table.loc[slicer, "@volau_run24_scenAM"]
-    y = plotting_table.loc[slicer, "@volau_run25_scenAM"]
-    plt.scatter(x, y)
-    plt.xlabel("run 3")
-    plt.ylabel("run 19")
+    x = plotting_table.loc[slicer, "@volau_run15_scenAM"]
+    y = plotting_table.loc[slicer, "@volau_run23_scenAM"]
+    plt.scatter(x, y, label=f'ft = {i}')
+    plt.xlabel("run 15")
+    plt.ylabel("run 22")
     print(stats.linregress(x, y))
     print(i)
     # plt.show()
+plt.legend()
 #%%
 vol_pairs_to_compare = [
     ("@volau_run23_scenAM", "@volau_run15_scenAM"), 
     ("@volau_run23_scenAM", "@volau_run24_scenAM"), 
     ("@volau_run23_scenAM", "@volau_run25_scenAM"), 
 ]
+rename_dict = {
+    "@volau_run15_scenAM": "emme 4.6.1",
+    "@volau_run23_scenAM": "emme Open Paths",
+    "@volau_run24_scenAM": "emme Open Paths Network Accelerate",
+    "@volau_run25_scenAM": "remove Cosmetic Nodes",
+}
+# vol_pairs_to_compare = [
+#     ("@volau_run15_scenAM", "@volau_run22_scenAM"), 
+# ]
 
 bases = []
 comparisons = []
@@ -191,8 +202,8 @@ for base, compare in vol_pairs_to_compare:
     stats_table = links_wide_table.dropna()
     for i in range(1, 7):
         slicer = stats_table["ft"] == i 
-        x = stats_table.loc[slicer, "@volau_run24_scenAM"]
-        y = stats_table.loc[slicer, "@volau_run25_scenAM"]
+        x = stats_table.loc[slicer, base]
+        y = stats_table.loc[slicer, compare]
         lingress = stats.linregress(x, y)
         bases.append(base)
         comparisons.append(compare)
@@ -200,7 +211,7 @@ for base, compare in vol_pairs_to_compare:
         slopes.append(lingress.slope)
         r_vals.append(lingress.rvalue)
 
-print(pd.DataFrame.from_dict(
+df = pd.DataFrame.from_dict(
     dict(
         bases = bases,
         comparisons = comparisons,
@@ -208,7 +219,12 @@ print(pd.DataFrame.from_dict(
         slopes = slopes,
         r_vals = r_vals,
     )
-).to_markdown())
+)
+df["bases"] = df["bases"].map(rename_dict)
+df["comparisons"] = df["comparisons"].map(rename_dict)
+df["slopes"] = df["slopes"].round(2)
+df["r_vals"] = df["r_vals"].round(2)
+print(df.to_markdown())
 #%%
 import pyperclip
 # %%
