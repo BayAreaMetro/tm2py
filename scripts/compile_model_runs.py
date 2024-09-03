@@ -188,13 +188,24 @@ rename_dict = {
     "@volau_run24_scenAM": "emme Open Paths Network Accelerate",
     "@volau_run25_scenAM": "remove Cosmetic Nodes",
 }
+
+ft_map = {
+    1: "Freeway",
+    2: "Expressway",
+    3: "Ramp",
+    4: "Divided Arterial",
+    5: "Undivided Arterial",
+    6: "Collector",
+    7: "Local",
+    8: "Connector"
+}
 # vol_pairs_to_compare = [
 #     ("@volau_run15_scenAM", "@volau_run22_scenAM"), 
 # ]
 
 bases = []
 comparisons = []
-func_types = []
+facility_type = []
 slopes = []
 r_vals = []
 for base, compare in vol_pairs_to_compare:
@@ -207,23 +218,24 @@ for base, compare in vol_pairs_to_compare:
         lingress = stats.linregress(x, y)
         bases.append(base)
         comparisons.append(compare)
-        func_types.append(i)
+        facility_type.append(i)
         slopes.append(lingress.slope)
         r_vals.append(lingress.rvalue)
 
 df = pd.DataFrame.from_dict(
     dict(
-        bases = bases,
-        comparisons = comparisons,
-        func_types = func_types,
+        base = bases,
+        comparison = comparisons,
+        facility_type = facility_type,
         slopes = slopes,
         r_vals = r_vals,
     )
 )
-df["bases"] = df["bases"].map(rename_dict)
-df["comparisons"] = df["comparisons"].map(rename_dict)
+df["base"] = df["base"].map(rename_dict)
+df["comparison"] = df["comparison"].map(rename_dict)
 df["slopes"] = df["slopes"].round(2)
 df["r_vals"] = df["r_vals"].round(2)
+df["facility_type"] = df["facility_type"].map(ft_map)
 print(df.to_markdown())
 #%%
 import pyperclip
