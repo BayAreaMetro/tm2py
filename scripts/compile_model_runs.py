@@ -7,7 +7,7 @@ from tqdm import tqdm
 from shapely.geometry import LineString
 
 input_dir = Path(
-    r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.2_remove_cosmetic_nodes\run_result"
+    r"Z:\MTC\US0024934.9168\Task_3_runtime_improvements\3.1_network_fidelity\run_result"
 )
 output_dir = input_dir / "consolidated_3"
 
@@ -20,7 +20,7 @@ output_dir = input_dir / "consolidated_3"
 # input[["#link_id", "geometry"]].to_file(output_dir / "test_geom.geojson")
 
 scenarios_to_consolidate = (12,)
-runs_to_consolidate = (15, 23, 24, 25)
+runs_to_consolidate = (15, 22, 26)
 # runs_to_consolidate = (15, 22)
 # %%
 
@@ -154,6 +154,29 @@ links_wide_table = combine_tables(all_links_no_none, ["#link_id", "geometry"])
 links_wide_table["direction"] = links_wide_table["geometry"].apply(
     get_linestring_direction
 )
+#%%
+# a little side quest
+
+rename_dict = {
+    15: "run 15 old code, emme 4.6.1",
+    22: "run 22 previous version of pr, open paths",
+    26: "run 26 final version of pr, emme 4.6.1"
+}
+ft_map = {
+    1.: "Freeway",
+    2.: "Expressway",
+    3.: "Ramp",
+    4.: "Divided Arterial",
+    5.: "Undivided Arterial",
+    6.: "Collector",
+    7.: "Local",
+    8.: "Connector",
+    99.: "Service Road "
+}
+
+all_tables = pd.concat(all_links_no_none)
+print(pd.crosstab(all_tables["run_number"].map(rename_dict), all_tables["@ft"]).rename(columns=ft_map).to_markdown())
+
 # %%
 ft_cols = [col for col in links_wide_table.columns if "ft_" in col]
 
@@ -167,28 +190,34 @@ import matplotlib.pyplot as plt
 from scipy import stats
 for i in range(1, 7):
     slicer = plotting_table["ft"] == i 
-    x = plotting_table.loc[slicer, "@volau_run15_scenAM"]
-    y = plotting_table.loc[slicer, "@volau_run23_scenAM"]
+    x = plotting_table.loc[slicer, "@volau_run22_scenAM"]
+    y = plotting_table.loc[slicer, "@volau_run26_scenAM"]
     plt.scatter(x, y, label=f'ft = {i}')
-    plt.xlabel("run 15")
-    plt.ylabel("run 22")
+    plt.xlabel("run 22")
+    plt.ylabel("run 26")
     print(stats.linregress(x, y))
     print(i)
-    # plt.show()
+    plt.show()
 plt.legend()
 #%%
 vol_pairs_to_compare = [
-    ("@volau_run23_scenAM", "@volau_run15_scenAM"), 
-    ("@volau_run23_scenAM", "@volau_run24_scenAM"), 
-    ("@volau_run23_scenAM", "@volau_run25_scenAM"), 
+    ("@volau_run15_scenAM", "@volau_run26_scenAM"), 
+    ("@volau_run22_scenAM", "@volau_run26_scenAM"), 
+    # ("@volau_run23_scenAM", "@volau_run25_scenAM"), 
 ]
 rename_dict = {
-    "@volau_run15_scenAM": "emme 4.6.1",
+    "@volau_run15_scenAM": "run 15 old code, emme 4.6.1",
+    "@volau_run22_scenAM": "run 22 previous version of pr, open paths",
     "@volau_run23_scenAM": "emme Open Paths",
     "@volau_run24_scenAM": "emme Open Paths Network Accelerate",
     "@volau_run25_scenAM": "remove Cosmetic Nodes",
+    "@volau_run26_scenAM": "run 26 final version of pr, emme 4.6.1"
 }
 
+# vs 22
+# add rmse
+# add total vmt for vmt
+# check number fo links
 ft_map = {
     1: "Freeway",
     2: "Expressway",
@@ -208,6 +237,12 @@ comparisons = []
 facility_type = []
 slopes = []
 r_vals = []
+
+rmse = []
+base_vmt = []
+comparison_vmt = []
+
+
 for base, compare in vol_pairs_to_compare:
     print(base, compare)
     stats_table = links_wide_table.dropna()
@@ -216,11 +251,16 @@ for base, compare in vol_pairs_to_compare:
         x = stats_table.loc[slicer, base]
         y = stats_table.loc[slicer, compare]
         lingress = stats.linregress(x, y)
+        
         bases.append(base)
         comparisons.append(compare)
         facility_type.append(i)
         slopes.append(lingress.slope)
         r_vals.append(lingress.rvalue)
+        rmse.append(round(((x-y)**2).mean()**0.5,2))
+
+        base_vmt.append(x.sum())
+        comparison_vmt.append(y.sum())
 
 df = pd.DataFrame.from_dict(
     dict(
@@ -229,6 +269,9 @@ df = pd.DataFrame.from_dict(
         facility_type = facility_type,
         slopes = slopes,
         r_vals = r_vals,
+        rmse = rmse,
+        base_vmt = base_vmt,
+        comparison_vmt = comparison_vmt,
     )
 )
 df["base"] = df["base"].map(rename_dict)
