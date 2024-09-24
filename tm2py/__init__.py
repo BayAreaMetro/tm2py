@@ -11,6 +11,7 @@ from .config import (
 from .controller import RunController
 from .examples import get_example
 from .logger import Logger, LogStartEnd
+from .setup_model.setup import SetupModel
 
 __all__ = [
     # component
@@ -24,6 +25,8 @@ __all__ = [
     "TimePeriodConfig",
     # controller
     "RunController",
+    # setupmodel
+    "SetupModel",
     # logger
     "Logger",
     "LogStartEnd",
