@@ -132,67 +132,85 @@ class HighwayAssignment(Component):
     def run(self):
         """Run highway assignment."""
         demand = PrepareHighwayDemand(self.controller)
-        if self.controller.iteration >= 0:
-            demand.run()
-        else:
+        if self.controller.iteration == 0:
             self.highway_emmebank.zero_matrix
+            if self.controller.config.warmstart.warmstart:
+                if self.controller.config.warmstart.use_warmstart_demand:
+                    demand.run()
+        else:
+            demand.run()
+
+        calculate_reliability = self.config.reliability
+
         for time in self.time_period_names:
             scenario = self.highway_emmebank.scenario(time)
             with self._setup(scenario, time):
                 iteration = self.controller.iteration
+                warmstart = self.controller.config.warmstart.warmstart
                 assign_classes = [
-                    AssignmentClass(c, time, iteration) for c in self.config.classes
+                    AssignmentClass(
+                        c, time, iteration, calculate_reliability, warmstart
+                    )
+                    for c in self.config.classes
                 ]
                 if iteration > 0:
                     self._copy_maz_flow(scenario)
                 else:
                     self._reset_background_traffic(scenario)
                 self._create_skim_matrices(scenario, assign_classes)
-                assign_spec = self._get_assignment_spec(
-                    assign_classes, path_analysis=False
-                )
-                # self.logger.log_dict(assign_spec, level="DEBUG")
-                with self.logger.log_start_end(
-                    "Run SOLA assignment with path analyses", level="INFO"
-                ):
-                    assign = self.controller.emme_manager.tool(
-                        "inro.emme.traffic_assignment.sola_traffic_assignment"
+                # calculate highway reliability in global iteration 0 and 1 only
+                # this requires the assignment to be run twice
+                if (iteration <= 1) & (calculate_reliability):
+                    # set path analysis to False to avoid skimming
+                    assign_spec = self._get_assignment_spec(
+                        assign_classes, path_analysis=False
                     )
-                    assign(assign_spec, scenario, chart_log_interval=1)
 
-                # calucaltes link level LOS based reliability
-                net_calc = NetworkCalculator(self.controller, scenario)
+                    with self.logger.log_start_end(
+                        "Run SOLA assignment without path analyses", level="INFO"
+                    ):
+                        assign = self.controller.emme_manager.tool(
+                            "inro.emme.traffic_assignment.sola_traffic_assignment"
+                        )
+                        assign(assign_spec, scenario, chart_log_interval=1)
 
-                exf_pars = scenario.emmebank.extra_function_parameters
-                vdfs = [
-                    f for f in scenario.emmebank.functions() if f.type == "VOLUME_DELAY"
-                ]
-                for function in vdfs:
-                    expression = function.expression
-                    for el in ["el1", "el2", "el3", "el4"]:
-                        expression = expression.replace(el, getattr(exf_pars, el))
-                    if "@static_rel" in expression:
-                        # split function into time component and reliability component
-                        time_expr, reliability_expr = expression.split(
-                            "*(1+@static_rel+"
-                        )
-                        net_calc(
-                            "@auto_time",
-                            time_expr,
-                            {"link": "vdf=%s" % function.id[2:]},
-                        )
-                        net_calc(
-                            "@reliability",
-                            "(@static_rel+" + reliability_expr,
-                            {"link": "vdf=%s" % function.id[2:]},
-                        )
-                        net_calc("@reliability_sq", "@reliability**2", {"link": "all"})
+                    # calucaltes link level LOS based reliability
+                    net_calc = NetworkCalculator(self.controller, scenario)
+
+                    exf_pars = scenario.emmebank.extra_function_parameters
+                    vdfs = [
+                        f
+                        for f in scenario.emmebank.functions()
+                        if f.type == "VOLUME_DELAY"
+                    ]
+                    for function in vdfs:
+                        expression = function.expression
+                        for el in ["el1", "el2", "el3", "el4"]:
+                            expression = expression.replace(el, getattr(exf_pars, el))
+                        if "@static_rel" in expression:
+                            # split function into time component and reliability component
+                            time_expr, reliability_expr = expression.split(
+                                "*(1+@static_rel+"
+                            )
+                            net_calc(
+                                "@auto_time",
+                                time_expr,
+                                {"link": "vdf=%s" % function.id[2:]},
+                            )
+                            net_calc(
+                                "@reliability",
+                                "(@static_rel+" + reliability_expr,
+                                {"link": "vdf=%s" % function.id[2:]},
+                            )
+                            net_calc(
+                                "@reliability_sq", "@reliability**2", {"link": "all"}
+                            )
 
                 assign_spec = self._get_assignment_spec(
                     assign_classes, path_analysis=True
                 )
                 with self.logger.log_start_end(
-                    "Run SOLA assignment with path analyses and highway reliability",
+                    "Run SOLA assignment with path analyses",
                     level="INFO",
                 ):
                     assign = self.controller.emme_manager.tool(
@@ -283,6 +301,14 @@ class HighwayAssignment(Component):
                         self.logger.debug(
                             f"Create matrix name: {matrix_name}, id: {matrix.id}"
                         )
+                    # if not skimming reliability, set reliability matrices to 0
+                    if not self.config.reliability:
+                        if ("rlbty" in matrix_name) | ("autotime" in matrix_name):
+                            data = self._matrix_cache.get_data(matrix_name)
+                            # NOTE: sets values for external zones as well
+                            data = 0 * data
+                            self._matrix_cache.set_data(matrix_name, data)
+
                     self._skim_matrices.append(matrix)
 
     def _get_assignment_spec(
@@ -297,7 +323,18 @@ class HighwayAssignment(Component):
             Emme specification for SOLA traffic assignment
 
         """
-        relative_gap = self.config.relative_gap
+        relative_gaps = self.config.relative_gaps
+        # get the corresponding relative gap for the current iteration
+        relative_gap = None
+        if relative_gaps and isinstance(relative_gaps, tuple):
+            for item in relative_gaps:
+                if item["global_iteration"] == self.controller.iteration:
+                    relative_gap = item["relative_gap"]
+                    break
+            if relative_gap is None:
+                raise ValueError(
+                    f"RelativeGapConfig: Must specifify a value for global iteration {self.controller.iteration}"
+                )
         max_iterations = self.config.max_iterations
         # NOTE: mazmazvol as background traffic in link.data1 ("ul1")
         base_spec = {
@@ -413,17 +450,23 @@ class HighwayAssignment(Component):
 class AssignmentClass:
     """Highway assignment class, represents data from config and conversion to Emme specs."""
 
-    def __init__(self, class_config, time_period, iteration):
+    def __init__(self, class_config, time_period, iteration, reliability, warmstart):
         """Constructor of Highway Assignment class.
 
         Args:
             class_config (_type_): _description_
             time_period (_type_): _description_
             iteration (_type_): _description_
+            reliability (bool): include reliability in path analysis or not.
+                If true, reliability is included in path analysis using link field.
+                If false, reliability is not included in path analysis, reliability skim is overwritten as 0.
+            warmstart (bool): True if assigning warmstart demand
         """
         self.class_config = class_config
         self.time_period = time_period
         self.iteration = iteration
+        self.skim_reliability = reliability
+        self.warmstart = warmstart
         self.name = class_config["name"].lower()
         self.skims = class_config.get("skims", [])
 
@@ -440,7 +483,10 @@ class AssignmentClass:
             class specification used in the SOLA assignment.
         """
         if self.iteration == 0:
-            demand_matrix = 'ms"zero"'
+            if not self.warmstart:
+                demand_matrix = 'ms"zero"'
+            else:
+                demand_matrix = f'mf"{self.time_period}_{self.name}"'
         else:
             demand_matrix = f'mf"{self.time_period}_{self.name}"'
         class_spec = {
@@ -474,7 +520,10 @@ class AssignmentClass:
             class specification used in the SOLA assignment.
         """
         if self.iteration == 0:
-            demand_matrix = 'ms"zero"'
+            if not self.warmstart:
+                demand_matrix = 'ms"zero"'
+            else:
+                demand_matrix = f'mf"{self.time_period}_{self.name}"'
         else:
             demand_matrix = f'mf"{self.time_period}_{self.name}"'
         class_spec = {
@@ -513,6 +562,17 @@ class AssignmentClass:
         for skim_type in self.skims:
             if skim_type == "time":
                 continue
+            # if not skimming reliability in all global iterations
+            if not self.skim_reliability:
+                if skim_type in ["rlbty", "autotime"]:
+                    continue
+            # if skimming reliability
+            # reliability is only skimmed in global iteration 0 and 1
+            if self.iteration > 1:
+                if skim_type == "rlbty":
+                    continue
+                if skim_type == "autotime":
+                    continue
             if "_" in skim_type:
                 skim_type, group = skim_type.split("_")
                 matrix_name = f"mf{self.time_period}_{self.name}_{skim_type}_{group}"

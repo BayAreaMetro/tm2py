@@ -213,7 +213,6 @@ class TransitSkim(Component):
                 )
             else:
                 _matrix.description = _desc
-            # _name = f"{_skprop.name}"
 
             self._skim_matrices[_name] = _matrix
             _tp_tclass_skprop_list.append(_name)
@@ -248,11 +247,6 @@ class TransitSkim(Component):
             self.skim_walk_wait_boards_fares(time_period, transit_class)
         with self.controller.emme_manager.logbook_trace("In-vehicle time by mode"):
             self.skim_invehicle_time_by_mode(time_period, transit_class, use_ccr)
-        # with self.controller.emme_manager.logbook_trace(
-        #    "Transfer boarding time penalty",
-        #    "Drive toll"
-        # ):
-        #    self.skim_penalty_toll(time_period, transit_class)
         with self.controller.emme_manager.logbook_trace(
             "Drive distance and time",
             "Walk auxiliary time, walk access time and walk egress time",
@@ -263,10 +257,6 @@ class TransitSkim(Component):
         if use_ccr:
             with self.controller.emme_manager.logbook_trace("CCR related skims"):
                 self.skim_reliability_crowding_capacity(time_period, transit_class)
-        # if congested_transit_assignment:
-
-        # self.mask_above_max_transfers(time_period, transit_class) #TODO: need to test
-        # self.mask_if_not_required_modes(time_period, transit_class) #TODO: need to test
 
     def skim_walk_wait_boards_fares(self, time_period: str, transit_class: str):
         """Skim wait, walk, board, and fares for a given time period and transit assignment class.
@@ -944,14 +934,6 @@ class TransitSkim(Component):
         _matrices = self.emmebank_skim_matrices(
             time_periods=[time_period], transit_classes=[transit_class]
         )
-        #        matrices = {}
-        #        matrices_growth = {} # matrices need to be multiplied by 100
-
-        #        for skim in _matrices.keys():
-        #            if ("BOARDS" in skim) or ("XBOATIME" in skim):
-        #                matrices[skim] = _matrices[skim]
-        #            else:
-        #                matrices_growth[skim] = _matrices[skim]
 
         with OMXManager(
             omx_file_path,
@@ -962,16 +944,6 @@ class TransitSkim(Component):
             growth_factor=1,
         ) as omx_file:
             omx_file.write_matrices(_matrices)
-
-    #        with OMXManager(
-    #            omx_file_path,
-    #            "a",
-    #            self.scenarios[time_period],
-    #            matrix_cache=self.matrix_cache[time_period],
-    #            mask_max_value=1e7,
-    #            growth_factor=100
-    #        ) as omx_file:
-    #            omx_file.write_matrices(matrices_growth)
 
     def _log_debug_report(self, _time_period):
         num_zones = len(self.scenarios[_time_period].zone_numbers)

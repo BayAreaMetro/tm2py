@@ -88,6 +88,10 @@ class WarmStartConfig(ConfigItem):
 
     Properties:
         warmstart: Boolean indicating whether warmstart demand matrices are used.
+            If set to True, the global iteration 0 will either assign warmstart demand for highway and transit, or skip the assignment and just use warmstart skims.
+            If set to False, the global iteration 0 will assign zero demand for highway and transit.
+        warmstart_skim: Boolean indicating whether to use warmstart skims. If set to True, then skips warmstart assignment in iteraton 0.
+        warmstart_demand: Boolean indicating whether to use warmstart demand. If set to True, then runs warmstart assignment in iteration 0.
         warmstart_check: if on, check that demand matrix files exist.
         household_highway_demand_file: file name template of warmstart household highway demand matrices.
         household_transit_demand_file: file name template of warmstart household transit demand matrices.
@@ -95,13 +99,24 @@ class WarmStartConfig(ConfigItem):
         internal_external_highway_demand_file: file name template of warmstart internal-external highway demand matrices.
     """
 
-    warmstart: Optional[bool] = Field(default=False)
+    warmstart: bool = Field(default=True)
+    use_warmstart_skim: bool = Field(default=True)
+    use_warmstart_demand: bool = Field(default=False)
     warmstart_check: Optional[bool] = Field(default=False)
     household_highway_demand_file: Optional[str] = Field(default="")
     household_transit_demand_file: Optional[str] = Field(default="")
     air_passenger_highway_demand_file: Optional[str] = Field(default="")
     internal_external_highway_demand_file: Optional[str] = Field(default="")
     truck_highway_demand_file: Optional[str] = Field(default="")
+
+    @validator("warmstart", allow_reuse=True)
+    def check_warmstart_method(cls, value, values):
+        """When warmstart, either skim or demand should be true."""
+        if values.get("warmstart"):
+            assert (
+                values.use_warmstart_skim != values.use_warmstart_demand
+            ), f"'warmstart is on, only one of' {values.use_warmstart_skim} and {values.use_warmstart_demand} can be true"
+        return value
 
 
 @dataclass(frozen=True)
@@ -119,7 +134,6 @@ class RunConfig(ConfigItem):
         global_iteration_components: list of component to run at every subsequent
             iteration (max(1, start_iteration) to end_iteration), in order.
         final_components: list of components to run after final iteration, in order
-        warmstart: warmstart configuration, including file locations.
     """
 
     initial_components: Tuple[ComponentNames, ...]
@@ -127,7 +141,6 @@ class RunConfig(ConfigItem):
     final_components: Tuple[ComponentNames, ...]
     start_iteration: int = Field(ge=0)
     end_iteration: int = Field(gt=0)
-    warmstart: WarmStartConfig = WarmStartConfig()
     start_component: Optional[Union[ComponentNames, EmptyString]] = Field(default="")
 
     @validator("end_iteration", allow_reuse=True)
@@ -229,8 +242,6 @@ class TimePeriodConfig(ConfigItem):
             capacites in the highway network
         emme_scenario_id: scenario ID to use for Emme per-period
             assignment (highway and transit) scenarios
-        congested_transit_assn_max_iteration: max iterations in congested
-            transit assignment stopping criteria
     """
 
     name: str = Field(max_length=4)
@@ -238,7 +249,6 @@ class TimePeriodConfig(ConfigItem):
     length_hours: float = Field(gt=0)
     highway_capacity_factor: float = Field(gt=0)
     emme_scenario_id: int = Field(ge=1)
-    congested_transit_assn_max_iteration: int = Field(ge=1)
     description: Optional[str] = Field(default="")
 
 
@@ -705,6 +715,19 @@ class ClassDemandConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class HighwayRelativeGapConfig(ConfigItem):
+    """Highway assignment relative gap parameters.
+
+    Properties:
+        global_iteration: global iteration number
+        relative_gap: relative gap
+    """
+
+    global_iteration: int = Field(ge=0)
+    relative_gap: float = Field(gt=0)
+
+
+@dataclass(frozen=True)
 class HighwayClassConfig(ConfigItem):
     """Highway assignment class definition.
 
@@ -906,7 +929,7 @@ class HighwayConfig(ConfigItem):
     Properties:
         generic_highway_mode_code: single character unique mode ID for entire
             highway network (no excluded_links)
-        relative_gap: target relative gap stopping criteria
+        relative_gaps: relative gaps for assignment convergence, specific to global iteration, see HighwayRelativeGapConfig
         max_iterations: maximum iterations stopping criteria
         area_type_buffer_dist_miles: used to in calculation to categorize link @areatype
             The area type is determined based on the average density of nearby
@@ -924,10 +947,19 @@ class HighwayConfig(ConfigItem):
             see HighwayClassConfig
         capclass_lookup: index cross-reference table from the link @capclass value
             to the free-flow speed, capacity, and critical speed values
+        interchange_nodes_file: relative path to the interchange nodes file, this is
+            used for calculating highway reliability
+        apply_msa_demand: average highway demand with previous iterations'. Default to True.
+        reliability: bool to skim highway reliability. Default to true. If true, assignment
+            will be run twice in global iterations 0 (warmstart) and 1, to calculate reliability,
+            assignment will be run only once in global iterations 2 and 3,
+            reliability skim will stay the same as global iteration 1.
+            If false, reliability will not be calculated nor skimmed in all global
+            iterations, and the resulting reliability skims will be 0.
     """
 
     generic_highway_mode_code: str = Field(min_length=1, max_length=1)
-    relative_gap: float = Field(ge=0)
+    relative_gaps: Tuple[HighwayRelativeGapConfig, ...] = Field()
     max_iterations: int = Field(ge=0)
     area_type_buffer_dist_miles: float = Field(gt=0)
     drive_access_output_skim_path: Optional[str] = Field(default=None)
@@ -939,6 +971,8 @@ class HighwayConfig(ConfigItem):
     classes: Tuple[HighwayClassConfig, ...] = Field()
     capclass_lookup: Tuple[HighwayCapClassConfig, ...] = Field()
     interchange_nodes_file: str = Field()
+    apply_msa_demand: bool = True
+    reliability: bool = Field(default=True)
 
     @validator("output_skim_filename_tmpl")
     def valid_skim_template(value):
@@ -1148,6 +1182,75 @@ class TransitClassConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class ManualJourneyLevelsConfig(ConfigItem):
+    """Manual Journey Level Specification"""
+
+    level_id: int
+    group_fare_systems: Tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class TransitJourneyLevelsConfig(ConfigItem):
+    """Transit manual journey levels structure."""
+
+    use_algorithm: bool = False
+    """
+    The original translation from Cube to Emme used an algorithm to, as faithfully as possible, reflect transfer fares via journey levels. 
+    The algorithm examines fare costs and proximity of transit services to create a set of journey levels that reflects transfer costs. 
+    While this algorithm works well, the Bay Area's complex fare system results in numerous journey levels specific to operators with low ridership. 
+    The resulting assignment compute therefore expends a lot of resources on these operators. 
+    Set this parameter to `True` to use the algorithm. Exactly one of `use_algorithm` or `specify_manually` must be `True`. 
+    """
+    specify_manually: bool = True
+    """
+    An alternative to using an algorithm to specify the journey levels is to use specify them manually. 
+    If this option is set to `True`, the `manual` parameter can be used to assign fare systems to faresystem groups (or journey levels). 
+    Consider, for example, the following three journey levels: 0 - has yet to board transit; 1 - has boarded SF Muni; 2 - has boarded all other transit systems. 
+    To specify this configuration, a single `manual` entry identifying the SF Muni fare systems is needed. 
+    The other faresystem group is automatically generated in the code with the rest of the faresystems which are not specified in any of the groups.
+    See the `manual` entry for an example.
+    """
+    manual: Optional[Tuple[ManualJourneyLevelsConfig, ...]] = (
+        ManualJourneyLevelsConfig(level_id=1, group_fare_systems=(25,)),
+    )
+    """
+    If 'specify_manually' is set to `True`, there should be at least one faresystem group specified here.
+    The format includes two entries: `level_id`, which is the serial number of the group specified, 
+    and `group_fare_system`, which is a list of all faresystems belonging to that group.
+    For example, to specify MUNI as one faresystem group, the right configuration would be:
+    [[transit.journey_levels.manual]]
+    level_id = 1
+    group_fare_systems = [25]
+    If there are multiple groups required to be specified, for example, MUNI in one and Caltrain in the other group,
+    it can be achieved by adding another entry of `manual`, like:
+    [[transit.journey_levels.manual]]
+    level_id = 1
+    group_fare_systems = [25]
+    [[transit.journey_levels.manual]]
+    level_id = 2
+    group_fare_systems = [12,14]
+    
+    """
+
+    @validator("specify_manually")
+    def check_exclusivity(cls, v, values):
+        """Valdiates that exactly one of specify_manually and use_algorithm is True"""
+        use_algorithm = values.get("use_algorithm")
+        assert (
+            use_algorithm != v
+        ), 'Exactly one of "use_algorithm" or "specify_manually" must be True.'
+        return v
+
+    @validator("manual", always=True)
+    def check_manual(cls, v, values):
+        if values.get("specify_manually"):
+            assert (
+                v is not None and len(v) > 0
+            ), "If 'specify_manually' is True, 'manual' cannot be None or empty."
+        return v
+
+
+@dataclass(frozen=True)
 class AssignmentStoppingCriteriaConfig(ConfigItem):
     "Assignment stop configuration parameters."
     max_iterations: int
@@ -1188,12 +1291,45 @@ class EawtWeightsConfig(ConfigItem):
 
 
 @dataclass(frozen=True)
+class CongestedTransitMaxIteration(ConfigItem):
+    """Congested transit assignment time period specific max iteration parameters.
+
+    Properties:
+        time_period: time period string
+        max_iteration: max iteration specific to time period. In the design of tm2py,
+            congested assignment is run only for AM and PM. For EA, MD, and EV, we run
+            extended assignment. See code here: tm2py/components/network/transit/transit_assign.py#L465-L466
+            Therefore, `max_iteration` here does not impact EA, MD, and EV, this setting
+            is only meaningful for AM and PM.
+    """
+
+    time_period: str = Field(max_length=4)
+    max_iteration: int = Field(ge=1, default=1)
+
+
+@dataclass(frozen=True)
+class CongestedTransitStopCriteria(ConfigItem):
+    """Congested transit assignment stopping criteria parameters.
+
+    Properties:
+        global_iteration: global iteration number
+        normalized_gap: normalized_gap
+        relative_gaps: relative gap
+        max_iterations: max iterations config, one for each time period
+    """
+
+    global_iteration: int = Field(ge=0)
+    normalized_gap: float = Field(gt=0)
+    relative_gap: float = Field(gt=0)
+    max_iterations: Tuple[CongestedTransitMaxIteration, ...] = Field()
+
+
+@dataclass(frozen=True)
 class CongestedAssnConfig(ConfigItem):
     "Congested transit assignment Configuration."
     trim_demand_before_congested_transit_assignment: bool = False
     output_trimmed_demand_report_path: str = Field(default=None)
-    normalized_gap: float = Field(default=0.25)
-    relative_gap: float = Field(default=0.25)
+    stop_criteria: Tuple[CongestedTransitStopCriteria, ...] = Field()
     use_peaking_factor: bool = False
     am_peaking_factor: float = Field(default=1.219)
     pm_peaking_factor: float = Field(default=1.262)
@@ -1205,6 +1341,7 @@ class TransitConfig(ConfigItem):
 
     modes: Tuple[TransitModeConfig, ...]
     classes: Tuple[TransitClassConfig, ...]
+    journey_levels: TransitJourneyLevelsConfig
     apply_msa_demand: bool
     value_of_time: float
     walk_speed: float
@@ -1248,6 +1385,14 @@ class TransitConfig(ConfigItem):
         default_factory=TransitVehicleConfig
     )
 
+    @validator("use_ccr")
+    def deprecate_capacitated_assignment(cls, value, values):
+        """Validate use_ccr is false."""
+        assert (
+            not value
+        ), "capacitated transit assignment is deprecated, please set use_ccr to false"
+        return value
+
 
 @dataclass(frozen=True)
 class EmmeConfig(ConfigItem):
@@ -1282,6 +1427,7 @@ class Configuration(ConfigItem):
 
     scenario: ScenarioConfig
     run: RunConfig
+    warmstart: WarmStartConfig
     time_periods: Tuple[TimePeriodConfig, ...]
     household: HouseholdConfig
     air_passenger: AirPassengerConfig
@@ -1327,6 +1473,26 @@ class Configuration(ConfigItem):
             assert (
                 value.maz_to_maz.skim_period in time_period_names
             ), "maz_to_maz -> skim_period -> name not found in time_periods list"
+        return value
+
+    @validator("highway", always=True)
+    def relative_gap_length(cls, value, values):
+        """Validate highway.relative_gaps is a list of the same length as global iterations."""
+        if "run" in values:
+            assert len(value.relative_gaps) == (
+                values["run"]["end_iteration"] + 1
+            ), f"'highway.relative_gaps must be the same length as end_iteration+1,\
+                that includes global iteration 0 to {values['run']['end_iteration']}'"
+        return value
+
+    @validator("transit", always=True)
+    def transit_stop_criteria_length(cls, value, values):
+        """Validate transit.congested.stop_criteria is a list of the same length as global iterations."""
+        if ("run" in values) & (value.congested_transit_assignment):
+            assert len(value.congested.stop_criteria) == (
+                values["run"]["end_iteration"]
+            ), f"'transit.relative_gaps must be the same length as end_iteration,\
+                that includes global iteration 1 to {values['run']['end_iteration']}'"
         return value
 
 

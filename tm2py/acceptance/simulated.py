@@ -386,7 +386,36 @@ class Simulated:
 
         return
 
-    
+    def _make_simulated_maz_data(self):
+        root_dir = self.scenario_dict["scenario"]["root_dir"]
+        in_file = self.scenario_dict["scenario"]["maz_landuse_file"]
+
+        df = pd.read_csv(os.path.join(root_dir, in_file))
+
+        index_file = os.path.join("inputs", "landuse", "mtc_final_network_zone_seq.csv")
+
+        index_df = pd.read_csv(index_file)
+        join_df = index_df.rename(columns={"N": "MAZ_ORIGINAL"})[
+            ["MAZ_ORIGINAL", "MAZSEQ"]
+        ].copy()
+
+        self.simulated_maz_data_df = pd.merge(
+            df,
+            join_df,
+            how="left",
+            on="MAZ_ORIGINAL",
+        )
+
+        self._make_taz_district_crosswalk()
+
+        return
+
+    def _make_taz_district_crosswalk(self):
+        df = self.simulated_maz_data_df[["TAZ_ORIGINAL", "DistID"]].copy()
+        df = df.rename(columns={"TAZ_ORIGINAL": "taz", "DistID": "district"})
+        self.taz_to_district_df = df.drop_duplicates().reset_index(drop=True)
+
+        return
 
     def _reduce_simulated_rail_access_summaries(self):
         if not self.transit_mode_dict:
