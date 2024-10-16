@@ -8,6 +8,8 @@ import toml
 class Canonical:
     canonical_dict: dict
     canonical_file: str
+    scenario_dict: dict
+    scenario_file: str
 
     census_2010_to_maz_crosswalk_df: pd.DataFrame
 
@@ -19,6 +21,7 @@ class Canonical:
 
     standard_to_emme_node_crosswalk_df: pd.DataFrame
     pems_to_link_crosswalk_df: pd.DataFrame
+    taz_to_district_df: pd.DataFrame
 
     ALL_DAY_WORD = "daily"
     WALK_ACCESS_WORD = "Walk"
@@ -64,18 +67,25 @@ class Canonical:
         with open(self.canonical_file, "r", encoding="utf-8") as toml_file:
             self.canonical_dict = toml.load(toml_file)
 
+        with open(self.scenario_file, "r", encoding="utf-8") as toml_file:
+            self.scenario_dict = toml.load(toml_file)
+        
+
+
         return
 
     def __init__(
-        self, canonical_file: str, on_board_assign_summary: bool = False
+        self, canonical_file: str, scenario_file: str = None, on_board_assign_summary: bool = False
     ) -> None:
         self.canonical_file = canonical_file
+        self.scenario_file = scenario_file
         self._load_configs()
         self._make_canonical_agency_names_dict()
         self._make_canonical_station_names_dict()
         self._read_standard_to_emme_transit()
         self._make_tm2_to_gtfs_mode_crosswalk()
         self._read_standard_transit_to_survey_crosswalk()
+        self._make_simulated_maz_data()
 
         if not on_board_assign_summary:
             self._make_census_maz_crosswalk()
@@ -84,6 +94,37 @@ class Canonical:
 
         return
 
+    def _make_simulated_maz_data(self):
+        in_file = self.scenario_dict["scenario"]["maz_landuse_file"]
+
+        df = pd.read_csv(in_file)
+
+        index_file = os.path.join("inputs", "landuse", "mtc_final_network_zone_seq.csv")
+
+        index_df = pd.read_csv(index_file)
+        join_df = index_df.rename(columns={"N": "MAZ_ORIGINAL"})[
+            ["MAZ_ORIGINAL", "MAZSEQ"]
+        ].copy()
+
+        self.simulated_maz_data_df = pd.merge(
+            df,
+            join_df,
+            how="left",
+            on="MAZ_ORIGINAL",
+        )
+
+        self._make_taz_district_crosswalk()
+
+        return
+        
+    def _make_taz_district_crosswalk(self):
+
+        df = self.simulated_maz_data_df[["TAZ_ORIGINAL", "DistID"]].copy()
+        df = df.rename(columns={"TAZ_ORIGINAL": "taz", "DistID": "district"})
+        self.taz_to_district_df = df.drop_duplicates().reset_index(drop=True)
+
+        return
+        
     def _make_canonical_agency_names_dict(self):
         file_root = self.canonical_dict["remote_io"]["crosswalk_folder_root"]
         in_file = self.canonical_dict["crosswalks"]["canonical_agency_names_file"]
@@ -243,8 +284,8 @@ class Canonical:
         in_file = self.canonical_dict["crosswalks"]["pems_station_to_tm2_links_file"]
 
         df = pd.read_csv(os.path.join(file_root, in_file))
-
-        df = df[["station", "A", "B"]]
+        df["station_id"] = df["station"].astype(str) + "_" + df["direction"]
+        df = df[["station_id", "A", "B"]]
 
         self.pems_to_link_crosswalk_df = df
 
