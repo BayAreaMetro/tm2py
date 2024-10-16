@@ -519,8 +519,8 @@ class Observed:
         o_df = self.reduced_transit_spatial_flow_df.copy()
         o_df = o_df[o_df["time_period"] == "am"].copy()
 
-        tm2_district_dict = self.c.taz_to_district_df.set_index("taz_tm2")[
-            "district_tm2"
+        tm2_district_dict = self.c.taz_to_district_df.set_index("taz")[
+            "district"
         ].to_dict()
         o_df["orig_district"] = o_df["orig_taz"].map(tm2_district_dict)
         o_df["dest_district"] = o_df["dest_taz"].map(tm2_district_dict)
