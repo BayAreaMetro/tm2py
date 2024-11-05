@@ -452,14 +452,22 @@ class TransitAssignment(Component):
             self.transit_network.update_auto_times(time_period)
 
             if self.controller.iteration == 0:
+                # iteration = 0 : run uncongested transit assignment
                 use_ccr = False
                 congested_transit_assignment = False
                 print("running uncongested transit assignment with warmstart demand")
                 self.run_transit_assign(
                     time_period, use_ccr, congested_transit_assignment
                 )
-
-            else:  # iteration >=1
+            elif (self.controller.iteration == 1) & (self.controller.config.warmstart.use_warmstart_skim):
+                # iteration = 1 and use_warmstart_skim = True : run uncongested transit assignment
+                use_ccr = False
+                congested_transit_assignment = False
+                self.run_transit_assign(
+                    time_period, use_ccr, congested_transit_assignment
+                )               
+            else:
+                # iteration >= 1 and use_warmstart_skim = False : run congested transit assignment
                 use_ccr = self.config.use_ccr
                 if time_period in ["EA", "EV", "MD"]:
                     congested_transit_assignment = False
