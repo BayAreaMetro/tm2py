@@ -115,9 +115,11 @@ class Simulated:
         scenario_file: str = None,
         model_file: str = None,
         on_board_assign_summary: bool = False,
+        iteration: int = 3,
     ) -> None:
         self.c = canonical
         self.scenario_file = scenario_file
+        self.iter = iteration
         self._load_configs(scenario=True, model=False)
 
         if not on_board_assign_summary:
@@ -605,7 +607,8 @@ class Simulated:
 
             df["boarding"] = df["boarding"].astype(int)
             df["alighting"] = df["alighting"].astype(int)
-            df["simulated"] = df["simulated"].astype(float)
+            # there are occasional odd simulated values with characters, such as '309u4181'
+            df["simulated"] = pd.to_numeric(df['simulated'], errors='coerce').fillna(0)
 
             file.close()
 
@@ -1022,7 +1025,7 @@ class Simulated:
 
         out_df = pd.DataFrame()
         for time_period in self.model_time_periods:
-            filename = os.path.join(dem_dir, "trn_demand_{}.omx".format(time_period))
+            filename = os.path.join(dem_dir, "trn_demand_{}_{}.omx".format(time_period, self.iter))
             omx_handle = omx.open_file(filename)
 
             running_df = None

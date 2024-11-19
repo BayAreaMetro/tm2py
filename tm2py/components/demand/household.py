@@ -34,6 +34,7 @@ class HouseholdModel(Component):
         self._stop_java()
         # consume ctramp person trip list and create trip tables for assignment
         self._prepare_demand_for_assignment()
+        self._copy_auto_maz_demand()
 
     def _prepare_demand_for_assignment(self):
         prep_demand = PrepareHighwayDemand(self.controller)
@@ -76,6 +77,31 @@ class HouseholdModel(Component):
     @staticmethod
     def _stop_java():
         run_process(['taskkill /im "java.exe" /F'])
+
+    def _copy_auto_maz_demand(self):
+        time_period_names = self.time_period_names
+        
+        for period in time_period_names:
+            for maz_group in [1, 2, 3]:
+                output_path = (
+                    self.controller.get_abs_path(
+                        self.controller.config.highway.maz_to_maz.demand_file
+                    )
+                    .__str__()
+                    .format(
+                        period=period, number=maz_group, iter=self.controller.iteration
+                    )
+                )
+
+                input_path = (
+                    self.controller.get_abs_path(
+                        self.config.highway_maz_ctramp_output_file
+                    )
+                    .__str__()
+                    .format(period=period, number=maz_group)
+                )
+
+                _shutil.copyfile(input_path, output_path)
 
     def _consolidate_demand_for_assign(self):
         """
@@ -123,27 +149,7 @@ class HouseholdModel(Component):
             output_omx.close()
 
         # auto MAZ
-        for period in time_period_names:
-            for maz_group in [1, 2, 3]:
-                output_path = (
-                    self.controller.get_abs_path(
-                        self.controller.config.highway.maz_to_maz.demand_file
-                    )
-                    .__str__()
-                    .format(
-                        period=period, number=maz_group, iter=self.controller.iteration
-                    )
-                )
-
-                input_path = (
-                    self.controller.get_abs_path(
-                        self.config.highway_maz_ctramp_output_file
-                    )
-                    .__str__()
-                    .format(period=period, number=maz_group)
-                )
-
-                _shutil.copyfile(input_path, output_path)
+        self._copy_auto_maz_demand()
 
         # transit TAP
         # for period in time_period_names:

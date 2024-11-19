@@ -265,21 +265,21 @@ class RunController:
                 elif self.config.warmstart.use_warmstart_skim:
                     highway_skim_file = self.get_abs_path(
                         self.config["highway"].output_skim_path
-                        + self.config["highway"].output_skim_filename_tmpl
+                        / self.config["highway"].output_skim_filename_tmpl
                     ).__str__()
                     for time in self.config["time_periods"]:
-                        path = highway_skim_file.format(period=time.name)
+                        path = highway_skim_file.format(time_period=time.name)
                         assert os.path.isfile(
                             path
                         ), f"{path} required as warmstart skim does not exist"
                     transit_skim_file = self.get_abs_path(
                         self.config["transit"].output_skim_path
-                        + self.config["transit"].output_skim_filename_tmpl
+                        / self.config["transit"].output_skim_filename_tmpl
                     ).__str__()
                     for time in self.config["time_periods"]:
                         for tclass in self.config["transit"]["classes"]:
                             path = transit_skim_file.format(
-                                period=time.name, iter=tclass.name
+                                time_period=time.name, tclass=tclass.name
                             )
                             assert os.path.isfile(
                                 path

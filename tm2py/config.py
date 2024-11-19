@@ -322,6 +322,7 @@ class HouseholdConfig(ConfigItem):
     highway_demand_file: pathlib.Path
     transit_demand_file: pathlib.Path
     active_demand_file: pathlib.Path
+    highway_maz_ctramp_output_file: pathlib.Path
     OwnedAV_ZPV_factor: float
     TNC_ZPV_factor: float
     ctramp_indiv_trip_file: str
@@ -1418,7 +1419,7 @@ class EmmeConfig(ConfigItem):
     active_north_database_path: pathlib.Path
     active_south_database_path: pathlib.Path
     transit_database_path: pathlib.Path
-    num_processors: str = Field(regex=r"^MAX$|^MAX-\d+$|^\d+$")
+    num_processors: str = Field(pattern=r"^MAX$|^MAX-\d+$|^\d+$")
 
 
 @dataclass(frozen=True)
@@ -1477,21 +1478,21 @@ class Configuration(ConfigItem):
 
     @validator("highway", always=True)
     def relative_gap_length(cls, value, values):
-        """Validate highway.relative_gaps is a list of the same length as global iterations."""
+        """Validate highway.relative_gaps is a list of length greater or equal to global iterations."""
         if "run" in values:
-            assert len(value.relative_gaps) == (
+            assert len(value.relative_gaps) >= (
                 values["run"]["end_iteration"] + 1
-            ), f"'highway.relative_gaps must be the same length as end_iteration+1,\
+            ), f"'highway.relative_gaps must be the same or greater length as end_iteration+1,\
                 that includes global iteration 0 to {values['run']['end_iteration']}'"
         return value
 
     @validator("transit", always=True)
     def transit_stop_criteria_length(cls, value, values):
-        """Validate transit.congested.stop_criteria is a list of the same length as global iterations."""
+        """Validate transit.congested.stop_criteria is a list of length greater or equal to global iterations."""
         if ("run" in values) & (value.congested_transit_assignment):
-            assert len(value.congested.stop_criteria) == (
+            assert len(value.congested.stop_criteria) >= (
                 values["run"]["end_iteration"]
-            ), f"'transit.relative_gaps must be the same length as end_iteration,\
+            ), f"'transit.stop_criteria must be the same or greater length as end_iteration,\
                 that includes global iteration 1 to {values['run']['end_iteration']}'"
         return value
 
