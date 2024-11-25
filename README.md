@@ -125,6 +125,15 @@ When running the model verify that the correct version eof emme is opened.
 
 ![Correct Emme Version Logo](docs/images/emme_open_46.PNG)
 
+3) tm2py uses EMME's matrix API for matrix calculation. If the user gets the error below in transit skimming, it suggests the Python library `numexpr` version is not consistent with what EMME uses. The user can upgrade or rollback their `numexpr` to 2.7.3 for EMME 4.6 and 4.7.
+```python
+File "c:\users\wangs1\documents\github\tm2py\tm2py\components\network\transit\transit_skim.py", line 341, in _calc_xfer_wait
+    num_processors=self.controller.num_processors,
+  File "standard\inro\emme\matrix_calculation\matrix_calculator.py", line 212, in __call__
+  File "standard\inro\emme\matrix_calculation\matrix_calculator.py", line 246, in _matrix_calculator
+  File "inro\emme\procedure\parallelmatrixcalculation.py", line 101, in __init__
+inro.emme.core.exception.Error: Current environment is inadequate to perform a parallel matrix calculation
+```
 
 ## Contributing
 
