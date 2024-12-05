@@ -20,7 +20,7 @@ output_dir = input_dir / "consolidated_3"
 # input[["#link_id", "geometry"]].to_file(output_dir / "test_geom.geojson")
 
 scenarios_to_consolidate = (12,)
-runs_to_consolidate = (15, 22, 26)
+runs_to_consolidate = (15, 22, 26, 27)
 # runs_to_consolidate = (15, 22)
 # %%
 
@@ -160,7 +160,8 @@ links_wide_table["direction"] = links_wide_table["geometry"].apply(
 rename_dict = {
     15: "run 15 old code, emme 4.6.1",
     22: "run 22 previous version of pr, open paths",
-    26: "run 26 final version of pr, emme 4.6.1"
+    26: "run 26 final version of pr, emme 4.6.1",
+    27: "run 27, PR with dropping maz no drive network",
 }
 ft_map = {
     1.: "Freeway",
@@ -190,19 +191,24 @@ import matplotlib.pyplot as plt
 from scipy import stats
 for i in range(1, 7):
     slicer = plotting_table["ft"] == i 
-    x = plotting_table.loc[slicer, "@volau_run22_scenAM"]
-    y = plotting_table.loc[slicer, "@volau_run26_scenAM"]
+    x = plotting_table.loc[slicer, "@volau_run15_scenAM"]
+    y = plotting_table.loc[slicer, "@volau_run27_scenAM"]
     plt.scatter(x, y, label=f'ft = {i}')
-    plt.xlabel("run 22")
-    plt.ylabel("run 26")
+    plt.xlabel("run 15")
+    plt.ylabel("run 27")
     print(stats.linregress(x, y))
     print(i)
-    plt.show()
+    # plt.show()
 plt.legend()
 #%%
+
+no_vol_links = links_wide_table[(links_wide_table["@volau_run27_scenAM"] < 1) & (links_wide_table["ft"] == 1)]
+slicer = (no_vol_links["@volau_run15_scenAM"] > 1)
+no_vol_links[slicer]
+#%%
 vol_pairs_to_compare = [
-    ("@volau_run15_scenAM", "@volau_run26_scenAM"), 
-    ("@volau_run22_scenAM", "@volau_run26_scenAM"), 
+    ("@volau_run15_scenAM", "@volau_run27_scenAM"), 
+    # ("@volau_run22_scenAM", "@volau_run26_scenAM"), 
     # ("@volau_run23_scenAM", "@volau_run25_scenAM"), 
 ]
 rename_dict = {
