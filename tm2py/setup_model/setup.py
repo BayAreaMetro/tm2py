@@ -6,6 +6,8 @@ import io
 import logging
 import toml
 
+from pathlib import Path
+
 
 class SetupModel:
     """
@@ -16,7 +18,8 @@ class SetupModel:
 
     def __init__(self, config_file):
         self.config_file = config_file
-        # self.logger = logger
+        self.configs = Config(dict())
+        self.model_dir = Path()
 
     def _setup_logging(self, log_file):
         logging.basicConfig(
@@ -46,11 +49,17 @@ class SetupModel:
         # Validate configs
         configs.validate()
 
+        self.configs = configs
+
         # Create model directory
         model_dir = os.path.join(configs.ROOT_DIR, configs.MODEL_FOLDER_NAME)
         model_dir = model_dir.replace("\\", "/")
-        # TODO: what to do if the directory already exists?
-        os.mkdir(model_dir)
+        self.model_dir = Path(model_dir)
+        # if the directory already exists - error and quit
+        if self.model_dir.exists():
+            raise Exception(f"{self.model_dir} already exist! Setup terminated.")
+        else:
+            os.mkdir(model_dir)
 
         # Initialize logging
         log_file = os.path.join(model_dir, "setup_log.log")
@@ -138,10 +147,36 @@ class SetupModel:
             os.path.join(model_dir, "CTRAMP", "model"),
         )
 
+        self._create_run_model_batch(logger)
+
         logger.info(f"Setup process completed successfully!")
 
         # Close logging
         logging.shutdown()
+
+
+    def _create_run_model_batch(self, logger):
+        """
+        Creates the RunModel.bat and RunModel.py in the root directory
+
+        Args:
+            logger: logger
+        """
+
+        if not self.model_dir.exists():
+            logger.error(f"Directory {self.model_dir} does not exists.")
+            raise FileNotFoundError(f"Directory {self.model_dir} does not exists.")
+        
+        # create RunModel.bat
+        with open(self.model_dir / 'RunModel.bat', 'w') as file:
+            logger.info(f"Creating RunModel.bat in directory {self.model_dir}")
+            file.write(_RUN_MODEL_BAT_CONTENT)
+
+        # create RunModel.py
+        with open(self.model_dir / 'RunModel.py', 'w') as file:
+            logger.info(f"Creating RunModel.py in directory {self.model_dir}")
+            file.write(_RUN_MODEL_PY_CONTENT)
+
 
     def _create_folder_structure(self, folder_names, root_dir, logger):
         """
@@ -399,3 +434,34 @@ class Config:
         for attr in required_attrs:
             if not getattr(self, attr, None):
                 raise ValueError(f"{attr} is required in the setup configuration!")
+
+_RUN_MODEL_BAT_CONTENT = """
+:: the directory that this file is in
+SET MODEL_RUN_DIR=%~p0
+cd /d %MODEL_RUN_DIR%
+
+SET EMMEPATH=C:\Program Files\INRO\Emme\Emme 4\Emme-4.7.0.11
+SET PATH=%EMMEPATH%\programs;%PATH%
+
+CALL "C:\ProgramData\Anaconda3\condabin\conda" activate tm2py
+python RunModel.py
+
+CALL "C:\ProgramData\Anaconda3\condabin\conda" deactivate
+PAUSE
+"""
+
+_RUN_MODEL_PY_CONTENT = """
+import os
+import gdal
+from tm2py.controller import RunController
+
+controller = RunController(
+    [
+        os.path.join(os.getcwd(), "scenario_config.toml"),
+        os.path.join(os.getcwd(), "model_config.toml")
+    ],
+    run_dir = os.getcwd()
+)
+
+controller.run()
+"""
