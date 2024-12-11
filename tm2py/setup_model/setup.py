@@ -64,6 +64,13 @@ class SetupModel:
             "CTRAMP",
             "ctramp_output",
             "demand_matrices",
+            "demand_matrices/highway",
+            "demand_matrices/highway/air_passenger",
+            "demand_matrices/highway/household",
+            "demand_matrices/highway/maz_demand",
+            "demand_matrices/highway/internal_external",
+            "demand_matrices/highway/commercial",
+            "demand_matrices/transit",
             "emme_project",
             "inputs",
             "logs",
@@ -155,7 +162,7 @@ class SetupModel:
         for folder in folder_names:
             path = os.path.join(root_dir, folder)
             os.makedirs(path)
-            # logger.info(f"  Created Empty Folder: {path}")
+            logger.info(f"  Created Empty Folder: {path}")
 
     def _copy_folder(self, src_dir, dest_dir, logger):
         """
