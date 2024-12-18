@@ -83,7 +83,6 @@ class SetupModel:
             "emme_project",
             "inputs",
             "logs",
-            "warmstart",
             "notebooks",
             "output_summaries",
             "skim_matrices",
@@ -358,10 +357,25 @@ class SetupModel:
             logger,
         )
 
-        # Copy warmstart demand
-        self._copy_folder(
-            configs.WARMSTART_DEMAND_DIR, os.path.join(model_dir, "warmstart"), logger
-        )
+        # Copy warmstart demand if exists
+        if os.path.exists(
+            os.path.join(configs.WARMSTART_FILES_DIR, "demand_matrices")
+        ):
+            self._copy_folder(
+                os.path.join(configs.WARMSTART_FILES_DIR, "demand_matrices"), 
+                os.path.join(model_dir, "demand_matrices"), 
+                logger
+            )
+
+        # Copy warmstart skims
+        if os.path.exists(
+            os.path.join(configs.WARMSTART_FILES_DIR, "skim_matrices")
+        ):
+            self._copy_folder(
+                os.path.join(configs.WARMSTART_FILES_DIR, "skim_matrices"), 
+                os.path.join(model_dir, "skim_matrices"), 
+                logger
+            )
 
     def _copy_emme_project_and_database(self, configs, model_dir, logger):
         """
@@ -426,7 +440,7 @@ class Config:
             "MODEL_FOLDER_NAME",
             "INPUT_NETWORK_DIR",
             "INPUT_POPLU_DIR",
-            "WARMSTART_DEMAND_DIR",
+            "WARMSTART_FILES_DIR",
             "CONFIGS_GITHUB_PATH",
             "TRAVEL_MODEL_TWO_RELEASE_TAG",
         ]

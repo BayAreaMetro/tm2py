@@ -3,32 +3,32 @@
 #######################
 
 # this is where user want to create the MTC model
-ROOT_DIR = "V:/projects/MTC/US0024934.9168/setup_model"
+ROOT_DIR = "D:/"
 
 # user-defined model folder name (naming convention: ModelYear_ModelVersion_Project_Scenario)
-MODEL_FOLDER_NAME = "2023_TM22_Demo"
+MODEL_FOLDER_NAME = "TM2.2.1.3_clean_setup"
 
 # location of the networks
 # this includes file such as tolls, transit fares etc.
-INPUT_NETWORK_DIR = "V:/projects/MTC/US0024934.9168/setup_model/model_inputs/2015-tm22-dev-sprint-02"
+INPUT_NETWORK_DIR = "Z:/projects/MTC/US0024934.9168/setup_model/model_inputs/2015-tm22-dev-sprint-03"
 
-# this is location/folder for Emme Netorks (built from Lasso) 
-INPUT_EMME_NETWORK_DIR = "V:/projects/MTC/US0024934.9168/setup_model/emme_network"
+# this is the location/folder for Emme Netorks (built from Lasso) 
+INPUT_EMME_NETWORK_DIR = "Z:/projects/MTC/US0024934.9168/setup_model/emme_network"
 
 # location of the populationsim and land use inputs
-INPUT_POPLU_DIR = "V:/projects/MTC/US0024934.9168/setup_model/model_inputs/2015-tm22-dev-sprint-02"
+INPUT_POPLU_DIR = "Z:/projects/MTC/US0024934.9168/setup_model/model_inputs/2015-tm22-dev-sprint-03"
 
 # location of nonres inputs
-INPUT_NONRES_DIR = "V:/projects/MTC/US0024934.9168/setup_model/model_inputs/2015-tm22-dev-sprint-02"
+INPUT_NONRES_DIR = "Z:/projects/MTC/US0024934.9168/setup_model/model_inputs/2015-tm22-dev-sprint-03"
 
-# this is location of demand matrices for warm start
-WARMSTART_DEMAND_DIR = "V:/projects/MTC/transit_path_builder_calib/TM2.2.1.2/warmstart"
+# this is the location of a previous run folder which has the warm start demand or skims
+WARMSTART_FILES_DIR = "Z:/projects/MTC/transit_path_builder_calib/TM2.2.1.2/warmstart"
 
-# this is location/folder for Emme Netorks 
-EMME_TEMPLATE_PROJECT_DIR = "V:/projects/MTC/US0024934.9168/setup_model/emme_23_project_template"
+# this is the location/folder for Emme Netorks 
+EMME_TEMPLATE_PROJECT_DIR = "Z:/projects/MTC/US0024934.9168/setup_model/emme_23_project_template"
 
 # github raw link for toml config files
-CONFIGS_GITHUB_PATH = "https://raw.githubusercontent.com/BayAreaMetro/travel-model-two-config/sprint_02/2015-tm22-dev-sprint-02"
+CONFIGS_GITHUB_PATH = "https://raw.githubusercontent.com/BayAreaMetro/travel-model-two-config/refs/heads/main/2015-tm22-dev-sprint-03"
 
 # travel model two release tag to fetch
-TRAVEL_MODEL_TWO_RELEASE_TAG = "TM2.2.2"
+TRAVEL_MODEL_TWO_RELEASE_TAG = "TM2.2.3"
