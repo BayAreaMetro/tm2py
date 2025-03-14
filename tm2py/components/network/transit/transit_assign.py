@@ -434,7 +434,7 @@ class TransitAssignment(Component):
         """Run transit assignments."""
 
         if self.controller.iteration == 0:
-            self.transit_emmebank.zero_matrix
+            self.transit_emmebank.create_zero_matrix()
             if self.controller.config.warmstart.warmstart:
                 if self.controller.config.warmstart.use_warmstart_demand:
                     self.sub_components["prepare transit demand"].run()
@@ -1098,12 +1098,12 @@ class TransitAssignment(Component):
                     self.config.output_station_to_station_flow_path
                 )
 
-                sta2sta_spec["transit_line_selections"][
-                    "first_boarding"
-                ] = "mode=" + ",".join(list(fare_modes[cut]))
-                sta2sta_spec["transit_line_selections"][
-                    "last_alighting"
-                ] = "mode=" + ",".join(list(fare_modes[cut]))
+                sta2sta_spec["transit_line_selections"]["first_boarding"] = (
+                    "mode=" + ",".join(list(fare_modes[cut]))
+                )
+                sta2sta_spec["transit_line_selections"]["last_alighting"] = (
+                    "mode=" + ",".join(list(fare_modes[cut]))
+                )
                 sta2sta_spec["analyzed_demand"] = demand_matrix
 
                 output_path = output_file_name.format(

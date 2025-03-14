@@ -195,7 +195,7 @@ class AssignMAZSPDemand(Component):
         self.logger.log(f"Calculating link costs using time {time_attr}", level="DEBUG")
         vot = self.config.value_of_time
         op_cost = self.config.operating_cost_per_mile
-        net_calc = NetworkCalculator(self.controller, self._scenario)
+        net_calc = NetworkCalculator(self.controller.emme_manager, self._scenario)
         report = net_calc(
             "@link_cost", f"{time_attr} + 0.6 / {vot} * (length * {op_cost})"
         )
@@ -412,7 +412,7 @@ class AssignMAZSPDemand(Component):
         """
         # forbid egress from MAZ nodes which are not demand roots /
         #        access to MAZ nodes which are not demand leafs
-        net_calc = NetworkCalculator(self.controller, self._scenario)
+        net_calc = NetworkCalculator(self.controller.emme_manager, self._scenario)
         net_calc.add_calc("@link_cost_maz", "@link_cost")
         net_calc.add_calc("@link_cost_maz", "1e20", "@maz_root=0 and !@maz_id=0")
         net_calc.add_calc("@link_cost_maz", "1e20", "@maz_leafj=0 and !@maz_idj=0")

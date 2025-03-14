@@ -3,6 +3,7 @@
 Contains NetworkCalculator class to generate Emme format specifications for
 the Network calculator.
 """
+
 import heapq
 from collections import defaultdict as _defaultdict
 from typing import Any, Callable, Dict, List, Union
@@ -29,14 +30,15 @@ class NetworkCalculator:
         scenario: Emme scenario object
     """
 
-    def __init__(self, controller, scenario: EmmeScenario):
+    def __init__(self, emme_manager, scenario: EmmeScenario):
         """Constructor for NetworkCalculator class.
 
         Args:
+            emme_manager: EmmeManager or EmmeManagerLight object
             scenario (EmmeScenario): Reference EmmeScenario object
         """
         self._scenario = scenario
-        self._network_calc = controller.emme_manager.modeller.tool(
+        self._network_calc = emme_manager.modeller.tool(
             "inro.emme.network_calculation.network_calculator"
         )
         self._specs = []

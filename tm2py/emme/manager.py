@@ -26,6 +26,7 @@ import inro.emme.desktop.app as _app
 
 if TYPE_CHECKING:
     from tm2py.config import EmmeConfig
+    from tm2py.controller import RunController
     from tm2py.emme.manager import EmmeNetwork, EmmeScenario
 
 # PyLint cannot build AST from compiled Emme libraries
@@ -52,8 +53,27 @@ EmmeDesktopApp = _app.App
 _EMME_PROJECT_REF = {}
 
 
-class EmmeBank:
-    """Emmebamk wrapper class."""
+def parse_num_processors(value: Union[str, int]) -> int:
+    cpu_processors = multiprocessing.cpu_count()
+    num_processors = 0
+    if isinstance(value, str):
+        if value.upper() == "MAX":
+            num_processors = cpu_processors
+        elif re.match("^[0-9]+$", value):
+            num_processors = int(value)
+        else:
+            minus_processors = re.split(r"^MAX[/s]*-[/s]*", value.upper())
+            num_processors = max(cpu_processors - int(minus_processors[1]), 1)
+    else:
+        num_processors = int(value)
+
+    num_processors = min(cpu_processors, num_processors)
+    num_processors = max(1, num_processors)
+    return num_processors
+
+
+class ProxyEmmebank:
+    """Emmebank wrapper class."""
 
     def __init__(self, emme_manager, path: Union[str, Path]):
         self.emme_manager = emme_manager
@@ -67,6 +87,8 @@ class EmmeBank:
 
     @property
     def emmebank(self) -> Emmebank:
+        """The underlying reference Emmebank object
+        (inro.emme.database.emmebank.Emmebank)"""
         if self._emmebank is None:
             self._emmebank = Emmebank(self.path)
         return self._emmebank
@@ -75,7 +97,7 @@ class EmmeBank:
     def path(self) -> Path:
         """Return the path to the Emmebank."""
         if not self._path.exists():
-            self._path = self.get_abs_path(self._path)
+            self._path = self.controller.get_abs_path(self._path)
         if not self._path.exists():
             raise (FileNotFoundError(f"Emmebank not found: {self._path}"))
         if not self._path.__str__().endswith("emmebank"):
@@ -104,25 +126,39 @@ class EmmeBank:
         Args:
             time_period: valid time period abbreviation
         """
-
         _scenario_id = self.scenario_dict[time_period.lower()]
         return self.emmebank.scenario(_scenario_id)
 
-    def get_or_init(self, name: str, matrix_type: Literal["SCALAR", "FULL"] = "FULL"):
-        _matrix = self.emmebank.matrix(f'ms"{name}"')
-        if _matrix is None:
-            ident = self.emmebank.available_matrix_identifier(matrix_type)
-            _matrix = self.emmebank.create_matrix(ident)
-            _matrix.name = name
-            _matrix.description = name
-            # _matrix.data = 0
-        return _matrix
-
-    @property
-    def zero_matrix(self):
+    def create_matrix(
+        self,
+        name: str,
+        matrix_type: Literal["SCALAR", "FULL", "ORIGIN", "DESTINATION"] = "FULL",
+        description: str = None,
+        default_value: float = 0,
+    ):
         """Create ms"zero" matrix for zero-demand assignments."""
+        prefix = {"SCALAR": "ms", "FULL": "mf", "ORIGIN": "mo", "DESTINATION": "md"}[
+            matrix_type
+        ]
+        matrix = self.emmebank.matrix(f'{prefix}"{name}"')
+        if matrix is None:
+            ident = self.emmebank.available_matrix_identifier(matrix_type)
+            matrix = self.emmebank.create_matrix(ident, default_value=default_value)
+            matrix.name = name
+            matrix.description = name if description is None else description
+        elif matrix_type == "SCALAR":
+            matrix.data = default_value
+        return matrix
+
+    def create_zero_matrix(self):
+        """Create ms"zero" matrix for zero-demand assignments."""
+        for matrix in self.emmebank.matrices():
+            if matrix.name == "zero":
+                self.emmebank.delete_matrix(matrix)
         if self._zero_matrix is None:
-            self._zero_matrix = self.get_or_init("zero", "SCALAR")
+            self._zero_matrix = self.create_matrix(
+                "zero", "SCALAR", "zero demand matrix", 0
+            )
         return self._zero_matrix
 
 
@@ -188,16 +224,21 @@ class EmmeManager:
         Returns:
             Emme Desktop App object, see Emme API Reference, Desktop section for details.
         """
+        if self._project is None:
+            # lookup if already in opened projects
+            self._project = _EMME_PROJECT_REF.get(self.project_path)
+
         if self._project is not None:
             try:  # Check if the Emme window was closed
                 self._project.current_window()
             except _socket_error:
                 self._project = None
-        # if window is not opened in this process, start a new one
-        if self._project is None:
+        else:
+            # if window is not opened in this process, start a new one
             self._project = _app.start_dedicated(
-                visible=True, user_initials="inro", project=self.project_path
+                visible=True, user_initials="mtc", project=self.project_path
             )
+            _EMME_PROJECT_REF[self.project_path] = self._project
         return self._project
 
     @property
@@ -217,7 +258,11 @@ class EmmeManager:
         """
         # pylint: disable=E0611, E0401, E1101
         if self._modeller is None:
-            self._modeller = EmmeModeller(self.project)
+            try:
+                self._modeller = EmmeModeller(self.project)
+            except (AssertionError, RuntimeError):
+                self._modeller = EmmeModeller()
+                self._project = self._modeller.desktop
         return self._modeller
 
     @property
@@ -259,56 +304,12 @@ class EmmeManager:
     @property
     def matrix_calculator(self):
         "Shortcut to matrix calculator."
-        return self.controller.emme_manager.modeller.tool(
-            "inro.emme.matrix_calculation.matrix_calculator"
-        )
+        return self.tool("inro.emme.matrix_calculation.matrix_calculator")
 
     @property
     def matrix_results(self):
         "Shortcut to matrix results."
-        return self.controller.emme_manager.modeller.tool(
-            "inro.emme.transit_assignment.extended.matrix_results"
-        )
-
-    @property
-    def num_processors(self) -> int:
-        """Number of processors available for parallel processing."""
-        if self._num_processors is None:
-            self._num_processors = self._calculate_num_processors()
-
-        return self._num_processors
-
-    @property
-    def num_processors(self):
-        """Convert input value (parse if string) to number of processors.
-
-
-        nt or string as 'MAX-X'
-        Returns:
-            An int of the number of processors to use
-
-        Raises:
-            Exception: Input value exceeds number of available processors
-            Exception: Input value less than 1 processors
-        """
-        _config_value = self.config.num_processors
-        _cpu_processors = multiprocessing.cpu_count()
-        num_processors = 0
-        if isinstance(_config_value, str):
-            if _config_value.upper() == "MAX":
-                num_processors = _cpu_processors
-            elif re.match("^[0-9]+$", _config_value):
-                num_processors = int(_config_value)
-            else:
-                _processor_range = re.split(r"^MAX[/s]*-[/s]*", _config_value.upper())
-                num_processors = max(_cpu_processors - int(_processor_range[1]), 1)
-        else:
-            num_processors = int(_config_value)
-
-        num_processors = min(_cpu_processors, num_processors)
-        num_processors = max(1, num_processors)
-
-        return num_processors
+        return self.tool("inro.emme.transit_assignment.extended.matrix_results")
 
     @staticmethod
     def copy_attribute_values(
@@ -420,6 +421,17 @@ class EmmeManager:
         self.copy_attribute_values(scenario, network, attributes)
         return network
 
+    def add_database(self, path):
+        path = os.path.realpath(path)
+        for db in self.project.data_explorer().databases():
+            if os.path.realpath(db.path) == path:
+                if not db.is_open:
+                    db.open()
+                return
+        db = self.project.data_explorer().add_database(path)
+        db.open()
+        self.project.project.save()
+
     @staticmethod
     def logbook_write(name: str, value: str = None, attributes: Dict[str, Any] = None):
         """Write an entry to the Emme Logbook at the current nesting level.
@@ -460,3 +472,10 @@ class EmmeManager:
         attributes = attributes if attributes else {}
         with logbook_trace(name, value=value, attributes=attributes):
             yield
+
+    def close(self):
+        """Close all open cached Emme project(s).
+
+        Should be called at the end of the model process / Emme assignments.
+        """
+        self._project.close()

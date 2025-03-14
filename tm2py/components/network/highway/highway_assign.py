@@ -133,7 +133,7 @@ class HighwayAssignment(Component):
         """Run highway assignment."""
         demand = PrepareHighwayDemand(self.controller)
         if self.controller.iteration == 0:
-            self.highway_emmebank.zero_matrix
+            self.highway_emmebank.create_zero_matrix()
             if self.controller.config.warmstart.warmstart:
                 if self.controller.config.warmstart.use_warmstart_demand:
                     demand.run()
@@ -167,7 +167,7 @@ class HighwayAssignment(Component):
                     assign(assign_spec, scenario, chart_log_interval=1)
 
                 # calucaltes link level LOS based reliability
-                net_calc = NetworkCalculator(self.controller, scenario)
+                net_calc = NetworkCalculator(self.controller.emme_manager, scenario)
 
                 exf_pars = scenario.emmebank.extra_function_parameters
                 vdfs = [
@@ -248,7 +248,7 @@ class HighwayAssignment(Component):
         self.logger.log(
             "Copy @maz_flow to ul1 for background traffic", indent=True, level="DETAIL"
         )
-        net_calc = NetworkCalculator(self.controller, scenario)
+        net_calc = NetworkCalculator(self.controller.emme_manager, scenario)
         net_calc("ul1", "@maz_flow")
 
     def _reset_background_traffic(self, scenario: EmmeScenario):
@@ -260,7 +260,7 @@ class HighwayAssignment(Component):
         self.logger.log(
             "Set ul1 to 0 for background traffic", indent=True, level="DETAIL"
         )
-        net_calc = NetworkCalculator(self.controller, scenario)
+        net_calc = NetworkCalculator(self.controller.emme_manager, scenario)
         net_calc("ul1", "0")
 
     def _create_skim_matrices(
