@@ -28,17 +28,12 @@ from ..tools import emme_context
 
 emme_context()
 
-import inro.emme.desktop.app as _app
-
-if TYPE_CHECKING:
-    from tm2py.config import EmmeConfig
-    from tm2py.controller import RunController
-
 # PyLint cannot build AST from compiled Emme libraries
 # so disabling relevant import module checks
-# pylint: disable=E0611, E0401, E1101
+# pylint: disable=E0611, E0401, E1101, C0411
 # Importing several Emme object types which are unused here, but so that
 # the Emme API import are centralized within tm2py
+import inro.emme.desktop.app as _app
 from inro.emme.database.emmebank import Emmebank, create as _create_emmebank
 from inro.emme.database.matrix import Matrix as EmmeMatrix  # pylint: disable=W0611
 from inro.emme.database.scenario import Scenario as EmmeScenario
@@ -48,6 +43,11 @@ from inro.emme.network.mode import Mode as EmmeMode  # pylint: disable=W0611
 from inro.emme.network.node import Node as EmmeNode  # pylint: disable=W0611
 from inro.modeller import Modeller as EmmeModeller
 from inro.modeller import logbook_trace, logbook_write
+
+if TYPE_CHECKING:
+    from tm2py.config import EmmeConfig
+    from tm2py.controller import RunController
+
 
 EmmeDesktopApp = _app.App
 
@@ -185,29 +185,22 @@ class EmmeManagerLight:
     Support access to EMME-related APIs separately from the controller / config
     in tm2py. Should only be used for launching separate processes for running
     EMME tasks, i.e. highway or transit assignments.
+
+    If Modeller has not already been initialized it will do so on
+    specified Emme project, or the first Emme project opened if not provided.
+    If already initialized Modeller will reference whichever project was used
+    first.
+
+    Args:
+        - project_path (str): path to emme project (*.emp)
+        - emmebank_path (str): optional, path to EMME database (emmebank) file
+           which will be added to the project
     """
 
-    def __init__(self, project_path):
+    def __init__(self, project_path, emmebank_path=None):
         self.project_path = os.path.normcase(os.path.abspath(project_path))
-        self._project = None
-        self._modeller = None
-        # call to statup Emme and make sure toolbox is available
-        self.matrix_calculator()
 
-    @property
-    def project(self) -> EmmeDesktopApp:
-        """Return already open Emme project, or open new Desktop session if not found.
-
-        Args:
-            project_path: valid path to Emme project *.emp file
-
-        Returns:
-            Emme Desktop App object, see Emme API Reference, Desktop section for details.
-        """
-        if self._project is None:
-            # lookup if already in opened projects
-            self._project = _EMME_PROJECT_REF.get(self.project_path)
-
+        self._project = _EMME_PROJECT_REF.get(self.project_path)
         if self._project is not None:
             try:  # Check if the Emme window was closed
                 self._project.current_window()
@@ -219,16 +212,31 @@ class EmmeManagerLight:
                 visible=True, user_initials="mtc", project=self.project_path
             )
             _EMME_PROJECT_REF[self.project_path] = self._project
+
+        if emmebank_path:
+            self.add_database(emmebank_path)
+
+        # pylint: disable=E0611, E0401, E1101
+        try:
+            self._modeller = EmmeModeller(self.project)
+        except (AssertionError, RuntimeError):
+            self._modeller = EmmeModeller()
+
+    @property
+    def project(self) -> EmmeDesktopApp:
+        """Return already open Emme project, or open new Desktop session if not found.
+
+        Args:
+            project_path: valid path to Emme project *.emp file
+
+        Returns:
+            Emme Desktop App object, see Emme API Reference, Desktop section for details.
+        """
         return self._project
 
     @property
     def modeller(self) -> EmmeModeller:
         """Initialize and return Modeller object.
-
-        If Modeller has not already been initialized it will do so on
-        specified Emme project, or the first Emme project opened if not provided.
-        If already initialized Modeller will reference whichever project was used
-        first.
 
         Args:
             emme_project: open 'Emme Desktop' application (inro.emme.desktop.app)
@@ -236,13 +244,6 @@ class EmmeManagerLight:
         Returns:
             Emme Modeller object, see Emme API Reference, Modeller section for details.
         """
-        # pylint: disable=E0611, E0401, E1101
-        if self._modeller is None:
-            try:
-                self._modeller = EmmeModeller(self.project)
-            except (AssertionError, RuntimeError):
-                self._modeller = EmmeModeller()
-                self._project = self._modeller.desktop
         return self._modeller
 
     def tool(self, namespace: str):
@@ -611,13 +612,18 @@ class BaseAssignmentLauncher(ABC):
         script_path = self.get_assign_script_path()
         command = " ".join([python_path, script_path, "--config", f'"{config_path}"'])
 
-        self._process = _subprocess.Popen(command, shell=True)
+        self._process = _subprocess.Popen(command)
 
     @property
     def is_running(self) -> bool:
         "Returns true if the subprocess is running"
         if self._process:
-            return self._process.poll() is None
+            if self._process.poll() is None:
+                if self._process.returncode != 0:
+                    raise _subprocess.CalledProcessError(
+                        f"error in '{self._run_project_name}'"
+                    )
+            return 
         return False
 
     def teardown(self):

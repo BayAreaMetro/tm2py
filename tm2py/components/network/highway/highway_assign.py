@@ -303,8 +303,7 @@ class AssignmentRunner:
             logger (Logger): optional logger object if running in process. 
                 If not specified a new logger reference is created.
         """
-        self.emme_manager = EmmeManagerLight(project_path)
-        self.emme_manager.add_database(emmebank_path)
+        self.emme_manager = EmmeManagerLight(project_path, emmebank_path)
         self.emmebank = Emmebank(emmebank_path)
         self.scenario = self.emmebank.scenario(scenario_id)
 
