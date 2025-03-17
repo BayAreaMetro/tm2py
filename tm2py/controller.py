@@ -20,10 +20,8 @@ import os
 import queue
 import re
 from collections import deque
-from io import RawIOBase
-from multiprocessing.sharedctypes import Value
 from pathlib import Path
-from typing import Any, Collection, Dict, List, Tuple, Union
+from typing import Collection, List, Tuple, Union
 
 from tm2py.components.component import Component
 from tm2py.components.demand.air_passenger import AirPassenger
@@ -250,9 +248,9 @@ class RunController:
                         "air_passenger",
                         "internal_external",
                     ]:
-                        highway_demand_file = self.get_abs_path(
+                        highway_demand_file = str(self.get_abs_path(
                             self.config[source].highway_demand_file
-                        ).__str__()
+                        ))
                         for time in self.config["time_periods"]:
                             path = highway_demand_file.format(
                                 period=time.name, iter=iteration
@@ -261,19 +259,19 @@ class RunController:
                                 path
                             ), f"{path} required as warmstart demand does not exist"
                 elif self.config.warmstart.use_warmstart_skim:
-                    highway_skim_file = self.get_abs_path(
+                    highway_skim_file = str(self.get_abs_path(
                         self.config["highway"].output_skim_path
                         + self.config["highway"].output_skim_filename_tmpl
-                    ).__str__()
+                    ))
                     for time in self.config["time_periods"]:
                         path = highway_skim_file.format(period=time.name)
                         assert os.path.isfile(
                             path
                         ), f"{path} required as warmstart skim does not exist"
-                    transit_skim_file = self.get_abs_path(
+                    transit_skim_file = str(self.get_abs_path(
                         self.config["transit"].output_skim_path
                         + self.config["transit"].output_skim_filename_tmpl
-                    ).__str__()
+                    ))
                     for time in self.config["time_periods"]:
                         for tclass in self.config["transit"]["classes"]:
                             path = transit_skim_file.format(
@@ -284,7 +282,12 @@ class RunController:
                             ), f"{path} required as warmstart skim does not exist"
 
         self._component = component
-        component.run()
+        try:
+            component.run()
+        except:
+            # re-insert failed component on error
+            self._queued_components.insert(0, (iteration, name, component))
+            raise
         self.completed_components.append((iteration, name, component))
 
     def _queue_components(self, run_components: Collection[str] = None):
@@ -296,7 +299,7 @@ class RunController:
         try:
             assert not self._queued_components
         except AssertionError:
-            "Components already queued, returning without re-queuing."
+            print("Components already queued, returning without re-queuing.")
             return
 
         _initial_components = self.config.run.initial_components

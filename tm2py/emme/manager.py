@@ -33,14 +33,13 @@ import inro.emme.desktop.app as _app
 if TYPE_CHECKING:
     from tm2py.config import EmmeConfig
     from tm2py.controller import RunController
-    from tm2py.emme.manager import EmmeNetwork, EmmeScenario
 
 # PyLint cannot build AST from compiled Emme libraries
 # so disabling relevant import module checks
 # pylint: disable=E0611, E0401, E1101
 # Importing several Emme object types which are unused here, but so that
 # the Emme API import are centralized within tm2py
-from inro.emme.database.emmebank import Emmebank as Emmebank, create as _create_emmebank
+from inro.emme.database.emmebank import Emmebank, create as _create_emmebank
 from inro.emme.database.matrix import Matrix as EmmeMatrix  # pylint: disable=W0611
 from inro.emme.database.scenario import Scenario as EmmeScenario
 from inro.emme.network import Network as EmmeNetwork
@@ -117,8 +116,8 @@ class ProxyEmmebank:
         if not self._path.exists():
             self._path = self.controller.get_abs_path(self._path)
         if not self._path.exists():
-            raise (FileNotFoundError(f"Emmebank not found: {self._path}"))
-        if not self._path.__str__().endswith("emmebank"):
+            raise FileNotFoundError(f"Emmebank not found: {self._path}")
+        if not str(self._path).endswith("emmebank"):
             self._path = os.path.join(self._path, "emmebank")
         return self._path
 
@@ -192,6 +191,8 @@ class EmmeManagerLight:
         self.project_path = os.path.normcase(os.path.abspath(project_path))
         self._project = None
         self._modeller = None
+        # call to statup Emme and make sure toolbox is available
+        self.matrix_calculator()
 
     @property
     def project(self) -> EmmeDesktopApp:
@@ -475,25 +476,23 @@ class EmmeManager(EmmeManagerLight):
         self._active_south_emmebank = None
         self._num_processors = None
 
-        # Initialize Modeller to use Emme assignment tools and other APIs
-        # inializing now will raise error sooner in case of EMME configuration
-        # issues (rather than waiting to get to the assignments)
-        self._modeller = self.modeller
-
     @property
     def highway_emmebank(self) -> ProxyEmmebank:
+        "The ProxyEmmebank object connect to the EMMEBANK for the highway assignment."
         if self._highway_emmebank is None:
             self._highway_emmebank = ProxyEmmebank(self, self.highway_database_path)
         return self._highway_emmebank
 
     @property
     def transit_emmebank(self) -> ProxyEmmebank:
+        "The ProxyEmmebank object connect to the EMMEBANK for the transit assignment."
         if self._transit_emmebank is None:
             self._transit_emmebank = ProxyEmmebank(self, self.transit_database_path)
         return self._transit_emmebank
 
     @property
     def active_north_emmebank(self) -> ProxyEmmebank:
+        "The ProxyEmmebank object connect to the EMMEBANK for the north active mode assignment."
         if self._active_north_emmebank is None:
             self._active_north_emmebank = ProxyEmmebank(
                 self, self.active_north_database_path
@@ -502,6 +501,7 @@ class EmmeManager(EmmeManagerLight):
 
     @property
     def active_south_emmebank(self) -> ProxyEmmebank:
+        "The ProxyEmmebank object connect to the EMMEBANK for the south active mode assignment."
         if self._active_south_emmebank is None:
             self._active_south_emmebank = ProxyEmmebank(
                 self, self.active_south_database_path
@@ -545,15 +545,18 @@ class BaseAssignmentLauncher(ABC):
 
     @abstractmethod
     def get_assign_script_path(self) -> str:
-        raise NotImplemented
+        "Full path to the script .py file to run in separate process."
+        raise NotImplementedError
 
     @abstractmethod
     def get_config(self) -> Dict:
-        raise NotImplemented
+        "JSON-compatible dict of input parameter configuration"
+        raise NotImplementedError
 
     @abstractmethod
-    def get_result_attributes(self) -> List[str]:
-        raise NotImplemented
+    def get_result_attributes(self, scenario_id) -> List[str]:
+        "List of string attribute names of link attributes in EMME scenario"
+        raise NotImplementedError
 
     def add_run(
         self,
@@ -584,6 +587,7 @@ class BaseAssignmentLauncher(ABC):
 
     @property
     def times(self):
+        "List of time IDs"
         return self._times
 
     def setup(self):
@@ -598,7 +602,7 @@ class BaseAssignmentLauncher(ABC):
             self._copy_demand_matrices(run_emmebank)
 
     def run(self):
-        """"""
+        "Start separate process"
         _time.sleep(2)
         python_path = sys.executable
         config_path = os.path.join(self._run_emmebank_dir, "config.json")
@@ -617,8 +621,8 @@ class BaseAssignmentLauncher(ABC):
         return False
 
     def teardown(self):
-        """Copy back reulting skims and link attributes (flow, times) from
-        completed .
+        """Copy back resulting skims and link attributes (flow, times) from
+        completed assignment(s).
 
         NOTE: does not delete duplicate EMME project files.
         """
@@ -722,7 +726,7 @@ class BaseAssignmentLauncher(ABC):
 
     def _copy_functions(self, run_emmebank):
         for src_func in self._primary_emmebank.functions():
-            dst_func = run_emmebank.create_function(src_func.id, src_func.expression)
+            run_emmebank.create_function(src_func.id, src_func.expression)
 
     def _copy_demand_matrices(self, run_emmebank):
         ref_scenario_id = self._scenarios[0].id

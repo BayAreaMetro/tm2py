@@ -442,8 +442,7 @@ class LogFormatter:
             indent = "  " * max(num_indents, 0)
         else:
             indent = ""
-        level_str = "{0:>6}".format(LEVELS_INT_TO_STR[level])
-        return f"{timestamp}{level_str}: {indent}{text}"
+        return f"{timestamp}{LEVELS_INT_TO_STR[level]:>6}: {indent}{text}"
 
 
 class LogFile(LogFormatter):
@@ -705,5 +704,5 @@ class SlackNotifier:
         headers = {"Content-type": "application/json"}
         data = {"text": text}
         self.logger.log(f"Sending message to slack: {text}", level="TRACE")
-        response = requests.post(self._slack_webhook_url, headers=headers, json=data)
+        response = requests.post(self._slack_webhook_url, headers=headers, json=data, timeout=10)
         self.logger.log(f"Receiving response: {response}", level="TRACE")

@@ -1460,12 +1460,6 @@ class Configuration(ConfigItem):
                 that includes global iteration 0 to {values['run']['end_iteration']}'"
         return value
 
-    # @validator("emme")
-    # def emme_num_processors(cls, value, values):
-    #     """Validate emme."""
-    # TODO: validate emme.highway_distribution: num_processors adds up, and all time periods defined
-    #     return value
-
 
 def _load_toml(path: str) -> dict:
     """Load config from toml file at path."""

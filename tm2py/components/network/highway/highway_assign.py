@@ -49,13 +49,11 @@ from typing import TYPE_CHECKING, Dict, List, Union
 
 import numpy as np
 
-from tm2py import tools
-from tm2py.components.component import Component, Subcomponent
+from tm2py.components.component import Component
 from tm2py.components.demand.prepare_demand import PrepareHighwayDemand
 from tm2py.components.network.highway.highway_emme_spec import AssignmentSpecBuilder
 from tm2py.emme.manager import (
     EmmeScenario,
-    EmmeManager,
     EmmeManagerLight,
     BaseAssignmentLauncher,
     Emmebank,
@@ -85,19 +83,23 @@ class HighwayAssignment(Component):
 
         self.config = self.controller.config.highway
         self._highway_emmebank = None
+        self._class_config = None
 
     @property
     def highway_emmebank(self):
+        "The ProxyEmmebank object connect to the EMMEBANK for the highway assignment."
         if not self._highway_emmebank:
             self._highway_emmebank = self.controller.emme_manager.highway_emmebank
         return self._highway_emmebank
 
     @property
     def classes(self):
+        "The list of class names in the highway config"
         return [c.name for c in self.config.classes]
 
     @property
     def class_config(self):
+        "Mapping of class names and config objs in the highway config."
         if not self._class_config:
             self._class_config = {c.name: c for c in self.config.classes}
 
@@ -105,8 +107,6 @@ class HighwayAssignment(Component):
 
     def validate_inputs(self):
         """Validate inputs files are correct, raise if an error is found."""
-        # TODO
-        pass
 
     @LogStartEnd("Highway assignment and skims", level="STATUS")
     def run(self):
@@ -133,7 +133,8 @@ class HighwayAssignment(Component):
             num_processors = self.controller.emme_manager.num_processors
             self.run_in_process(self.time_period_names, num_processors)
 
-    def run_in_process(self, times, num_processors):
+    def run_in_process(self, times: List[str], num_processors: Union[int, str]):
+        "Start highway assignments in same process"
         self.logger.status(
             f"Running highway assignments in process: {', '.join(times)}"
         )
@@ -152,11 +153,11 @@ class HighwayAssignment(Component):
             runner.run()
 
     def setup_process_launchers(self, distribution):
+        "Setup (copy data) databases for running assignments in separate processes"
         self.logger.status(
             f"Running highway assignments in {len(distribution)} separate processes"
         )
         iteration = self.controller.iteration
-        warmstart = self.controller.config.warmstart.warmstart
         launchers = []
         time_params = {}
         for config in distribution:
@@ -171,7 +172,6 @@ class HighwayAssignment(Component):
 
         # initialize all skim matrices - complete all periods in order
         for time in self.time_period_names:
-            scenario = self.highway_emmebank.scenario(time)
             params = time_params.get(time)
             if params:
                 for matrix_name in params["skim_matrices"]:
@@ -180,6 +180,7 @@ class HighwayAssignment(Component):
         return launchers
 
     def start_proccesses(self, launchers):
+        "Start separate processes for running assignments"
         for i, assign_launcher in enumerate(launchers):
             self.logger.status(
                 f"Starting highway assignment process {i} {', '.join(assign_launcher.times)}"
@@ -188,13 +189,14 @@ class HighwayAssignment(Component):
             assign_launcher.run()
 
     def wait_for_processes(self, launchers):
-        self.logger.status(f"Waiting for highway assignments to complete...")
+        self.logger.status("Waiting for highway assignments to complete...")
         while launchers:
             _time.sleep(5)
             for assign_launcher in launchers[:]:
                 if not assign_launcher.is_running:
                     self.logger.status(
-                        f"... assignment process complete for time(s): {', '.join(assign_launcher.times)}"
+                        "... assignment process complete for time(s): "
+                        f"{', '.join(assign_launcher.times)}"
                     )
                     assign_launcher.teardown()
                     launchers.remove(assign_launcher)
@@ -219,9 +221,7 @@ class HighwayAssignment(Component):
             ),
         )
         self.logger.debug(
-            "_get_assign_params: self.config.output_skim_path:{}".format(
-                self.config.output_skim_path
-            )
+            f"_get_assign_params: self.config.output_skim_path:{self.config.output_skim_path}"
         )
         with self.logger._skip_emme_logging():
             self.logger.debug("_get_assign_params: params dictionary")
@@ -230,12 +230,16 @@ class HighwayAssignment(Component):
 
 
 class AssignmentLauncher(BaseAssignmentLauncher):
+    """
+    Manages Emme-related data (matrices and scenarios) for multiple time periods
+    and kicks off assignment in a subprocess.
+    """
 
     def get_assign_script_path(self):
         return __file__
 
     def get_config(self):
-        config = []
+        configs = []
         params = zip(
             self._times,
             self._scenarios,
@@ -245,7 +249,7 @@ class AssignmentLauncher(BaseAssignmentLauncher):
             self._omx_file_paths,
         )
         for time, scenario, spec, skims, demands, omx_path in params:
-            config.append(
+            configs.append(
                 {
                     "project_path": self._run_project_path,
                     "emmebank_path": self._run_emmebank_path,
@@ -258,7 +262,7 @@ class AssignmentLauncher(BaseAssignmentLauncher):
                     "omx_file_path": omx_path,
                 }
             )
-        return config
+        return configs
 
     def get_result_attributes(self, scenario_id: str):
         attrs = ["auto_time", "auto_volume"]
@@ -296,7 +300,8 @@ class AssignmentRunner:
             assign_spec (Dict): EMME SOLA assignment specification
             skim_matrices (List[str]): list of skim matrix ID.
             omx_file_path (str): path to resulting output of skim matrices to OMX
-            logger (Logger): optional logger object if running in process. If not specified a new logger reference is created.
+            logger (Logger): optional logger object if running in process. 
+                If not specified a new logger reference is created.
         """
         self.emme_manager = EmmeManagerLight(project_path)
         self.emme_manager.add_database(emmebank_path)
@@ -311,6 +316,7 @@ class AssignmentRunner:
         self.omx_file_path = omx_file_path
 
         self._matrix_cache = None
+        self._network_calculator = None
         self._skim_matrix_objs = []
         if logger:
             self.logger = logger
@@ -324,6 +330,7 @@ class AssignmentRunner:
             )
 
     def run(self):
+        "Run time period highway assignment"
         with self._setup():
             if self.iteration > 0:
                 self._copy_maz_flow()
@@ -366,12 +373,12 @@ class AssignmentRunner:
                         net_calc.add_calc(
                             "@auto_time",
                             time_expr,
-                            {"link": "vdf=%s" % function.id[2:]},
+                            {"link": f"vdf={function.id[2:]}"},
                         )
                         net_calc.add_calc(
                             "@reliability",
-                            "(@static_rel+" + reliability_expr,
-                            {"link": "vdf=%s" % function.id[2:]},
+                            f"(@static_rel+{reliability_expr}",
+                            {"link": f"vdf={function.id[2:]}"},
                         )
                 net_calc.add_calc("@reliability_sq", "@reliability**2")
                 net_calc.run()
@@ -492,8 +499,8 @@ class AssignmentRunner:
         self.logger.debug(
             "name                            min       max      mean           sum"
         )
-        for matrix in self._skim_matrices:
-            values = self._matrix_cache.get_data(matrix)
+        for matrix in self._skim_matrix_objs:
+            values = self._matrix_cache.get_data(matrix.name)
             data = np.ma.masked_outside(values, -9999999, 9999999)
             stats = (
                 f"{matrix.name:25} {data.min():9.4g} {data.max():9.4g} "
@@ -508,10 +515,10 @@ if __name__ == "__main__":
     )
     parser.add_argument("--config", help="path to config json kwargs or list of kwargs")
     args = parser.parse_args()
-    with open(args.config, "r") as f:
-        config = _json.load(f)
-    if not isinstance(config, list):
-        config = [config]
-    for kwargs in config:
-        runner = AssignmentRunner(**kwargs)
-        runner.run()
+    with open(args.config, "r", encoding='utf8') as f:
+        run_config = _json.load(f)
+    if not isinstance(run_config, list):
+        run_config = [run_config]
+    for kwargs in run_config:
+        assign_runner = AssignmentRunner(**kwargs)
+        assign_runner.run()
