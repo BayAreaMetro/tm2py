@@ -13,6 +13,7 @@ files in .toml format (by convention a scenario.toml and a model.toml)
   `python <path>/tm2py/tm2py/controller.py –s scenario.toml –m model.toml`
 
 """
+
 import itertools
 import multiprocessing
 import os
@@ -114,9 +115,6 @@ class RunController:
 
         self.config = Configuration.load_toml(config_file)
         self.has_emme: bool = emme_context()
-        # NOTE: Logger opens log file on __enter__ (in run), not ready for logging yet
-        # Logger uses self.config.logging
-        self.logger = Logger(self)
         self.top_sheet = None
         self.trace = None
         self.completed_components = []
@@ -127,13 +125,13 @@ class RunController:
         self._component = None
         self._component_name = None
         self._queued_components = deque()
-
         # mapping from defined names referenced in config to Component objects
         self._component_map = {
             k: v(self) for k, v in component_cls_map.items() if k in run_components
         }
-
         self._queue_components(run_components=run_components)
+
+        self.logger = Logger(self)
 
     def __repr__(self):
         """Legible representation."""
