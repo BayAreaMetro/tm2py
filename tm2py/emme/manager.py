@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 # pylint: disable=E0611, E0401, E1101
 # Importing several Emme object types which are unused here, but so that
 # the Emme API import are centralized within tm2py
-from inro.emme.database.emmebank import Emmebank as Emmebank
+from inro.emme.database.emmebank import Emmebank as Emmebank, create as _create_emmebank
 from inro.emme.database.matrix import Matrix as EmmeMatrix  # pylint: disable=W0611
 from inro.emme.database.scenario import Scenario as EmmeScenario
 from inro.emme.network import Network as EmmeNetwork
@@ -60,16 +60,28 @@ _EMME_PROJECT_REF = {}
 
 
 def parse_num_processors(value: Union[str, int]) -> int:
+    """Process input value as integer or formatted string into
+       number of processors to use. Caps between 1 and maximum
+       available according to multiprocessing.cpu_count().
+
+       Returns integer number of processors to use.
+
+       value: either an integer or string as "MAX" or "MAX-N" or "MAX/N"
+    """
     cpu_processors = multiprocessing.cpu_count()
     num_processors = 0
     if isinstance(value, str):
-        if value.upper() == "MAX":
+        value = value.upper().strip()
+        if value == "MAX":
             num_processors = cpu_processors
         elif re.match("^[0-9]+$", value):
             num_processors = int(value)
-        else:
-            minus_processors = re.split(r"^MAX[/s]*-[/s]*", value.upper())
+        elif re.match(r"^MAX[\s]*-[\s]*\d+$", value):
+            minus_processors = re.split(r"^MAX[\s]*-[\s]*", value)
             num_processors = max(cpu_processors - int(minus_processors[1]), 1)
+        else:
+            fraction = re.split(r"^MAX[\s]*/[\s]*", value)
+            num_processors = max(int(cpu_processors / int(fraction[1])), 1)
     else:
         num_processors = int(value)
 
@@ -173,7 +185,7 @@ class EmmeManagerLight:
 
     Support access to EMME-related APIs separately from the controller / config
     in tm2py. Should only be used for launching separate processes for running
-    EMME tasks.
+    EMME tasks, i.e. highway or transit assignments.
     """
 
     def __init__(self, project_path):
@@ -361,6 +373,7 @@ class EmmeManagerLight:
         return network
 
     def add_database(self, path):
+        "Add new EMMEBANK database at path"
         path = os.path.realpath(path)
         for db in self.project.data_explorer().databases():
             if os.path.realpath(db.path) == path:
@@ -433,6 +446,9 @@ class EmmeManager(EmmeManagerLight):
 
         Maps an Emme project path to Emme Desktop API object for reference
         (projects are opened only once).
+        Args:
+            controller: the parent RunController of tm2py
+            emme_config: the config.emme entry of tm2py
         """
         self.controller = controller
         self.config = emme_config
@@ -496,8 +512,8 @@ class EmmeManager(EmmeManagerLight):
     def num_processors(self):
         """Convert input value (parse if string) to number of processors.
 
-        Must be an int or string as 'MAX' or 'MAX-X', capped between 1 and the maximum available
-        processors.
+        Must be an int or string as 'MAX' or 'MAX-X' or 'MAX/N',
+        capped between 1 and the maximum available processors.
 
         Returns:
             An int of the number of processors to use.
@@ -506,3 +522,225 @@ class EmmeManager(EmmeManagerLight):
         if self._num_processors is None:
             self._num_processors = parse_num_processors(self.config.num_processors)
         return self._num_processors
+
+
+class BaseAssignmentLauncher(ABC):
+    """
+    Manages Emme-related data (matrices and scenarios) for multiple time periods
+    and kicks off assignment in a subprocess.
+    """
+
+    def __init__(self, emmebank: Emmebank, iteration: int):
+        self._primary_emmebank = emmebank
+        self._iteration = iteration
+
+        self._times = []
+        self._scenarios = []
+        self._assign_specs = []
+        self._demand_matrices = []
+        self._skim_matrices = []
+        self._omx_file_paths = []
+
+        self._process = None
+
+    @abstractmethod
+    def get_assign_script_path(self) -> str:
+        raise NotImplemented
+
+    @abstractmethod
+    def get_config(self) -> Dict:
+        raise NotImplemented
+
+    @abstractmethod
+    def get_result_attributes(self) -> List[str]:
+        raise NotImplemented
+
+    def add_run(
+        self,
+        time: str,
+        scenario_id: str,
+        assign_spec: Dict,
+        demand_matrices: List[str],
+        skim_matrices: List[str],
+        omx_file_path: str,
+    ):
+        """Add new time period run along with the required scenario, assignment specification
+           lists of demand and skims matrices and resulting output omx file path.
+
+        Args:
+            time (str): time period ID
+            scenario_id (str): EMME scenario ID
+            assign_spec (Dict): EMME assignment specification
+            demand_matrices (List[str]): list of demand matrix IDs
+            skim_matrices (List[str]): list of skim matrix IDs
+            omx_file_path (str): complete absolute path for the output of the skim matrices to omx
+        """
+        self._times.append(time)
+        self._scenarios.append(self._primary_emmebank.scenario(scenario_id))
+        self._assign_specs.append(assign_spec)
+        self._demand_matrices.append(demand_matrices)
+        self._skim_matrices.append(skim_matrices)
+        self._omx_file_paths.append(omx_file_path)
+
+    @property
+    def times(self):
+        return self._times
+
+    def setup(self):
+        """Create separate Emme project and emmebank and
+        copies time period scenario(s), functions and demand matrices.
+
+        """
+        self._setup_run_project()
+        with self._setup_run_emmebank() as run_emmebank:
+            self._copy_scenarios(run_emmebank)
+            self._copy_functions(run_emmebank)
+            self._copy_demand_matrices(run_emmebank)
+
+    def run(self):
+        """"""
+        _time.sleep(2)
+        python_path = sys.executable
+        config_path = os.path.join(self._run_emmebank_dir, "config.json")
+        with open(config_path, "w", encoding="utf8") as f:
+            _json.dump(self.get_config(), f, indent=4)
+        script_path = self.get_assign_script_path()
+        command = " ".join([python_path, script_path, "--config", f'"{config_path}"'])
+
+        self._process = _subprocess.Popen(command, shell=True)
+
+    @property
+    def is_running(self) -> bool:
+        "Returns true if the subprocess is running"
+        if self._process:
+            return self._process.poll() is None
+        return False
+
+    def teardown(self):
+        """Copy back reulting skims and link attributes (flow, times) from
+        completed .
+
+        NOTE: does not delete duplicate EMME project files.
+        """
+        ref_scenario_id = self._scenarios[0].id
+        dst_emmebank = self._primary_emmebank
+        with Emmebank(self._run_emmebank_path) as src_emmebank:
+            for matrix_list in self._skim_matrices:
+                for matrix_name in matrix_list:
+                    src_matrix = src_emmebank.matrix(matrix_name)
+                    self.__copy_matrix(dst_emmebank, src_matrix, ref_scenario_id)
+            for scenario in self._scenarios:
+                attrs = self.get_result_attributes(scenario.id)
+                if attrs:
+                    values = src_emmebank.scenario(scenario).get_attribute_values(
+                        "LINK", attrs
+                    )
+                    scenario.set_attribute_values("LINK", attrs, values)
+
+        self._process = None
+
+    def delete_run_project(self):
+        "Remove all files and folders under target run project directory"
+        if os.path.exists(self._run_project_dir):
+            _shutil.rmtree(self._run_project_dir)
+
+    @property
+    def _run_project_root(self):
+        return os.path.dirname(os.path.dirname(self._primary_emmebank.path))
+
+    @property
+    def _run_project_name(self):
+        return "Remote run " + str(" ".join(self._times))
+
+    @property
+    def _run_project_dir(self):
+        return os.path.join(self._run_project_root, self._run_project_name)
+
+    @property
+    def _run_project_path(self):
+        return os.path.join(self._run_project_dir, self._run_project_name + ".emp")
+
+    @property
+    def _run_emmebank_dir(self):
+        return os.path.join(self._run_project_dir, "Database")
+
+    @property
+    def _run_emmebank_path(self):
+        return os.path.join(self._run_emmebank_dir, "emmebank")
+
+    def _setup_run_project(self):
+        self.delete_run_project()
+        _app.create_project(self._run_project_root, self._run_project_name)
+
+    @_context
+    def _setup_run_emmebank(self):
+        src_emmebank = self._primary_emmebank
+        dst_db_dir = self._run_emmebank_dir
+        if os.path.exists(dst_db_dir):
+            _shutil.rmtree(dst_db_dir)
+        os.mkdir(dst_db_dir)
+        dimensions = src_emmebank.dimensions
+        dimensions["scenarios"] = len(self._scenarios)
+        run_emmebank = _create_emmebank(self._run_emmebank_path, dimensions)
+        try:
+            run_emmebank.title = src_emmebank.title
+            run_emmebank.coord_unit_length = src_emmebank.coord_unit_length
+            run_emmebank.unit_of_length = src_emmebank.unit_of_length
+            run_emmebank.unit_of_cost = src_emmebank.unit_of_cost
+            run_emmebank.unit_of_energy = src_emmebank.unit_of_energy
+            run_emmebank.use_engineering_notation = (
+                src_emmebank.use_engineering_notation
+            )
+            run_emmebank.node_number_digits = src_emmebank.node_number_digits
+            # set extra function parameters ep1...ep3, el1...el9
+            for c, upper in [("l", 10), ("p", 4)]:
+                for i in range(1, upper):
+                    v = getattr(src_emmebank.extra_function_parameters, f"e{c}{i}")
+                    setattr(run_emmebank.extra_function_parameters, f"e{c}{i}", v)
+
+            yield run_emmebank
+
+        finally:
+            run_emmebank.dispose()
+
+    def _copy_scenarios(self, dst_emmebank):
+        for src_scen in self._scenarios:
+            dst_scen = dst_emmebank.create_scenario(src_scen.id)
+            dst_scen.title = src_scen.title
+            for attr in sorted(src_scen.extra_attributes(), key=lambda x: x._id):
+                dst_attr = dst_scen.create_extra_attribute(
+                    attr.type, attr.name, attr.default_value
+                )
+                dst_attr.description = attr.description
+            for field in src_scen.network_fields():
+                dst_scen.create_network_field(
+                    field.type, field.name, field.atype, field.description
+                )
+            dst_scen.has_traffic_results = src_scen.has_traffic_results
+            dst_scen.has_transit_results = src_scen.has_transit_results
+            dst_scen.publish_network(src_scen.get_network())
+
+    def _copy_functions(self, run_emmebank):
+        for src_func in self._primary_emmebank.functions():
+            dst_func = run_emmebank.create_function(src_func.id, src_func.expression)
+
+    def _copy_demand_matrices(self, run_emmebank):
+        ref_scenario_id = self._scenarios[0].id
+        for matrix_list in self._demand_matrices:
+            for matrix_id in matrix_list:
+                src_matrix = self._primary_emmebank.matrix(matrix_id)
+                self.__copy_matrix(run_emmebank, src_matrix, ref_scenario_id)
+
+    @staticmethod
+    def __copy_matrix(emmebank, src_matrix, scenario_id):
+        dst_matrix = emmebank.matrix(src_matrix.name)
+        if not dst_matrix:
+            ident = emmebank.available_matrix_identifier(src_matrix.type)
+            dst_matrix = emmebank.create_matrix(ident)
+            dst_matrix.name = src_matrix.name
+            dst_matrix.description = src_matrix.description
+        if src_matrix.type == "SCALAR":
+            dst_matrix.data = src_matrix.data
+        else:
+            dst_matrix.set_data(src_matrix.get_data(scenario_id), scenario_id)
+        return dst_matrix
