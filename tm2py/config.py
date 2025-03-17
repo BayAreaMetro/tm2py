@@ -1356,13 +1356,14 @@ class TransitConfig(ConfigItem):
 
 @dataclass(frozen=True)
 class HighwayDistribution(ConfigItem):
-    """Highway distribution run configuration. Use to enable distributing the 
+    """Highway distribution run configuration. Use to enable distributing the
        assignment (running time periods in parallel).
 
     Properties:
         periods: list of the names of the periods to use.
         num_processors: the number of processors to use as an integer, MAX-N or MAX/N
     """
+
     time_periods: List[str]
     num_processors: str = Field(regex=r"^MAX$|^MAX-\d+$|^\d+$|^MAX/\d+$")
 

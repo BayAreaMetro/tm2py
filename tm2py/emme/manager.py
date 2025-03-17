@@ -61,12 +61,12 @@ _EMME_PROJECT_REF = {}
 
 def parse_num_processors(value: Union[str, int]) -> int:
     """Process input value as integer or formatted string into
-       number of processors to use. Caps between 1 and maximum
-       available according to multiprocessing.cpu_count().
+    number of processors to use. Caps between 1 and maximum
+    available according to multiprocessing.cpu_count().
 
-       Returns integer number of processors to use.
+    Returns integer number of processors to use.
 
-       value: either an integer or string as "MAX" or "MAX-N" or "MAX/N"
+    value: either an integer or string as "MAX" or "MAX-N" or "MAX/N"
     """
     cpu_processors = multiprocessing.cpu_count()
     num_processors = 0

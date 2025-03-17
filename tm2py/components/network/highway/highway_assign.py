@@ -134,7 +134,9 @@ class HighwayAssignment(Component):
             self.run_in_process(self.time_period_names, num_processors)
 
     def run_in_process(self, times, num_processors):
-        self.logger.status(f"Running highway assignments in process: {', '.join(times)}")
+        self.logger.status(
+            f"Running highway assignments in process: {', '.join(times)}"
+        )
         iteration = self.controller.iteration
         for time in times:
             project_path = self.emme_manager.project_path
@@ -179,7 +181,9 @@ class HighwayAssignment(Component):
 
     def start_proccesses(self, launchers):
         for i, assign_launcher in enumerate(launchers):
-            self.logger.status(f"Starting highway assignment process {i} {', '.join(assign_launcher.times)}")
+            self.logger.status(
+                f"Starting highway assignment process {i} {', '.join(assign_launcher.times)}"
+            )
             assign_launcher.setup()
             assign_launcher.run()
 
@@ -189,7 +193,9 @@ class HighwayAssignment(Component):
             _time.sleep(5)
             for assign_launcher in launchers[:]:
                 if not assign_launcher.is_running:
-                    self.logger.status(f"... assignment process complete for time(s): {', '.join(assign_launcher.times)}")
+                    self.logger.status(
+                        f"... assignment process complete for time(s): {', '.join(assign_launcher.times)}"
+                    )
                     assign_launcher.teardown()
                     launchers.remove(assign_launcher)
 
@@ -400,7 +406,9 @@ class AssignmentRunner:
         ):
             self._matrix_cache = MatrixCache(self.scenario)
             self._skim_matrix_objs = []
-            self._network_calculator = NetworkCalculator(self.emme_manager, self.scenario)
+            self._network_calculator = NetworkCalculator(
+                self.emme_manager, self.scenario
+            )
             try:
                 yield
             finally:
