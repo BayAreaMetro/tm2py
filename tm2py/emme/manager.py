@@ -8,9 +8,15 @@ Contains EmmeManager class for access to common Emme-related procedures
 and Modeller.
 """
 
+import json as _json
 import multiprocessing
 import os
 import re
+import shutil as _shutil
+import subprocess as _subprocess
+import sys
+import time as _time
+from abc import ABC, abstractmethod
 from contextlib import contextmanager as _context
 from pathlib import Path
 from socket import error as _socket_error
@@ -34,7 +40,7 @@ if TYPE_CHECKING:
 # pylint: disable=E0611, E0401, E1101
 # Importing several Emme object types which are unused here, but so that
 # the Emme API import are centralized within tm2py
-from inro.emme.database.emmebank import Emmebank
+from inro.emme.database.emmebank import Emmebank as Emmebank
 from inro.emme.database.matrix import Matrix as EmmeMatrix  # pylint: disable=W0611
 from inro.emme.database.scenario import Scenario as EmmeScenario
 from inro.emme.network import Network as EmmeNetwork
@@ -162,57 +168,18 @@ class ProxyEmmebank:
         return self._zero_matrix
 
 
-class EmmeManager:
-    """Centralized cache for a single Emme project and related calls.
+class EmmeManagerLight:
+    """Base class for EMME access point.
 
-    Leverages EmmeConfig.
-
-    Wraps Emme Desktop API (see Emme API Reference for additional details on the Emme objects).
+    Support access to EMME-related APIs separately from the controller / config
+    in tm2py. Should only be used for launching separate processes for running
+    EMME tasks.
     """
 
-    def __init__(self, controller, emme_config: "EmmeConfig"):
-        """The EmmeManager constructor.
-
-        Maps an Emme project path to Emme Desktop API object for reference
-        (projects are opened only once).
-        """
-        self.controller = controller
-        self.config = emme_config
-
-        self.project_path = self.controller.get_abs_path(self.config.project_path)
-
-        # see if works without os.path.normcase(os.path.realpath(project_path))
-        self.highway_database_path = self.controller.get_abs_path(
-            self.config.highway_database_path
-        )
-        self.transit_database_path = self.controller.get_abs_path(
-            self.config.transit_database_path
-        )
-        self.active_north_database_path = self.controller.get_abs_path(
-            self.config.active_north_database_path
-        )
-        self.active_south_database_path = self.controller.get_abs_path(
-            self.config.active_south_database_path
-        )
-
-        self._num_processors = None
+    def __init__(self, project_path):
+        self.project_path = os.path.normcase(os.path.abspath(project_path))
         self._project = None
         self._modeller = None
-
-        self._highway_emmebank = None
-        self._transit_emmebank = None
-        self._active_north_emmebank = None
-        self._active_south_emmebank = None
-
-        # Initialize Modeller to use Emme assignment tools and other APIs
-        self._modeller = self.modeller
-
-    def close(self):
-        """Close all open cached Emme project(s).
-
-        Should be called at the end of the model process / Emme assignments.
-        """
-        self._project.close()
 
     @property
     def project(self) -> EmmeDesktopApp:
@@ -264,34 +231,6 @@ class EmmeManager:
                 self._modeller = EmmeModeller()
                 self._project = self._modeller.desktop
         return self._modeller
-
-    @property
-    def highway_emmebank(self) -> EmmeBank:
-        if self._highway_emmebank is None:
-            self._highway_emmebank = EmmeBank(self, self.highway_database_path)
-        return self._highway_emmebank
-
-    @property
-    def transit_emmebank(self) -> EmmeBank:
-        if self._transit_emmebank is None:
-            self._transit_emmebank = EmmeBank(self, self.transit_database_path)
-        return self._transit_emmebank
-
-    @property
-    def active_north_emmebank(self) -> EmmeBank:
-        if self._active_north_emmebank is None:
-            self._active_north_emmebank = EmmeBank(
-                self, self.active_north_database_path
-            )
-        return self._active_north_emmebank
-
-    @property
-    def active_south_emmebank(self) -> EmmeBank:
-        if self._active_south_emmebank is None:
-            self._active_south_emmebank = EmmeBank(
-                self, self.active_south_database_path
-            )
-        return self._active_south_emmebank
 
     def tool(self, namespace: str):
         """Return the Modeller tool at namespace.
@@ -479,3 +418,91 @@ class EmmeManager:
         Should be called at the end of the model process / Emme assignments.
         """
         self._project.close()
+
+
+class EmmeManager(EmmeManagerLight):
+    """Centralized cache for a single Emme project and related calls.
+
+    Leverages EmmeConfig.
+
+    Wraps Emme Desktop API (see Emme API Reference for additional details on the Emme objects).
+    """
+
+    def __init__(self, controller: "RunController", emme_config: "EmmeConfig"):
+        """The EmmeManager constructor.
+
+        Maps an Emme project path to Emme Desktop API object for reference
+        (projects are opened only once).
+        """
+        self.controller = controller
+        self.config = emme_config
+        project_path = self.controller.get_abs_path(self.config.project_path)
+        super().__init__(project_path)
+
+        # see if works without os.path.normcase(os.path.realpath(project_path))
+        self.highway_database_path = self.controller.get_abs_path(
+            self.config.highway_database_path
+        )
+        self.transit_database_path = self.controller.get_abs_path(
+            self.config.transit_database_path
+        )
+        self.active_north_database_path = self.controller.get_abs_path(
+            self.config.active_north_database_path
+        )
+        self.active_south_database_path = self.controller.get_abs_path(
+            self.config.active_south_database_path
+        )
+
+        self._highway_emmebank = None
+        self._transit_emmebank = None
+        self._active_north_emmebank = None
+        self._active_south_emmebank = None
+        self._num_processors = None
+
+        # Initialize Modeller to use Emme assignment tools and other APIs
+        # inializing now will raise error sooner in case of EMME configuration
+        # issues (rather than waiting to get to the assignments)
+        self._modeller = self.modeller
+
+    @property
+    def highway_emmebank(self) -> ProxyEmmebank:
+        if self._highway_emmebank is None:
+            self._highway_emmebank = ProxyEmmebank(self, self.highway_database_path)
+        return self._highway_emmebank
+
+    @property
+    def transit_emmebank(self) -> ProxyEmmebank:
+        if self._transit_emmebank is None:
+            self._transit_emmebank = ProxyEmmebank(self, self.transit_database_path)
+        return self._transit_emmebank
+
+    @property
+    def active_north_emmebank(self) -> ProxyEmmebank:
+        if self._active_north_emmebank is None:
+            self._active_north_emmebank = ProxyEmmebank(
+                self, self.active_north_database_path
+            )
+        return self._active_north_emmebank
+
+    @property
+    def active_south_emmebank(self) -> ProxyEmmebank:
+        if self._active_south_emmebank is None:
+            self._active_south_emmebank = ProxyEmmebank(
+                self, self.active_south_database_path
+            )
+        return self._active_south_emmebank
+
+    @property
+    def num_processors(self):
+        """Convert input value (parse if string) to number of processors.
+
+        Must be an int or string as 'MAX' or 'MAX-X', capped between 1 and the maximum available
+        processors.
+
+        Returns:
+            An int of the number of processors to use.
+
+        """
+        if self._num_processors is None:
+            self._num_processors = parse_num_processors(self.config.num_processors)
+        return self._num_processors
