@@ -618,12 +618,15 @@ class BaseAssignmentLauncher(ABC):
     def is_running(self) -> bool:
         "Returns true if the subprocess is running"
         if self._process:
-            if self._process.poll() is None:
-                if self._process.returncode != 0:
-                    raise _subprocess.CalledProcessError(
-                        f"error in '{self._run_project_name}'"
+            returncode = self._process.poll()
+            if returncode is not None:
+                self._process = None
+                if returncode != 0:
+                    raise _subprocess.SubprocessError(
+                        f"error in '{self._run_project_name} return code {returncode}'"
                     )
-            return 
+            else:
+                return True
         return False
 
     def teardown(self):
@@ -642,12 +645,13 @@ class BaseAssignmentLauncher(ABC):
             for scenario in self._scenarios:
                 attrs = self.get_result_attributes(scenario.id)
                 if attrs:
-                    values = src_emmebank.scenario(scenario).get_attribute_values(
+                    src_scenario = src_emmebank.scenario(scenario.id)
+                    scenario.has_traffic_results = src_scenario.has_traffic_results
+                    scenario.has_transit_results = src_scenario.has_transit_results
+                    values = src_scenario.get_attribute_values(
                         "LINK", attrs
                     )
                     scenario.set_attribute_values("LINK", attrs, values)
-
-        self._process = None
 
     def delete_run_project(self):
         "Remove all files and folders under target run project directory"
