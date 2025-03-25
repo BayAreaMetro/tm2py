@@ -1,12 +1,12 @@
-fiona
+# fiona
 folium
 fontawesome_markdown
 gdal
 geographiclib
 geojson
 geopandas > 0.8.0
-jsonschema
-jupyter
+#jsonschema
+#jupyter
 lark-parser
 markdown == 3.3.1 # needs to be compatible with mkdocs, which needs > markdown 3.2.1
 mike
@@ -18,19 +18,19 @@ mkdocs-macros-plugin
 mkdocs-material
 mkdocstrings
 mkdocstrings-python
-notebook
-numpy
-openmatrix
+# notebook
+# numpy
+# openmatrix
 osmnx >= 0.12
-pandas > 1.0
+# pandas > 1.0
 pydantic < 2.0
-pyproj > 2.2.0
-pywin32==224 ; sys_platform == 'win32'
-pyyaml
-pywin32==224 ; sys_platform == 'win32'
+# pyproj > 2.2.0
+# pywin32==224 ; sys_platform == 'win32'
+# pyyaml
+# pywin32==224 ; sys_platform == 'win32'
 rtree
 scipy
-shapely
-tables
+# shapely
+# tables
 toml
-typing_extensions
+# typing_extensions
