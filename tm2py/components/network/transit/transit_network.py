@@ -1321,7 +1321,7 @@ class ApplyFares(Component):
                         stops.add(stop.i_node)
             fs_data["shape"] = _geom.MultiPoint([(stop.x, stop.y) for stop in stops])
             # fs_data["bounding_rect"] = bounding_rect(fs_data["shape"])
-            fs_data["NUM STOPS"] = len(fs_data["shape"])
+            fs_data["NUM STOPS"] = len(fs_data["shape"].geoms)
             fs_data["FS_INDEX"] = fs_index
 
         # get distances between every pair of zone systems
