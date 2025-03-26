@@ -466,7 +466,7 @@ PAUSE
 
 _RUN_MODEL_PY_CONTENT = """
 import os
-import gdal
+from osgeo import gdal
 from tm2py.controller import RunController
 
 controller = RunController(
