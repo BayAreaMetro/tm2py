@@ -1,34 +1,34 @@
 # fiona
-folium
-fontawesome_markdown
-gdal
-geographiclib
+# folium Not used in TM2PY
+#fontawesome_markdown #Not used in TM2PY
+# gdal
+# geographiclib <- should just be dependency for geopandas at worse
 geojson
 geopandas > 0.8.0
 #jsonschema
 #jupyter
-lark-parser
-markdown == 3.3.1 # needs to be compatible with mkdocs, which needs > markdown 3.2.1
-mike
-mkdocs
-mkdocs-autorefs
-mkdocs-awesome-pages-plugin
-mkdocs-jupyter
-mkdocs-macros-plugin
-mkdocs-material
-mkdocstrings
-mkdocstrings-python
+# lark-parser
+# markdown == 3.3.1 # needs to be compatible with mkdocs, which needs > markdown 3.2.1
+# mike
+# mkdocs
+# mkdocs-autorefs
+# mkdocs-awesome-pages-plugin
+# mkdocs-jupyter
+# mkdocs-macros-plugin
+# mkdocs-material
+# mkdocstrings
+# mkdocstrings-python
 # notebook
 # numpy
-# openmatrix
-osmnx >= 0.12
+openmatrix
+# osmnx >= 0.12
 # pandas > 1.0
 pydantic < 2.0
 # pyproj > 2.2.0
 # pywin32==224 ; sys_platform == 'win32'
 # pyyaml
 # pywin32==224 ; sys_platform == 'win32'
-rtree
+# rtree
 scipy
 # shapely
 # tables
