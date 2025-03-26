@@ -316,8 +316,12 @@ class CommercialVehicleTripGeneration(Subcomponent):
                 _rate_trips_df = landuse_df.mul(land_use_rates.iloc[0])
                 _trips_df = _rate_trips_df * _multiplier + _constant
 
-                tripends_df[f"{_trip_type}_{_trk_class}_{_pa_short}s"] = _trips_df.sum(
-                    axis=1
+                # TODO fix this at the source
+                # at this point our data frame is completely object types (not numeric) 
+                # it is a series of float objects not a float series
+                # for now we can call pd to_numeric
+                tripends_df[f"{_trip_type}_{_trk_class}_{_pa_short}s"] = pd.to_numeric(
+                    _trips_df.sum(axis=1)
                 ).round()
 
         return tripends_df
