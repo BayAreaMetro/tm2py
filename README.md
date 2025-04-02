@@ -12,30 +12,41 @@ A python package to run the San Francisco Bay Area's Travel Model.
 
 ## Installation
 
-Recommended install in a virtual environment.
+### Stable (to come - use bleeding edge for now):
+If default install locations are used for openpaths, then the you should be able to copy and paste the following bash script
+```
+#!/bin/bash
+read -p "Enter the path for the virtual environment: " VENV_PATH
+"C:\Program Files\Bentley\OpenPaths\EMME 24.01.00\Python311\python.exe" -m venv "$VENV_PATH"
+cp "C:\Program Files\Bentley\OpenPaths\EMME 24.01.00\emme.pth" "$VENV_PATH/Lib/site-packages/emme.pth"
+cmd.exe /c "$VENV_PATH/Scripts/activate.bat" && pip install tm2py
+```
 
-Stable (to come - use bleeding edge for now):
+Otherwise, You can install the environment manually by following the steps below
 
+1) Open OpenPaths Shell Emme Shell (24.01.00)
+2) Create a virtual Environement 
+```bash
+python -m venv /path/to/venv
+```
+3) Copy emmepath file (usually found in C:\Program Files\Bentley\OpenPaths\EMME 24.01.00) to venv/path/to/venv/Lib/site-packages
+4) Install tm2py 
 ```bash
 pip install tm2py
 ```
 
-Bleeding edge:
-TODO: Which environment is this?  Does it still work for anyone?
+### Developer Installation:
 
+1) Open OpenPaths Shell Emme Shell (24.01.00)
+2) Create a virtual Environement 
 ```bash
-conda env create -f environment.yml
-conda activate tm2py
-pip install git+https://github.com/bayareametro/tm2py@develop
+python -m venv /path/to/venv
 ```
+3) Copy emmepath file (usually found in C:\Program Files\Bentley\OpenPaths\EMME 24.01.00) to venv/path/to/venv/Lib/site-packages
+4) Install tm2py 
+```bash
+pip install tm2py
 
-The above directions didn't work for the MTC Windows environment.  The following method did work, on a machine with Emme-4.6.0 installed.  This required a compiled GDAL/Fiona package set for python 3.7, this can be found in the [lib directory](/lib/) , consisting of the following:
-
-1. GDAL-3.3.2-cp37-cp37m-win_amd64.whl
-2. pyproj-3.2.1-cp37-cp37m-win_amd64.whl
-3. Fiona-1.8.20-cp37-cp37m-win_amd64.whl
-4. Shapely-1.8.1-cp37-cp37m-win_amd64.whl
-5. geopandas-0.10.2-py2.py3-none-any.whl
 
 With these files in hand, the following installation instructions work:
 

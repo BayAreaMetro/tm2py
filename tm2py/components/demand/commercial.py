@@ -319,7 +319,7 @@ class CommercialVehicleTripGeneration(Subcomponent):
                 # TODO fix this at the source
                 # at this point our data frame is completely object types (not numeric) 
                 # it is a series of float objects not a float series
-                # for now we can call pd to_numeric
+                # for now we can call pd to_numeric but maybe fix at source if it causes errors
                 tripends_df[f"{_trip_type}_{_trk_class}_{_pa_short}s"] = pd.to_numeric(
                     _trips_df.sum(axis=1)
                 ).round()
