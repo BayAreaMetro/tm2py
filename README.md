@@ -22,62 +22,32 @@ cp "C:\Program Files\Bentley\OpenPaths\EMME 24.01.00\emme.pth" "$VENV_PATH/Lib/s
 cmd.exe /c "$VENV_PATH/Scripts/activate.bat" && pip install tm2py
 ```
 
-Otherwise, You can install the environment manually by following the steps below
+### Developer Installation (bleeding edge):
 
-1) Open OpenPaths Shell Emme Shell (24.01.00)
-2) Create a virtual Environement 
+1) Clone this repo, switch to the desired branch
+2) Open OpenPaths Shell Emme Shell (24.01.00)
+3) Create a virtual Environment 
+
 ```bash
-python -m venv /path/to/venv
+# In the OpenPaths Shell, cd to the parent folder of the tm2py GitHub folder. Create a new virtual environment in that folder (alongside the tm2py folder, not within it).
+python -m venv <your_tm2py_env_name>
+# Activate the virtual env
+<your_tm2py_env_name>\Scripts\activate
 ```
-3) Copy emmepath file (usually found in C:\Program Files\Bentley\OpenPaths\EMME 24.01.00) to venv/path/to/venv/Lib/site-packages
-4) Install tm2py 
+
+4) Copy the emmepath file from the OpenPaths EMME installation folder to the virtual environment
+
+Copy "C:\Program Files\Bentley\OpenPaths\EMME 24.01.00\emme.pth" to <your_tm2py_env_name>\Lib\site-packages\
+
+5) Install tm2py in editable mode
+
 ```bash
-pip install tm2py
+# In the OpenPaths EMME shell activated in step 2, install tm2py from local clone in editable mode
+# cd to the tm2py folder
+cd tm2py
+# pip
+pip install tm2py -e .
 ```
-
-### Developer Installation:
-
-1) Open OpenPaths Shell Emme Shell (24.01.00)
-2) Create a virtual Environement 
-```bash
-python -m venv /path/to/venv
-```
-3) Copy emmepath file (usually found in C:\Program Files\Bentley\OpenPaths\EMME 24.01.00) to venv/path/to/venv/Lib/site-packages
-4) Install tm2py 
-```bash
-pip install tm2py
-
-
-With these files in hand, the following installation instructions work:
-
-```bat
-conda create -n tm2py python=3.7.6
-conda activate tm2py
-pip install [the packages listed above, in that order]
-cd <path to tm2py git directory>
-pip install -e .
-conda env config vars set GDAL_VERSION=3.3.2
-```
-Finally, install the Emme python packages using the Emme GUI. This effectively creates a file,
-`C:\Users\%USERNAME%\.conda\envs\tm2py\Lib\site-packages\emme.pth` with the following contents, so you could create the file yourself.
-
-```python
-import os, site; site.addsitedir("C:/Program Files/INRO/Emme/Emme 4/Emme-4.6.0/Python37/Lib/site-packages")
-```
-
-In troubleshooting, sometimes DLL load failure errors would occur which may be resolved by importing gdal before importing emme packages. Emme support explained this thusly:
-
-At load time, the EMME API will always load the geos_c co-located with the EMME API, unless it was already loaded from some other location, which is the case when you import GDAL first. EMME API seems to be compatible with the newer GDAL/geos_c (reminder: not tested!). But this does not appear to be the case the other way around (newer GDAL is not compatible with older geos_c).
-
-Copy and unzip [example_union_test_highway.zip](https://mtcdrive.box.com/s/3entr016e9teq2wt46x1os3fjqylfoge) to a local
-drive and from within that directory run:
-
-```sh
-get_test_data <location>
-tm2py -s scenario.toml -m model.toml
-```
-
-See [starting out](http://bayareametro.github.com/tm2py) section of documentation for more details.
 
 ### Example Data
 
@@ -88,6 +58,14 @@ get_test_data location/for/test/data
 ```
 
 Alternatively, you can access it from [example_union_test_highway.zip](https://mtcdrive.box.com/s/3entr016e9teq2wt46x1os3fjqylfoge)
+
+Copy and unzip [example_union_test_highway.zip](https://mtcdrive.box.com/s/3entr016e9teq2wt46x1os3fjqylfoge) to a local
+drive and from within that directory run:
+
+```sh
+get_test_data <location>
+tm2py -s scenario.toml -m model.toml
+```
 
 See [starting out](http://bayareametro.github.com/tm2py) section of documentation for more details.
 
