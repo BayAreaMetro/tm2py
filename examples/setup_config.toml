@@ -37,4 +37,4 @@ EMME_TEMPLATE_PROJECT_DIR = "Z:/projects/MTC/US0024934.9168/setup_model/emme_23_
 CONFIGS_GITHUB_PATH = "https://raw.githubusercontent.com/BayAreaMetro/travel-model-two-config/refs/heads/main/2015-tm22-dev-sprint-03"
 
 # travel model two release tag to fetch
-TRAVEL_MODEL_TWO_RELEASE_TAG = "TM2.2.3"
+TRAVEL_MODEL_TWO_RELEASE_TAG = "TM2.2.4"
