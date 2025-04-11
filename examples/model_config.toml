@@ -1,0 +1,1279 @@
+####################################
+#       MODEL CONFIGURATION        #
+####################################
+
+[[time_periods]]
+    name = "ea"
+    length_hours = 3
+    highway_capacity_factor = 3
+    emme_scenario_id = 11
+[[time_periods]]
+    name = "am"
+    length_hours = 4
+    highway_capacity_factor = 3.65
+    emme_scenario_id = 12
+[[time_periods]]
+    name = "md"
+    length_hours = 5
+    highway_capacity_factor = 5
+    emme_scenario_id = 13
+[[time_periods]]
+    name = "pm"
+    length_hours = 4
+    highway_capacity_factor = 3.65
+    emme_scenario_id = 14
+[[time_periods]]
+    name = "ev"
+    length_hours = 8
+    highway_capacity_factor = 8
+    emme_scenario_id = 15
+
+[household]
+    highway_demand_file = "demand_matrices\\highway\\household\\TAZ_Demand_{period}.omx"
+    transit_demand_file = "demand_matrices\\transit\\TAP_Demand_{set}_{period}.omx"
+
+[air_passenger]
+    highway_demand_file = "demand_matrices\\highway\\air_passenger\\tripsAirPax{period}.omx"
+    input_demand_folder = "inputs\\nonres"
+    reference_start_year = "2007"
+    reference_end_year = "2035"
+    [[air_passenger.demand_aggregation]]
+        result_class_name = "da"
+        src_group_name = "DA"
+        access_modes = [ "ES", "PK", "RN", "TX", "LI",]
+    [[air_passenger.demand_aggregation]]
+        result_class_name = "sr2"
+        src_group_name = "S2"
+        access_modes = [ "ES", "PK", "RN", "TX", "LI",]
+    [[air_passenger.demand_aggregation]]
+        result_class_name = "sr3"
+        src_group_name = "S3"
+        access_modes = [ "ES", "PK", "RN", "TX", "LI", "VN", "HT", "CH",]
+
+[internal_external]
+    highway_demand_file = "demand_matrices\\highway\\internal_external\\tripsIx{period}.omx"
+    input_demand_file = "inputs\\nonres\\IXDaily2006x4.may2208.new.omx"
+    reference_year = 2005
+    toll_choice_time_coefficient = -0.088
+    value_of_time = 18.93
+    shared_ride_2_toll_factor = 0.5714285714285714
+    shared_ride_3_toll_factor = 0.4
+    operating_cost_per_mile = 17.23
+
+[truck]
+    highway_demand_file = "demand_matrices\\highway\\commercial\\tripstrk{period}.omx"
+    k_factors_file = "inputs\\nonres\\truck_kfactors_taz.csv"
+    friction_factors_file = "inputs\\nonres\\truckFF.dat"
+    value_of_time = 37.87
+    operating_cost_per_mile = 31.28
+    toll_choice_time_coefficient = -0.088
+    max_balance_iterations = 999
+    max_balance_relative_error = 0.0001
+
+[active_modes]
+    emme_scenario_id = 1
+    [[active_modes.shortest_path_skims]]
+        mode = "walk"
+        roots = "MAZ"
+        leaves = "MAZ"
+        max_dist_miles = 3
+        output = "skim_matrices\\non_motorized\\ped_distance_maz_maz.txt"
+    [[active_modes.shortest_path_skims]]
+        mode = "walk"
+        roots = "MAZ"
+        leaves = "TAP"
+        max_dist_miles = 0.5
+        output = "skim_matrices\\non_motorized\\ped_distance_maz_tap.txt"
+    [[active_modes.shortest_path_skims]]
+        mode = "bike"
+        roots = "MAZ"
+        leaves = "MAZ"
+        max_dist_miles = 3
+        output = "skim_matrices\\non_motorized\\bike_distance_maz_maz.txt"
+    [[active_modes.shortest_path_skims]]
+        mode = "bike"
+        roots = "MAZ"
+        leaves = "TAP"
+        max_dist_miles = 3
+        output = "skim_matrices\\non_motorized\\bike_distance_maz_tap.txt"
+    [[active_modes.shortest_path_skims]]
+        mode = "bike"
+        roots = "TAZ"
+        leaves = "TAZ"
+        output = "skim_matrices\\non_motorized\\bike_distance_taz_taz.txt"
+    [[active_modes.shortest_path_skims]]
+        mode = "walk"
+        roots = "TAP"
+        leaves = "TAP"
+        max_dist_miles = 0.5
+        output = "skim_matrices\\non_motorized\\ped_distance_tap_tap.txt"
+
+[highway]
+    output_skim_path = "skim_matrices\\highway\\HWYSKM{period}_taz.omx"
+    relative_gap = 0.0005
+    max_iterations = 100
+    # labels entire highway network (any of the classes) + MAZ connectors
+    generic_highway_mode_code = "c"
+    # include other MAZs to estimate density (pop+jobs*2.5)/acres for each MAZ
+    area_type_buffer_dist_miles = 0.5
+    [highway.tolls]
+        file_path = "inputs\\hwy\\tolls.csv"
+        src_vehicle_group_names = ["da", "s2",  "s3",  "vsm", "sml", "med", "lrg"]
+        # the dst_vehicle_group_names is used in the class group suffix for the
+        # highway.classes toll attribute name and the skims name, "bridgetoll_{}"
+        # and "valuetoll_{}"
+        dst_vehicle_group_names = ["da", "sr2", "sr3", "vsm", "sml", "med", "lrg"]
+        # tollbooth separates links with "bridge" tolls (index < this value)
+        # (used in all classes) vs. "value" tolls (used in toll-available classes only)
+        tollbooth_start_index = 11
+    [highway.maz_to_maz]
+        mode_code = "x"
+        excluded_links = [ "is_toll_da", "is_sr",]
+        operating_cost_per_mile = 18.93
+        value_of_time = 17.23
+        output_skim_file = "skim_matrices\\highway\\HWYSKIM_MAZMAZ_DA.csv"
+        skim_period = "md"
+        max_skim_cost = 11.0
+            # based on ~= 5 miles @ 40 mph = 11
+            #           = time + (0.6 / vot) * (dist * opcost)
+            #           = 5 / 40 * 60 + (0.6 / 17.23) * (5 * 18.93)
+        demand_file = "demand_matrices\\highway\\maz_demand\\auto_{period}_MAZ_AUTO_{number}_{period}.omx"
+        [[highway.maz_to_maz.demand_county_groups]]
+            number = 1
+            counties = ["San Francisco", "San Mateo", "Santa Clara"]
+        [[highway.maz_to_maz.demand_county_groups]]
+            number = 2
+            counties = ["Alameda", "Contra Costa"]
+        [[highway.maz_to_maz.demand_county_groups]]
+            number = 3
+            counties = ["Solano", "Napa", "Sonoma", "Marin"]
+
+    [[highway.classes]]
+        name = "da"
+        description = "drive alone"
+        mode_code = "d"
+        excluded_links = [ "is_toll_da", "is_sr",]
+        value_of_time = 18.93
+        operating_cost_per_mile = 17.23
+        toll = ["@bridgetoll_da"]
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_da",]
+        [[highway.classes.demand]]
+            source = "household"
+            name = "SOV_GP_{period}"
+        [[highway.classes.demand]]
+            source = "air_passenger"
+            name = "da"
+        [[highway.classes.demand]]
+            source = "internal_external"
+            name = "da"
+    [[highway.classes]]
+        name = "sr2"
+        description = "shared ride 2"
+        mode_code = "e"
+        excluded_links = [ "is_toll_sr2", "is_sr3",]
+        value_of_time = 18.93
+        operating_cost_per_mile = 17.23
+        toll = [ "@bridgetoll_sr2" ]
+        toll_factor = 0.5714285714285714
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr2", "hovdist",]
+        [[highway.classes.demand]]
+            source = "household"
+            name = "SR2_GP_{period}"
+            factor = 0.5714285714285714
+        [[highway.classes.demand]]
+            source = "household"
+            name = "SR2_HOV_{period}"
+            factor = 0.5714285714285714
+        [[highway.classes.demand]]
+            source = "air_passenger"
+            name = "sr2"
+        [[highway.classes.demand]]
+            source = "internal_external"
+            name = "sr2"
+    [[highway.classes]]
+        name = "sr3"
+        description = "shared ride 3+"
+        mode_code = "f"
+        excluded_links = [ "is_toll_sr3",]
+        value_of_time = 18.93
+        operating_cost_per_mile = 17.23
+        toll = ["@bridgetoll_sr3"]
+        toll_factor = 0.4
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr3", "hovdist",]
+        [[highway.classes.demand]]
+            source = "household"
+            name = "SR3_GP_{period}"
+            factor = 0.4
+        [[highway.classes.demand]]
+            source = "household"
+            name = "SR3_HOV_{period}"
+            factor = 0.4
+        [[highway.classes.demand]]
+            source = "air_passenger"
+            name = "sr3"
+        [[highway.classes.demand]]
+            source = "internal_external"
+            name = "sr3"
+    [[highway.classes]]
+        name = "trk"
+        description = "truck"
+        mode_code = "t"
+        excluded_links = [ "is_toll_vsm", "is_toll_sml", "is_toll_med", "is_sr",]
+        value_of_time = 37.87
+        operating_cost_per_mile = 31.28
+        toll = ["@bridgetoll_sml"]
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_vsm", "bridgetoll_sml", "bridgetoll_med",]
+        [[highway.classes.demand]]
+            source = "truck"
+            name = "vsmtrk"
+        [[highway.classes.demand]]
+            source = "truck"
+            name = "smltrk"
+        [[highway.classes.demand]]
+            source = "truck"
+            name = "medtrk"
+    [[highway.classes]]
+        name = "lrgtrk"
+        description = "large truck"
+        mode_code = "l"
+        excluded_links = [ "is_toll_lrg", "is_auto_only",]
+        value_of_time = 37.87
+        operating_cost_per_mile = 31.28
+        toll = ["@bridgetoll_lrg"]
+        pce = 2.0
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_lrg",]
+        [[highway.classes.demand]]
+            source = "truck"
+            name = "lrgtrk"
+            factor = 2.0
+    [[highway.classes]]
+        name = "datoll"
+        description = "drive alone toll"
+        mode_code = "D"
+        excluded_links = [ "is_sr",]
+        value_of_time = 18.93
+        operating_cost_per_mile = 17.23
+        toll = [ "@valuetoll_da", "@bridgetoll_da" ]
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_da", "valuetoll_da", "tolldist",]
+        [[highway.classes.demand]]
+            source = "household"
+            name = "SOV_PAY_{period}"
+        [[highway.classes.demand]]
+            source = "internal_external"
+            name = "datoll"
+    [[highway.classes]]
+        name = "sr2toll"
+        description = "shared ride 2 toll"
+        mode_code = "E"
+        excluded_links = [ "is_sr3",]
+        value_of_time = 18.93
+        operating_cost_per_mile = 17.23
+        toll = [ "@valuetoll_sr2", "@bridgetoll_sr2" ]
+        toll_factor = 0.5714285714285714
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr2", "valuetoll_sr2", "hovdist", "tolldist",]
+        [[highway.classes.demand]]
+            source = "household"
+            name = "SR2_PAY_{period}"
+            factor = 0.5714285714285714
+        [[highway.classes.demand]]
+            source = "internal_external"
+            name = "sr2toll"
+    [[highway.classes]]
+        name = "sr3toll"
+        description = "shared ride 3+ toll"
+        mode_code = "F"
+        excluded_links = []
+        value_of_time = 18.93
+        operating_cost_per_mile = 17.23
+        toll = [ "@valuetoll_sr3", "@bridgetoll_sr3" ]
+        toll_factor = 0.4
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_sr3", "valuetoll_sr3", "hovdist", "tolldist",]
+        [[highway.classes.demand]]
+            source = "household"
+            name = "SR3_PAY_{period}"
+            factor = 0.4
+        [[highway.classes.demand]]
+            source = "internal_external"
+            name = "sr3toll"
+    [[highway.classes]]
+        name = "trktoll"
+        description = "truck toll"
+        mode_code = "T"
+        excluded_links = [ "is_sr",]
+        value_of_time = 37.87
+        operating_cost_per_mile = 31.28
+        toll = [ "@valuetoll_sml", "@bridgetoll_sml" ]
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_vsm", "bridgetoll_sml", "bridgetoll_med", "valuetoll_vsm", "valuetoll_sml", "valuetoll_med",]
+        [[highway.classes.demand]]
+            source = "truck"
+            name = "vsmtrktoll"
+        [[highway.classes.demand]]
+            source = "truck"
+            name = "smltrktoll"
+        [[highway.classes.demand]]
+            source = "truck"
+            name = "medtrktoll"
+    [[highway.classes]]
+        name = "lrgtrktoll"
+        description = "large truck toll"
+        mode_code = "L"
+        excluded_links = [ "is_auto_only", "is_sr",]
+        value_of_time = 37.87
+        operating_cost_per_mile = 31.28
+        pce = 2.0
+        toll = [ "@valuetoll_lrg", "@bridgetoll_lrg" ]
+        skims = [ "time", "dist", "freeflowtime", "bridgetoll_lrg", "valuetoll_lrg",]
+        [[highway.classes.demand]]
+            source = "truck"
+            name = "lrgtrktoll"
+            factor = 2.0
+
+
+[transit]
+    apply_msa_demand = false
+    value_of_time = 16.2
+    effective_headway_source = "hdw"
+    initial_wait_perception_factor = 1.5
+    transfer_wait_perception_factor = 3.0
+    walk_perception_factor = 2.0
+    initial_boarding_penalty = 10
+    transfer_boarding_penalty = 10
+    max_transfers = 3
+    output_skim_path = "skim_matrices\\transit\\transit_skims_{period}.omx"
+    fares_path = "inputs\\trn\\fares.far"
+    fare_matrix_path = "inputs\\trn\\fareMatrix.txt"
+    # max expected transfer distance for mode-to-mode transfer fare table generation
+    fare_max_transfer_distance_miles = 3.0
+    use_fares = false
+    # for TAZ instead of TAPs
+    override_connector_times = false
+    #input_connector_access_times_path = "inputs\\trn\\estimated_taz_access_connectors.csv"
+    #input_connector_egress_times_path = "inputs\\trn\\estimated_taz_egress_connectors.csv"
+    #output_stop_usage_path = "inputs\\trn\\stop_usage_{period}.csv"
+
+[emme]
+    num_processors = "max-1"
+    all_day_scenario_id = 1
+    project_path = "emme_project\\mtc_emme.emp"
+    highway_database_path = "emme_project\\Database_highway\\emmebank"
+    active_database_paths = [ "emme_project\\Database_maz\\emmebank", ]
+    transit_database_path = "emme_project\\Database_transit\\emmebank"
+
+
+[[highway.capclass_lookup]]
+	capclass = 0
+	capacity = 0
+	free_flow_speed = 0
+	critical_speed = 0
+
+[[highway.capclass_lookup]]
+	capclass = 1
+	capacity = 2050
+	free_flow_speed = 55
+	critical_speed = 18.835
+
+[[highway.capclass_lookup]]
+	capclass = 2
+	capacity = 1450
+	free_flow_speed = 40
+	critical_speed = 25.898
+
+[[highway.capclass_lookup]]
+	capclass = 3
+	capacity = 1450
+	free_flow_speed = 30
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 4
+	capacity = 900
+	free_flow_speed = 20
+	critical_speed = 4.709
+
+[[highway.capclass_lookup]]
+	capclass = 5
+	capacity = 900
+	free_flow_speed = 20
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 6
+	capacity = 600
+	free_flow_speed = 15
+	critical_speed = 47.087
+
+[[highway.capclass_lookup]]
+	capclass = 7
+	capacity = 600
+	free_flow_speed = 15
+	critical_speed = 7.063
+
+[[highway.capclass_lookup]]
+	capclass = 8
+	capacity = 2050
+	free_flow_speed = 18
+	critical_speed = 9.417
+
+[[highway.capclass_lookup]]
+	capclass = 9
+	capacity = 0
+	free_flow_speed = 0
+	critical_speed = 25.898
+
+[[highway.capclass_lookup]]
+	capclass = 10
+	capacity = 0
+	free_flow_speed = 18
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 11
+	capacity = 2050
+	free_flow_speed = 55
+	critical_speed = 7.063
+
+[[highway.capclass_lookup]]
+	capclass = 12
+	capacity = 1450
+	free_flow_speed = 40
+	critical_speed = 4.709
+
+[[highway.capclass_lookup]]
+	capclass = 13
+	capacity = 1500
+	free_flow_speed = 30
+	critical_speed = 4.709
+
+[[highway.capclass_lookup]]
+	capclass = 14
+	capacity = 950
+	free_flow_speed = 25
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 15
+	capacity = 950
+	free_flow_speed = 25
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 16
+	capacity = 650
+	free_flow_speed = 20
+	critical_speed = 18.835
+
+[[highway.capclass_lookup]]
+	capclass = 17
+	capacity = 650
+	free_flow_speed = 20
+	critical_speed = 25.898
+
+[[highway.capclass_lookup]]
+	capclass = 18
+	capacity = 2050
+	free_flow_speed = 18
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 19
+	capacity = 0
+	free_flow_speed = 0
+	critical_speed = 4.709
+
+[[highway.capclass_lookup]]
+	capclass = 20
+	capacity = 0
+	free_flow_speed = 18
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 21
+	capacity = 2100
+	free_flow_speed = 60
+	critical_speed = 47.087
+
+[[highway.capclass_lookup]]
+	capclass = 22
+	capacity = 1600
+	free_flow_speed = 45
+	critical_speed = 9.417
+
+[[highway.capclass_lookup]]
+	capclass = 23
+	capacity = 1550
+	free_flow_speed = 35
+	critical_speed = 9.417
+
+[[highway.capclass_lookup]]
+	capclass = 24
+	capacity = 1000
+	free_flow_speed = 30
+	critical_speed = 28.252
+
+[[highway.capclass_lookup]]
+	capclass = 25
+	capacity = 1000
+	free_flow_speed = 30
+	critical_speed = 16.48
+
+[[highway.capclass_lookup]]
+	capclass = 26
+	capacity = 700
+	free_flow_speed = 25
+	critical_speed = 9.417
+
+[[highway.capclass_lookup]]
+	capclass = 27
+	capacity = 700
+	free_flow_speed = 25
+	critical_speed = 4.709
+
+[[highway.capclass_lookup]]
+	capclass = 28
+	capacity = 700
+	free_flow_speed = 18
+	critical_speed = 4.709
+
+[[highway.capclass_lookup]]
+	capclass = 29
+	capacity = 0
+	free_flow_speed = 0
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 30
+	capacity = 0
+	free_flow_speed = 18
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 31
+	capacity = 2100
+	free_flow_speed = 60
+	critical_speed = 21.189
+
+[[highway.capclass_lookup]]
+	capclass = 32
+	capacity = 1600
+	free_flow_speed = 45
+	critical_speed = 28.252
+
+[[highway.capclass_lookup]]
+	capclass = 33
+	capacity = 1550
+	free_flow_speed = 35
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 34
+	capacity = 1000
+	free_flow_speed = 35
+	critical_speed = 7.063
+
+[[highway.capclass_lookup]]
+	capclass = 35
+	capacity = 1000
+	free_flow_speed = 35
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 36
+	capacity = 700
+	free_flow_speed = 30
+	critical_speed = 47.087
+
+[[highway.capclass_lookup]]
+	capclass = 37
+	capacity = 700
+	free_flow_speed = 30
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 38
+	capacity = 2100
+	free_flow_speed = 18
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 39
+	capacity = 0
+	free_flow_speed = 0
+	critical_speed = 30.607
+
+[[highway.capclass_lookup]]
+	capclass = 40
+	capacity = 0
+	free_flow_speed = 18
+	critical_speed = 18.835
+
+[[highway.capclass_lookup]]
+	capclass = 41
+	capacity = 2150
+	free_flow_speed = 65
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 42
+	capacity = 1650
+	free_flow_speed = 50
+	critical_speed = 7.063
+
+[[highway.capclass_lookup]]
+	capclass = 43
+	capacity = 1550
+	free_flow_speed = 40
+	critical_speed = 7.063
+
+[[highway.capclass_lookup]]
+	capclass = 44
+	capacity = 1050
+	free_flow_speed = 35
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 45
+	capacity = 1050
+	free_flow_speed = 35
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 46
+	capacity = 900
+	free_flow_speed = 30
+	critical_speed = 21.189
+
+[[highway.capclass_lookup]]
+	capclass = 47
+	capacity = 900
+	free_flow_speed = 30
+	critical_speed = 28.252
+
+[[highway.capclass_lookup]]
+	capclass = 48
+	capacity = 2150
+	free_flow_speed = 18
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 49
+	capacity = 0
+	free_flow_speed = 0
+	critical_speed = 9.417
+
+[[highway.capclass_lookup]]
+	capclass = 50
+	capacity = 0
+	free_flow_speed = 18
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 51
+	capacity = 2150
+	free_flow_speed = 65
+	critical_speed = 47.087
+
+[[highway.capclass_lookup]]
+	capclass = 52
+	capacity = 1650
+	free_flow_speed = 55
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 53
+	capacity = 1550
+	free_flow_speed = 40
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 54
+	capacity = 1050
+	free_flow_speed = 40
+	critical_speed = 23.543
+
+[[highway.capclass_lookup]]
+	capclass = 55
+	capacity = 1050
+	free_flow_speed = 40
+	critical_speed = 9.417
+
+[[highway.capclass_lookup]]
+	capclass = 56
+	capacity = 950
+	free_flow_speed = 35
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 57
+	capacity = 950
+	free_flow_speed = 35
+	critical_speed = 9.417
+
+[[highway.capclass_lookup]]
+	capclass = 58
+	capacity = 2150
+	free_flow_speed = 18
+	critical_speed = 9.417
+
+[[highway.capclass_lookup]]
+	capclass = 59
+	capacity = 0
+	free_flow_speed = 0
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 60
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 61
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 23.543
+
+[[highway.capclass_lookup]]
+	capclass = 62
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 30.607
+
+[[highway.capclass_lookup]]
+	capclass = 63
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 16.48
+
+[[highway.capclass_lookup]]
+	capclass = 64
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 65
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 16.48
+
+[[highway.capclass_lookup]]
+	capclass = 66
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 47.087
+
+[[highway.capclass_lookup]]
+	capclass = 67
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 68
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 69
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 21.189
+
+[[highway.capclass_lookup]]
+	capclass = 70
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 71
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 72
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 73
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 11.772
+
+[[highway.capclass_lookup]]
+	capclass = 74
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 75
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 76
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 23.543
+
+[[highway.capclass_lookup]]
+	capclass = 77
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 30.607
+
+[[highway.capclass_lookup]]
+	capclass = 78
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 16.48
+
+[[highway.capclass_lookup]]
+	capclass = 79
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 80
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 16.48
+
+[[highway.capclass_lookup]]
+	capclass = 81
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 47.087
+
+[[highway.capclass_lookup]]
+	capclass = 82
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 16.48
+
+[[highway.capclass_lookup]]
+	capclass = 83
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 84
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 23.543
+
+[[highway.capclass_lookup]]
+	capclass = 85
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 16.48
+
+[[highway.capclass_lookup]]
+	capclass = 86
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 16.48
+
+[[highway.capclass_lookup]]
+	capclass = 87
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 88
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 14.126
+
+[[highway.capclass_lookup]]
+	capclass = 89
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 90
+    capacity = 0
+    free_flow_speed = 0
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 99
+	capacity = 0
+	free_flow_speed = 10
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 109
+	capacity = 0
+	free_flow_speed = 10
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 119
+	capacity = 0
+	free_flow_speed = 10
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 129
+	capacity = 0
+	free_flow_speed = 10
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 139
+	capacity = 0
+	free_flow_speed = 10
+	critical_speed = 3.0
+
+[[highway.capclass_lookup]]
+	capclass = 149
+	capacity = 0
+	free_flow_speed = 10
+	critical_speed = 3.0
+
+[[transit.modes]]
+    mode_id = "w"
+    name = "walk"
+    type = "WALK"
+    assign_type = "AUX_TRANSIT"
+    speed_miles_per_hour = 3.0
+[[transit.modes]]
+    mode_id = "a"
+    name = "access"
+    type = "ACCESS"
+    assign_type = "AUX_TRANSIT"
+    speed_miles_per_hour = 3.0
+[[transit.modes]]
+    mode_id = "e"
+    name = "egress"
+    type = "EGRESS"
+    assign_type = "AUX_TRANSIT"
+    speed_miles_per_hour = 3.0
+[[transit.modes]]
+    mode_id = "b"
+    name = "local_bus"
+    type = "LOCAL"
+    assign_type = "TRANSIT"
+    in_vehicle_perception_factor = 1.0
+[[transit.modes]]
+    mode_id = "x"
+    name = "exp_bus"
+    type = "PREMIUM"
+    assign_type = "TRANSIT"
+    in_vehicle_perception_factor = 1.0
+[[transit.modes]]
+    mode_id = "f"
+    name = "ferry"
+    type = "PREMIUM"
+    assign_type = "TRANSIT"
+    in_vehicle_perception_factor = 1.0
+[[transit.modes]]
+    mode_id = "l"
+    name = "light_rail"
+    type = "PREMIUM"
+    assign_type = "TRANSIT"
+    in_vehicle_perception_factor = 1.0
+[[transit.modes]]
+    mode_id = "h"
+    name = "heavy_rail"
+    type = "PREMIUM"
+    assign_type = "TRANSIT"
+    in_vehicle_perception_factor = 1.0
+[[transit.modes]]
+    mode_id = "r"
+    name = "comm_rail"
+    type = "PREMIUM"
+    assign_type = "TRANSIT"
+    in_vehicle_perception_factor = 1.0
+
+[[transit.vehicles]]
+    vehicle_id = 12 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 14 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 13 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 16 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 17 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 20 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 21 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 24 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 28 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 30 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 38 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 42 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 44 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 46 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 49 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 52 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 56 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 60 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 63 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 66 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 68 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 70 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 71 
+    mode = "b"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 80 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 81 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 84 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 86 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 87 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 90 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 91 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 92 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 94 
+    mode = "x"
+    name = ""
+    auto_equivalent = 2.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 101 
+    mode = "f"
+    name = ""
+    auto_equivalent = 0.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 103 
+    mode = "f"
+    name = ""
+    auto_equivalent = 0.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 110 
+    mode = "l"
+    name = ""
+    auto_equivalent = 0.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 111 
+    mode = "l"
+    name = ""
+    auto_equivalent = 0.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 120 
+    mode = "h"
+    name = ""
+    auto_equivalent = 0.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 130 
+    mode = "r"
+    name = ""
+    auto_equivalent = 0.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 131 
+    mode = "r"
+    name = ""
+    auto_equivalent = 0.0
+    seated_capacity = 1 
+    total_capacity = 2
+[[transit.vehicles]]
+    vehicle_id = 133 
+    mode = "r"
+    name = ""
+    auto_equivalent = 0.0
+    seated_capacity = 1 
+    total_capacity = 2

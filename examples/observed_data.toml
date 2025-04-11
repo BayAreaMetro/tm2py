@@ -1,0 +1,26 @@
+####################################
+#   OBSERVED DATA CONFIGURATION    #
+####################################
+
+[remote_io]
+    obs_folder_root = "/Users/wsp/Box Sync/"
+[transit]
+    on_board_survey_file = "Survey_Database_090221/acceptance-criteria-summaries-year-2015.csv"
+    reduced_summaries_file = "Survey_Database_090221/acceptance-criteria-reductions.csv"
+    reduced_access_summary_file = "Survey_Database_090221/acceptance-criteria-access-summaries-year-2015.csv"
+    reduced_flow_summary_file = "Survey_Database_090221/acceptance-criteria-spatial-flows-year-2015.csv"
+    bart_boardings_file = "bart-typical-weekday/BART Through Time Typical Weekday.csv"
+[census]
+    ctpp_2012_2016_file = "CTPP20122016/A302100 - Total Workers (1) (Workers 16 years and over).csv"
+    vehicles_by_block_group_file = "Census/ACSDT5Y2017.B08201-Data.csv"
+    census_geographies_shapefile = "Census/tl_2010_06_bg10.shp"
+    census_geographies_pickle = "Census/tl_2010_06_bg10.pickle"
+    census_tract_centroids_geojson = "Census/tl_2010_tract_centroids.geojson"
+[roadway]
+    pems_traffic_count_file = "PeMS/pems_period.csv"
+    pems_truck_count_file = "PeMS/pems_truck_period.csv"
+    caltrans_count_file = "Travel Model Two Conversion/Link21 Roadway Counts/CaltransandAlameda/Link21EMME_Caltrans_AADT_Traffic_and_Truck_alsowithAlamadaCounts.csv"
+    reduced_pems_summaries_file = "PeMS/acceptance-criteria-reduced-traffic-counts.pickle"
+    bridge_transactions_file = "bridge-transactions/Typical Weekday Transactions Statistics.csv"
+    reduced_transactions_file = "bridge-transactions/acceptance-criteria-reduced_transactions.pickle"
+

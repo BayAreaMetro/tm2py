@@ -1,0 +1,37 @@
+####################################
+#     SCENARIO CONFIGURATION       #
+####################################
+
+[scenario]
+    name = "Example scenario"
+    year = 2015
+    verify = false
+    maz_landuse_file = "inputs/landuse/maz_data.csv"
+    root_dir = "/Users/wsp/Documents/GitHub/tm2py/examples/temp_acceptance/"
+
+[run]
+    start_component = ""
+    initial_components = [
+        #"create_tod_scenarios", 
+        #"active_modes", 
+        #"air_passenger", 
+        "prepare_network_highway", 
+        "highway", 
+        "highway_maz_skim", 
+        #"prepare_network_transit",
+        #"transit_assign",
+        #"transit_skim"
+    ]
+    global_iteration_components = [
+        #"household", 
+        #"internal_external", 
+        #"truck", 
+        #"highway_maz_assign", 
+        #"highway", 
+        #"prepare_network_transit",
+        #"transit_assign",
+        #"transit_skim"
+    ]
+    final_components = []
+    start_iteration = 0
+    end_iteration = 1
