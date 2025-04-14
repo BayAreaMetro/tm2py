@@ -11,48 +11,52 @@ A python package to run the San Francisco Bay Area's Travel Model.
 [![Package Published](https://github.com/BayAreaMetro/tm2py/actions/workflows/publish.yml/badge.svg?branch=develop)](https://github.com/BayAreaMetro/tm2py/actions/workflows/publish.yml)
 
 ## Installation
+Note: TM2PY is only available on windows
 
-### Stable (to come - use bleeding edge for now):
-If default install locations are used for openpaths, then the you should be able to copy and paste the following bash script
-```
-#!/bin/bash
-read -p "Enter the path for the virtual environment: " VENV_PATH
-"C:\Program Files\Bentley\OpenPaths\EMME 24.01.00\Python311\python.exe" -m venv "$VENV_PATH"
-cp "C:\Program Files\Bentley\OpenPaths\EMME 24.01.00\emme.pth" "$VENV_PATH/Lib/site-packages/emme.pth"
-cmd.exe /c "$VENV_PATH/Scripts/activate.bat" && pip install tm2py
-```
-
-### Developer Installation (bleeding edge):
-
-1) Clone this repo, switch to the desired branch
-2) Open OpenPaths Shell Emme Shell (24.01.00)
-3) Create a virtual Environment 
-
+### Stable:
+there are 2 potential options to install and run tm2py, 
+the simplest is to open Open OpenPaths Shell and run:
 ```bash
-# In the OpenPaths Shell, cd to the parent folder of the tm2py GitHub folder. Create a new virtual environment in that folder (alongside the tm2py folder, not within it).
-python -m venv <your_tm2py_env_name>
-# Activate the virtual env
-<your_tm2py_env_name>\Scripts\activate
+pip install tm2py
 ```
 
-4) Copy the emmepath file from the OpenPaths EMME installation folder to the virtual environment
+Otherwise if you would like to seperate tm2py from the openpaths environment, You can install a virtual environment manually by following the steps below
 
-Copy "C:\Program Files\Bentley\OpenPaths\EMME 24.01.00\emme.pth" to <your_tm2py_env_name>\Lib\site-packages\
-
-5) Install tm2py in editable mode
-
+1) Open emme OpenPaths Shell Emme Shell (24.01.00)
+2) Create a virtual Environement 
 ```bash
-# In the OpenPaths EMME shell activated in step 2, install tm2py from local clone in editable mode
-# cd to the tm2py folder
+python -m venv /path/to/venv
+```
+3) Copy emmepath file (usually found in C:\Program Files\Bentley\OpenPaths\EMME 24.01.00) to venv/path/to/venv/Lib/site-packages
+4) Install tm2py 
+```bash
+pip install tm2py
+```
+
+### Developer Installation:
+For developers, if you would like to modify the base tm2py
+1) Open OpenPaths Shell Emme Shell (24.01.00)
+2) Create and activate your virtual Environement 
+```bash
+python -m venv /path/to/venv
+```
+
+3) Copy emmepath file (usually found in C:\Program Files\Bentley\OpenPaths\EMME 24.01.00) to venv/path/to/venv/Lib/site-packages
+4) clone tm2py in the apropriate directory
+```bash
+cd path/to/git/repo/location
+git clone https://github.com/BayAreaMetro/tm2py.git
+```
+5) Install tm2py
+```
 cd tm2py
-# pip
-pip install tm2py -e .
+pip install -e .[dev,doc]
 ```
 
+ 
 ### Example Data
 
 This respository doesn't come with example data due to its size. However, it does provide helper functions to access it from an online bucket:
-
 ```bash
 get_test_data location/for/test/data
 ```
@@ -61,7 +65,6 @@ Alternatively, you can access it from [example_union_test_highway.zip](https://m
 
 Copy and unzip [example_union_test_highway.zip](https://mtcdrive.box.com/s/3entr016e9teq2wt46x1os3fjqylfoge) to a local
 drive and from within that directory run:
-
 ```sh
 get_test_data <location>
 tm2py -s scenario.toml -m model.toml
@@ -107,12 +110,8 @@ import os, site; site.addsitedir(os.path.join(r"C:\\Program Files\\INRO\\Emme\\E
 ```
 2) At the beginning of first python file run_model.py add this line
 ```python
-os.environ["EMMEPATH"] = "C:\\Program Files\\INRO\\Emme\\Emme 4\\Emme-4.6.1"
+os.environ["EMMEPATH"] = "C:\\Program Files\\Bentley\\OpenPaths\\EMME 24.01.00"
 ```
-When running the model verify that the correct version eof emme is opened.
-
-
-![Correct Emme Version Logo](docs/images/emme_open_46.PNG)
 
 3) tm2py uses EMME's matrix API for matrix calculation. If the user gets the error below in transit skimming, it suggests the Python library `numexpr` version is not consistent with what EMME uses. The user can upgrade or rollback their `numexpr` to 2.7.3 for EMME 4.6 and 4.7.
 ```python
@@ -126,4 +125,4 @@ inro.emme.core.exception.Error: Current environment is inadequate to perform a p
 
 ## Contributing
 
-Details about contributing can be found on our documentation website: [](https://bayareametro.github.io/tm2py/contributing)
+Details about contributing can be found on our documentation website: [https://bayareametro.github.io/tm2py/contributing](https://bayareametro.github.io/tm2py/contributing)
