@@ -454,19 +454,15 @@ _RUN_MODEL_BAT_CONTENT = """
 SET MODEL_RUN_DIR=%~p0
 cd /d %MODEL_RUN_DIR%
 
-SET EMMEPATH=C:\Program Files\INRO\Emme\Emme 4\Emme-4.7.0.11
-SET PATH=%EMMEPATH%\programs;%PATH%
-
-CALL "C:\ProgramData\Anaconda3\condabin\conda" activate tm2py
+echo make sure python is the correct location
+where python
 python RunModel.py
 
-CALL "C:\ProgramData\Anaconda3\condabin\conda" deactivate
 PAUSE
 """
 
 _RUN_MODEL_PY_CONTENT = """
 import os
-from osgeo import gdal
 from tm2py.controller import RunController
 
 controller = RunController(
