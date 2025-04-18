@@ -1,4 +1,4 @@
-# How to setup your server to run tm2py
+# Set up server
 
 ## MTC's server
 MTC is running tm2py Intel(R) Xeon(R) Gold 6338 CPU @ 2.00GHz processors, 24 sockets 48 cores.

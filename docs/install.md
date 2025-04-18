@@ -1,5 +1,5 @@
 
-# Installation
+# Install tm2py
 
 First you need to [setup your server](server-setup.md).
 

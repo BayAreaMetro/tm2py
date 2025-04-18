@@ -1,29 +1,38 @@
 
-# Installation
+# Run the model
 
-First you need to [setup your server](server-setup.md).
+##	Set up Model Run Directory
 
-1. Clone the [tm2py repo](https://github.com/BayAreaMetro/tm2py) and switch to the branch you want to run (with Git Bash or GitHub desktop).
+1.	Activate your virtual environment
 
-2. Open the ``OpenPaths EMME Shell``.
-    a. In the OpenPaths Shell, cd to the parent folder of the tm2py GitHub folder. Create a new virtual environment in that folder (alongside the tm2py folder, not within it): 
-    
-    python -m venv <your_tm2py_env_name>
+cd to your tm2pyenv type <your_tm2py_env_name>\Scripts\activate
 
-3. Activate your virtual environment in the EMME shell:
-   <your_tm2py_env_name>\Scripts\activate
+2.	Set your input file paths and expected run paths here:
+ tm2py\examples\setup_config.toml
+3.	Run setup-model.ipynb
+-	In the EMME prompt virtual environment, type jupyter notebook, and Navigate to the file C:\GitHub\tm2py\notebook\setup-model.ipynb
+(or Visual studio with the correct virtual environment)
+4.	In Jupyter Notebook, open this notebook from the tm2py folder: https://github.com/BayAreaMetro/tm2py/blob/update_openpaths_env/notebooks/setup-model.ipynb
+	This notebook references the example setup model config in here: https://github.com/BayAreaMetro/tm2py/blob/update_openpaths_env/examples/setup_config.toml, it copies model inputs and folder structure templates from various places. I added the Box source link of each item in the comments.
+	Run this notebook, it should create a clean model folder.
+	It also print setup loggings in the model folder.
 
-4. Copy the emme.pth file from the OpenPaths EMME installation folder to the virutal environment. You can copy in the shell with shell commands or just do things in Windows. (This part feels like the crazy things travel modelers do because we are such a small field.)
+5.	The only manual change you need to make should be updating the IP Address in CT-RAMP properties files. RunModel.MatrixServerAddress and RunModel.HouseholdServerAddress. you can find them in the model folder:\
 
-Copy "C:\Program Files\Bentley\OpenPaths\EMME 24.01.00\emme.pth" to <your_tm2py_env_name>\Lib\site-packages\
+"D:\TM2.2.1.3_clean_setup\CTRAMP\runtime\mtctm2.properties"
 
-5. In the OpenPaths EMME shell activated from step 2, install tm2py from local clone in editable mode
-a.	cd to the tm2py GitHub folder cd tm2py
-b.	pip install -e .
+"D:\TM2.2.1.3_clean_setup\CTRAMP\runtime\mtcpcrm.properties"
 
-6.	In step 4 loggings, you should expect to see only the packages listed in the requirements.txt are installed. After step 4 completes, you can try importing tm2py to verify if there's any quick dependency error.
-a.	In the shell, type python
-b.	type import tm2py
+"D:\TM2.2.1.3_clean_setup\CTRAMP\runtime\logsum.properties"
+
+6.	Set the model to use warm start demand in the file: scenario_config.toml in your run directory.
+Note: I had to update the emmebanks to the latest version before themodel would run.
+
+We had to use a different WalkTransitDriveSkims.xls in the CTRAMP folder
+
+## Run the Model
+While still in your virtual environment from step 1 a), navigate to the run folder you set in 2b).
+1.	To run the model, in the activate OpenPaths virtual env, type python RunModel.py
 
 
 
