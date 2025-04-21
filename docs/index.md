@@ -25,3 +25,4 @@ Important travel behavior enhancements in Travel Model Two include:
 * Representation of Automated Vehicles
 
 
+How do you create and update these pages? [Instructions for deploying GitHub pages with mkdocs](https://www.mkdocs.org/user-guide/deploying-your-docs/)
