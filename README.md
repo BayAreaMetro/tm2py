@@ -11,48 +11,48 @@ A python package to run the San Francisco Bay Area's Travel Model.
 [![Package Published](https://github.com/BayAreaMetro/tm2py/actions/workflows/publish.yml/badge.svg?branch=develop)](https://github.com/BayAreaMetro/tm2py/actions/workflows/publish.yml)
 
 ## Installation
-Note: TM2PY is only available on windows
+Note: `tm2py` is fully tested on Windows only.
 
-### Stable:
-there are 2 potential options to install and run tm2py, 
-the simplest is to open Open OpenPaths Shell and run:
+### Create Virtual Environment
+Since April 2025, `tm2py` has been updated to use OpenPaths' Python distribution (OpenPaths EMME 24.01.00). To launch an OpenPaths Python instance, in the system search bar, type "OpenPaths EMME Shell 24.01.00" and click it to launch.
+
+We recommend creating a virtual environment for `tm2py` installation and deployment. To create a virtual environment, use the following steps:
+
+1) Launch OpenPaths EMME Shell 24.01.00
+2) Create a virtual environment 
+```bash
+python -m venv /path/to/virtual/env/<your_tm2py_env_name>
+```
+3) Copy the "emme.pth" file from the OpenPaths EMME installation folder to the virtual environment. "emme.pth" is usually found under "C:\Program Files\Bentley\OpenPaths\EMME 24.01.00". Copy it to: `/path/to/virtual/env/<your_tm2py_env_name>/Lib/site-packages/`
+4) You've just created a virtual environment. To activate it
+```bash
+/path/to/virtual/env/<your_tm2py_env_name>/Scripts/activate
+```
+
+### Stable Installation (From Release):
+In the active virtual environment, 
 ```bash
 pip install tm2py
 ```
+Note: this option is only available when `tm2py` is released on pypi. Before that, use the Developer Installation option below.
 
-Otherwise if you would like to seperate tm2py from the openpaths environment, You can install a virtual environment manually by following the steps below
-
-1) Open emme OpenPaths Shell Emme Shell (24.01.00)
-2) Create a virtual Environement 
+### Developer Installation (From Clone):
+In the active virtual environment,
+1) Clone `tm2py` to your local directory
 ```bash
-python -m venv /path/to/venv
-```
-3) Copy emmepath file (usually found in C:\Program Files\Bentley\OpenPaths\EMME 24.01.00) to venv/path/to/venv/Lib/site-packages
-4) Install tm2py 
-```bash
-pip install tm2py
-```
-
-### Developer Installation:
-For developers, if you would like to modify the base tm2py
-1) Open OpenPaths Shell Emme Shell (24.01.00)
-2) Create and activate your virtual Environement 
-```bash
-python -m venv /path/to/venv
-```
-
-3) Copy emmepath file (usually found in C:\Program Files\Bentley\OpenPaths\EMME 24.01.00) to venv/path/to/venv/Lib/site-packages
-4) clone tm2py in the apropriate directory
-```bash
-cd path/to/git/repo/location
+cd path/to/your/local/git/repo/location
 git clone https://github.com/BayAreaMetro/tm2py.git
 ```
-5) Install tm2py
+2) Install tm2py
+```bash
+cd tm2py
+pip install -e .
 ```
+3) If developers would like to install dev or doc dependencies
+```bash
 cd tm2py
 pip install -e .[dev,doc]
 ```
-
  
 ### Example Data
 
