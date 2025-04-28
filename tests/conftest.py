@@ -3,8 +3,7 @@ import os
 import sys
 from pathlib import Path
 
-# why import gdal first: https://github.com/BayAreaMetro/tm2py/blob/7a563f0c5cea2125f28bfaedc50205e70c532094/README.md?plain=1#L57
-import gdal
+from osgeo import gdal
 import pytest
 
 print("CONFTEST LOADED")
