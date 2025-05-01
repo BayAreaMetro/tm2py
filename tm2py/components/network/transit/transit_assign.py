@@ -452,14 +452,22 @@ class TransitAssignment(Component):
             self.transit_network.update_auto_times(time_period)
 
             if self.controller.iteration == 0:
+                # iteration = 0 : run uncongested transit assignment
                 use_ccr = False
                 congested_transit_assignment = False
                 print("running uncongested transit assignment with warmstart demand")
                 self.run_transit_assign(
                     time_period, use_ccr, congested_transit_assignment
                 )
-
-            else:  # iteration >=1
+            elif (self.controller.iteration == 1) & (self.controller.config.warmstart.use_warmstart_skim):
+                # iteration = 1 and use_warmstart_skim = True : run uncongested transit assignment
+                use_ccr = False
+                congested_transit_assignment = False
+                self.run_transit_assign(
+                    time_period, use_ccr, congested_transit_assignment
+                )               
+            else:
+                # iteration >= 1 and use_warmstart_skim = False : run congested transit assignment
                 use_ccr = self.config.use_ccr
                 if time_period in ["EA", "EV", "MD"]:
                     congested_transit_assignment = False
@@ -711,13 +719,24 @@ class TransitAssignment(Component):
             "assignment_period": _duration,
         }
 
-        _stop_criteria = {
-            "max_iterations": self.congested_transit_assn_max_iteration[
-                time_period.lower()
-            ],
-            "normalized_gap": self.config.congested.normalized_gap,
-            "relative_gap": self.config.congested.relative_gap,
-        }
+        stop_criteria_settings = self.config.congested.stop_criteria
+        # get the corresponding stop criteria for the global iteration
+        _stop_criteria = None
+        for item in stop_criteria_settings:
+            if item["global_iteration"] == self.controller.iteration:
+                _stop_criteria = {
+                    "max_iterations": [
+                        time.max_iteration
+                        for time in item.max_iterations
+                        if time.time_period.lower() == time_period.lower()
+                    ][0],
+                    "normalized_gap": item.normalized_gap,
+                    "relative_gap": item.relative_gap,
+                }
+        if _stop_criteria is None:
+            raise ValueError(
+                f"transit.congested.stop_criteria: Must specifify stop criteria for global iteration {self.controller.iteration}"
+            )
         add_volumes = False
         assign_transit(
             _tclass_specs,

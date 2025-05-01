@@ -1,36 +1,5 @@
-fiona
-folium
-fontawesome_markdown
-gdal
-geographiclib
-geojson
-geopandas > 0.8.0
-jsonschema
-jupyter
-lark-parser
-markdown == 3.3.1 # needs to be compatible with mkdocs, which needs > markdown 3.2.1
-mike
-mkdocs
-mkdocs-autorefs
-mkdocs-awesome-pages-plugin
-mkdocs-jupyter
-mkdocs-macros-plugin
-mkdocs-material
-mkdocstrings
-mkdocstrings-python
-notebook
-numpy
-openmatrix
-osmnx >= 0.12
-pandas > 1.0
-pydantic < 2.0
-pyproj > 2.2.0
-pywin32==306 ; sys_platform == 'win32'
-pyyaml
-pywin32==306 ; sys_platform == 'win32'
-rtree
-scipy
-shapely
-tables
-toml
-typing_extensions
+# required in tm2py but not in OpenPaths
+toml # used in config.py to load config files. alternative is json
+pydantic < 2.0 # used in config.py to validate config files. alternative?
+requests # logger.py, used to post msg to slack about model run; also a deep dependency of the documentation libs. alternative?
+scipy # transit_network.py, using scipy non-negative least squares solver. alternative?

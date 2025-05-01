@@ -248,9 +248,9 @@ class RunController:
                         "air_passenger",
                         "internal_external",
                     ]:
-                        highway_demand_file = str(self.get_abs_path(
-                            self.config[source].highway_demand_file
-                        ))
+                        highway_demand_file = str(
+                            self.get_abs_path(self.config[source].highway_demand_file)
+                        )
                         for time in self.config["time_periods"]:
                             path = highway_demand_file.format(
                                 period=time.name, iter=iteration
@@ -259,23 +259,27 @@ class RunController:
                                 path
                             ), f"{path} required as warmstart demand does not exist"
                 elif self.config.warmstart.use_warmstart_skim:
-                    highway_skim_file = str(self.get_abs_path(
-                        self.config["highway"].output_skim_path
-                        + self.config["highway"].output_skim_filename_tmpl
-                    ))
+                    highway_skim_file = str(
+                        self.get_abs_path(
+                            self.config["highway"].output_skim_path
+                            + self.config["highway"].output_skim_filename_tmpl
+                        )
+                    )
                     for time in self.config["time_periods"]:
-                        path = highway_skim_file.format(period=time.name)
+                        path = highway_skim_file.format(time_period=time.name)
                         assert os.path.isfile(
                             path
                         ), f"{path} required as warmstart skim does not exist"
-                    transit_skim_file = str(self.get_abs_path(
-                        self.config["transit"].output_skim_path
-                        + self.config["transit"].output_skim_filename_tmpl
-                    ))
+                    transit_skim_file = str(
+                        self.get_abs_path(
+                            self.config["transit"].output_skim_path
+                            + self.config["transit"].output_skim_filename_tmpl
+                        )
+                    )
                     for time in self.config["time_periods"]:
                         for tclass in self.config["transit"]["classes"]:
                             path = transit_skim_file.format(
-                                period=time.name, iter=tclass.name
+                                time_period=time.name, tclass=tclass.name
                             )
                             assert os.path.isfile(
                                 path

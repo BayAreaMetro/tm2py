@@ -300,7 +300,7 @@ class AssignmentRunner:
             assign_spec (Dict): EMME SOLA assignment specification
             skim_matrices (List[str]): list of skim matrix ID.
             omx_file_path (str): path to resulting output of skim matrices to OMX
-            logger (Logger): optional logger object if running in process. 
+            logger (Logger): optional logger object if running in process.
                 If not specified a new logger reference is created.
         """
         self.emme_manager = EmmeManagerLight(project_path, emmebank_path)
@@ -514,7 +514,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--config", help="path to config json kwargs or list of kwargs")
     args = parser.parse_args()
-    with open(args.config, "r", encoding='utf8') as f:
+    with open(args.config, "r", encoding="utf8") as f:
         run_config = _json.load(f)
     if not isinstance(run_config, list):
         run_config = [run_config]

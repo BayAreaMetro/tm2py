@@ -204,7 +204,9 @@ class PrepareHighwayDemand(EmmeDemand):
             demand = demand + self._read_demand(file_config, time_period, num_zones)
         demand_name = f"{time_period}_{name}"
         description = f"{time_period} {description} demand"
-        self._save_demand(demand_name, demand, description, apply_msa=True)
+        self._save_demand(
+            demand_name, demand, description, apply_msa=self.config.apply_msa_demand
+        )
 
     def _read_demand(self, file_config, time_period, num_zones):
         # Load demand from cross-referenced source file,
@@ -428,7 +430,7 @@ class PrepareHighwayDemand(EmmeDemand):
                     self.controller.config.household.transit_demand_file
                 )
                 .__str__()
-                .format(period=time_period),
+                .format(period=time_period, iter=self.controller.iteration),
                 "w",
             )
             # active_out_file = OMXManager(
@@ -691,11 +693,7 @@ class PrepareTransitDemand(EmmeDemand):
             ).__str__()
         name = file_config["name"]
         return self._read(
-            path.format(
-                period=time_period,
-                # set=skim_set,
-                # iter=self.controller.iteration
-            ),
+            path.format(period=time_period, iter=self.controller.iteration),
             name,
             num_zones,
         )
