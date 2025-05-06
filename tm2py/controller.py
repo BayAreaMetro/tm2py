@@ -338,7 +338,7 @@ class RunController:
         # Queue components which are run after final iteration
         _finalizer_iteration = self.config.run.end_iteration + 1
 
-        for c_name in _final_components:
+        for _c_name in _final_components:
             self._add_component_to_queue(_finalizer_iteration, _c_name)
 
         # If start_component specified, remove things before its first occurance
