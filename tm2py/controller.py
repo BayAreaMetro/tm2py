@@ -38,6 +38,7 @@ from tm2py.components.network.highway.highway_network import PrepareNetwork
 from tm2py.components.network.transit.transit_assign import TransitAssignment
 from tm2py.components.network.transit.transit_network import PrepareTransitNetwork
 from tm2py.components.network.transit.transit_skim import TransitSkim
+from tm2py.components.post_processor import PostProcessor
 from tm2py.config import Configuration
 from tm2py.emme.manager import EmmeManager
 from tm2py.logger import Logger
@@ -60,6 +61,7 @@ component_cls_map = {
     "internal_external": InternalExternal,
     "truck": CommercialVehicleModel,
     "household": HouseholdModel,
+    "post_processor":PostProcessor,
 }
 
 # pylint: disable=too-many-instance-attributes
