@@ -6,6 +6,8 @@ import os
 from typing import TYPE_CHECKING, Dict, List, Set
 
 import pandas as pd
+from shapely.geometry import mapping, LineString
+import json
 
 from tm2py.components.component import Component, FileFormatError
 from tm2py.emme.manager import EmmeNetwork, EmmeScenario
@@ -32,27 +34,26 @@ class PostProcessor(Component):
         self._transit_scenarios = None
         self._highway_emmebank = None
         self._highway_scenarios = None
-        self._auto_emmebank = None
-        self._auto_networks = None
-        self._auto_scenarios = None
 
         self._tp_mapping = {
             tp.name.upper(): tp.emme_scenario_id
             for tp in self.controller.config.time_periods
         }
 
-    @LogStartEnd("Post processing model outputs")
+    @LogStartEnd("Exporting model networks")
     def run(self):
-        """Run post processing steps."""
+        """Export model networks."""
         for period in self.controller.time_period_names:
             with self.controller.emme_manager.logbook_trace(
-                f"run post processing for {period}"
+                f"exporting networks for {period}"
             ):
                 transit_scenario = self.transit_emmebank.scenario(period)
                 highway_scenario = self.highway_emmebank.scenario(period)
                 self._export_transit_network_as_shapefile(transit_scenario, period)
                 self._export_highway_network_as_shapefile(highway_scenario, period)
-
+                if period.upper() == "AM":
+                    self._export_boardings_by_segment(transit_scenario, period)
+                    self._export_boardings_by_segment_geofile(transit_scenario, period)
 
     def validate_inputs(self):
         """Validate the inputs."""
@@ -88,7 +89,6 @@ class PostProcessor(Component):
 
     @property
     def transit_networks(self):
-        # if self._transit_networks is None:
         self._transit_networks = {
             tp: self.transit_scenarios[tp].get_network()
             for tp in self.time_period_names
@@ -141,4 +141,98 @@ class PostProcessor(Component):
                 "transit_line":'none'
             }
         )
-       
+
+    def _export_boardings_by_segment(self, scenario: EmmeScenario, time_period: str):
+        """Export boardings by transit segment."""
+        transit_network = scenario.get_network()
+        path_tmplt = self.get_abs_path(self.config.boardings_by_segment_file_path)
+        period_scen_id = self._tp_mapping[time_period]
+        output_path = path_tmplt.format(period=period_scen_id)
+        with open(output_path, "w") as f:
+            f.write(
+                ",".join(
+                    [
+                    "Line", 
+                    "From",
+                    "To",
+                    "Length", 
+                    "Dwt",
+                    "capt",
+                    "TTF",
+                    "voltr",
+                    "caps",
+                    "Data1",
+                    "Data2",
+                    "Data3"
+                    ]
+                )
+            )
+            f.write("\n")
+
+            for line in transit_network.transit_lines():
+                total_capacity = line.vehicle.total_capacity
+                seated_capacity = line.vehicle.seated_capacity
+                hdw = line.headway
+                line_hour_total_cap = 60 * total_capacity / hdw
+                line_hour_seated_cap = 60 * seated_capacity / hdw
+                for segment in line.segments(include_hidden=False):
+                    f.write(
+                        ",".join(
+                            [
+                                str(x) 
+                                for x in [
+                                    segment.line.id, 
+                                    segment.i_node, 
+                                    segment.j_node,
+                                    segment.link.length,  
+                                    segment.dwell_time,
+                                    line_hour_total_cap,
+                                    segment.transit_time_func,
+                                    segment.transit_volume,
+                                    line_hour_seated_cap,
+                                    segment.data1,
+                                    segment.data2,
+                                    segment.data3
+                                ]
+                            ]
+                        )
+                    )
+                    f.write("\n")
+
+    def _export_boardings_by_segment_geofile(self, scenario: EmmeScenario, time_period: str):
+        """Export boardings by transit segment."""
+        transit_network = scenario.get_network()
+        path_tmplt = self.get_abs_path(self.config.boardings_by_segment_geofile_path)
+        output_path = path_tmplt.format(period=time_period)
+        features = []
+
+        for line in transit_network.transit_lines():
+            total_capacity = line.vehicle.total_capacity
+            seated_capacity = line.vehicle.seated_capacity
+            hdw = line.headway
+            line_hour_total_cap = 60 * total_capacity / hdw
+            line_hour_seated_cap = 60 * seated_capacity / hdw
+
+            for segment in line.segments(include_hidden=False):
+                geometry = mapping(LineString(segment.link.shape))
+                feature = {
+                    "type": "Feature",
+                    "geometry": geometry,
+                    "properties": {
+                        "line_id": segment.line.id,
+                        "inode": segment.i_node.id,
+                        "jnode": segment.j_node.id,
+                        "voltr": segment.transit_volume,
+                        "caps": line_hour_seated_cap,
+                        "capt": line_hour_total_cap
+                    }
+                }
+                features.append(feature)
+
+        geojson_data = {
+            "type": "FeatureCollection",
+            "features": features
+        }
+
+        with open(output_path, "w") as f:
+            json.dump(geojson_data, f, indent=2)

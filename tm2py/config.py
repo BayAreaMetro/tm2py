@@ -1400,6 +1400,8 @@ class TransitConfig(ConfigItem):
 class PostProcessorConfig(ConfigItem):
     "Post Processor Configuration."
     network_shapefile_path: str = Field(default=None)
+    boardings_by_segment_file_path: str = Field(default=None)
+    boardings_by_segment_geofile_path: str = Field(default=None)
 
 
 @dataclass(frozen=True)
