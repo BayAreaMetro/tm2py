@@ -143,7 +143,12 @@ class PostProcessor(Component):
         )
 
     def _export_boardings_by_segment(self, scenario: EmmeScenario, time_period: str):
-        """Export boardings by transit segment."""
+        """Export transit segment boardings to a CSV file.
+
+        The output includes dwell time, travel time function, segment volumes,
+        total and seated capacity of transit line per hour for each transit segment
+        in the specified time period.
+        """
         transit_network = scenario.get_network()
         path_tmplt = self.get_abs_path(self.config.boardings_by_segment_file_path)
         period_scen_id = self._tp_mapping[time_period]
@@ -200,10 +205,14 @@ class PostProcessor(Component):
                     f.write("\n")
 
     def _export_boardings_by_segment_geofile(self, scenario: EmmeScenario, time_period: str):
-        """Export boardings by transit segment."""
+        """Export transit segment boardings to a geojson file.
+
+        The output includes segment volumes, total and seated capacity 
+        of transit line per hour for each transit segment in the specified time period.
+        """
         transit_network = scenario.get_network()
         path_tmplt = self.get_abs_path(self.config.boardings_by_segment_geofile_path)
-        output_path = path_tmplt.format(period=time_period)
+        output_path = path_tmplt.format(period=time_period.lower())
         features = []
 
         for line in transit_network.transit_lines():
@@ -219,10 +228,10 @@ class PostProcessor(Component):
                     "type": "Feature",
                     "geometry": geometry,
                     "properties": {
-                        "line_id": segment.line.id,
-                        "inode": segment.i_node.id,
-                        "jnode": segment.j_node.id,
-                        "voltr": segment.transit_volume,
+                        "LINE_ID": segment.line.id,
+                        "INODE": int(segment.i_node.id),
+                        "JNODE": int(segment.j_node.id),
+                        "VOLTR": segment.transit_volume,
                         "caps": line_hour_seated_cap,
                         "capt": line_hour_total_cap
                     }
@@ -231,6 +240,10 @@ class PostProcessor(Component):
 
         geojson_data = {
             "type": "FeatureCollection",
+            "crs": {
+                "type": "name",
+                "properties": {"name": "urn:ogc:def:crs:EPSG::2875"},
+            },
             "features": features
         }
 
