@@ -8,9 +8,10 @@ ROOT_DIR = "E:/"
 # user-defined model folder name (naming convention: ModelYear_ModelVersion_Project_Scenario)
 MODEL_FOLDER_NAME = "TM2.2.1.3_clean_setup"
 
-# location of the networks
+# location of the networks support files
 # this includes file such as tolls, transit fares etc.
 # Box: https://mtcdrive.box.com/s/6jf6duborg00d5uqftu35iiynpuzpkbj
+
 INPUT_NETWORK_DIR = "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Inputs/2015-tm22-dev-sprint-03"
 
 # this is the location/folder for Emme Netorks (built from Lasso) 
@@ -37,4 +38,4 @@ EMME_TEMPLATE_PROJECT_DIR = "E:/Box/Modeling and Surveys/Development/Travel Mode
 CONFIGS_GITHUB_PATH = "https://raw.githubusercontent.com/BayAreaMetro/travel-model-two-config/refs/heads/main/2015-tm22-dev-sprint-03"
 
 # travel model two release tag to fetch
-TRAVEL_MODEL_TWO_RELEASE_TAG = "TM2.2.3"
+TRAVEL_MODEL_TWO_RELEASE_TAG = "TM2.2.4"

@@ -20,6 +20,8 @@ Copy "C:\Program Files\Bentley\OpenPaths\EMME 24.01.00\emme.pth" to <your_tm2py_
 5. In the OpenPaths EMME shell activated from step 2, install tm2py from local clone in editable mode
 a.	cd to the tm2py GitHub folder cd tm2py
 b.	pip install -e .
+For developers: if you would like to install additional dev or doc dependencies,
+c.	pip install -e .[dev,doc]
 
 6.	In step 4 loggings, you should expect to see only the packages listed in the requirements.txt are installed. After step 4 completes, you can try importing tm2py to verify if there's any quick dependency error.
 a.	In the shell, type python
