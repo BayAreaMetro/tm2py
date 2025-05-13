@@ -923,6 +923,15 @@
     active_south_database_path = "emme_project/Database_active_south/emmebank"
     transit_database_path = "emme_project/Database_transit/emmebank"
 
+    [[emme.highway_distribution]]
+        time_periods = ["AM"]
+        num_processors = "MAX/3"
+    [[emme.highway_distribution]]
+        time_periods = ["PM"]
+        num_processors = "MAX/3"
+    [[emme.highway_distribution]]
+        time_periods = ["EA", "MD", "EV"]
+        num_processors = "MAX/3"
 
 [[highway.capclass_lookup]]
 	capclass = 0

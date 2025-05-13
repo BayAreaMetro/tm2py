@@ -48,14 +48,3 @@
     air_passenger_highway_demand_file = "warmstart/demand_matrices/highway/air_passenger/tripsAirPax{period}.omx"
     internal_external_highway_demand_file = "warmstart/demand_matrices/highway/internal_external/tripsIx{period}.omx"
     truck_highway_demand_file = "warmstart/demand_matrices/highway/commercial/tripstrk{period}.omx"
-
-[emme]
-    [[emme.highway_distribution]]
-        time_periods = ["AM"]
-        num_processors = "MAX/3"
-    [[emme.highway_distribution]]
-        time_periods = ["PM"]
-        num_processors = "MAX/3"
-    [[emme.highway_distribution]]
-        time_periods = ["EA", "MD", "EV"]
-        num_processors = "MAX/3"
