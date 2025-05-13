@@ -13,16 +13,15 @@ files in .toml format (by convention a scenario.toml and a model.toml)
   `python <path>/tm2py/tm2py/controller.py –s scenario.toml –m model.toml`
 
 """
+
 import itertools
 import multiprocessing
 import os
 import queue
 import re
 from collections import deque
-from io import RawIOBase
-from multiprocessing.sharedctypes import Value
 from pathlib import Path
-from typing import Any, Collection, Dict, List, Tuple, Union
+from typing import Collection, List, Tuple, Union
 
 from tm2py.components.component import Component
 from tm2py.components.demand.air_passenger import AirPassenger
@@ -114,9 +113,6 @@ class RunController:
 
         self.config = Configuration.load_toml(config_file)
         self.has_emme: bool = emme_context()
-        # NOTE: Logger opens log file on __enter__ (in run), not ready for logging yet
-        # Logger uses self.config.logging
-        self.logger = Logger(self)
         self.top_sheet = None
         self.trace = None
         self.completed_components = []
@@ -127,13 +123,13 @@ class RunController:
         self._component = None
         self._component_name = None
         self._queued_components = deque()
-
         # mapping from defined names referenced in config to Component objects
         self._component_map = {
             k: v(self) for k, v in component_cls_map.items() if k in run_components
         }
-
         self._queue_components(run_components=run_components)
+
+        self.logger = Logger(self)
 
     def __repr__(self):
         """Legible representation."""
@@ -252,9 +248,9 @@ class RunController:
                         "air_passenger",
                         "internal_external",
                     ]:
-                        highway_demand_file = self.get_abs_path(
-                            self.config[source].highway_demand_file
-                        ).__str__()
+                        highway_demand_file = str(
+                            self.get_abs_path(self.config[source].highway_demand_file)
+                        )
                         for time in self.config["time_periods"]:
                             path = highway_demand_file.format(
                                 period=time.name, iter=iteration
@@ -263,19 +259,23 @@ class RunController:
                                 path
                             ), f"{path} required as warmstart demand does not exist"
                 elif self.config.warmstart.use_warmstart_skim:
-                    highway_skim_file = self.get_abs_path(
-                        self.config["highway"].output_skim_path
-                        / self.config["highway"].output_skim_filename_tmpl
-                    ).__str__()
+                    highway_skim_file = str(
+                        self.get_abs_path(
+                            self.config["highway"].output_skim_path
+                            + self.config["highway"].output_skim_filename_tmpl
+                        )
+                    )
                     for time in self.config["time_periods"]:
                         path = highway_skim_file.format(time_period=time.name)
                         assert os.path.isfile(
                             path
                         ), f"{path} required as warmstart skim does not exist"
-                    transit_skim_file = self.get_abs_path(
-                        self.config["transit"].output_skim_path
-                        / self.config["transit"].output_skim_filename_tmpl
-                    ).__str__()
+                    transit_skim_file = str(
+                        self.get_abs_path(
+                            self.config["transit"].output_skim_path
+                            + self.config["transit"].output_skim_filename_tmpl
+                        )
+                    )
                     for time in self.config["time_periods"]:
                         for tclass in self.config["transit"]["classes"]:
                             path = transit_skim_file.format(
@@ -286,7 +286,12 @@ class RunController:
                             ), f"{path} required as warmstart skim does not exist"
 
         self._component = component
-        component.run()
+        try:
+            component.run()
+        except:
+            # re-insert failed component on error
+            self._queued_components.insert(0, (iteration, name, component))
+            raise
         self.completed_components.append((iteration, name, component))
 
     def _queue_components(self, run_components: Collection[str] = None):
@@ -298,7 +303,7 @@ class RunController:
         try:
             assert not self._queued_components
         except AssertionError:
-            "Components already queued, returning without re-queuing."
+            print("Components already queued, returning without re-queuing.")
             return
 
         _initial_components = self.config.run.initial_components

@@ -553,8 +553,8 @@
     output_skim_path = "skim_matrices/highway"
     output_skim_filename_tmpl = "HWYSKM{time_period}_taz.omx"
     output_skim_matrixname_tmpl = "{time_period}_{mode}_{property}"
-    relative_gap = 0.0005
     max_iterations = 100
+    network_acceleration = false
     # labels entire highway network (any of the classes) + MAZ connectors
     generic_highway_mode_code = "c"
     # include other MAZs to estimate density (pop+jobs*2.5)/acres for each MAZ
@@ -594,6 +594,12 @@
             number = 3
             counties = ["Solano", "Napa", "Sonoma", "Marin"]
 
+    [[highway.relative_gaps]]
+        global_iteration = 0
+        relative_gap = 0.0005
+    [[highway.relative_gaps]]
+        global_iteration = 1
+        relative_gap = 0.0005
     [[highway.classes]]
         name = "da"
         veh_group_name = "da"
@@ -814,6 +820,7 @@
     fare_matrix_path = "inputs/trn/fareMatrix.txt"
     # max expected transfer distance for mode-to-mode transfer fare table generation
     fare_max_transfer_distance_miles = 3
+    journey_levels.use_algorithm = true
     # for TAZ instead of TAPs
     ## set to true if use TAZ
     override_connector_times = false
@@ -916,6 +923,20 @@
     active_south_database_path = "emme_project/Database_active_south/emmebank"
     transit_database_path = "emme_project/Database_transit/emmebank"
 
+    [[emme.highway_distribution]]
+        time_periods = ["AM"]
+        num_processors = "MAX/3"
+    [[emme.highway_distribution]]
+        time_periods = ["PM"]
+        num_processors = "MAX/3"
+    [[emme.highway_distribution]]
+        time_periods = ["EA", "MD", "EV"]
+        num_processors = "MAX/3"
+
+    # if serial assignment is required comment about the above block and use the below
+    # [[emme.highway_distribution]]
+    #     time_periods = ["EA", "AM", "MD", "PM", "EV"]
+    #     num_processors = "MAX-1"
 
 [[highway.capclass_lookup]]
 	capclass = 0
@@ -1258,6 +1279,23 @@
 	capacity = 2150
 	free_flow_speed = 18
 	critical_speed = 47.087
+
+[[highway.capclass_lookup]]
+    capclass = 129
+    capacity = 900
+    free_flow_speed = 30
+    critical_speed = 11.772
+[[highway.capclass_lookup]]
+    capclass = 139
+    capacity = 900
+    free_flow_speed = 30
+    critical_speed = 11.772
+[[highway.capclass_lookup]]
+    capclass = 149
+    capacity = 900
+    free_flow_speed = 30
+    critical_speed = 11.772
+
 
 
 
