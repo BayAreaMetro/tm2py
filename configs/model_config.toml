@@ -933,6 +933,11 @@
         time_periods = ["EA", "MD", "EV"]
         num_processors = "MAX/3"
 
+    # if serial assignment is required comment about the above block and use the below
+    # [[emme.highway_distribution]]
+    #     time_periods = ["EA", "AM", "MD", "PM", "EV"]
+    #     num_processors = "MAX-1"
+
 [[highway.capclass_lookup]]
 	capclass = 0
 	capacity = 0
