@@ -763,7 +763,7 @@ class SkimMAZCosts(Component):
     @LogStartEnd(level="DEBUG")
     def _prepare_network(self):
         """Calculates the link cost in @link_cost and loads the network to self._network."""
-        net_calc = NetworkCalculator(self.controller, self._scenario)
+        net_calc = NetworkCalculator(self.controller.emme_manager, self._scenario)
         if self._scenario.has_traffic_results:
             time_attr = "(@free_flow_time.max.timau)"
         else:
