@@ -230,7 +230,7 @@ class RunController:
 
     @property
     def runtime_log_headers(self):
-        return ['LOOP', 'STEP', 'START_TIME', 'END_TIME', 'STEP_TIME (MINS)']
+        return ["LOOP", "STEP", "START_TIME", "END_TIME", "STEP_TIME (MINS)"]
 
     @property
     def runtime_log_col_width(self):
@@ -243,7 +243,9 @@ class RunController:
         """
         self._iteration = None
 
-        initialize_log(self.runtime_log_file, self.runtime_log_headers, self.runtime_log_col_width)
+        initialize_log(
+            self.runtime_log_file, self.runtime_log_headers, self.runtime_log_col_width
+        )
 
         while self._queued_components:
             self.run_next()
@@ -311,7 +313,14 @@ class RunController:
         try:
             component.run()
             component_end_time = datetime.now()
-            add_run_log(iteration, name, component_start_time, component_end_time, self.runtime_log_file, self.runtime_log_col_width)
+            add_run_log(
+                iteration,
+                name,
+                component_start_time,
+                component_end_time,
+                self.runtime_log_file,
+                self.runtime_log_col_width,
+            )
         except:
             # re-insert failed component on error
             self._queued_components.insert(0, (iteration, name, component))
