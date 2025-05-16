@@ -262,7 +262,7 @@ class RunController:
                     highway_skim_file = str(
                         self.get_abs_path(
                             self.config["highway"].output_skim_path
-                            + self.config["highway"].output_skim_filename_tmpl
+                            / self.config["highway"].output_skim_filename_tmpl
                         )
                     )
                     for time in self.config["time_periods"]:
@@ -273,7 +273,7 @@ class RunController:
                     transit_skim_file = str(
                         self.get_abs_path(
                             self.config["transit"].output_skim_path
-                            + self.config["transit"].output_skim_filename_tmpl
+                            / self.config["transit"].output_skim_filename_tmpl
                         )
                     )
                     for time in self.config["time_periods"]:
