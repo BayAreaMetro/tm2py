@@ -23,6 +23,7 @@ from collections import deque
 from pathlib import Path
 from typing import Collection, List, Tuple, Union
 
+from datetime import datetime
 from tm2py.components.component import Component
 from tm2py.components.demand.air_passenger import AirPassenger
 from tm2py.components.demand.commercial import CommercialVehicleModel
@@ -41,6 +42,9 @@ from tm2py.config import Configuration
 from tm2py.emme.manager import EmmeManager
 from tm2py.logger import Logger
 from tm2py.tools import emme_context
+from tm2py.tools import initialize_log
+from tm2py.tools import add_run_log
+
 
 # mapping from names referenced in config.run to imported classes
 # NOTE: component names also listed as literal in tm2py.config for validation
@@ -220,12 +224,29 @@ class RunController:
             rel_path = Path(rel_path)
         return Path(os.path.join(self.run_dir, rel_path))
 
+    @property
+    def runtime_log_file(self):
+        return self.get_abs_path("logs/runtime_log.txt").__str__()
+
+    @property
+    def runtime_log_headers(self):
+        return ["LOOP", "STEP", "START_TIME", "END_TIME", "STEP_TIME (MINS)"]
+
+    @property
+    def runtime_log_col_width(self):
+        return [8, 30, 25, 25, 10]
+
     def run(self):
         """Main interface to run model.
 
         Iterates through the self._queued_components and runs them.
         """
         self._iteration = None
+
+        initialize_log(
+            self.runtime_log_file, self.runtime_log_headers, self.runtime_log_col_width
+        )
+
         while self._queued_components:
             self.run_next()
 
@@ -237,6 +258,9 @@ class RunController:
         if self._iteration != iteration:
             self.logger.log(f"Start iteration {iteration}")
         self._iteration = iteration
+
+        print(f"Running iteration {iteration} component {name}")
+        component_start_time = datetime.now()
 
         # check wamrstart files exist
         if iteration == 0:
@@ -288,6 +312,15 @@ class RunController:
         self._component = component
         try:
             component.run()
+            component_end_time = datetime.now()
+            add_run_log(
+                iteration,
+                name,
+                component_start_time,
+                component_end_time,
+                self.runtime_log_file,
+                self.runtime_log_col_width,
+            )
         except:
             # re-insert failed component on error
             self._queued_components.insert(0, (iteration, name, component))
