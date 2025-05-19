@@ -42,7 +42,6 @@ from tm2py.emme.manager import EmmeNode
 from tm2py.emme.matrix import OMXManager
 from tm2py.emme.network import NetworkCalculator
 from tm2py.logger import LogStartEnd
-from tm2py.tools import parse_num_processors
 
 # from tables import NoSuchNodeError
 
