@@ -61,9 +61,9 @@ class HouseholdModel(Component):
         run_process(commands, name="start_matrix_manager")
 
     def _run_resident_model(self):
-        sample_rate_iteration = {1: 0.05, 2: 0.5, 3: 1, 4: 0.02, 5: 0.02}
+        sample_rate_iteration = self.config.sample_rate_by_iteration
         iteration = self.controller.iteration
-        sample_rate = sample_rate_iteration[iteration]
+        sample_rate = sample_rate_iteration[iteration - 1]
         _shutil.copyfile("CTRAMP\\runtime\\mtctm2.properties", "mtctm2.properties")
         commands = [
             f"cd /d {self.controller.run_dir}",
