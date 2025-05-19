@@ -336,6 +336,7 @@ class HouseholdConfig(ConfigItem):
     ctramp_mode_names: Dict[float, str]
     income_segment: Dict[str, Union[float, str, list]]
     ctramp_hh_file: str
+    sample_rate_by_iteration: List[float]
 
 
 @dataclass(frozen=True)
@@ -1508,6 +1509,15 @@ class Configuration(ConfigItem):
                 values["run"]["end_iteration"]
             ), f"'transit.stop_criteria must be the same or greater length as end_iteration,\
                 that includes global iteration 1 to {values['run']['end_iteration']}'"
+        return value
+
+    @validator("household", always=True)
+    def sample_rate_length(cls, value, values):
+        """Validate highway.sample_rate_by_iteration is a list of length greater or equal to global iterations."""
+        if "run" in values:
+            assert len(value.sample_rate_by_iteration) >= (
+                values["run"]["end_iteration"]
+            ), f"'highway.sample_rate_by_iteration must be the same or greater length as end_iteration'"
         return value
 
 
