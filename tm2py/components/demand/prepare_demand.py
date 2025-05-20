@@ -172,7 +172,7 @@ class PrepareHighwayDemand(EmmeDemand):
     def run(self):
         """Open combined demand OMX files from demand models and prepare for assignment."""
 
-        self.highway_emmebank.zero_matrix
+        self.highway_emmebank.create_zero_matrix()
         for time in self.controller.time_period_names:
             for klass in self.config.classes:
                 self._prepare_demand(klass.name, klass.description, klass.demand, time)
@@ -633,7 +633,7 @@ class PrepareTransitDemand(EmmeDemand):
     def run(self):
         """Open combined demand OMX files from demand models and prepare for assignment."""
         self._source_ref_key = "transit_demand_file"
-        self.transit_emmebank.zero_matrix
+        self.transit_emmebank.create_zero_matrix()
         _time_period_tclass = itertools.product(
             self.controller.time_period_names, self.config.classes
         )

@@ -26,5 +26,42 @@ a.	In the shell, type python
 b.	type import tm2py
 
 
+## User Configuration
+
+### model_config.toml
+the model config file allows for customization on the the model run performance settings.
+
+1) network acceleration
+
+Emme Openpaths provides the network accelerate option, which allows for faster assignment on smaller machines.  
+WARNING: This has lead to some instability with model runs completing so, especially on large machines, this should remain off 
+
+to enable this under [highway] in toml
+```
+    network_acceleration=true
+```
+
+2) Parallel Highway Assignment
+
+tm2py offers the option to run assignment in parallel to reduce runtime. This can be achieved by including the following configuration under [emme] in the model_config.
+```
+    [[emme.highway_distribution]]
+        time_periods = ["AM"]
+        num_processors = "MAX/3"
+    [[emme.highway_distribution]]
+        time_periods = ["PM"]
+        num_processors = "MAX/3"
+    [[emme.highway_distribution]]
+        time_periods = ["EA", "MD", "EV"]
+        num_processors = "MAX/3"
+```
+
+otherwise, to turn this feature off, explicitly configure tm2py to use 1 thread:
+```
+    if serial assignment is required comment about the above block and use the below
+    [[emme.highway_distribution]]
+        time_periods = ["EA", "AM", "MD", "PM", "EV"]
+        num_processors = "MAX-1"
+```
 
 

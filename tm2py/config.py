@@ -1,4 +1,5 @@
 """Config implementation and schema."""
+
 # pylint: disable=too-many-instance-attributes
 
 import datetime
@@ -227,9 +228,9 @@ class LoggingConfig(ConfigItem):
 
     notify_slack: Optional[bool] = Field(default=False)
     use_emme_logbook: Optional[bool] = Field(default=True)
-    iter_component_level: Optional[
-        Tuple[Tuple[int, ComponentNames, LogLevel], ...]
-    ] = Field(default=None)
+    iter_component_level: Optional[Tuple[Tuple[int, ComponentNames, LogLevel], ...]] = (
+        Field(default=None)
+    )
 
 
 @dataclass(frozen=True)
@@ -265,11 +266,11 @@ class TimeSplitConfig(ConfigItem):
     attraction: Optional[NonNegativeFloat] = None
     od: Optional[NonNegativeFloat] = None
 
-    @validator("production", "attraction", "od")
+    @validator("production", "attraction", "od", allow_reuse=True)
     def less_than_equal_one(cls, v):
         if v:
             assert v <= 1.0, "Value should be less than or equal to 1"
-            return v
+        return v
 
     def __post_init__(self):
         if self.od and any([self.production, self.attraction]):
@@ -336,6 +337,7 @@ class HouseholdConfig(ConfigItem):
     ctramp_mode_names: Dict[float, str]
     income_segment: Dict[str, Union[float, str, list]]
     ctramp_hh_file: str
+    sample_rate_by_iteration: List[float]
 
 
 @dataclass(frozen=True)
@@ -963,6 +965,7 @@ class HighwayConfig(ConfigItem):
     generic_highway_mode_code: str = Field(min_length=1, max_length=1)
     relative_gaps: Tuple[HighwayRelativeGapConfig, ...] = Field()
     max_iterations: int = Field(ge=0)
+    network_acceleration: bool = Field()
     area_type_buffer_dist_miles: float = Field(gt=0)
     drive_access_output_skim_path: Optional[str] = Field(default=None)
     output_skim_path: pathlib.Path = Field()
@@ -1021,7 +1024,7 @@ class HighwayConfig(ConfigItem):
     def validate_class_mode_excluded_links(cls, value, values):
         """Validate list of classes has unique .mode_code or .excluded_links match."""
         # validate if any mode IDs are used twice, that they have the same excluded links sets
-        mode_excluded_links = {values["generic_highway_mode_code"]: set([])}
+        mode_excluded_links = {}
         for i, highway_class in enumerate(value):
             # maz_to_maz.mode_code must be unique
             if "maz_to_maz" in values:
@@ -1203,7 +1206,7 @@ class TransitJourneyLevelsConfig(ConfigItem):
     The resulting assignment compute therefore expends a lot of resources on these operators. 
     Set this parameter to `True` to use the algorithm. Exactly one of `use_algorithm` or `specify_manually` must be `True`. 
     """
-    specify_manually: bool = True
+    specify_manually: bool = False
     """
     An alternative to using an algorithm to specify the journey levels is to use specify them manually. 
     If this option is set to `True`, the `manual` parameter can be used to assign fare systems to faresystem groups (or journey levels). 
@@ -1255,6 +1258,7 @@ class TransitJourneyLevelsConfig(ConfigItem):
 @dataclass(frozen=True)
 class AssignmentStoppingCriteriaConfig(ConfigItem):
     "Assignment stop configuration parameters."
+
     max_iterations: int
     relative_difference: float
     percent_segments_over_capacity: float
@@ -1263,6 +1267,7 @@ class AssignmentStoppingCriteriaConfig(ConfigItem):
 @dataclass(frozen=True)
 class CcrWeightsConfig(ConfigItem):
     "Weights for CCR Configuration."
+
     min_seat: float = Field(default=1.0)
     max_seat: float = Field(default=1.4)
     power_seat: float = Field(default=2.2)
@@ -1274,6 +1279,7 @@ class CcrWeightsConfig(ConfigItem):
 @dataclass(frozen=True)
 class CongestedWeightsConfig(ConfigItem):
     "Weights for Congested Transit Assignment Configuration."
+
     min_seat: float = Field(default=1.0)
     max_seat: float = Field(default=1.4)
     power_seat: float = Field(default=2.2)
@@ -1285,6 +1291,7 @@ class CongestedWeightsConfig(ConfigItem):
 @dataclass(frozen=True)
 class EawtWeightsConfig(ConfigItem):
     "Weights for calculating extra added wait time Configuration."
+
     constant: float = Field(default=0.259625)
     weight_inverse_headway: float = Field(default=1.612019)
     vcr: float = Field(default=0.005274)
@@ -1329,6 +1336,7 @@ class CongestedTransitStopCriteria(ConfigItem):
 @dataclass(frozen=True)
 class CongestedAssnConfig(ConfigItem):
     "Congested transit assignment Configuration."
+
     trim_demand_before_congested_transit_assignment: bool = False
     output_trimmed_demand_report_path: str = Field(default=None)
     stop_criteria: Tuple[CongestedTransitStopCriteria, ...] = Field()
@@ -1387,13 +1395,19 @@ class TransitConfig(ConfigItem):
         default_factory=TransitVehicleConfig
     )
 
-    @validator("use_ccr")
-    def deprecate_capacitated_assignment(cls, value, values):
-        """Validate use_ccr is false."""
-        assert (
-            not value
-        ), "capacitated transit assignment is deprecated, please set use_ccr to false"
-        return value
+
+@dataclass(frozen=True)
+class HighwayDistribution(ConfigItem):
+    """Highway distribution run configuration. Use to enable distributing the
+       assignment (running time periods in parallel).
+
+    Properties:
+        periods: list of the names of the periods to use.
+        num_processors: the number of processors to use as an integer, MAX-N or MAX/N
+    """
+
+    time_periods: List[str]
+    num_processors: str = Field(regex=r"^MAX$|^MAX-\d+$|^\d+$|^MAX/\d+$")
 
 
 @dataclass(frozen=True)
@@ -1428,7 +1442,8 @@ class EmmeConfig(ConfigItem):
     active_north_database_path: pathlib.Path
     active_south_database_path: pathlib.Path
     transit_database_path: pathlib.Path
-    num_processors: str = Field(pattern=r"^MAX$|^MAX-\d+$|^\d+$")
+    num_processors: str = Field(regex=r"^MAX$|^MAX-\d+$|^\d+$")
+    highway_distribution: Optional[List[HighwayDistribution]] = Field(default=None)
 
 
 @dataclass(frozen=True)
@@ -1504,6 +1519,15 @@ class Configuration(ConfigItem):
                 values["run"]["end_iteration"]
             ), f"'transit.stop_criteria must be the same or greater length as end_iteration,\
                 that includes global iteration 1 to {values['run']['end_iteration']}'"
+        return value
+
+    @validator("household", always=True)
+    def sample_rate_length(cls, value, values):
+        """Validate highway.sample_rate_by_iteration is a list of length greater or equal to global iterations."""
+        if "run" in values:
+            assert len(value.sample_rate_by_iteration) >= (
+                values["run"]["end_iteration"]
+            ), f"'highway.sample_rate_by_iteration must be the same or greater length as end_iteration'"
         return value
 
 

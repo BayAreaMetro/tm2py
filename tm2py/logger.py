@@ -15,10 +15,11 @@ STATUS: top-level, model is running type messages. There should be
     relatively few of these, generally one per component, or one per time
     period if the procedure is long.
 WARN: warning messages where there is a possibility of a problem
-ERROR: problem causing operation to halt which is normal
-    (or not unexpected) in scope, e.g. file does not exist
-    Includes general Python exceptions.
+ERROR: problem causing operation to halt which is normal in scope
+    (not unexpected, or can be handled gracefully).
+    E.g. file does not exist. Includes general Python exceptions.
 FATAL: severe problem requiring operation to stop immediately.
+    May not be recoverable, e.g. data corruption is possible.
 """
 
 from __future__ import annotations
@@ -48,93 +49,16 @@ LEVELS_INT_TO_STR = dict((i, k) for i, k in enumerate(get_args(LogLevel)))
 # pylint: disable=too-many-instance-attributes
 
 
-class Logger:
-    """Logging of message text for display, text file, and Emme logbook, as well as notify to slack.
+class BaseLogger:
+    "Base class for logging. Not to be constructed directly."
 
-    The log message levels can be one of:
-    TRACE, DEBUG, DETAIL, INFO, STATUS, WARN, ERROR, FATAL
-    Which will filter all messages of that severity and higher.
-    See module note on use of descriptive level names.
-
-    logger.log("a message")
-    with logger.log_start_end("Running a set of steps"):
-        logger.log("Message with timestamp")
-        logger.log("A debug message", level="DEBUG")
-        # equivalently, use the .debug:
-        logger.debug("Another debug message")
-        if logger.debug_enabled:
-            # only generate this report if logging DEBUG
-            logger.log("A debug report that takes time to produce", level="DEBUG")
-        logger.notify_slack("A slack message")
-
-    Methods can also be decorated with LogStartEnd (see class for more).
-
-    Note that the Logger should only be initialized once per model run.
-    In places where the controller is not available, the last Logger
-    initialized can be obtained from the class method get_logger::
-
-        logger = Logger.get_logger()
-
-    Internal properties:
-        _log_cache: the LogCache object
-        _log_formatters: list of objects that format text and record, either
-            to file, display (print to screen) or cache for log on error
-        _use_emme_logbook: whether Emme logbook is enabled
-        _slack_notifier: SlackNotifier object for sending messages to slack
-    """
-
-    # used to cache last initialized Logger
-    _instance = None
-
-    def __new__(cls, controller: RunController):
-        """Logger __new__ method override. TODO.
-
-        Args:
-            controller (RunController): TODO.
-        """
-        # pylint: disable=unused-argument
-        cls._instance = super(Logger, cls).__new__(cls)
-        return cls._instance
-
-    def __init__(self, controller: RunController):
-        """Constructor for Logger object.
-
-        Args:
-            controller (RunController): Associated RunController instance.
-        """
-        self.controller = controller
+    def __init__(self, log_formatters, log_cache_file, emme_manager=None):
         self._indentation = 0
-        log_config = controller.config.logging
-        iter_component_level = log_config.iter_component_level or []
-        iter_component_level = dict(
-            ((i, c), LEVELS_STR_TO_INT[l]) for i, c, l in iter_component_level
-        )
-        display_logger = LogDisplay(LEVELS_STR_TO_INT[log_config.display_level])
-        run_log_formatter = LogFile(
-            LEVELS_STR_TO_INT[log_config.run_file_level],
-            os.path.join(controller.run_dir, log_config.run_file_path),
-        )
-        standard_log_formatter = LogFileLevelOverride(
-            LEVELS_STR_TO_INT[log_config.log_file_level],
-            os.path.join(controller.run_dir, log_config.log_file_path),
-            iter_component_level,
-            controller,
-        )
-        self._log_cache = LogCache(
-            os.path.join(controller.run_dir, log_config.log_on_error_file_path)
-        )
-        self._log_formatters = [
-            display_logger,
-            run_log_formatter,
-            standard_log_formatter,
-            self._log_cache,
-        ]
+        self._log_cache = LogCache(log_cache_file)
+        self._log_formatters = log_formatters + [self._log_cache]
+        self._emme_manager = emme_manager
+        self._use_emme_logbook = emme_manager is not None
 
-        self._use_emme_logbook = self.controller.config.logging.use_emme_logbook
-
-        self._slack_notifier = SlackNotifier(self)
-
-        # open log formatters
         for log_formatter in self._log_formatters:
             if hasattr(log_formatter, "open"):
                 log_formatter.open()
@@ -147,20 +71,6 @@ class Logger:
             if hasattr(log_formatter, "close"):
                 log_formatter.close()
 
-    @classmethod
-    def get_logger(cls):
-        """Return the last initialized logger object."""
-        return cls._instance
-
-    def notify_slack(self, text: str):
-        """Send message to slack if enabled by config.
-
-        Args:
-            text (str): text to send to slack
-        """
-        if self.controller.config.logging.notify_slack:
-            self._slack_notifier.post_message(text)
-
     def log(self, text: str, level: LogLevel = "INFO", indent: bool = True):
         """Log text to file and display depending upon log level and config.
 
@@ -172,8 +82,8 @@ class Logger:
         timestamp = datetime.now().strftime("%d-%b-%Y (%H:%M:%S) ")
         for log_formatter in self._log_formatters:
             log_formatter.log(text, LEVELS_STR_TO_INT[level], indent, timestamp)
-        if self._use_emme_logbook and self.controller.has_emme:
-            self.controller.emme_manager.logbook_write(text)
+        if self._use_emme_logbook:
+            self._emme_manager.logbook_write(text)
 
     def trace(self, text: str, indent: bool = False):
         """Log text with level=TRACE.
@@ -292,7 +202,7 @@ class Logger:
         with self._skip_emme_logging():
             self._log_start(text, level)
         if self._use_emme_logbook:
-            with self.controller.emme_manager.logbook_trace(text):
+            with self._emme_manager.logbook_trace(text):
                 yield
         else:
             yield
@@ -344,6 +254,120 @@ class Logger:
             if log_formatter is not self._log_cache and log_formatter.level <= trace:
                 return True
         return False
+
+
+class Logger(BaseLogger):
+    """Logging of message text for display, text file, and Emme logbook, as well as notify to slack.
+
+    The log message levels can be one of:
+    TRACE, DEBUG, DETAIL, INFO, STATUS, WARN, ERROR, FATAL
+    Which will filter all messages of that severity and higher.
+    See module note on use of descriptive level names.
+
+    logger.log("a message")
+    with logger.log_start_end("Running a set of steps"):
+        logger.log("Message with timestamp")
+        logger.log("A debug message", level="DEBUG")
+        # equivalently, use the .debug:
+        logger.debug("Another debug message")
+        if logger.debug_enabled:
+            # only generate this report if logging DEBUG
+            logger.log("A debug report that takes time to produce", level="DEBUG")
+        logger.notify_slack("A slack message")
+
+    Methods can also be decorated with LogStartEnd (see class for more).
+
+    Note that the Logger should only be initialized once per model run.
+    In places where the controller is not available, the last Logger
+    initialized can be obtained from the class method get_logger::
+
+        logger = Logger.get_logger()
+
+    Internal properties:
+        _log_cache: the LogCache object
+        _log_formatters: list of objects that format text and record, either
+            to file, display (print to screen) or cache for log on error
+        _use_emme_logbook: whether Emme logbook is enabled
+        _slack_notifier: SlackNotifier object for sending messages to slack
+    """
+
+    # used to cache last initialized Logger
+    _instance = None
+
+    def __new__(cls, controller: RunController):
+        """Logger __new__ method override.
+
+        Args:
+            controller (RunController): Associated RunController instance.
+        """
+        # pylint: disable=unused-argument
+        cls._instance = super(Logger, cls).__new__(cls)
+        return cls._instance
+
+    def __init__(self, controller: RunController):
+        """Constructor for Logger object.
+
+        Args:
+            controller (RunController): Associated RunController instance.
+        """
+        self.controller = controller
+
+        log_config = controller.config.logging
+        iter_component_level = log_config.iter_component_level or []
+        iter_component_level = dict(
+            ((i, c), LEVELS_STR_TO_INT[l]) for i, c, l in iter_component_level
+        )
+        display_logger = LogDisplay(LEVELS_STR_TO_INT[log_config.display_level])
+        run_log_formatter = LogFile(
+            LEVELS_STR_TO_INT[log_config.run_file_level],
+            os.path.join(controller.run_dir, log_config.run_file_path),
+        )
+        standard_log_formatter = LogFileLevelOverride(
+            LEVELS_STR_TO_INT[log_config.log_file_level],
+            os.path.join(controller.run_dir, log_config.log_file_path),
+            iter_component_level,
+            controller,
+        )
+        log_formatters = [display_logger, run_log_formatter, standard_log_formatter]
+        log_cache_file = os.path.join(
+            controller.run_dir, log_config.log_on_error_file_path
+        )
+        emme_manager = None
+        if self.controller.config.logging.use_emme_logbook and self.controller.has_emme:
+            emme_manager = self.controller.emme_manager
+        super().__init__(log_formatters, log_cache_file, emme_manager)
+
+        self._slack_notifier = SlackNotifier(self)
+
+    @classmethod
+    def get_logger(cls):
+        """Return the last initialized logger object."""
+        return cls._instance
+
+    def notify_slack(self, text: str):
+        """Send message to slack if enabled by config.
+
+        Args:
+            text (str): text to send to slack
+        """
+        if self.controller.config.logging.notify_slack:
+            self._slack_notifier.post_message(text)
+
+
+class ProcessLogger(BaseLogger):
+    "Logger for running in separate process with no RunController."
+
+    def __init__(self, run_log_file_path, log_on_error_file_path, emme_manager):
+        """Constructor for Logger object.
+
+        Args:
+            run_log_file_path ():
+            log_on_error_file_path ():
+            emme_manager ():
+        """
+        run_log_formatter = LogFile(LEVELS_STR_TO_INT["INFO"], run_log_file_path)
+        log_formatters = [run_log_formatter]
+        super().__init__(log_formatters, log_on_error_file_path, emme_manager)
 
 
 class LogFormatter:
@@ -418,8 +442,7 @@ class LogFormatter:
             indent = "  " * max(num_indents, 0)
         else:
             indent = ""
-        level_str = "{0:>6}".format(LEVELS_INT_TO_STR[level])
-        return f"{timestamp}{level_str}: {indent}{text}"
+        return f"{timestamp}{LEVELS_INT_TO_STR[level]:>6}: {indent}{text}"
 
 
 class LogFile(LogFormatter):
@@ -681,5 +704,5 @@ class SlackNotifier:
         headers = {"Content-type": "application/json"}
         data = {"text": text}
         self.logger.log(f"Sending message to slack: {text}", level="TRACE")
-        response = requests.post(self._slack_webhook_url, headers=headers, json=data)
+        response = requests.post(self._slack_webhook_url, headers=headers, json=data, timeout=10)
         self.logger.log(f"Receiving response: {response}", level="TRACE")

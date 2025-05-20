@@ -17,7 +17,6 @@ from numpy import repeat
 
 from tm2py.components.component import Component
 from tm2py.logger import LogStartEnd
-from tm2py.tools import parse_num_processors
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
@@ -288,9 +287,7 @@ class ActiveModesSkim(Component):
         shortest_paths = self.controller.emme_manager.tool(
             "inro.emme.network_calculation.shortest_path"
         )
-        num_processors = parse_num_processors(
-            self.controller.config.emme.num_processors
-        )
+        num_processors = self.controller.num_processors
         spec = {
             "type": "SHORTEST_PATH",
             "modes": [mode_code],

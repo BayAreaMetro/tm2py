@@ -1,4 +1,5 @@
 """Tools module for common resources / shared code and "utilities" in the tm2py package."""
+
 import multiprocessing
 import os
 import re
@@ -13,7 +14,6 @@ from contextlib import contextmanager as _context
 from itertools import product as _product
 from math import ceil, sqrt
 from typing import Any, Collection, Mapping, Union
-
 import pandas as pd
 
 
@@ -295,28 +295,30 @@ def emme_context():
     return True
 
 
-def parse_num_processors(value: [str, int, float]):
-    """Parse input value string "MAX-X" to number of available processors.
+# utility to format a row
+def format_row(row, column_widths):
+    return "".join(str(item).ljust(width) for item, width in zip(row, column_widths))
 
-    Used with Emme procedures (traffic and transit assignments, matrix
-    caculator, etc.) Does not raise any specific errors.
 
-    Args:
-        value: int, float or string; string value can be "X" or "MAX-X"
-    """
-    max_processors = multiprocessing.cpu_count()
-    if isinstance(value, str):
-        value = value.upper()
-        if value == "MAX":
-            return max_processors
-        if re.match("^[0-9]+$", value):
-            return int(value)
-        result = re.split(r"^MAX[\s]*-[\s]*", value)
-        if len(result) == 2:
-            return max(max_processors - int(result[1]), 1)
-    else:
-        return int(value)
-    return value
+# initialize run log file if it doesn't exist
+def initialize_log(log_file, headers, col_width):
+    if not os.path.exists(log_file):
+        with open(log_file, "w") as f:
+            f.write(format_row(headers, col_width) + "\n")
+
+
+# add run log entry
+def add_run_log(loop, step, start_time, end_time, log_file, col_width):
+    step_time = (end_time - start_time).total_seconds() / 60
+    start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S")
+    end_time_str = end_time.strftime("%Y-%m-%d %H:%M:%S")
+
+    row = format_row(
+        [loop, step, start_time_str, end_time_str, f"{step_time:.2f}"], col_width
+    )
+
+    with open(log_file, "a") as f:
+        f.write(row + "\n")
 
 
 class SpatialGridIndex:
