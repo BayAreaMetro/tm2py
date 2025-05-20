@@ -1,8 +1,7 @@
 """Installation script for tm2py package."""
 
 import os
-
-from setuptools import setup
+from setuptools import setup, find_packages
 
 version = "0.0.1"
 
@@ -33,8 +32,10 @@ if os.path.exists(os.path.join("docs", "requirements.txt")):
 else:
     install_requires_doc = []
 
-# While version is in active development, install both development and base requirements.
-major_version_number = int(version.split(".")[0])
+# Include Setup-TravelModelMonitor.ps1 and any other packaged data files
+enabled_package_data = {
+    "tm2py": ["data/Setup-TravelModelMonitor.ps1"]
+}
 
 setup(
     name="tm2py",
@@ -45,8 +46,9 @@ setup(
     url="https://github.com/BayAreaMetro/tm2py",
     license="Apache 2",
     platforms="any",
-    packages=["tm2py"],
+    packages=find_packages(),
     include_package_data=True,
+    package_data=enabled_package_data,
     install_requires=install_requires,
     extras_require={
         "dev": install_requires_dev,

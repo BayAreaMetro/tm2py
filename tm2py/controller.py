@@ -23,6 +23,30 @@ from io import RawIOBase
 from multiprocessing.sharedctypes import Value
 from pathlib import Path
 from typing import Any, Collection, Dict, List, Tuple, Union
+from importlib import resources
+import atexit
+import sys
+import ctypes
+
+def is_admin() -> bool:
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
+
+if not is_admin():
+    # Re-launch the current script with elevation and pass along args
+    params = ' '.join([f'"{arg}"' for arg in sys.argv])
+    ctypes.windll.shell32.ShellExecuteW(
+        None,              # hwnd
+        "runas",           # verb
+        sys.executable,    # python.exe path
+        params,            # script + args
+        None,              # working dir
+        1                  # show flag
+    )
+    sys.exit(0)
+
 
 from tm2py.components.component import Component
 from tm2py.components.demand.air_passenger import AirPassenger
@@ -42,6 +66,7 @@ from tm2py.config import Configuration
 from tm2py.emme.manager import EmmeManager
 from tm2py.logger import Logger
 from tm2py.tools import emme_context
+from tm2py.perfmon import start_perfmon, stop_perfmon
 
 # mapping from names referenced in config.run to imported classes
 # NOTE: component names also listed as literal in tm2py.config for validation
@@ -117,6 +142,28 @@ class RunController:
         # NOTE: Logger opens log file on __enter__ (in run), not ready for logging yet
         # Logger uses self.config.logging
         self.logger = Logger(self)
+        # PerfMon: start monitoring if enabled
+        perf_cfg = getattr(self.config.logging, 'perfmon', None)
+        if perf_cfg and getattr(perf_cfg, 'enabled', False):
+            try:
+                # Resolve script path: absolute or relative inside package
+                script_ref = perf_cfg.script_path
+                if not os.path.isabs(script_ref):
+                    script_path = str(
+                        resources.files('tm2py').joinpath(script_ref)
+                    )
+                else:
+                    script_path = script_ref
+
+                start_perfmon(script_path, additional_args=["-OutputDirectory", str(self._run_dir)])
+                # Ensure stop on normal or abnormal exit
+                atexit.register(stop_perfmon, perf_cfg.collector_name)
+                self.logger.detail(
+                    f"PerfMon monitoring started ({perf_cfg.collector_name})"
+                )
+            except Exception as e:
+                self.logger.warn(f"PerfMon failed to start: {e}")
+
         self.top_sheet = None
         self.trace = None
         self.completed_components = []
@@ -229,9 +276,21 @@ class RunController:
 
         Iterates through the self._queued_components and runs them.
         """
-        self._iteration = None
-        while self._queued_components:
-            self.run_next()
+        try:
+            self._iteration = None
+            while self._queued_components:
+                self.run_next()
+        finally:
+            # ensure PerfMon stops even if an error occurs
+            perf_cfg = getattr(self.config.logging, 'perfmon', None)
+            if perf_cfg and getattr(perf_cfg, 'enabled', False):
+                try:
+                    stop_perfmon(perf_cfg.collector_name)
+                    self.logger.detail(
+                        f"PerfMon monitoring stopped ({perf_cfg.collector_name})"
+                    )
+                except Exception as e:
+                    self.logger.warn(f"PerfMon failed to stop: {e}")
 
     def run_next(self):
         """Run next component in the queue."""
