@@ -1433,7 +1433,7 @@ class EmmeConfig(ConfigItem):
     active_north_database_path: pathlib.Path
     active_south_database_path: pathlib.Path
     transit_database_path: pathlib.Path
-    num_processors: str = Field(regex=r"^MAX$|^MAX-\d+$|^\d+$")
+    num_processors: str = Field(regex=r"^MAX$|^MAX-\d+$|^\d+$|^MAX/\d+$")
     highway_distribution: Optional[List[HighwayDistribution]] = Field(default=None)
 
 
