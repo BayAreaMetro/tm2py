@@ -563,31 +563,33 @@ class TransitSkim(Component):
                 "distance": f'mf"{_tp_tclass}_WEGR"',
             },
         }
-
-        self.controller.emme_manager.matrix_results(
-            spec1,
-            class_name=transit_class.name,
-            scenario=self.scenarios[time_period],
-            num_processors=self.controller.num_processors,
-        )
+        if transit_class.name not in ['WLK_TRN_WLK']:
+            self.controller.emme_manager.matrix_results(
+                spec1,
+                class_name=transit_class.name,
+                scenario=self.scenarios[time_period],
+                num_processors=self.controller.num_processors,
+            )
         self.controller.emme_manager.matrix_results(
             spec2,
             class_name=transit_class.name,
             scenario=self.scenarios[time_period],
             num_processors=self.controller.num_processors,
         )
-        self.controller.emme_manager.matrix_results(
-            spec3,
-            class_name=transit_class.name,
-            scenario=self.scenarios[time_period],
-            num_processors=self.controller.num_processors,
-        )
-        self.controller.emme_manager.matrix_results(
-            spec4,
-            class_name=transit_class.name,
-            scenario=self.scenarios[time_period],
-            num_processors=self.controller.num_processors,
-        )
+        if transit_class.name not in ['PNR_TRN_WLK','KNR_TRN_WLK']:
+            self.controller.emme_manager.matrix_results(
+                spec3,
+                class_name=transit_class.name,
+                scenario=self.scenarios[time_period],
+                num_processors=self.controller.num_processors,
+            )
+        if transit_class.name not in ['WLK_TRN_PNR','WLK_TRN_KNR']:
+            self.controller.emme_manager.matrix_results(
+                spec4,
+                class_name=transit_class.name,
+                scenario=self.scenarios[time_period],
+                num_processors=self.controller.num_processors,
+            )
 
         drive_perception_factor = self.config.drive_perception_factor
         walk_speed = self.config.walk_speed
