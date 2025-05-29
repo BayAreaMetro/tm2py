@@ -77,6 +77,7 @@ ComponentNames = Literal[
     "visitor",
     "internal_external",
     "truck",
+    "post_processor",
 ]
 EmptyString = Literal[""]
 
@@ -1410,6 +1411,14 @@ class HighwayDistribution(ConfigItem):
 
 
 @dataclass(frozen=True)
+class PostProcessorConfig(ConfigItem):
+    "Post Processor Configuration."
+    network_shapefile_path: str = Field(default=None)
+    boardings_by_segment_file_path: str = Field(default=None)
+    boardings_by_segment_geofile_path: str = Field(default=None)
+
+
+@dataclass(frozen=True)
 class EmmeConfig(ConfigItem):
     """Emme-specific parameters.
 
@@ -1452,6 +1461,7 @@ class Configuration(ConfigItem):
     active_modes: ActiveModesConfig
     highway: HighwayConfig
     transit: TransitConfig
+    post_processor: PostProcessorConfig
     emme: EmmeConfig
     logging: Optional[LoggingConfig] = Field(default_factory=LoggingConfig)
 
