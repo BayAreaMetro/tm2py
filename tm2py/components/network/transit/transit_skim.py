@@ -49,6 +49,7 @@ class TransitSkim(Component):
                 self.skim_properties,
             )
         }
+        self._skim_outputs = None
 
     def validate_inputs(self):
         """Validate inputs."""
@@ -165,6 +166,46 @@ class TransitSkim(Component):
                     ]
                 )
         return self._skim_properties
+
+    @property
+    def skim_outputs(self):
+        """List of Skim Property named tuples: name, description.
+
+        TODO put these in config.
+        """
+        if self._skim_outputs is None:
+            from collections import namedtuple
+
+            # TODO config
+            self._skim_outputs = []
+
+            _output_skims = [
+                ("IWAIT", "first wait time"),
+                ("XWAIT", "transfer wait time"),
+                ("FARE", "fare"),
+                ("BOARDS", "num boardings"),
+                ("WAUX", "auxiliary walk time"),
+                ("DTIME", "access and egress drive time"),
+                ("DDIST", "access and egress drive distance"),
+                ("WACC", "access walk time"),
+                ("WEGR", "egress walk time"),
+                ("IVT", "total in-vehicle time"),
+                ("CROWD", "Crowding penalty"),
+            ]
+            self._skim_outputs += [
+                Skimproperty(_name, _desc) for _name, _desc in _output_skims
+            ]
+            for mode in self.config.modes:
+                if (mode.assign_type == "TRANSIT") and (mode.type != "PNR_dummy"):
+                    desc = mode.description or mode.name
+                    self._skim_outputs.append(
+                        Skimproperty(
+                            f"IVT{mode.name}",
+                            f"{desc} in-vehicle travel time"[:40],
+                        )
+                    )    
+
+        return self._skim_outputs
 
     def emmebank_skim_matrices(
         self,
@@ -934,7 +975,10 @@ class TransitSkim(Component):
         os.makedirs(os.path.dirname(omx_file_path), exist_ok=True)
 
         _matrices = self.emmebank_skim_matrices(
-            time_periods=[time_period], transit_classes=[transit_class]
+            time_periods=[time_period], 
+            transit_classes=[transit_class],
+            skim_properties=self.skim_outputs
+
         )
 
         with OMXManager(
