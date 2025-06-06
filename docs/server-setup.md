@@ -13,7 +13,7 @@ The C: drive has 80 GB, and an external E: drive has about 1 TB of disk space.
    From this link, search for OpenPaths, then install **OpenPaths 204 Update 1 (SES)**.
 
 2. [Java 1.8.0 162](https://www.oracle.com/java/technologies/javase/javase8-archive-downloads.html#license-lightbox)  
-   CTRAMP runs on Java. You might eventually want a Java IDE — Eclipse is a good option.
+   CTRAMP runs on Java. 
 
 3. [Box](https://www.box.com/resources/downloads)  
    MTC gets its input files from Box, so this is required for now. We’ll need to figure out a long-term location for inputs.  
@@ -29,7 +29,7 @@ The C: drive has 80 GB, and an external E: drive has about 1 TB of disk space.
 ## Optional Software
 
 1. Visual Studio Code  
-   This can be used to debug Python and run Jupyter notebooks. Install the **Python** and **Jupyter** extensions.and run jupyter notebooks. Install the python and jupyter notebook extensions.
+   This can be used to debug Python and run Jupyter notebooks. Install the **Python**, **Java** and **Jupyter** extensions.and run jupyter notebooks. Install the python and jupyter notebook extensions.
 
 
 
