@@ -1,0 +1,41 @@
+#######################
+# Setup Model Configs #
+#######################
+
+### This is the current MTC 2023 model run for MTC staff
+
+# TODO: replace E:/Box with //tsclient/E/Box in setup.py
+# for model servers, when staff Remote Desktop Connect to a server, they should pass their E drive
+# through as a Local Resource
+# Then E:/Box can be accessed via //tsclient/E/Box
+
+# location of the networks support files
+# this includes file such as tolls, transit fares etc.
+# Box: https://mtcdrive.box.com/s/6jf6duborg00d5uqftu35iiynpuzpkbj
+INPUT_NETWORK_DIR = "E:/Box/Modeling and Surveys/XXDevelopment/Travel Model Two Conversion/Model Inputs/2015-tm22-dev-sprint-03"
+
+# this is the location/folder for Emme Netorks (built from Lasso) 
+# Box: https://mtcdrive.box.com/s/rs84fqlzkpidn1cdxruucy70500seye5
+INPUT_EMME_NETWORK_DIR = "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Inputs/2015-tm22-dev-sprint-03/emme_network"
+
+# location of the populationsim and land use inputs
+# Box: https://mtcdrive.box.com/s/6jf6duborg00d5uqftu35iiynpuzpkbj
+INPUT_POPLU_DIR = "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Inputs/2015-tm22-dev-sprint-03"
+
+# location of nonres inputs
+# Box: https://mtcdrive.box.com/s/6jf6duborg00d5uqftu35iiynpuzpkbj
+INPUT_NONRES_DIR = "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Inputs/2015-tm22-dev-sprint-03"
+
+# this is the location of a previous run folder which has the warm start demand or skims
+# Box: https://mtcdrive.box.com/s/rj0kh56lbqjxhtcmg96ifcc4x6knsmqz
+WARMSTART_FILES_DIR = "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Inputs/2015-tm22-dev-sprint-03/warmstart"
+
+# this is the location/folder for Emme Netorks 
+# Box: https://mtcdrive.box.com/s/a59dn0o6c3s11tbb65b5z2ww2wc0ixtl
+EMME_TEMPLATE_PROJECT_DIR = "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Inputs/2015-tm22-dev-sprint-03/emme_23_project_template"
+
+# github raw link for toml config files
+CONFIGS_GITHUB_PATH = "https://raw.githubusercontent.com/BayAreaMetro/travel-model-two-config/refs/heads/main/2015-tm22-dev-sprint-03"
+
+# travel model two release tag to fetch
+TRAVEL_MODEL_TWO_RELEASE_TAG = "TM2.2.4"

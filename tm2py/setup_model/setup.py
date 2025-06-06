@@ -1,4 +1,5 @@
 import os
+import pathlib
 import shutil
 import requests
 import zipfile
@@ -6,33 +7,63 @@ import io
 import logging
 import toml
 
-from pathlib import Path
+class SetupConfig:
+    """ Simple class with attributes required for setting up a model
+    """
+    def __init__(self, config_dict):
+    
+        for key, value in config_dict.items():
+            # _DIR values are pathlib.Paths
+            if key.upper().endswith("_DIR"):
+                setattr(self, key, pathlib.Path(value))
+            else:
+                setattr(self, key, value)
+        
+    def validate(self):
+        # validate setup configuration
+        required_attrs = [
+            "INPUT_NETWORK_DIR",
+            "INPUT_POPLU_DIR",
+            "WARMSTART_FILES_DIR",
+            "CONFIGS_GITHUB_PATH",
+            "TRAVEL_MODEL_TWO_RELEASE_TAG",
+        ]
 
+        for attr in required_attrs:
+            if not getattr(self, attr, None):
+                raise ValueError(f"{attr} is required in the setup configuration!")
 
 class SetupModel:
     """
     Main operational interface for setup model process.
-
-
     """
 
-    def __init__(self, config_file):
+    def __init__(self, config_file: pathlib.Path, model_dir: pathlib.Path):
         self.config_file = config_file
-        self.configs = Config(dict())
-        self.model_dir = Path()
+        self.setup_config = SetupConfig(dict())
+        self.model_dir = model_dir
 
-    def _setup_logging(self, log_file):
-        logging.basicConfig(
-            filename=log_file,
-            level=logging.INFO,
-            format="%(asctime)s | %(levelname)s | %(message)s",
-            datefmt="%d-%b-%Y (%H:%M:%S)",
-        )
-        return logging.getLogger()
+    def _setup_logging(self, log_file: pathlib.Path):
+        """
+        Setup a logger that logs to both the console and to the given log file.
+        """
+        self.logger = logging.getLogger()
+        self.logger.setLevel(logging.DEBUG)
+        # console handler
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.INFO)
+        ch.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p'))
+        self.logger.addHandler(ch)
+
+        # file handler
+        fh = logging.FileHandler(log_file, mode='w')
+        fh.setLevel(logging.DEBUG)
+        fh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p'))
+        self.logger.addHandler(fh)
 
     def _load_toml(self):
         """
-        Load config from toml file.
+        Load SetupConfig from toml file.
 
         Args:
             toml_path: path for toml file to read
@@ -42,30 +73,22 @@ class SetupModel:
         return data
 
     def run_setup(self):
-        # Read setup configs
+        # Read setup setup_config
         config_dict = self._load_toml()
-        configs = Config(config_dict)
+        self.setup_config = SetupConfig(config_dict)
+        self.setup_config.validate()
 
-        # Validate configs
-        configs.validate()
-
-        self.configs = configs
-
-        # Create model directory
-        model_dir = os.path.join(configs.ROOT_DIR, configs.MODEL_FOLDER_NAME)
-        model_dir = model_dir.replace("\\", "/")
-        self.model_dir = Path(model_dir)
         # if the directory already exists - error and quit
         if self.model_dir.exists():
-            raise Exception(f"{self.model_dir} already exist! Setup terminated.")
+            raise Exception(f"{self.model_dir.resolve()} already exists! Setup terminated.")
         else:
-            os.mkdir(model_dir)
+            self.model_dir.mkdir()
 
         # Initialize logging
-        log_file = os.path.join(model_dir, "setup_log.log")
-        logger = self._setup_logging(log_file)
+        log_file = self.model_dir / "setup.log"
+        self._setup_logging(log_file)
 
-        logger.info(f"Starting process to setup MTC model in directory: {model_dir}")
+        self.logger.info(f"Starting process to setup MTC model in directory: {self.model_dir.resolve()}")
 
         # List of folders to create
         folders_to_create = [
@@ -92,15 +115,15 @@ class SetupModel:
         ]
 
         # Create folder structure
-        self._create_folder_structure(folders_to_create, model_dir, logger)
+        self._create_folder_structure(folders_to_create)
 
         # Copy model inputs
-        self._copy_model_inputs(configs, model_dir, logger)
+        self._copy_model_inputs()
 
         # Copy emme project and database
-        self._copy_emme_project_and_database(configs, model_dir, logger)
+        self._copy_emme_project_and_database()
 
-        # Download toml config files from GitHub
+        # Download toml SetupConfig files from GitHub
         config_files_list = [
             "observed_data.toml",
             "canonical_crosswalk.toml",
@@ -113,22 +136,16 @@ class SetupModel:
         ]
 
         for file in config_files_list:
-            github_url = os.path.join(configs.CONFIGS_GITHUB_PATH, file)
-            github_url = github_url.replace("\\", "/")
+            github_url = self.setup_config.CONFIGS_GITHUB_PATH + "/" + file
 
-            local_file = os.path.join(
-                model_dir,
-                "acceptance" if file in acceptance_config_files_list else "",
-                file,
-            )
-            local_file = local_file.replace("\\", "/")
+            local_file = self.model_dir / file
 
-            self._download_file_from_github(github_url, local_file, logger)
+            self._download_file_from_github(github_url, local_file)
 
         # Fetch required folders from travel model two github release (zip file)
         org = "BayAreaMetro"
         repo = "travel-model-two"
-        tag = configs.TRAVEL_MODEL_TWO_RELEASE_TAG
+        tag = self.setup_config.TRAVEL_MODEL_TWO_RELEASE_TAG
         folders_to_extract = ["runtime", "uec"]
 
         self._download_github_release(
@@ -136,128 +153,117 @@ class SetupModel:
             repo,
             tag,
             folders_to_extract,
-            os.path.join(model_dir, "CTRAMP"),
-            logger,
+            self.model_dir / "CTRAMP"
         )
 
         # Rename 'uec' folder to 'model'
-        os.rename(
-            os.path.join(model_dir, "CTRAMP", "uec"),
-            os.path.join(model_dir, "CTRAMP", "model"),
-        )
+        old_path = self.model_dir / "CTRAMP" / "uec"
+        old_path.rename(self.model_dir / "CTRAMP" / "model")
 
-        self._create_run_model_batch(logger)
+        self._create_run_model_batch()
 
-        logger.info(f"Setup process completed successfully!")
+        self.logger.info(f"Setup process completed successfully!")
 
         # Close logging
         logging.shutdown()
 
 
-    def _create_run_model_batch(self, logger):
+    def _create_run_model_batch(self):
         """
         Creates the RunModel.bat and RunModel.py in the root directory
-
-        Args:
-            logger: logger
         """
 
         if not self.model_dir.exists():
-            logger.error(f"Directory {self.model_dir} does not exists.")
+            self.logger.error(f"Directory {self.model_dir} does not exists.")
             raise FileNotFoundError(f"Directory {self.model_dir} does not exists.")
         
         # create RunModel.bat
         with open(self.model_dir / 'RunModel.bat', 'w') as file:
-            logger.info(f"Creating RunModel.bat in directory {self.model_dir}")
+            self.logger.info(f"Creating RunModel.bat in directory {self.model_dir}")
             file.write(_RUN_MODEL_BAT_CONTENT)
 
         # create RunModel.py
         with open(self.model_dir / 'RunModel.py', 'w') as file:
-            logger.info(f"Creating RunModel.py in directory {self.model_dir}")
+            self.logger.info(f"Creating RunModel.py in directory {self.model_dir}")
             file.write(_RUN_MODEL_PY_CONTENT)
 
 
-    def _create_folder_structure(self, folder_names, root_dir, logger):
+    def _create_folder_structure(self, folder_names: list[str]):
         """
         Creates empty folder structure in the root directory
 
         Args:
             folder_names: list of folders to create
-            root_dir: root directory for the model
-            logger: logger
+            self.model_dir: root directory for the model
         """
 
-        logger.info(f"Creating folder structure in directory {root_dir}")
+        self.logger.info(f"Creating folder structure in directory {self.model_dir.resolve()}")
 
-        if not os.path.exists(root_dir):
-            logger.error(f"Directory {root_dir} does not exists.")
-            raise FileNotFoundError(f"Directory {root_dir} does not exists.")
+        if not self.model_dir.exists():
+            error_str = f"Directory {self.model_dir} does not exist."
+            self.logger.error(error_str)
+            raise FileNotFoundError(error_str)
 
         for folder in folder_names:
-            path = os.path.join(root_dir, folder)
-            os.makedirs(path)
-            logger.info(f"  Created Empty Folder: {path}")
+            path = self.model_dir / folder
+            path.mkdir()
+            self.logger.info(f"  Created Empty Folder: {path}")
 
-    def _copy_folder(self, src_dir, dest_dir, logger):
+    def _copy_folder(self, src_dir: pathlib.Path, dest_dir: pathlib.Path):
         """
         Copies a folder from the source directory to the destination directory.
 
         Args:
             src: source folder
             dest: destination folder
-            logger: logger
         """
 
-        src_dir = src_dir.replace("\\", "/")
-        dest_dir = dest_dir.replace("\\", "/")
+        if not src_dir.exists():
+            error_str = f"Source directory {src_dir} to copy from does not exist"
+            self.logger.error(error_str)
+            raise FileNotFoundError(error_str)
+        
+        # Copy the entire folder and its contents
+        try:
+            # Check if the destination directory exists
+            if dest_dir.exists():
+                # delete the existing destination directory
+                # Newer versions supports `dirs_exist_ok` but with this version,
+                # the destination directory must not already exist
+                shutil.rmtree(dest_dir)
 
-        if os.path.exists(src_dir):
-            # Copy the entire folder and its contents
-            try:
-                # Check if the destination directory exists
-                if os.path.exists(dest_dir):
-                    # delete the existing destination directory
-                    # Newer versions supports `dirs_exist_ok` but with this version,
-                    # the destination directory must not already exist
-                    shutil.rmtree(dest_dir)
+            shutil.copytree(src_dir, dest_dir)
 
-                shutil.copytree(src_dir, dest_dir)
+            self.logger.info(f"Copied folder from {src_dir} to {dest_dir}")
+        except Exception as e:
+            error_str = f"Failed to copy {src_dir} to {dest_dir}: {str(e)}"
+            self.logger.error(error_str)
+            raise Exception(error_str)
 
-                logger.info(f"Copied folder from {src_dir} to {dest_dir}")
-            except Exception as e:
-                logger.error(f"Failed to copy {src_dir} to {dest_dir}: {str(e)}")
-                raise Exception(f"Failed to copy {src_dir} to {dest_dir}: {str(e)}")
-        else:
-            logger.error(f"Source directory {src_dir} to copy from does not exists.")
-            raise FileNotFoundError(
-                f"Source directory {src_dir} to copy from does not exists."
-            )
 
-    def _download_file_from_github(self, github_url, local_file, logger):
+    def _download_file_from_github(self, github_url: str, local_file: pathlib.Path):
         """
         Downloads a file from a GitHub URL.
 
         Args:
             github_url: raw github link for the file to download
             local_file: local path for the file to download
-            logger: logger
         """
         try:
             response = requests.get(github_url)
             response.raise_for_status()
+            self.logger.debug(f"Downloading file from {github_url} to {local_file.resolve()}")
 
             with open(local_file, "wb") as f:
                 # write the content of the response (file content) to the local file
                 f.write(response.content)
-            logger.info(f"Downloaded file from {github_url} to {local_file}")
         except Exception as e:
-            logger.error(f"Failed to download file {github_url} from GitHub: {str(e)}")
-            raise Exception(
-                f"Failed to download file {github_url} from GitHub: {str(e)}"
-            )
+            error_str = f"Failed to download file {github_url} from GitHub to {local_file.resolve()}: {str(e)}"
+            self.logger.error(error_str)
+            raise Exception(error_str)
 
     def _download_github_release(
-        self, org_name, repo_name, release_tag, folders_to_extract, local_dir, logger
+        self, org_name: str, repo_name: str, release_tag: str, folders_to_extract: list[str], local_dir: pathlib.Path
     ):
         """
         download a release ZIP from a GitHub repository and extract specified sub-folders to a local directory.
@@ -268,7 +274,6 @@ class SetupModel:
             release_tag: release tag
             folders_to_extract: list of sub-folders to extract from the ZIP file
             local_dir: local directory to save extracted folders
-            logger: logger
         """
         release_url = f"https://github.com/{org_name}/{repo_name}/archive/refs/tags/{release_tag}.zip"
 
@@ -278,7 +283,6 @@ class SetupModel:
 
             root_folder = f"{repo_name}-{release_tag}"
             copied_folder = set([])
-            local_dir = local_dir.replace("\\", "/")
 
             z = zipfile.ZipFile(io.BytesIO(response.content))
             for file_info in z.infolist():
@@ -292,8 +296,7 @@ class SetupModel:
                         file_path.startswith(folder) for folder in folders_to_extract
                     ):
                         # create the local path to extract the file
-                        extract_path = os.path.join(local_dir, file_path)
-                        extract_path = extract_path.replace("\\", "/")
+                        extract_path = local_dir / file_path
 
                         # ensure the directory exists
                         os.makedirs(os.path.dirname(extract_path), exist_ok=True)
@@ -307,147 +310,89 @@ class SetupModel:
                         copied_folder.add(file_path.split("/")[0])
 
             if copied_folder is not None:
-                logger.info(
+                self.logger.info(
                     f"Extracted folders {copied_folder} from GitHub release {release_url} and to directory {local_dir}"
                 )
 
         except Exception as e:
-            logger.error(f"Failed to download GitHub release {release_url}: {str(e)}")
-            raise Exception(
-                f"Failed to download GitHub release {release_url}: {str(e)}"
-            )
+            error_str = f"Failed to download GitHub release {release_url}: {str(e)}"
+            self.logger.error(error_str)
+            raise Exception(error_str)
 
-    def _copy_model_inputs(self, configs, model_dir, logger):
+    def _copy_model_inputs(self):
         """
         copy required model inputs into their respective directories.
-
-        Args:
-            configs: setup model configurations
-            model_dir: path to model directory
-            logger: logger
         """
         # Copy hwy and trn networks
         self._copy_folder(
-            os.path.join(configs.INPUT_NETWORK_DIR, "hwy"),
-            os.path.join(model_dir, "inputs", "hwy"),
-            logger,
+            self.setup_config.INPUT_NETWORK_DIR / "hwy",
+            self.model_dir / "inputs" / "hwy"
         )
         self._copy_folder(
-            os.path.join(configs.INPUT_NETWORK_DIR, "trn"),
-            os.path.join(model_dir, "inputs", "trn"),
-            logger,
+            self.setup_config.INPUT_NETWORK_DIR / "trn",
+            self.model_dir / "inputs" / "trn"
         )
 
         # Copy popsyn and landuse inputs
         self._copy_folder(
-            os.path.join(configs.INPUT_POPLU_DIR, "popsyn"),
-            os.path.join(model_dir, "inputs", "popsyn"),
-            logger,
+            self.setup_config.INPUT_POPLU_DIR / "popsyn",
+            self.model_dir / "inputs" / "popsyn"
         )
         self._copy_folder(
-            os.path.join(configs.INPUT_POPLU_DIR, "landuse"),
-            os.path.join(model_dir, "inputs", "landuse"),
-            logger,
+            self.setup_config.INPUT_POPLU_DIR /"landuse",
+            self.model_dir / "inputs" / "landuse"
         )
 
         # Copy nonres inputs
         self._copy_folder(
-            os.path.join(configs.INPUT_NONRES_DIR, "nonres"),
-            os.path.join(model_dir, "inputs", "nonres"),
-            logger,
+            self.setup_config.INPUT_NONRES_DIR / "nonres",
+            self.model_dir / "inputs" / "nonres"
         )
 
         # Copy warmstart demand if exists
-        if os.path.exists(
-            os.path.join(configs.WARMSTART_FILES_DIR, "demand_matrices")
-        ):
+        warmstart_demand = self.setup_config.WARMSTART_FILES_DIR / "demand_matrices"
+        if warmstart_demand.exists():
             self._copy_folder(
-                os.path.join(configs.WARMSTART_FILES_DIR, "demand_matrices"), 
-                os.path.join(model_dir, "demand_matrices"), 
-                logger
+                warmstart_demand, 
+                self.model_dir / "demand_matrices"
             )
 
         # Copy warmstart skims
-        if os.path.exists(
-            os.path.join(configs.WARMSTART_FILES_DIR, "skim_matrices")
-        ):
+        warmstart_skims = self.setup_config.WARMSTART_FILES_DIR / "skim_matrices"
+        if warmstart_skims.exists():
             self._copy_folder(
-                os.path.join(configs.WARMSTART_FILES_DIR, "skim_matrices"), 
-                os.path.join(model_dir, "skim_matrices"), 
-                logger
+                warmstart_skims, 
+                self.model_dir /"skim_matrices"
             )
 
-    def _copy_emme_project_and_database(self, configs, model_dir, logger):
+    def _copy_emme_project_and_database(self):
         """
         copy emme projects from template project and then copy the emme networks databases
-
-        Args:
-            configs: setup model configurations
-            model_dir: path to model directory
-            ogger: logger
         """
         # copy template emme project
         self._copy_folder(
-            configs.EMME_TEMPLATE_PROJECT_DIR,
-            os.path.join(model_dir, "emme_project"),
-            logger,
+            self.setup_config.EMME_TEMPLATE_PROJECT_DIR,
+            self.model_dir / "emme_project"
         )
 
         # copy emme network database
         self._copy_folder(
-            os.path.join(
-                configs.INPUT_EMME_NETWORK_DIR, "emme_drive_network", "Database"
-            ),
-            os.path.join(model_dir, "emme_project", "Database_highway"),
-            logger,
+            self.setup_config.INPUT_EMME_NETWORK_DIR / "emme_drive_network" / "Database",
+            self.model_dir / "emme_project" / "Database_highway"
         )
         self._copy_folder(
-            os.path.join(
-                configs.INPUT_EMME_NETWORK_DIR, "emme_taz_transit_network", "Database"
-            ),
-            os.path.join(model_dir, "emme_project", "Database_transit"),
-            logger,
+            self.setup_config.INPUT_EMME_NETWORK_DIR / "emme_taz_transit_network" / "Database",
+            self.model_dir / "emme_project" / "Database_transit"
         )
         self._copy_folder(
-            os.path.join(
-                configs.INPUT_EMME_NETWORK_DIR,
-                "emme_maz_active_modes_network_subregion_north",
-                "Database",
-            ),
-            os.path.join(model_dir, "emme_project", "Database_active_north"),
-            logger,
+            self.setup_config.INPUT_EMME_NETWORK_DIR / "emme_maz_active_modes_network_subregion_north" / "Database",
+            self.model_dir / "emme_project" /"Database_active_north"
         )
         self._copy_folder(
-            os.path.join(
-                configs.INPUT_EMME_NETWORK_DIR,
-                "emme_maz_active_modes_network_subregion_south",
-                "Database",
-            ),
-            os.path.join(model_dir, "emme_project", "Database_active_south"),
-            logger,
+            self.setup_config.INPUT_EMME_NETWORK_DIR / "emme_maz_active_modes_network_subregion_south" / "Database",
+            self.model_dir / "emme_project" /"Database_active_south"
         )
 
-
-class Config:
-    def __init__(self, config_dict):
-        for key, value in config_dict.items():
-            setattr(self, key, value)
-
-    def validate(self):
-        # validate setup configuration
-        required_attrs = [
-            "ROOT_DIR",
-            "MODEL_FOLDER_NAME",
-            "INPUT_NETWORK_DIR",
-            "INPUT_POPLU_DIR",
-            "WARMSTART_FILES_DIR",
-            "CONFIGS_GITHUB_PATH",
-            "TRAVEL_MODEL_TWO_RELEASE_TAG",
-        ]
-
-        for attr in required_attrs:
-            if not getattr(self, attr, None):
-                raise ValueError(f"{attr} is required in the setup configuration!")
 
 _RUN_MODEL_BAT_CONTENT = """
 :: the directory that this file is in
