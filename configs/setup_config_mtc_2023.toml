@@ -12,7 +12,7 @@
 # location of the networks support files
 # this includes file such as tolls, transit fares etc.
 # Box: https://mtcdrive.box.com/s/6jf6duborg00d5uqftu35iiynpuzpkbj
-INPUT_NETWORK_DIR = "E:/Box/Modeling and Surveys/XXDevelopment/Travel Model Two Conversion/Model Inputs/2015-tm22-dev-sprint-03"
+INPUT_NETWORK_DIR = "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Inputs/2015-tm22-dev-sprint-03"
 
 # this is the location/folder for Emme Netorks (built from Lasso) 
 # Box: https://mtcdrive.box.com/s/rs84fqlzkpidn1cdxruucy70500seye5
