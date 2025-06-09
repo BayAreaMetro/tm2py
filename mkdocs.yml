@@ -23,6 +23,22 @@ theme:
         icon: material/toggle-switch
         name: Switch to light mode
 
+nav:
+  - Home: index.md
+  - Getting Started: 
+    - Server Setup: server-setup.md
+    - Installing tm2py: install.md
+    - Running tm2: run.md
+  - Codebase:
+    - Architecture: architecture.md
+    - API Documentation: api.md
+  - Input & Output:
+    - Input: inputs.md
+    - Output: outputs.md
+  - Contributing:
+    - Development: contributing\development.md
+    - Documentation: contributing\documentation.md
+
 plugins:
   - autorefs
   - awesome-pages
@@ -52,13 +68,11 @@ plugins:
             show_root_heading: true
             show_source: true
             heading_level: 3
-      custom_templates: templates
+      # custom_templates: templates
       watch:
         - tm2py
   - search
-
-extra_javascript:
-  - https://unpkg.com/mermaid@8.5.0/dist/mermaid.min.js
+  - mermaid2
 
 extra_css:
   - https://use.fontawesome.com/releases/v5.13.0/css/all.css
@@ -76,7 +90,7 @@ markdown_extensions:
       custom_fences:
         - name: mermaid
           class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_div_format
+          format: !!python/name:mermaid2.fence_mermaid_custom
   - pymdownx.smartsymbols
   - smarty
   - toc:
