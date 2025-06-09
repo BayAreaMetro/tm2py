@@ -1,32 +1,88 @@
 
-# Installation
+## Run the Model
 
-First you need to [setup your server](server-setup.md).
+### 1. **Set Up the Model Run Directory**
 
-1. Clone the [tm2py repo](https://github.com/BayAreaMetro/tm2py) and switch to the branch you want to run (with Git Bash or GitHub desktop).
+#### a. **Activate Your Virtual Environment**
 
-2. Open the ``OpenPaths EMME Shell``.
-    a. In the OpenPaths Shell, cd to the parent folder of the tm2py GitHub folder. Create a new virtual environment in that folder (alongside the tm2py folder, not within it): 
-    
-    python -m venv <your_tm2py_env_name>
+Open a terminal and activate your *tm2py* virtual environment:  
+`<your_tm2py_env_name>\Scripts\activate`
 
-3. Activate your virtual environment in the EMME shell:
-   <your_tm2py_env_name>\Scripts\activate
+#### b. **Configure Input and Output Paths**
 
-4. Copy the emme.pth file from the OpenPaths EMME installation folder to the virutal environment. You can copy in the shell with shell commands or just do things in Windows. (This part feels like the crazy things travel modelers do because we are such a small field.)
+Edit the configuration file located at:  
+`tm2py/examples/setup_config.toml`
 
-Copy "C:\Program Files\Bentley\OpenPaths\EMME 24.01.00\emme.pth" to <your_tm2py_env_name>\Lib\site-packages\
+Set your input file paths and expected output (run) paths here.
 
-5. In the OpenPaths EMME shell activated from step 2, install tm2py from local clone in editable mode
-a.	cd to the tm2py GitHub folder cd tm2py
-b.	pip install -e .
+#### c. **Run `setup-model.ipynb`**
 
-6.	In step 4 loggings, you should expect to see only the packages listed in the requirements.txt are installed. After step 4 completes, you can try importing tm2py to verify if there's any quick dependency error.
-a.	In the shell, type python
-b.	type import tm2py
+1. In the same virtual environment, launch Jupyter Notebook:  
+   `jupyter notebook`
+
+2. Navigate to the notebook:  
+   `tm2py/notebooks/setup-model.ipynb`
 
 
-## User Configuration
+cessors = "MAX-1"
+```
+
+   *Alternatively*, open the `.ipynb` file in **Visual Studio Code** using the correct virtual environment.
+
+
+3. This notebook:
+   - References the example config file: `examples/setup_config.toml`
+   - Copies model input files and folder templates from various sources
+   - Includes Box links for data sources in the comments
+   - Prints setup logs in the model run folder
+
+**Run this notebook to create a clean model directory structure.**
+
+#### d. **Manually Update IP Addresses in CT-RAMP Properties Files**
+
+Update the following files with the correct IP address values:
+
+- `...\CTRAMP\runtime\mtctm2.properties`  
+- `...\CTRAMP\runtime\mtcpcrm.properties`  
+- `...\CTRAMP\runtime\logsum.properties`
+
+Look for the following keys in each file:
+
+- `RunModel.MatrixServerAddress`
+- `RunModel.HouseholdServerAddress`
+
+#### e. **Enable Warm Start Demand**
+
+Edit the file:  
+`<your_run_directory>/scenario_config.toml`
+
+Set the model to use *warm start demand* ,like this:
+
+
+[warmstart]
+
+    warmstart = true
+
+    use_warmstart_skim = false
+
+    use_warmstart_demand = true
+
+*Note: You may need to update the `emmebanks` to the latest version before the model will run.*  
+*Also: We used a different `WalkTransitDriveSkims.xls` file in the CTRAMP folder.*
+
+---
+
+### 2. **Run the Model**
+
+While still in the activated virtual environment:
+
+1. Navigate to the model run directory you set in step 1b.  
+2. Run the model:  
+   `python RunModel.py`
+   
+   
+   
+   ## User Configuration
 
 ### model_config.toml
 the model config file allows for customization on the the model run performance settings.
@@ -61,7 +117,4 @@ otherwise, to turn this feature off, explicitly configure tm2py to use 1 thread:
     if serial assignment is required comment about the above block and use the below
     [[emme.highway_distribution]]
         time_periods = ["EA", "AM", "MD", "PM", "EV"]
-        num_processors = "MAX-1"
-```
-
-
+        num_pro
