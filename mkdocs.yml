@@ -36,8 +36,8 @@ nav:
     - Input: inputs.md
     - Output: outputs.md
   - Contributing:
-    - Development: contributing\development.md
-    - Documentation: contributing\documentation.md
+    - Development: contributing/development.md
+    - Documentation: contributing/documentation.md
 
 plugins:
   - autorefs
