@@ -486,9 +486,7 @@ import tm2py
 if __name__ == "__main__":
     controller = tm2py.RunController(
         config_file = ["scenario_config.toml", "model_config.toml"],
-        run_dir = pathlib.Path("."),
-        # all components
-        run_components = None
+        run_dir = pathlib.Path(".")
     )
     controller.run()
 """
