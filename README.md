@@ -9,7 +9,7 @@ Currently [a large pile of documentation](https://bayareametro.github.io/travel-
  
 Travel Model Two runs with a ***CTRAMP household demand model*** and ***EMME skimming/assignment*** procedures.
 
-
+For **current configuration files and model run utilities** see [the tm2py-utils repository] (https://github.com/BayAreaMetro/tm2py-utils)
 
 [Run the model](docs/run.md)
 
