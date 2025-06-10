@@ -19,7 +19,7 @@ C:\Users\lzorn\Documents>E:\GitHub\tm2\tm2py_env\Scripts\activate
 ### b. **Configure Input and Output Paths**
 
 If needed, edit the configuration file located at:
-[`tm2py/congs/setup_config_mtc_2023.toml`](../configs/setup_config_mtc_2023.toml)
+[`tm2py-utils/tm2py-utils/config/develop/setup_config_mtc_2015.toml`](https://github.com/BayAreaMetro/tm2py-utils/blob/main/tm2py_utils/config/develop/setup_config_mtc_2015.toml)
 
 ### c. **Run `setup_model.py`**
 
@@ -31,7 +31,7 @@ This script is a light wrapper for [SetupModel](/tm2py/api/#tm2py.SetupModel) an
 Either argument can be relative or absolute paths
 
 ```batch
-(tm2py_env) E:\GitHub\tm2\tm2py>python scripts\setup_model.py configs\setup_config_mtc_2023.toml E:\TM2\2023_TM2_test_20250606
+(tm2py_env) E:\GitHub\tm2\tm2py>python scripts\setup_model.py E:\GitHub\tm2\tm2py-utils\tm2py-utils\config\develop\setup_config_mtc_2015.toml E:\TM2\2023_TM2_test_20250606
 ```
 
 TODO: Fix this
@@ -40,7 +40,7 @@ TODO: Fix this
 
 ---
 
-### 2. **Run the Model**
+## 2. **Run the Model**
 
 While still in the activated virtual environment:
 
