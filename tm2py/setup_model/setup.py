@@ -1,3 +1,4 @@
+""" SetupModel implementation."""
 import os
 import pathlib
 import shutil
@@ -6,11 +7,19 @@ import zipfile
 import io
 import logging
 import toml
+import socket
+import re
 
 class SetupConfig:
     """ Simple class with attributes required for setting up a model
     """
-    def __init__(self, config_dict):
+    def __init__(self, config_dict: dict):
+        """Intialize with given dictionary
+
+        Args:
+            config_dict (dict): Assumes keys that end with _DIR point to
+            pathlib.Path objects, otherwise assumes values are strings.
+        """
     
         for key, value in config_dict.items():
             # _DIR values are pathlib.Paths
@@ -20,12 +29,16 @@ class SetupConfig:
                 setattr(self, key, value)
         
     def validate(self):
+        """Validates that all required attributes are present.
+
+        Raises:
+            ValueError: when required attribute is missing.
+        """
         # validate setup configuration
         required_attrs = [
             "INPUT_NETWORK_DIR",
             "INPUT_POPLU_DIR",
             "WARMSTART_FILES_DIR",
-            "CONFIGS_GITHUB_PATH",
             "TRAVEL_MODEL_TWO_RELEASE_TAG",
         ]
 
@@ -39,6 +52,12 @@ class SetupModel:
     """
 
     def __init__(self, config_file: pathlib.Path, model_dir: pathlib.Path):
+        """Initializes an instance of the SetupModel class.
+
+        Args:
+            config_file (pathlib.Path): The TOML file with the model setup attributes.
+            model_dir (pathlib.Path): The directory which to setup for a TM2 model run.
+        """
         self.config_file = config_file
         self.setup_config = SetupConfig(dict())
         self.model_dir = model_dir
@@ -73,6 +92,28 @@ class SetupModel:
         return data
 
     def run_setup(self):
+        """
+        Does the work of setting up the model.  
+        
+        This step will do the following within the model directory.
+
+        1. Intialize logging to write to `setup.log`
+        2. Create the required folder structure
+        3. Copy the input from the locations specified:
+           a. hwy and trn networks
+           b. popsyn and landuse inputs
+           c. nonres inputs
+           d. warmstart demand matrices
+           e. warmstart skims
+        4. Copy the Emme template project and Emme network databases
+        5. Download the travel model CTRAMP core code (runtime, uec) from the 
+           [travel-model-two repository](https://github.com/BayAreaMetro/travel-model-two)
+        6. Updates the IP address in the CTRAMP runtime properties files
+        7. Creates `RunModel.py` for running the model
+
+        Raises:
+            FileExistsError: If the model directory to setup already exists.
+        """
         # Read setup setup_config
         config_dict = self._load_toml()
         self.setup_config = SetupConfig(config_dict)
@@ -80,7 +121,7 @@ class SetupModel:
 
         # if the directory already exists - error and quit
         if self.model_dir.exists():
-            raise Exception(f"{self.model_dir.resolve()} already exists! Setup terminated.")
+            raise FileExistsError(f"{self.model_dir.resolve()} already exists! Setup terminated.")
         else:
             self.model_dir.mkdir()
 
@@ -162,6 +203,24 @@ class SetupModel:
 
         self._create_run_model_batch()
 
+        # update IP addresses in config files
+        ips_here = socket.gethostbyname_ex(socket.gethostname())[-1]
+        self.logger.info(f"Found the following IPs for this server: {ips_here}; using the first one: {ips_here[0]}")
+
+        # add IP address to mtctm2.properties
+        self._replace_in_file(
+            self.model_dir / 'CTRAMP' / 'runtime' / 'mtctm2.properties', {
+                "(\nRunModel.MatrixServerAddress[ \t]*=[ \t]*)(\S*)": f"\g<1>{ips_here[0]}",
+                "(\nRunModel.HouseholdServerAddress[ \t]*=[ \t]*)(\S*)": f"\g<1>{ips_here[0]}"
+            }
+        )
+        # add IP address to logsum.properties
+        self._replace_in_file(
+            self.model_dir / 'CTRAMP' / 'runtime' / 'logsum.properties', {
+                "(\nRunModel.MatrixServerAddress[ \t]*=[ \t]*)(\S*)": f"\g<1>{ips_here[0]}",
+                "(\nRunModel.HouseholdServerAddress[ \t]*=[ \t]*)(\S*)": f"\g<1>{ips_here[0]}"
+            }
+        )
         self.logger.info(f"Setup process completed successfully!")
 
         # Close logging
@@ -177,11 +236,6 @@ class SetupModel:
             self.logger.error(f"Directory {self.model_dir} does not exists.")
             raise FileNotFoundError(f"Directory {self.model_dir} does not exists.")
         
-        # create RunModel.bat
-        with open(self.model_dir / 'RunModel.bat', 'w') as file:
-            self.logger.info(f"Creating RunModel.bat in directory {self.model_dir}")
-            file.write(_RUN_MODEL_BAT_CONTENT)
-
         # create RunModel.py
         with open(self.model_dir / 'RunModel.py', 'w') as file:
             self.logger.info(f"Creating RunModel.py in directory {self.model_dir}")
@@ -393,30 +447,48 @@ class SetupModel:
             self.model_dir / "emme_project" /"Database_active_south"
         )
 
+    def _replace_in_file(self, filepath: pathlib.Path, regex_dict: dict[str, str]):
+        """
+        Copies `filepath` to `filepath.original`
+        Opens `filepath.original` and reads it, writing a new version to `filepath`.
+        The new version is the same as the old, except that the regexes in the regex_dict keys
+        are replaced by the corresponding values.
+        """
+        original_copy = pathlib.Path(f"{str(filepath.absolute())}.original")
+        shutil.move(filepath, original_copy)
+        self.logger.info(f"_replace_in_file: Updating {filepath} via {original_copy}")
 
-_RUN_MODEL_BAT_CONTENT = """
-:: the directory that this file is in
-SET MODEL_RUN_DIR=%~p0
-cd /d %MODEL_RUN_DIR%
+        # read the contents
+        myfile = open(original_copy, 'r')
+        file_contents = myfile.read()
+        myfile.close()
 
-echo make sure python is the correct location
-where python
-python RunModel.py
+        # do the regex subs
+        for pattern,newstr in regex_dict.items():
+            (file_contents, numsubs) = re.subn(pattern,newstr,file_contents,flags=re.IGNORECASE)
+            self.logger.info(f"  Made {numsubs} sub for {newstr}")
+ 
+           # Raise exception on failure
+            if numsubs < 1:
+                error_str = f"  SUBSITUTION FOR PATTERN {pattern} NOT MADE -- Fatal error"
+                self.logger.fatal(error_str)
+                raise ValueError(error_str)
 
-PAUSE
-"""
+        # write the result
+        myfile = open(filepath, 'w')
+        myfile.write(file_contents)
+        myfile.close()
 
 _RUN_MODEL_PY_CONTENT = """
-import os
-from tm2py.controller import RunController
+import pathlib
+import tm2py
 
-controller = RunController(
-    [
-        os.path.join(os.getcwd(), "scenario_config.toml"),
-        os.path.join(os.getcwd(), "model_config.toml")
-    ],
-    run_dir = os.getcwd()
-)
-
-controller.run()
+if __name__ == "__main__":
+    controller = tm2py.RunController(
+        config_file = ["scenario_config.toml", "model_config.toml"],
+        run_dir = pathlib.Path("."),
+        # all components
+        run_components = None
+    )
+    controller.run()
 """
