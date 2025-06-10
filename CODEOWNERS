@@ -2,20 +2,20 @@
 # The last match will 'win'
 
 # Global owners
-*                               @lmz    @FlaviaTsang
+*                               @lmz    @Ennazus
 
 # DevOps / Quality Assurance
-/.github/                       @e-lo    @lmz
-setup.config                    @e-lo    @lmz
-pre-commit-config.yaml          @e-lo    @lmz
-.markdownlint.yaml              @e-lo    @lmz
+/.github/                       @e-lo    @lmz   @Ennazus
+setup.config                    @e-lo    @lmz   @Ennazus
+pre-commit-config.yaml          @e-lo    @lmz   @Ennazus
+.markdownlint.yaml              @e-lo    @lmz   @Ennazus
 
 # Documentation Setup
-/docs/                         @e-lo    @lmz
-mkdocs.yml                     @e-lo    @lmz
+/docs/                         @e-lo    @lmz   @Ennazus
+mkdocs.yml                     @e-lo    @lmz   @Ennazus
 
 # Documentation Content
-*.md                            @lmz     @FlaviaTsang
+*.md                            @lmz     @Ennazus
 
 # Tests should be reviewed by dev team
 pytest.ini                      @e-lo   @inrokevin  @lmz
@@ -33,4 +33,4 @@ Dockerfile                       @inrokevin     @lmz
 /bin/                            @inrokevin     @lmz         @e-lo
 
 # Examples
-/examples/                       @FlaviaTsang   @i-am-sijia
+/examples/                       @Ennazus   @i-am-sijia

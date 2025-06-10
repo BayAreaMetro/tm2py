@@ -30,6 +30,9 @@ Mkdocs documentation webpages can be built locally and viewed at the URL specifi
 mkdocs serve
 ```
 
+### Helpful References:
+1. [mkdocstrings](https://mkdocstrings.github.io/usage/) - how to document code to generate documentation.
+
 ## Linting
 
 Documentation should be linted before deployment:

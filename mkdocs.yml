@@ -2,6 +2,8 @@ site_name: "Travel Model Two Python Package: tm2py"
 site_url: https://bayareametro.github.io/tm2py
 repo_url: https://github.com/bayareametro/tm2py
 edit_uri: edit/main/docs
+watch:
+  - tm2py
 
 theme:
   name: material
@@ -47,6 +49,7 @@ plugins:
       enable_inventory: true
       handlers:
         python:
+          paths: [".","tm2py"]
           setup_commands:
            - import sys
            - from unittest.mock import MagicMock as mock
@@ -68,9 +71,9 @@ plugins:
             show_root_heading: true
             show_source: true
             heading_level: 3
+          options:
+            fallback_to_import: true
       # custom_templates: templates
-      watch:
-        - tm2py
   - search
   - mermaid2
 
