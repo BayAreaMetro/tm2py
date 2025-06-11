@@ -178,32 +178,30 @@ class TransitSkim(Component):
 
             # TODO config
             self._skim_outputs = []
+            
+            _write_skims_to_omx = [
+                "IWAIT",
+                "XWAIT",
+                "FARE",
+                "BOARDS",
+                "WAUX",
+                "DTIME",
+                "DDIST",
+                "WACC",
+                "WEGR",
+                "IVT",
+                "CROWD"
+            ]
 
-            _output_skims = [
-                ("IWAIT", "first wait time"),
-                ("XWAIT", "transfer wait time"),
-                ("FARE", "fare"),
-                ("BOARDS", "num boardings"),
-                ("WAUX", "auxiliary walk time"),
-                ("DTIME", "access and egress drive time"),
-                ("DDIST", "access and egress drive distance"),
-                ("WACC", "access walk time"),
-                ("WEGR", "egress walk time"),
-                ("IVT", "total in-vehicle time"),
-                ("CROWD", "Crowding penalty"),
-            ]
-            self._skim_outputs += [
-                Skimproperty(_name, _desc) for _name, _desc in _output_skims
-            ]
             for mode in self.config.modes:
                 if (mode.assign_type == "TRANSIT") and (mode.type != "PNR_dummy"):
-                    desc = mode.description or mode.name
-                    self._skim_outputs.append(
-                        Skimproperty(
-                            f"IVT{mode.name}",
-                            f"{desc} in-vehicle travel time"[:40],
-                        )
-                    )    
+                    _write_skims_to_omx.append(f"IVT{mode.name}")
+
+            self._skim_outputs = [
+                Skimproperty(_name, _desc) 
+                for _name, _desc in self._skim_properties
+                if _name in _write_skims_to_omx
+            ]
 
         return self._skim_outputs
 
