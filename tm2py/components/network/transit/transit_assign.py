@@ -488,10 +488,11 @@ class TransitAssignment(Component):
                 self._export_boardings_by_line(time_period)
             if self.config.output_transit_segment_path is not None:
                 self._export_transit_segment(time_period)
-            if self.config.output_station_to_station_flow_path is not None:
-                self._export_boardings_by_station(time_period)
-            if self.config.output_transfer_at_station_path is not None:
-                self._export_transfer_at_stops(time_period)
+            if self.controller.iteration == self.controller.config.run.end_iteration:
+                if self.config.output_station_to_station_flow_path is not None:
+                    self._export_boardings_by_station(time_period)
+                if self.config.output_transfer_at_station_path is not None:
+                    self._export_transfer_at_stops(time_period)
 
     @LogStartEnd("Transit assignments for a time period")
     def run_transit_assign(
