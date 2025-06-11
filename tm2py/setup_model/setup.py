@@ -14,17 +14,33 @@ class SetupConfig:
     """ Simple class with attributes required for setting up a model
     """
     def __init__(self, config_dict: dict):
-        """Intialize with given dictionary
+        """Intialize with given dictionary.
+
+        Note that for keys that end with _DIR, the value is assumed to be a
+        path, so a pathlib.Path is saved rather than a string.
+
+        Additionally, if this is run on an MTC modeling machine (e.g. USERNAME==MTCPB)
+        then the Box directory is assumed to be passed through as a local resource
+        from Remote Desktop, so E:\Box is replaced with \\tsclient\E\Box as
+        the Box location.
 
         Args:
             config_dict (dict): Assumes keys that end with _DIR point to
             pathlib.Path objects, otherwise assumes values are strings.
         """
-    
+        MTC_BOX_DIR = pathlib.Path("E:\Box")
+        username = os.environ['USERNAME'].upper()
+
         for key, value in config_dict.items():
             # _DIR values are pathlib.Paths
             if key.upper().endswith("_DIR"):
-                setattr(self, key, pathlib.Path(value))
+                my_path = pathlib.Path(value)
+                # if on an MTC modeling machine, and E:\Box isn't available,
+                # assume the E:\Box drive should be accessed via \\tsclient\E\Box
+                my_path_root = pathlib.Path(*my_path.parts[:2])
+                if (username == "MTCPB") and (my_path_root == MTC_BOX_DIR) and (not MTC_BOX_DIR.exists()):
+                    my_path = pathlib.Path("\\\\tsclient\\E\\Box", *my_path.parts[2:])
+                setattr(self, key, my_path)
             else:
                 setattr(self, key, value)
         
@@ -98,18 +114,19 @@ class SetupModel:
         This step will do the following within the model directory.
 
         1. Intialize logging to write to `setup.log`
-        2. Create the required folder structure
-        3. Copy the input from the locations specified:
+        2. Copy the setup config file to `setupmodel_config.toml'
+        3. Create the required folder structure
+        4. Copy the input from the locations specified:
            a. hwy and trn networks
            b. popsyn and landuse inputs
            c. nonres inputs
            d. warmstart demand matrices
            e. warmstart skims
-        4. Copy the Emme template project and Emme network databases
-        5. Download the travel model CTRAMP core code (runtime, uec) from the 
+        5. Copy the Emme template project and Emme network databases
+        6. Download the travel model CTRAMP core code (runtime, uec) from the 
            [travel-model-two repository](https://github.com/BayAreaMetro/travel-model-two)
-        6. Updates the IP address in the CTRAMP runtime properties files
-        7. Creates `RunModel.py` for running the model
+        7. Updates the IP address in the CTRAMP runtime properties files
+        8. Creates `RunModel.py` for running the model
 
         Raises:
             FileExistsError: If the model directory to setup already exists.
@@ -130,6 +147,10 @@ class SetupModel:
         self._setup_logging(log_file)
 
         self.logger.info(f"Starting process to setup MTC model in directory: {self.model_dir.resolve()}")
+
+        # Save setup config into model dir as setupmodel_config.toml
+        shutil.copy(self.config_file, self.model_dir / "setupmodel_config.toml")
+        self.logger.info(f"Copied {self.config_file} to {self.model_dir / 'setupmodel_config.toml'}")
 
         # List of folders to create
         folders_to_create = [
