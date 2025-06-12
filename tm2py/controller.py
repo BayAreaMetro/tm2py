@@ -187,6 +187,10 @@ class RunController:
         return self.emme_manager.num_processors
 
     @property
+    def num_processors_transit_skim(self) -> int:
+        return self.emme_manager.num_processors_transit_skim
+
+    @property
     def iteration(self) -> int:
         """Current iteration of model run."""
         return self._iteration

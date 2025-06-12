@@ -476,6 +476,7 @@ class EmmeManager(EmmeManagerLight):
         self._active_north_emmebank = None
         self._active_south_emmebank = None
         self._num_processors = None
+        self._num_processors_transit_skim = None
 
     @property
     def highway_emmebank(self) -> ProxyEmmebank:
@@ -524,6 +525,22 @@ class EmmeManager(EmmeManagerLight):
             self._num_processors = parse_num_processors(self.config.num_processors)
         return self._num_processors
 
+    @property
+    def num_processors_transit_skim(self):
+        """Convert input value (parse if string) to number of processors for transit skimming.
+
+        Must be an int or string as 'MAX' or 'MAX-X' or 'MAX/N',
+        capped between 1 and the maximum available processors.
+
+        Returns:
+            An int of the number of processors to use.
+
+        """
+        if self._num_processors_transit_skim is None:
+            self._num_processors_transit_skim = parse_num_processors(
+                self.config.num_processors_transit_skim
+            )
+        return self._num_processors_transit_skim
 
 class BaseAssignmentLauncher(ABC):
     """
