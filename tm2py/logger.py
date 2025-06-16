@@ -39,6 +39,7 @@ from typing_extensions import Literal, get_args
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
+    from tm2py.emme.manager import EmmeManagerLight
 
 LogLevel = Literal[
     "TRACE", "DEBUG", "DETAIL", "INFO", "STATUS", "WARN", "ERROR", "FATAL"
@@ -52,24 +53,32 @@ LEVELS_INT_TO_STR = dict((i, k) for i, k in enumerate(get_args(LogLevel)))
 class BaseLogger:
     "Base class for logging. Not to be constructed directly."
 
-    def __init__(self, log_formatters, log_cache_file, emme_manager=None):
+    def __init__(self, log_formatters, log_cache_file):
         self._indentation = 0
         self._log_cache = LogCache(log_cache_file)
         self._log_formatters = log_formatters + [self._log_cache]
-        self._emme_manager = emme_manager
-        self._use_emme_logbook = emme_manager is not None
+
+        # these will be set later via set_emme_manager()
+        self._emme_manager = None
+        self._use_emme_logbook = False
 
         for log_formatter in self._log_formatters:
             if hasattr(log_formatter, "open"):
                 log_formatter.open()
 
+    def set_emme_manager(self,emme_manager: EmmeManagerLight):
+        if self.controller.config.logging.use_emme_logbook and self.controller.has_emme:
+            self._emme_manager = emme_manager
+            self._use_emme_logbook = emme_manager is not None
+    
     def __del__(self):
         """
         Destructor for logger object
         """
-        for log_formatter in self._log_formatters:
-            if hasattr(log_formatter, "close"):
-                log_formatter.close()
+        if self._log_formatters:
+            for log_formatter in self._log_formatters:
+                if hasattr(log_formatter, "close"):
+                    log_formatter.close()
 
     def log(self, text: str, level: LogLevel = "INFO", indent: bool = True):
         """Log text to file and display depending upon log level and config.
@@ -332,10 +341,9 @@ class Logger(BaseLogger):
         log_cache_file = os.path.join(
             controller.run_dir, log_config.log_on_error_file_path
         )
+        # set this latter via setEmmeManager()
         emme_manager = None
-        if self.controller.config.logging.use_emme_logbook and self.controller.has_emme:
-            emme_manager = self.controller.emme_manager
-        super().__init__(log_formatters, log_cache_file, emme_manager)
+        super().__init__(log_formatters, log_cache_file)
 
         self._slack_notifier = SlackNotifier(self)
 
