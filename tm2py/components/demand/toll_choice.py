@@ -153,7 +153,8 @@ class TollChoiceCalculator(Subcomponent):
         """
 
         if not os.path.isdir(value):
-            raise ValueError(f"{value} is not a valid skim directory")
+            os.makedirs(value)
+            self.controller.logger.debug(f"Creating directory {value}")
         if value != self._skim_dir:
             self._omx_manager = OMXManager(value)
             self._skim_dir = value
