@@ -1,0 +1,1 @@
+""" Subdir for model setup class."""

@@ -38,6 +38,7 @@ from tm2py.components.network.highway.highway_network import PrepareNetwork
 from tm2py.components.network.transit.transit_assign import TransitAssignment
 from tm2py.components.network.transit.transit_network import PrepareTransitNetwork
 from tm2py.components.network.transit.transit_skim import TransitSkim
+from tm2py.components.post_processor import PostProcessor
 from tm2py.config import Configuration
 from tm2py.emme.manager import EmmeManager
 from tm2py.logger import Logger
@@ -63,6 +64,7 @@ component_cls_map = {
     "internal_external": InternalExternal,
     "truck": CommercialVehicleModel,
     "household": HouseholdModel,
+    "post_processor":PostProcessor,
 }
 
 # pylint: disable=too-many-instance-attributes
@@ -183,6 +185,10 @@ class RunController:
     @property
     def num_processors(self) -> int:
         return self.emme_manager.num_processors
+
+    @property
+    def num_processors_transit_skim(self) -> int:
+        return self.emme_manager.num_processors_transit_skim
 
     @property
     def iteration(self) -> int:
@@ -376,7 +382,7 @@ class RunController:
         # Queue components which are run after final iteration
         _finalizer_iteration = self.config.run.end_iteration + 1
 
-        for c_name in _final_components:
+        for _c_name in _final_components:
             self._add_component_to_queue(_finalizer_iteration, _c_name)
 
         # If start_component specified, remove things before its first occurance

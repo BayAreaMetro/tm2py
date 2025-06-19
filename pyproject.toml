@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tm2py"
+version = "0.1.0"
+description = "Travel Model Two - python edition"
+authors = [
+    { name = "Metropolitan Transportation Commission", email = "info@bayareametro.gov" }
+]
+license = { text = "Apache-2.0" }
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = [
+    # "inro-emme",
+    "toml",
+    "pydantic",
+    "requests",
+    "scipy",
+    "geopandas",
+    "openmatrix",
+    # these would be in an EMME environment
+    "pyproj",
+    "shapely"
+]
+
+[project.urls]
+Homepage = "https://github.com/BayAreaMetro/tm2py"
+Documentation = "https://bayareametro.github.io/tm2py/"
+Source = "https://github.com/BayAreaMetro/tm2py"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]

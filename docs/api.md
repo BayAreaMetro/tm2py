@@ -1,5 +1,9 @@
 # API Documentation
 
+## Setting up the model to run
+
+::: tm2py.SetupModel
+
 ## Controller
 
 ::: tm2py.controller

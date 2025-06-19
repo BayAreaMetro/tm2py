@@ -36,7 +36,7 @@ class TransitSkim(Component):
         super().__init__(controller)
         self.config = self.controller.config.transit
         self._emmebank = None
-
+        self._num_processors = self.controller.emme_manager.num_processors_transit_skim
         self._networks = None
         self._scenarios = None
         self._matrix_cache = None
@@ -329,7 +329,7 @@ class TransitSkim(Component):
             spec,
             class_name=transit_class.name,
             scenario=self.scenarios[time_period],
-            num_processors=self.controller.num_processors,
+            num_processors=self._num_processors,
         )
 
         self._calc_xfer_wait(time_period, transit_class.name)
@@ -351,7 +351,7 @@ class TransitSkim(Component):
             spec,
             class_name=transit_class_name,
             scenario=self.scenarios[time_period],
-            num_processors=self.controller.num_processors,
+            num_processors=self._num_processors,
         )
 
     def _calc_xfer_wait(self, time_period, transit_class_name):
@@ -377,7 +377,7 @@ class TransitSkim(Component):
         self.controller.emme_manager.matrix_calculator(
             spec,
             scenario=self.scenarios[time_period],
-            num_processors=self.controller.num_processors,
+            num_processors=self._num_processors,
         )
 
     def _calc_boardings(self, time_period: str, transit_class_name: str):
@@ -405,7 +405,7 @@ class TransitSkim(Component):
             self.controller.emme_manager.matrix_calculator(
                 spec,
                 scenario=self.scenarios[time_period],
-                num_processors=self.controller.num_processors,
+                num_processors=self._num_processors,
             )
 
     def _calc_fares(self, time_period: str, transit_class_name: str):
@@ -424,7 +424,7 @@ class TransitSkim(Component):
         self.controller.emme_manager.matrix_calculator(
             spec,
             scenario=self.scenarios[time_period],
-            num_processors=self.controller.num_processors,
+            num_processors=self._num_processors,
         )
 
     @staticmethod
@@ -512,7 +512,7 @@ class TransitSkim(Component):
                 spec,
                 class_name=transit_class.name,
                 scenario=self.scenarios[time_period],
-                num_processors=self.controller.num_processors,
+                num_processors=self._num_processors,
             )
         return _total_ivtt_expr
 
@@ -561,7 +561,7 @@ class TransitSkim(Component):
         self.controller.emme_manager.matrix_calculator(
             spec,
             scenario=self.scenarios[time_period],
-            num_processors=self.controller.num_processors,
+            num_processors=self._num_processors,
         )
 
     def skim_drive_walk(self, time_period: str, transit_class: str) -> None:
@@ -602,33 +602,57 @@ class TransitSkim(Component):
                 "distance": f'mf"{_tp_tclass}_WEGR"',
             },
         }
+
         if transit_class.name not in ['WLK_TRN_WLK']:
             self.controller.emme_manager.matrix_results(
                 spec1,
                 class_name=transit_class.name,
                 scenario=self.scenarios[time_period],
                 num_processors=self.controller.num_processors,
-            )
+      
+
+        self.controller.emme_manager.matrix_results(
+            spec1,
+            class_name=transit_class.name,
+            scenario=self.scenarios[time_period],
+            num_processors=self._num_processors,
+        )
+
         self.controller.emme_manager.matrix_results(
             spec2,
             class_name=transit_class.name,
             scenario=self.scenarios[time_period],
-            num_processors=self.controller.num_processors,
+            num_processors=self._num_processors,
         )
+
         if transit_class.name not in ['PNR_TRN_WLK','KNR_TRN_WLK']:
             self.controller.emme_manager.matrix_results(
                 spec3,
                 class_name=transit_class.name,
                 scenario=self.scenarios[time_period],
-                num_processors=self.controller.num_processors,
+                num_processors=self._num_processors,
             )
         if transit_class.name not in ['WLK_TRN_PNR','WLK_TRN_KNR']:
             self.controller.emme_manager.matrix_results(
                 spec4,
                 class_name=transit_class.name,
                 scenario=self.scenarios[time_period],
-                num_processors=self.controller.num_processors,
+                num_processors=self._num_processors,
             )
+              
+        self.controller.emme_manager.matrix_results(
+            spec3,
+            class_name=transit_class.name,
+            scenario=self.scenarios[time_period],
+            num_processors=self._num_processors,
+        )
+        self.controller.emme_manager.matrix_results(
+            spec4,
+            class_name=transit_class.name,
+            scenario=self.scenarios[time_period],
+            num_processors=self._num_processors,
+        )
+
 
         drive_perception_factor = self.config.drive_perception_factor
         walk_speed = self.config.walk_speed
@@ -671,7 +695,7 @@ class TransitSkim(Component):
         self.controller.emme_manager.matrix_calculator(
             spec_list,
             scenario=self.scenarios[time_period],
-            num_processors=self.controller.num_processors,
+            num_processors=self._num_processors,
         )
 
     def skim_penalty_toll(self, time_period: str, transit_class: str) -> None:
@@ -700,7 +724,7 @@ class TransitSkim(Component):
             self.controller.emme_manager.matrix_calculator(
                 spec,
                 scenario=self.scenarios[time_period],
-                num_processors=self.controller.num_processors,
+                num_processors=self._num_processors,
             )
 
         # drive toll
@@ -847,7 +871,7 @@ class TransitSkim(Component):
             spec,
             class_name=transit_class.name,
             scenario=self.scenarios[time_period],
-            num_processors=self.controller.num_processors,
+            num_processors=self._num_processors,
         )
 
     def _run_path_analysis(
@@ -889,7 +913,7 @@ class TransitSkim(Component):
             spec,
             class_name=transit_class.name,
             scenario=self.scenarios[time_period],
-            num_processors=self.controller.num_processors,
+            num_processors=self._num_processors,
         )
 
     def mask_if_not_required_modes(self, time_period: str, transit_class) -> None:

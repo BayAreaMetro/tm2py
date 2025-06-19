@@ -1,58 +1,5 @@
 # Development
 
-## Preparation
-
-### Install Git
-
-If you don't have it installed already, you will need to [install Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) version-contorl system.
-
-=== "LINUX"
-
-    ```sh
-    sudo apt install git-all
-    ```
-
-=== "Mac"
-
-    [](https://git-scm.com/download/mac)
-
-    or
-
-    ```sh
-    brew install git
-    ```
-
-=== "Windows"
-
-    [](https://git-scm.com/download/win)
-
-!!! tip
-
-    Also install [GitHub Desktop](https://desktop.github.com/) to make your life easier.
-
-### Download `tm2py` Repository
-
-Have a local clone of the entire `tm2py` repository on your machine:
-
-=== "Terminal"
-
-    ```sh
-    git clone https://github.com/BayAreaMetro/tm2py.git
-    ```
-
-=== "GitHub Desktop"
-
-    [Open Clone in GitHub Desktop](x-github-client://openRepo/https://github.com/BayAreaMetro/tm2py)
-
-### Get a Text Editor
-
-Text editors with python support and/or integrated development environments (IDEs) make development
-a lot easier than working in notepad.  
-
-Some to try:  
-
-- [VS Code](https://code.visualstudio.com/)
-
 ## Development Pattern
 
 Generally speaking, development uses git branches to manage progress on features and bugs while

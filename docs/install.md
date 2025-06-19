@@ -1,32 +1,58 @@
+## Install tm2py
 
-# Installation
+First, you need to [set up your server](server-setup.md).
 
-First you need to [setup your server](server-setup.md).
+### 1. **Clone the Repository**
 
-1. Clone the [tm2py repo](https://github.com/BayAreaMetro/tm2py) and switch to the branch you want to run (with Git Bash or GitHub desktop).
+Clone the [tm2py GitHub repo](https://github.com/BayAreaMetro/tm2py) using Git Bash or GitHub Desktop, and switch to the branch you want to run.
 
-2. Open the ``OpenPaths EMME Shell``.
-    a. In the OpenPaths Shell, cd to the parent folder of the tm2py GitHub folder. Create a new virtual environment in that folder (alongside the tm2py folder, not within it): 
-    
-    python -m venv <your_tm2py_env_name>
+### 2. **Open the OpenPaths EMME Shell and Create a Virtual Environment**
 
-3. Activate your virtual environment in the EMME shell:
-   <your_tm2py_env_name>\Scripts\activate
+Open the **OpenPaths EMME Shell** and:
 
-4. Copy the emme.pth file from the OpenPaths EMME installation folder to the virutal environment. You can copy in the shell with shell commands or just do things in Windows. (This part feels like the crazy things travel modelers do because we are such a small field.)
+- Change directory (`cd`) to the parent folder of the `tm2py` GitHub folder.  
+- Create a new virtual environment alongside the `tm2py` folder (not inside it):
 
-Copy "C:\Program Files\Bentley\OpenPaths\EMME 24.01.00\emme.pth" to <your_tm2py_env_name>\Lib\site-packages\
+`python -m venv <your_tm2py_env_name>`
 
-5. In the OpenPaths EMME shell activated from step 2, install tm2py from local clone in editable mode
-a.	cd to the tm2py GitHub folder cd tm2py
-b.	pip install -e .
-For developers: if you would like to install additional dev or doc dependencies,
-c.	pip install -e .[dev,doc]
 
-6.	In step 4 loggings, you should expect to see only the packages listed in the requirements.txt are installed. After step 4 completes, you can try importing tm2py to verify if there's any quick dependency error.
-a.	In the shell, type python
-b.	type import tm2py
+### 3. **Activate the Virtual Environment**
 
+
+Activate the virtual environment in the OpenPaths EMME shell:
+
+`<your_tm2py_env_name>\Scripts\activate`
+
+### 4. **Copy `emme.pth` to the Virtual Environment**
+
+Copy the `emme.pth` file from your OpenPaths EMME installation folder to the virtual environment’s `site-packages` folder. You can do this via shell commands or manually in Windows.
+
+Copy from:  
+`C:\Program Files\Bentley\OpenPaths\EMME 24.01.00\emme.pth`  
+Copy to:  
+`<your_tm2py_env_name>\Lib\site-packages\`
+
+(*Yes, this is one of those quirky things travel modelers do.*)
+
+### 5. **Install `tm2py` in Editable Mode**
+
+In the same activated shell:
+
+- Change into the `tm2py` folder:  
+`cd tm2py`
+
+- Install in editable mode:  
+`pip install -e .`
+
+### 6. **Verify the Installation**
+
+- In the shell, launch Python:  
+`python`
+
+- Try importing tm2py:  
+`import tm2py`
+
+You should only see packages listed in `requirements.txt` installed. If the import works without errors, the installation was successful.
 
 
 
