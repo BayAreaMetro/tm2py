@@ -129,13 +129,23 @@ class RunController:
         self._component = None
         self._component_name = None
         self._queued_components = deque()
+
+        # create logger before creating components so we can log if issues arise in the component creation
+        self.logger = Logger(self)
+        print(f"initialize_log({self.runtime_log_file, self.runtime_log_headers, self.runtime_log_col_width})")
+        initialize_log(
+            self.runtime_log_file, self.runtime_log_headers, self.runtime_log_col_width
+        )
+
         # mapping from defined names referenced in config to Component objects
         self._component_map = {
             k: v(self) for k, v in component_cls_map.items() if k in run_components
         }
+
+        self.logger.set_emme_manager(self.emme_manager)
         self._queue_components(run_components=run_components)
 
-        self.logger = Logger(self)
+
 
     def __repr__(self):
         """Legible representation."""
@@ -249,10 +259,6 @@ class RunController:
         """
         self._iteration = None
 
-        initialize_log(
-            self.runtime_log_file, self.runtime_log_headers, self.runtime_log_col_width
-        )
-
         while self._queued_components:
             self.run_next()
 
@@ -265,7 +271,7 @@ class RunController:
             self.logger.log(f"Start iteration {iteration}")
         self._iteration = iteration
 
-        print(f"Running iteration {iteration} component {name}")
+        self.logger.debug(f" Running iteration {iteration} component {name}")
         component_start_time = datetime.now()
 
         # check wamrstart files exist

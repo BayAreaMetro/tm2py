@@ -85,6 +85,8 @@ class Component(ABC):
         self._controller = controller
         self._trace = None
 
+        self._controller.logger.detail(f"Initializing component {type(self).__qualname__}")
+
     @property
     def controller(self):
         """Parent controller."""

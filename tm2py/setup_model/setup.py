@@ -7,8 +7,9 @@ import zipfile
 import io
 import logging
 import toml
-import socket
 import re
+import socket
+import sys
 
 class SetupConfig:
     """ Simple class with attributes required for setting up a model
@@ -114,7 +115,7 @@ class SetupModel:
         This step will do the following within the model directory.
 
         1. Intialize logging to write to `setup.log`
-        2. Copy the setup config file to `setupmodel_config.toml'
+        2. Copy the setup config file to `setupmodel_config.toml`
         3. Create the required folder structure
         4. Copy the input from the locations specified:
            a. hwy and trn networks
@@ -122,7 +123,8 @@ class SetupModel:
            c. nonres inputs
            d. warmstart demand matrices
            e. warmstart skims
-        5. Copy the Emme template project and Emme network databases
+        5. Copy the Emme template project and Emme network databases 
+           (based on the EMME version in the Python path)
         6. Download the travel model CTRAMP core code (runtime, uec) from the 
            [travel-model-two repository](https://github.com/BayAreaMetro/travel-model-two)
         7. Updates the IP address in the CTRAMP runtime properties files
@@ -442,7 +444,8 @@ class SetupModel:
 
     def _copy_emme_project_and_database(self):
         """
-        copy emme projects from template project and then copy the emme networks databases
+        Copy EMME project from template project and then copy the emme networks databases based
+        on the EMME version found in the Python path.
         """
         # copy template emme project
         self._copy_folder(
@@ -450,23 +453,44 @@ class SetupModel:
             self.model_dir / "emme_project"
         )
 
-        # copy emme network database
-        self._copy_folder(
-            self.setup_config.INPUT_EMME_NETWORK_DIR / "emme_drive_network" / "Database",
-            self.model_dir / "emme_project" / "Database_highway"
-        )
-        self._copy_folder(
-            self.setup_config.INPUT_EMME_NETWORK_DIR / "emme_taz_transit_network" / "Database",
-            self.model_dir / "emme_project" / "Database_transit"
-        )
-        self._copy_folder(
-            self.setup_config.INPUT_EMME_NETWORK_DIR / "emme_maz_active_modes_network_subregion_north" / "Database",
-            self.model_dir / "emme_project" /"Database_active_north"
-        )
-        self._copy_folder(
-            self.setup_config.INPUT_EMME_NETWORK_DIR / "emme_maz_active_modes_network_subregion_south" / "Database",
-            self.model_dir / "emme_project" /"Database_active_south"
-        )
+        # get emme version from python path
+        python_path = pathlib.Path(sys.executable).resolve()
+        EMME_VERSION = None
+        for part in python_path.parts:
+            if part.startswith("EMME"):
+                EMME_VERSION = part.replace(" ","_")  # replace spaces with underscores
+                self.logger.info(f"Found EMME version in Python path: {EMME_VERSION}")
+                break
+
+        if EMME_VERSION is None:
+            error_str = f"EMME version not found in Python path {python_path}. Please run setup from EMME command prompt"
+            self.logger.error(error_str)
+            raise ValueError(error_str) 
+
+        # copy versioned, zipped emme network database, falling back to unversioned if necessary
+        DATABASE_TO_SOURCE = {
+            'highway': 'emme_drive_network',
+            'transit': 'emme_taz_transit_network',
+            'active_north': 'emme_maz_active_modes_network_subregion_north',
+            'active_south': 'emme_maz_active_modes_network_subregion_south'
+        }
+        for network_type in DATABASE_TO_SOURCE.keys():
+            source_file = self.setup_config.INPUT_EMME_NETWORK_DIR / f"Database_{network_type}_{EMME_VERSION}.zip"
+            dest_dir = self.model_dir / "emme_project" / f"Database_{network_type}"
+            if source_file.exists():
+                # remove what was there before
+                shutil.rmtree(dest_dir)
+                # unzip the EMME version of the ntework
+                with zipfile.ZipFile(source_file, 'r') as zf:
+                    zf.extractall(dest_dir.parent)
+                self.logger.info(f"Unzipped {source_file} to {dest_dir}")
+            
+            # otherwise, copy folder
+            else:
+                self._copy_folder(
+                    self.setup_config.INPUT_EMME_NETWORK_DIR / DATABASE_TO_SOURCE[network_type] / "Database",
+                    dest_dir
+                )
 
     def _replace_in_file(self, filepath: pathlib.Path, regex_dict: dict[str, str]):
         """
