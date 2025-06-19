@@ -49,6 +49,7 @@ class TransitSkim(Component):
                 self.skim_properties,
             )
         }
+        self._skim_outputs = None
 
     def validate_inputs(self):
         """Validate inputs."""
@@ -165,6 +166,44 @@ class TransitSkim(Component):
                     ]
                 )
         return self._skim_properties
+
+    @property
+    def skim_outputs(self):
+        """List of Skim Property named tuples: name, description.
+
+        TODO put these in config.
+        """
+        if self._skim_outputs is None:
+            from collections import namedtuple
+
+            # TODO config
+            self._skim_outputs = []
+            
+            _write_skims_to_omx = [
+                "IWAIT",
+                "XWAIT",
+                "FARE",
+                "BOARDS",
+                "WAUX",
+                "DTIME",
+                "DDIST",
+                "WACC",
+                "WEGR",
+                "IVT",
+                "CROWD"
+            ]
+
+            for mode in self.config.modes:
+                if (mode.assign_type == "TRANSIT") and (mode.type != "PNR_dummy"):
+                    _write_skims_to_omx.append(f"IVT{mode.name}")
+
+            self._skim_outputs = [
+                Skimproperty(_name, _desc) 
+                for _name, _desc in self._skim_properties
+                if _name in _write_skims_to_omx
+            ]
+
+        return self._skim_outputs
 
     def emmebank_skim_matrices(
         self,
@@ -564,18 +603,43 @@ class TransitSkim(Component):
             },
         }
 
+        if transit_class.name not in ['WLK_TRN_WLK']:
+            self.controller.emme_manager.matrix_results(
+                spec1,
+                class_name=transit_class.name,
+                scenario=self.scenarios[time_period],
+                num_processors=self.controller.num_processors,
+      
+
         self.controller.emme_manager.matrix_results(
             spec1,
             class_name=transit_class.name,
             scenario=self.scenarios[time_period],
             num_processors=self._num_processors,
         )
+
         self.controller.emme_manager.matrix_results(
             spec2,
             class_name=transit_class.name,
             scenario=self.scenarios[time_period],
             num_processors=self._num_processors,
         )
+
+        if transit_class.name not in ['PNR_TRN_WLK','KNR_TRN_WLK']:
+            self.controller.emme_manager.matrix_results(
+                spec3,
+                class_name=transit_class.name,
+                scenario=self.scenarios[time_period],
+                num_processors=self._num_processors,
+            )
+        if transit_class.name not in ['WLK_TRN_PNR','WLK_TRN_KNR']:
+            self.controller.emme_manager.matrix_results(
+                spec4,
+                class_name=transit_class.name,
+                scenario=self.scenarios[time_period],
+                num_processors=self._num_processors,
+            )
+              
         self.controller.emme_manager.matrix_results(
             spec3,
             class_name=transit_class.name,
@@ -588,6 +652,7 @@ class TransitSkim(Component):
             scenario=self.scenarios[time_period],
             num_processors=self._num_processors,
         )
+
 
         drive_perception_factor = self.config.drive_perception_factor
         walk_speed = self.config.walk_speed
@@ -932,7 +997,10 @@ class TransitSkim(Component):
         os.makedirs(os.path.dirname(omx_file_path), exist_ok=True)
 
         _matrices = self.emmebank_skim_matrices(
-            time_periods=[time_period], transit_classes=[transit_class]
+            time_periods=[time_period], 
+            transit_classes=[transit_class],
+            skim_properties=self.skim_outputs
+
         )
 
         with OMXManager(
