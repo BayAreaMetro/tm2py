@@ -124,7 +124,7 @@ class SetupModel:
            d. warmstart demand matrices
            e. warmstart skims
         5. Copy the Emme template project and Emme network databases 
-           (based on the EMME version in the Python path)
+           (based on the EMME version in sys.path)
         6. Download the travel model CTRAMP core code (runtime, uec) from the 
            [travel-model-two repository](https://github.com/BayAreaMetro/travel-model-two)
         7. Updates the IP address in the CTRAMP runtime properties files
@@ -445,13 +445,31 @@ class SetupModel:
     def _copy_emme_project_and_database(self):
         """
         Copy EMME project from template project and then copy the emme networks databases based
-        on the EMME version found in the Python path.
+        on the EMME version found in the sys.path.
         """
+
         
         python_path = pathlib.Path(sys.executable).resolve()
-        EMME_VERSION = None
-        for part in python_path.parts:
-            if part.startswith("EMME"):
+
+        # copy template emme project
+        self._copy_folder(
+            self.setup_config.EMME_TEMPLATE_PROJECT_DIR,
+            self.model_dir / "emme_project"
+        )
+
+        # get emme version from sys.path
+        sys_paths = sys.path
+        emme_path = None
+        for sys_path in sys_paths:
+            if sys_path.find("EMME") >=0 and sys_path.find("Bentley") >= 0:
+                emme_path = pathlib.Path(sys_path)
+                self.logger.info(f"Found EMME path: {emme_path}")
+                break
+        if emme_path is None:
+            error_str = f"emme_path not found in sys.path {sys_paths}. Please run setup from EMME command prompt"
+            self.logger.error(error_str)
+            raise ValueError(error_str) 
+
                 EMME_VERSION = part.replace(" ", "_")
                 self.logger.info(f"Found EMME version in Python path: {EMME_VERSION}")
                 break
@@ -465,6 +483,15 @@ class SetupModel:
                     EMME_VERSION = candidate.name.replace(" ", "_")
                     self.logger.info(f"Falling back to OpenPaths install: {EMME_VERSION}")
                     break
+
+                EMME_VERSION = part.replace(" ","_")  # replace spaces with underscores
+                self.logger.info(f"Found EMME version in emme_path: {EMME_VERSION}")
+                break
+
+        if EMME_VERSION is None:
+            error_str = f"EMME version not found in emme_path {emme_path}. Please run setup from EMME command prompt"
+            self.logger.error(error_str)
+            raise ValueError(error_str) 
 
         # copy versioned, zipped emme network database, falling back to unversioned if necessary
         DATABASE_TO_SOURCE = {
