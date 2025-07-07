@@ -1,5 +1,7 @@
-black
+# These packages are not required for tm2py users, but for developers.
+black >= 22.3.0
 flake8
 pre-commit
 pytest
 recommonmark
+# geopandas > 0.8.0 # required by acceptance criteria

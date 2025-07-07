@@ -1,0 +1,77 @@
+---
+title: "Fix On-board Survey to Standard Crosswalk"
+output: html_notebook
+---
+
+# Overhead
+```{r overhead, include = FALSE}
+packages_vector <- c("tidyverse")
+
+need_to_install <- packages_vector[!(packages_vector %in% installed.packages()[,"Package"])]
+
+if (length(need_to_install)) install.packages(need_to_install)
+
+for (package in packages_vector) {
+  library(package, character.only = TRUE)
+}
+
+```
+
+# Remote I/O
+```{r remote-io}
+crosswalk_dir <- "../examples/temp_acceptance/"
+
+input_filename <- paste0(crosswalk_dir, "transit-standard-2015-to-survey-crosswalk.csv")
+output_filename <- paste0(crosswalk_dir, "transit-standard-2015-to-survey-crosswalk-v3.csv")
+```
+
+# Parameters
+```{r parameters}
+
+```
+
+
+# Data Reads
+```{r read}
+input_df <- read_csv(input_filename, col_types = "c")
+```
+
+# Reductions 
+```{r reductions}
+# Fix Golden Gate problems
+a_df <- input_df %>%
+  mutate(survey_agency = if_else(str_detect(survey_route, "GOLDEN GATE FERRY"), "Golden Gate Transit", survey_agency))
+
+b_df <- a_df %>%
+  separate(., 
+           standard_line_name, 
+           into = c("std_op", "std_ag", "std_rt", "std_tp", "std_dr", "std_sh"), 
+           sep = "_",
+           remove = FALSE
+  )
+
+gg_df <- b_df %>%
+  filter(survey_agency == "Golden Gate Transit") %>%
+  mutate(remove_me = FALSE) %>%
+  mutate(update_remove_me_01 = if_else((survey_tech == "EXPRESS") & (std_op == "20"), TRUE, remove_me)) %>%
+  mutate(update_remove_me_02 = if_else((survey_tech == "FERRY") & (std_op == "35"), TRUE, remove_me)) %>%
+  mutate(remove_me = update_remove_me_01 | update_remove_me_02) %>%
+  filter(!remove_me) %>%
+  select(-starts_with("std_"), -contains("remove_me"))
+
+output_df <- a_df %>%
+  filter(survey_agency != "Golden Gate Transit") %>%
+  bind_rows(., gg_df)
+
+# Remove Cloverdale Transit -- appears to just be a duplicate of Sonoma
+output_df <- output_df %>%
+  filter(standard_operator != "Cloverdale Transit")
+  
+```
+
+
+# Write
+```{r write}
+write_csv(output_df, file = output_filename)
+```
+

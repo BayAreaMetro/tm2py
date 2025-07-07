@@ -1,6 +1,6 @@
-"""Base of tm2py module"""
+"""Base of tm2py module."""
 from ._version import __version__
-
+from .components.component import Component
 from .config import (
     Configuration,
     HouseholdConfig,
@@ -8,10 +8,10 @@ from .config import (
     ScenarioConfig,
     TimePeriodConfig,
 )
-from .logger import Logger, LogStartEnd
 from .controller import RunController
-from .components.component import Component
 from .examples import get_example
+from .logger import Logger, LogStartEnd
+from .setup_model.setup import SetupModel
 
 __all__ = [
     # component
@@ -25,6 +25,8 @@ __all__ = [
     "TimePeriodConfig",
     # controller
     "RunController",
+    # setupmodel
+    "SetupModel",
     # logger
     "Logger",
     "LogStartEnd",

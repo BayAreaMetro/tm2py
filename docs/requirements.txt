@@ -1,1 +1,13 @@
--r ../requirements.txt
+# This file is used to install the dependencies for the documentation.
+# It is used by the GitHub Actions workflow to build the documentation.
+markdown == 3.3.1 # needs to be compatible with mkdocs, which needs > markdown 3.2.1
+mike
+mkdocs
+mkdocs-autorefs
+mkdocs-awesome-pages-plugin
+mkdocs-jupyter
+mkdocs-macros-plugin
+mkdocs-material
+mkdocstrings
+mkdocstrings-python
+mkdocs-mermaid2-plugin

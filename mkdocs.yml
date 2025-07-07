@@ -2,6 +2,8 @@ site_name: "Travel Model Two Python Package: tm2py"
 site_url: https://bayareametro.github.io/tm2py
 repo_url: https://github.com/bayareametro/tm2py
 edit_uri: edit/main/docs
+watch:
+  - tm2py
 
 theme:
   name: material
@@ -23,6 +25,22 @@ theme:
         icon: material/toggle-switch
         name: Switch to light mode
 
+nav:
+  - Home: index.md
+  - Getting Started: 
+    - Server Setup: server-setup.md
+    - Installing tm2py: install.md
+    - Running tm2: run.md
+  - Codebase:
+    - Architecture: architecture.md
+    - API Documentation: api.md
+  - Input & Output:
+    - Input: inputs.md
+    - Output: outputs.md
+  - Contributing:
+    - Development: contributing/development.md
+    - Documentation: contributing/documentation.md
+
 plugins:
   - autorefs
   - awesome-pages
@@ -31,6 +49,7 @@ plugins:
       enable_inventory: true
       handlers:
         python:
+          paths: [".","tm2py"]
           setup_commands:
            - import sys
            - from unittest.mock import MagicMock as mock
@@ -52,13 +71,11 @@ plugins:
             show_root_heading: true
             show_source: true
             heading_level: 3
-      custom_templates: templates
-      watch:
-        - tm2py
+          options:
+            fallback_to_import: true
+      # custom_templates: templates
   - search
-
-extra_javascript:
-  - https://unpkg.com/mermaid@8.5.0/dist/mermaid.min.js
+  - mermaid2
 
 extra_css:
   - https://use.fontawesome.com/releases/v5.13.0/css/all.css
@@ -67,7 +84,6 @@ markdown_extensions:
   - admonition
   - codehilite:
       linenums: true
-  - fontawesome_markdown
   - meta
   - pymdownx.inlinehilite
   - pymdownx.tasklist:
@@ -77,7 +93,7 @@ markdown_extensions:
       custom_fences:
         - name: mermaid
           class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_div_format
+          format: !!python/name:mermaid2.fence_mermaid_custom
   - pymdownx.smartsymbols
   - smarty
   - toc:

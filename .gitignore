@@ -18,7 +18,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+#lib/
 lib64/
 parts/
 sdist/
@@ -41,8 +41,18 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 *.log
+
 # except logs in the example
 !examples/**/*.log
+
+# dowloaded example files
+examples/example_union_test_highway.zip
+examples/UnionCity/demand_matrices/
+examples/UnionCity/emme_project/
+examples/UnionCity/inputs/
+examples/UnionCity/ref_skim_matrices/
+examples/UnionCity/skim_matrices
+examples/UnionCity/
 
 #temp files
 tests/scratch/*
@@ -53,6 +63,7 @@ scratch/*
 *.bak
 .cache
 .hubstorinfo
+examples/temp_acceptance/*
 
 # Unit test / coverage reports
 htmlcov/
@@ -78,7 +89,7 @@ site/*
 # mkdocs documentation
 site/*
 
-# Jupyter 
+# Jupyter
 .ipynb_checkpoints
 profile_default/
 ipython_config.py
@@ -121,3 +132,18 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Acceptance Criteria temps
+examples/temp_acceptance/boardings_by_line_am.csv
+notebooks/acceptance-transit-network.geojson
+notebooks/boardings_by_segment_am.geojson
+notebooks/tl_2010_06_bg10.*
+notebooks/*.twbx
+
+# Interim data
+data/interim/*
+
+# R Scripts
+scripts/.Rproj.user/*
+scripts/.Rhistory
+.Rproj.user

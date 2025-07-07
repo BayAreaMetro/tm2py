@@ -1,4 +1,4 @@
-"""Download and unzip examples for tm2py, used in tests"""
+"""Download and unzip examples for tm2py, used in tests."""
 
 
 import os
@@ -8,7 +8,7 @@ from .tools import download_unzip
 _ROOT_DIR = r".."
 
 _DEFAULT_EXAMPLE_URL = (
-    r"https://mtcdrive.box.com/shared/static/3entr016e9teq2wt46x1os3fjqylfoge.zip"
+    r"https://mtcdrive.box.com/shared/static/8a71wv7jif0d844udf6gh902nuxd8bio.zip"
 )
 _DEFAULT_EXAMPLE_SUBDIR = r"examples"
 _DEFAULT_EXAMPLE_NAME = "UnionCity"

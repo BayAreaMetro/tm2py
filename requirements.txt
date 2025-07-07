@@ -1,29 +1,5 @@
-geojson
-geographiclib
-geopandas > 0.8.0
-fiona
-folium
-fontawesome_markdown
-jinja2 < 3.1.0
-jsonschema
-jupyter
-lark-parser
-mkdocs
-mkdocs-autorefs
-mkdocs-awesome-pages-plugin
-mkdocs-macros-plugin
-mkdocs-material
-mkdocstrings
-openmatrix
-osmnx >= 0.12
-notebook
-numpy
-pandas > 1.0
-pydantic
-pyproj > 2.2.0 
-pyyaml
-pywin32==224 ; sys_platform == 'win32'
-rtree
-shapely
-tables
-toml
+# required in tm2py but not in OpenPaths
+toml # used in config.py to load config files. alternative is json
+pydantic < 2.0 # used in config.py to validate config files. alternative?
+requests # logger.py, used to post msg to slack about model run; also a deep dependency of the documentation libs. alternative?
+scipy # transit_network.py, using scipy non-negative least squares solver. alternative?

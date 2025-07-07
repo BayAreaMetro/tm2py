@@ -1,4 +1,7 @@
+"""Installation script for tm2py package."""
+
 import os
+
 from setuptools import setup
 
 version = "0.0.1"
@@ -9,9 +12,7 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.11",
 ]
 
 with open("README.md") as f:
@@ -25,10 +26,15 @@ with open("dev-requirements.txt") as f:
     dev_requirements = f.readlines()
 install_requires_dev = [r.strip() for r in dev_requirements]
 
+if os.path.exists(os.path.join("docs", "requirements.txt")):
+    with open(os.path.join("docs", "requirements.txt")) as f:
+        doc_requirements = f.readlines()
+    install_requires_doc = [r.strip() for r in doc_requirements]
+else:
+    install_requires_doc = []
+
 # While version is in active development, install both development and base requirements.
 major_version_number = int(version.split(".")[0])
-if major_version_number < 1:
-    install_requires = install_requires + install_requires_dev
 
 setup(
     name="tm2py",
@@ -42,5 +48,9 @@ setup(
     packages=["tm2py"],
     include_package_data=True,
     install_requires=install_requires,
+    extras_require={
+        "dev": install_requires_dev,
+        "doc": install_requires_doc,
+    },
     scripts=["bin/tm2py", "bin/get_test_data"],
 )

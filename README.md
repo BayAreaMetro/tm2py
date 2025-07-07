@@ -1,73 +1,44 @@
-# Travel Model 2 Python Package
+## Welcome to tm2py
 
-[![Tests](https://github.com/BayAreaMetro/tm2py/actions/workflows/test.yml/badge.svg)](https://github.com/BayAreaMetro/tm2py/actions/workflows/test.yml)
-
-[![Documentation](https://github.com/BayAreaMetro/tm2py/actions/workflows/docs.yml/badge.svg)](https://github.com/BayAreaMetro/tm2py/actions/workflows/docs.yml)
-
-[![Package Published](https://github.com/BayAreaMetro/tm2py/actions/workflows/publish.yml/badge.svg)](https://github.com/BayAreaMetro/tm2py/actions/workflows/publish.yml)
-
-## Installation
-
-If you are managing multiple python versions, we suggest using [`virtualenv`](https://virtualenv.pypa.io/en/latest/) or [`conda`](https://conda.io/en/latest/) virtual environments.
-
-The following instructions create and activate a conda environment (recommended) in which you can install:
-
-```bash
-conda env create -f environment.yml
-conda activate tm2py
-```
-
-Basic installation instructions are as follows:
-
-```bash
-pip install tm2py
-```
-
-#### Bleeding Edge
-If you want to install a more up-to-date or development version, you can do so by installing it from the `develop` branch as follows:
-
-```bash
-conda env create -f environment.yml
-conda activate tm2py
-pip install git+https://github.com/bayareametro/tm2py@develop
-```
-
-#### Developers (from clone)
-If you are going to be working on Lasso locally, you might want to clone it to your local machine and install it from the clone.  The -e will install it in [editable mode](https://pip.pypa.io/en/stable/reference/pip_install/?highlight=editable#editable-installs).
+### The python package developed to run Travel Model Two
 
 
-```bash
-conda env create -f environment.yml
-conda activate tm2py
-git clone https://github.com/bayareametro/tm2py
-cd tm2py
-pip install -e .
-```
+**Owner:** Metropolitan Transportation Commission (MTC)
 
-Note that you'll also need to install Emme's python packages into this conda environment.
-Following these instructions from an INRO community forum post: In the Emme Desktop application, open Tools->Application Options->Modeller, change your Python path as desired and click the "Install Modeller Package" button.
+Currently [a large pile of documentation](https://bayareametro.github.io/travel-model-two/develop/) exists for an earlier incarnation of this project, we need to port that documentation here.
+ 
+Travel Model Two runs with a ***CTRAMP household demand model*** and ***EMME skimming/assignment*** procedures.
 
-If this is successful, the following packages will be visible in your environment when you type `pip list`:
-* inro-dynameq
-* inro-emme
-* inro-emme-agent
-* inro-emme-engine
-* inro-modeller
+For **current configuration files and model run utilities** see [the tm2py-utils repository] (https://github.com/BayAreaMetro/tm2py-utils)
 
-Note that doing the emme package install will also install the package *pywin32*; if *pywin32* gets installed by other means (like
-conda or pip), then I got DLL load errors when tryring to import the emme packages, so I recommend uninstalling *pywin32* before
-installing the emme packages.
+[Run the model](docs/run.md)
 
-## Basic Usage
+[Install the model](docs/install.md)
 
-Copy and unzip [example_union_test_highway.zip](https://mtcdrive.box.com/s/3entr016e9teq2wt46x1os3fjqylfoge) to a local
-drive and from within that directory run:
+[Setup your server](docs/server-setup.md)
 
-```sh
-get_test_data <location>
-tm2py -s scenario.toml -m model.toml
-```
+
+Important travel behavior enhancements in Travel Model Two include:
+
+* A much more detailed spatial representation of transportation system supply including an accurate all-streets network for entire 9-county Bay Area, pedestrian paths\sidewalks from OpenStreetMap, bicycle facilities from MTC’s BikeMapper, and transit networks from MTC’s RTD network
+
+* Land-use and demographic forecast integration with Bay Area UrbanSim Two represented at a 40,000 micro-analysis zone (MAZ) level
+
+* Detailed transit access/egress based on actual origin/destinations at the MAZ level considering boarding and alighting at specific transit stops allowing for a more accurate representation of walk times
+
+* More detailed temporal resolution using half-hourly time windows compared to hourly time windows in Travel Model One
+
+* The effects of transit capacity and crowding
+
+* More detailed auto assignments, most notably with the loading of short trips to local streets
+
+* The inclusion of Taxis and Transportation Network Companies (TNCs) such as Uber and Lyft as a mode choice option
+* Representation of Automated Vehicles
+
+
+How do you create and update these pages? [Instructions for deploying GitHub pages with mkdocs](https://www.mkdocs.org/user-guide/deploying-your-docs/)
+
 
 ## Contributing
 
-Details can be found in [CONTRIBUTING]
+Details about contributing can be found on our documentation website: [https://bayareametro.github.io/tm2py/contributing](https://bayareametro.github.io/tm2py/contributing)

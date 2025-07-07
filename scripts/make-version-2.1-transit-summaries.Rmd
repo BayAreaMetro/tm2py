@@ -1,0 +1,133 @@
+---
+title: "Quick Transit Summaries for 2.2.0"
+output: html_notebook
+---
+
+# Overhead
+```{r overhead, include = FALSE}
+packages_vector <- c("tidyverse",
+                     "sf")
+
+need_to_install <- packages_vector[!(packages_vector %in% installed.packages()[,"Package"])]
+
+if (length(need_to_install)) install.packages(need_to_install)
+
+for (package in packages_vector) {
+  library(package, character.only = TRUE)
+}
+
+```
+
+# Remote I/O
+```{r remote-io}
+interim_dir <- "../data/interim/"
+crosswalk_dir <- "../examples/temp_acceptance/"
+pems_dir <- "/Users/wsp/Box Sync/"
+
+am_shape_filename <- paste0(interim_dir, "emme_tsegs.shp")
+crosswalk_filename <- paste0(crosswalk_dir, "transit-standard-2015-to-survey-crosswalk.csv")
+counts_filename <- paste0(pems_dir, "Survey_Database_122717/acceptance-criteria-reductions.csv")
+
+```
+
+# Parameters
+```{r parameters}
+
+```
+
+
+# Data Reads
+```{r read}
+am_assign_sf <- read_sf(am_shape_filename)
+
+crosswalk_df <- read_csv(crosswalk_filename, col_types = cols(
+  survey_route = col_character(),
+  survey_agency = col_character(),
+  survey_tech = col_character(),
+  standard_route_id = col_character(),
+  standard_line_name = col_character(),
+  BART_line_name = col_character(),
+  MTC_line_name = col_character(),
+  standard_operator = col_character(),
+  standard_headsign = col_character(),
+  standard_agency = col_character(),
+  standard_route_short_name = col_character(),
+  standard_route_long_name = col_character(),
+  canonical_operator = col_character()
+))
+
+counts_df <- read_csv(counts_filename, col_types = cols(
+  ...1 = col_double(),
+  survey_tech = col_character(),
+  survey_operator = col_character(),
+  survey_route = col_character(),
+  survey_boardings = col_double(),
+  time_period = col_character(),
+  florida_threshold = col_double(),
+  survey_agency = col_character(),
+  standard_route_id = col_double(),
+  daily_line_name = col_character(),
+  canonical_operator = col_character(),
+  standard_route_short_name = col_character(),
+  standard_route_long_name = col_character(),
+  standard_line_name = col_character(),
+  standard_headsign = col_character()
+))
+```
+
+# Reductions 
+```{r reductions}
+working_df <- am_assign_sf %>%
+  st_drop_geometry(.) %>%
+  select(., line_id = LINE_ID, boardings = BOARD) %>%
+  filter(boardings > 0.0) %>%
+  group_by(line_id) %>%
+  summarize(boardings = sum(boardings), .groups = "drop") %>%
+  left_join(., select(crosswalk_df, line_id = MTC_line_name, operator = canonical_operator, technology = survey_tech), by = c("line_id")) %>%
+  filter(!is.na(operator)) %>%
+  separate(., line_id, into = c("agency_id", "route_id", "time_period", "direction", "shape_id"), extra = "drop", fill = "warn") %>%
+  group_by(operator, agency_id, technology) %>%
+  summarise(simulated_boardings = sum(boardings), .groups = "drop")
+
+# station-to-station not in the database
+rail_df <- am_assign_sf %>%
+  st_drop_geometry(.) %>%
+  select(., line_id = LINE_ID, boardings = BOARD) %>%
+  separate(., line_id, into = c("agency_id", "route_id", "time_period", "direction", "shape_id"), extra = "drop", fill = "warn") %>%
+  filter(boardings > 0.0) %>%
+  group_by(agency_id) %>%
+  summarise(simulated_boardings = sum(boardings), .groups = "drop")
+
+BART_AGENCY <- 26
+bart_df <- rail_df %>%
+  filter(agency_id == BART_AGENCY) %>%
+  mutate(operator = "BART") %>%
+  mutate(technology = "Heavy Rail")
+
+CALTRAIN_AGENCY <- 17
+caltrain_df <- rail_df %>%
+  filter(agency_id == CALTRAIN_AGENCY) %>%
+  mutate(operator = "Caltrain") %>%
+  mutate(technology = "Commuter Rail")
+
+simulated_df <- bind_rows(working_df, bart_df, caltrain_df) %>%
+  mutate(agency_id = as.integer(agency_id)) %>%
+  group_by(operator, agency_id) %>%
+  summarise(simulated_boardings = sum(simulated_boardings), .groups = "drop")
+
+observed_df <- counts_df %>%
+  filter(time_period == "am") %>%
+  group_by(survey_operator) %>%
+  summarise(observed_boardings = sum(survey_boardings), .groups = "drop") %>%
+  rename(., operator = survey_operator)
+
+output_df <- left_join(observed_df, simulated_df, by = c("operator")) %>%
+  mutate(error = simulated_boardings - observed_boardings) %>%
+  mutate(pct_error = error / observed_boardings) %>%
+  arrange(., -observed_boardings)
+
+output_df
+  
+
+```
+

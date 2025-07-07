@@ -1,45 +1,20 @@
 """Tools module for common resources / shared code and "utilities" in the tm2py package."""
-from contextlib import contextmanager as _context
+
 import multiprocessing
 import os
 import re
-import urllib.request
+import subprocess as _subprocess
+import tempfile
 import urllib.error
 import urllib.parse
+import urllib.request
 import zipfile
-
-from typing import Union
-
-
-def parse_num_processors(value: Union[str, int, float]):
-    """Convert input value (parse if string) to number of processors.
-    Args:
-        value: an int, float or string; string value can be "X" or "MAX-X"
-    Returns:
-        An int of the number of processors to use
-
-    Raises:
-        Exception: Input value exceeds number of available processors
-        Exception: Input value less than 1 processors
-    """
-    max_processors = multiprocessing.cpu_count()
-    if isinstance(value, str):
-        result = value.upper()
-        if result == "MAX":
-            return max_processors
-        if re.match("^[0-9]+$", value):
-            return int(value)
-        result = re.split(r"^MAX[\s]*-[\s]*", result)
-        if len(result) == 2:
-            return max(max_processors - int(result[1]), 1)
-        raise Exception(f"Input value {value} is an int or string as 'MAX-X'")
-
-    result = int(value)
-    if result > max_processors:
-        raise Exception(f"Input value {value} greater than available processors")
-    if result < 1:
-        raise Exception(f"Input value {value} less than 1 processors")
-    return value
+from collections import defaultdict as _defaultdict
+from contextlib import contextmanager as _context
+from itertools import product as _product
+from math import ceil, sqrt
+from typing import Any, Collection, Mapping, Union
+import pandas as pd
 
 
 @_context
@@ -60,26 +35,31 @@ def _urlopen(url):
     request = urllib.request.Request(url)
     # Handle Redirects using solution shown by user: metatoaster on StackOverflow
     # https://stackoverflow.com/questions/62384020/python-3-7-urllib-request-doesnt-follow-redirect-url
+    print(f"Opening URL: {url}")
     try:
         with urllib.request.urlopen(request) as response:
+            print(f"No redirects found.")
             yield response
     except urllib.error.HTTPError as error:
-        print("redirect error")
+        print("Redirect Error")
         if error.status != 307:
             raise ValueError(f"HTTP Error {error.status}") from error
         redirected_url = urllib.parse.urljoin(url, error.headers["Location"])
+        print(f"Redirected to: {redirected_url}")
         with urllib.request.urlopen(redirected_url) as response:
             yield response
 
 
 def _download(url: str, target_destination: str):
-    """Download file with redirects (i.e. box)
+    """Download file with redirects (i.e. box).
 
     Args:
         url (str): source URL to download data from
         target_destination (str): destination file path to save download
     """
     with _urlopen(url) as response:
+        total_length = int(response.headers.get("content-length"))
+        print(f"Total Download Size: {total_length}")
         with open(target_destination, "wb") as out_file:
             out_file.write(response.read())
 
@@ -98,7 +78,7 @@ def _unzip(target_zip: str, target_dir: str):
 def download_unzip(
     url: str, out_base_dir: str, target_dir: str, zip_filename: str = "test_data.zip"
 ) -> None:
-    """Downloads and unzips a file from a URL. The zip file is removed after extraction.
+    """Download and unzips a file from a URL. The zip file is removed after extraction.
 
     Args:
         url (str): Full URL do download from.
@@ -113,3 +93,330 @@ def download_unzip(
     _download(url, target_zip)
     _unzip(target_zip, target_dir)
     os.remove(target_zip)
+
+
+@_context
+def temp_file(mode: str = "w+", prefix: str = "", suffix: str = ""):
+    """Temp file wrapper to return open file handle and named path.
+
+    A named temporary file (using mkstemp) with specified prefix and
+    suffix is created and opened with the specified mode. The file
+    handle and path are returned. The file is closed and deleted on exit.
+
+    Args:
+        mode: mode to open file, [rw][+][b]
+        prefix: optional text to start temp file name
+        suffix: optional text to end temp file name
+    """
+    file_ref, file_path = tempfile.mkstemp(prefix=prefix, suffix=suffix)
+    file = os.fdopen(file_ref, mode=mode)
+    try:
+        yield file, file_path
+    finally:
+        if not file.closed:
+            file.close()
+        os.remove(file_path)
+
+
+def run_process(commands: Collection[str], name: str = ""):
+    """Run system level commands as blocking process and log output and error messages.
+
+    Args:
+        commands: list of one or more commands to execute
+        name: optional name to use for the temp bat file
+    """
+    # when merged with develop_logging branch can use get_logger
+    # logger = Logger.get_logger
+    logger = None
+    with temp_file("w", prefix=name, suffix=".bat") as (bat_file, bat_file_path):
+        bat_file.write("\n".join(commands))
+        bat_file.close()
+        if logger:
+            # temporary file to capture output error messages generated by Java
+            # Note: temp file created in the current working directory
+            with temp_file(mode="w+", suffix="_error.log") as (err_file, _):
+                try:
+                    output = _subprocess.check_output(
+                        bat_file_path, stderr=err_file, shell=True
+                    )
+                    logger.log(output.decode("utf-8"))
+                except _subprocess.CalledProcessError as error:
+                    logger.log(error.output)
+                    raise
+                finally:
+                    err_file.seek(0)
+                    error_msg = err_file.read()
+                    if error_msg:
+                        logger.log(error_msg)
+        else:
+            _subprocess.check_call(bat_file_path, shell=True)
+
+
+def interpolate_dfs(
+    df: pd.DataFrame,
+    ref_points: Collection[Union[float, int]],
+    target_point: Union[float, int],
+    ref_col_name: str = "ends_with",
+) -> pd.DataFrame:
+    """Interpolate for the model year assuming linear growth between the reference years.
+
+    Args:
+        df (pd.DataFrame): dataframe to interpolate on, with ref points contained in column
+            name per ref_col_name.
+        ref_points (Collection[Union[float,int]]): reference years to interpolate between
+        target_point (Union[float,int]): target year
+        ref_col_name (str, optional): column name to use for reference years.
+            Defaults to "ends_with".
+    """
+    if ref_col_name not in ["ends_with"]:
+        raise NotImplementedError(f"{ref_col_name} not implemented")
+    if len(ref_points) != 2:
+        raise NotImplementedError(f"{ref_points} reference points not implemented")
+
+    _ref_points = list(map(int, ref_points))
+    _target_point = int(target_point)
+
+    _ref_points.sort()
+    _start_point, _end_point = _ref_points
+    if not _start_point <= _target_point <= _end_point:
+        raise ValueError(
+            f"Target Point: {_target_point} not within range of \
+            Reference Points: {_ref_points}"
+        )
+
+    _start_ref_df = df[[c for c in df.columns if c.endswith(f"{_start_point}")]].copy()
+    _end_ref_df = df[[c for c in df.columns if c.endswith(f"{_end_point}")]].copy()
+
+    if len(_start_ref_df.columns) != len(_end_ref_df.columns):
+        raise ValueError(
+            f"{_start_point} and {_end_point} have different number of columns:\n\
+           {_start_point} Columns: {_start_ref_df.columns}\n\
+           {_end_point} Columns: {_end_ref_df.columns}\
+        "
+        )
+
+    _start_ref_df.rename(
+        columns=lambda x: x.replace(f"_{_start_point}", ""), inplace=True
+    )
+    _end_ref_df.rename(columns=lambda x: x.replace(f"_{_end_point}", ""), inplace=True)
+    _scale_factor = float(target_point - _start_point) / (_end_point - _start_point)
+
+    interpolated_df = (1 - _scale_factor) * _start_ref_df + _scale_factor * _end_ref_df
+
+    return interpolated_df
+
+
+def zonal_csv_to_matrices(
+    csv_file: str,
+    i_column: str = "ORIG",
+    j_column: str = "DEST",
+    value_columns: str = ["VALUE"],
+    default_value: float = 0.0,
+    fill_zones: bool = False,
+    max_zone: int = None,
+    delimiter: str = ",",
+) -> Mapping[str, pd.DataFrame]:
+    """Read a CSV file with zonal data and into dataframes.
+
+    Input CSV file should have a header row specifying the I, J, and Value column names.
+
+    Args:
+        csv_file (str): _description_
+        i_column (str, optional): Name of j zone column. Defaults to "ORIG".
+        j_column (str, optional): Name of i zone column. Defaults to "DEST".
+        value_columns (str, optional): List of columns to turn into matrices.
+            Defaults to ["VALUE"].
+        default_value (float, optional): Value to fill empty cells with. Defaults to 0.0.
+        fill_zones (bool, optional): If true, will fill zones without values to max zone with
+            default value. Defaults to False.
+        max_zone (int, optional): If fill_zones is True, used to determine matrix size.
+            Defaults to max(I, J).
+        delimiter (str, optional): Input file delimeter. Defaults to ",".
+
+    Returns:
+        dict: Dictionary of Pandas dataframes with matrix names as keys.
+    """
+    # TODO Create a test
+    _df = pd.read_csv(csv_file, delimiter=delimiter)
+    _df_idx = _df.set_index([i_column, j_column])
+
+    _dfs_dict = {v: _df_idx[v] for v in value_columns}
+    if not fill_zones:
+        return _dfs_dict
+
+    if max_zone is None:
+        max_zone = _df[[i_column, j_column]].max().max()
+
+    _zone_list = list(range(1, max_zone + 1))
+    for v, _df in _dfs_dict.items():
+        _df[v].reindex(index=_zone_list, columns=_zone_list, fill_value=default_value)
+    return _dfs_dict
+
+
+def mocked_inro_context():
+    """Mocking of modules which need to be mocked for tests."""
+    import sys
+    from unittest.mock import MagicMock
+
+    sys.modules["inro.emme.database.emmebank"] = MagicMock()
+    sys.modules["inro.emme.database.emmebank.path"] = MagicMock(return_value=".")
+    sys.modules["inro.emme.network.link"] = MagicMock()
+    sys.modules["inro.emme.network.mode"] = MagicMock()
+    sys.modules["inro.emme.network.node"] = MagicMock()
+    sys.modules["inro.emme.network"] = MagicMock()
+    sys.modules["inro.emme.database.scenario"] = MagicMock()
+    sys.modules["inro.emme.database.matrix"] = MagicMock()
+    sys.modules["inro.emme.network.node"] = MagicMock()
+    sys.modules["inro.emme.desktop.app"] = MagicMock()
+    sys.modules["inro"] = MagicMock()
+    sys.modules["inro.modeller"] = MagicMock()
+    sys.modules["tm2py.emme.manager.EmmeManager.project"] = MagicMock()
+    sys.modules["tm2py.emme.manager.EmmeManager.emmebank"] = MagicMock()
+    sys.modules["tm2py.emme.manager"] = MagicMock()
+
+
+def emme_context():
+    """Return True if Emme is installed."""
+    import pkg_resources
+
+    _inro_package = "inro-emme"
+    _avail_packages = [pkg.key for pkg in pkg_resources.working_set]
+
+    if _inro_package not in _avail_packages:
+        print("Inro not found. Skipping inro setup.")
+        mocked_inro_context()
+        return False
+    else:
+        import inro
+
+        if "MagicMock" in str(type(inro)):
+            return False
+
+    return True
+
+
+# utility to format a row
+def format_row(row, column_widths):
+    return "".join(str(item).ljust(width) for item, width in zip(row, column_widths))
+
+
+# initialize run log file if it doesn't exist
+def initialize_log(log_file, headers, col_width):
+    if not os.path.exists(log_file):
+        with open(log_file, "w") as f:
+            f.write(format_row(headers, col_width) + "\n")
+
+
+# add run log entry
+def add_run_log(loop, step, start_time, end_time, log_file, col_width):
+    step_time = (end_time - start_time).total_seconds() / 60
+    start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S")
+    end_time_str = end_time.strftime("%Y-%m-%d %H:%M:%S")
+
+    row = format_row(
+        [loop, step, start_time_str, end_time_str, f"{step_time:.2f}"], col_width
+    )
+
+    with open(log_file, "a") as f:
+        f.write(row + "\n")
+
+
+class SpatialGridIndex:
+    """
+    Simple spatial grid hash for fast (enough) nearest neighbor / within distance searches of points.
+    """
+
+    def __init__(self, size: float):
+        """
+        Args:
+            size: the size of the grid to use for the index, relative to the point coordinates
+        """
+        self._size = float(size)
+        self._grid_index = _defaultdict(lambda: [])
+
+    def insert(self, obj: Any, x: float, y: float):
+        """
+        Add new obj with coordinates x and y.
+        Args:
+           obj: any python object, will be returned from search methods "nearest" and "within_distance"
+           x: x-coordinate
+           y: y-coordinate
+        """
+        grid_x, grid_y = round(x / self._size), round(y / self._size)
+        self._grid_index[(grid_x, grid_y)].append((obj, x, y))
+
+    def nearest(self, x: float, y: float):
+        """Return the closest object in index to the specified coordinates
+        Args:
+            x: x-coordinate
+            y: y-coordinate
+        """
+        if len(self._grid_index) == 0:
+            raise Exception("SpatialGrid is empty.")
+
+        def calc_dist(x1, y1, x2, y2):
+            return sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
+        grid_x, grid_y = round(x / self._size), round(y / self._size)
+        step = 0
+        done = False
+        found_items = []
+        while not done:
+            search_offsets = list(range(-1 * step, step + 1))
+            search_offsets = _product(search_offsets, search_offsets)
+            items = []
+            for x_offset, y_offset in search_offsets:
+                if abs(x_offset) != step and abs(y_offset) != step:
+                    continue  # already checked this grid tile
+                items.extend(self._grid_index[grid_x + x_offset, grid_y + y_offset])
+            if found_items:
+                done = True
+            found_items.extend(items)
+            step += 1
+        min_dist = 1e400
+        closest = None
+        for i, xi, yi in found_items:
+            dist = calc_dist(x, y, xi, yi)
+            if dist < min_dist:
+                closest = i
+                min_dist = dist
+        return closest
+
+    def within_distance(self, x: float, y: float, distance: float):
+        """Return all objects in index within the distance of the specified coordinates
+        Args:
+            x: x-coordinate
+            y: y-coordinate
+            distance: distance to search in point coordinate units
+        """
+
+        def point_in_circle(x1, y1, x2, y2, dist):
+            return sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2) <= dist
+
+        return self._get_items_on_grid(x, y, distance, point_in_circle)
+
+    def within_square(self, x: float, y: float, distance: float):
+        """Return all objects in index within a square box distance of the specified coordinates.
+        Args:
+            x: x-coordinate
+            y: y-coordinate
+            distance: distance to search in point coordinate units
+        """
+
+        def point_in_box(x1, y1, x2, y2, dist):
+            return abs(x1 - x2) <= dist and abs(y1 - y2) <= dist
+
+        return self._get_items_on_grid(x, y, distance, point_in_box)
+
+    def _get_items_on_grid(self, x, y, distance, filter_func):
+        grid_x, grid_y = round(x / self._size), round(y / self._size)
+        num_search_grids = ceil(distance / self._size)
+        search_offsets = list(range(-1 * num_search_grids, num_search_grids + 1))
+        search_offsets = list(_product(search_offsets, search_offsets))
+        items = []
+        for x_offset, y_offset in search_offsets:
+            items.extend(self._grid_index[grid_x + x_offset, grid_y + y_offset])
+        filtered_items = [
+            i for i, xi, yi in items if filter_func(x, y, xi, yi, distance)
+        ]
+        return filtered_items

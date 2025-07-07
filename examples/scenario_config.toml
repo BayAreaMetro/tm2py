@@ -3,9 +3,11 @@
 ####################################
 
 [scenario]
+    name = "Example scenario"
     year = 2015
     verify = false
-    maz_landuse_file = "inputs\\landuse\\maz_data.csv"
+    maz_landuse_file = "inputs/landuse/maz_data.csv"
+    root_dir = "/Users/wsp/Documents/GitHub/tm2py/examples/temp_acceptance/"
 
 [run]
     start_component = ""

@@ -1,0 +1,18 @@
+####################################
+#   CANONICAL & CROSSWALKS         #
+####################################
+
+[remote_io]
+    crosswalk_folder_root = "/Users/wsp/Documents/GitHub/tm2py/examples/temp_acceptance/"
+    #crosswalk_folder_root = "/Users/USVA682771/GitHub/tm2py/examples/temp_acceptance/"
+
+[crosswalks]
+    crosswalk_standard_survey_file = "transit-standard-2015-to-survey-crosswalk.csv"
+    standard_to_tm2_modes_file = "gtfs_to_tm2_mode_crosswalk.csv"
+    standard_to_emme_transit_file = "emme_taz_transit_network_node_id_crosswalk.csv"
+    canonical_agency_names_file = "canonical-agency-names.csv"
+    canonical_station_names_file = "canonical-station-names.csv"
+    block_group_to_maz_url = "https://raw.githubusercontent.com/BayAreaMetro/travel-model-two/master/maz_taz/crosswalks/Census%202010%20hhs%20maz%20share%20of%20blockgroups_ACS2017.csv"
+    pems_station_to_tm2_links_file = "pems_station_to_TM2_links_crosswalk.csv"
+    standard_to_emme_nodes_file = "emme_drive_network_node_id_crosswalk.csv"
+
