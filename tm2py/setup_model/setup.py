@@ -447,6 +447,10 @@ class SetupModel:
         Copy EMME project from template project and then copy the emme networks databases based
         on the EMME version found in the sys.path.
         """
+
+        
+        python_path = pathlib.Path(sys.executable).resolve()
+
         # copy template emme project
         self._copy_folder(
             self.setup_config.EMME_TEMPLATE_PROJECT_DIR,
@@ -466,9 +470,20 @@ class SetupModel:
             self.logger.error(error_str)
             raise ValueError(error_str) 
 
-        EMME_VERSION = None
-        for part in emme_path.parts:
-            if part.startswith("EMME"):
+                EMME_VERSION = part.replace(" ", "_")
+                self.logger.info(f"Found EMME version in Python path: {EMME_VERSION}")
+                break
+
+        # simplified fallback: just look for any EMME* folder
+        if not EMME_VERSION:
+            fallback_base = pathlib.Path(r"C:\Program Files\Bentley\OpenPaths")
+            if fallback_base.exists():
+                for candidate in sorted(fallback_base.glob("EMME*"), reverse=True):
+                    # take the first match you find
+                    EMME_VERSION = candidate.name.replace(" ", "_")
+                    self.logger.info(f"Falling back to OpenPaths install: {EMME_VERSION}")
+                    break
+
                 EMME_VERSION = part.replace(" ","_")  # replace spaces with underscores
                 self.logger.info(f"Found EMME version in emme_path: {EMME_VERSION}")
                 break
@@ -485,23 +500,37 @@ class SetupModel:
             'active_north': 'emme_maz_active_modes_network_subregion_north',
             'active_south': 'emme_maz_active_modes_network_subregion_south'
         }
+
         for network_type in DATABASE_TO_SOURCE.keys():
-            source_file = self.setup_config.INPUT_EMME_NETWORK_DIR / f"Database_{network_type}_{EMME_VERSION}.zip"
+            source_file = (
+                self.setup_config.INPUT_EMME_NETWORK_DIR
+                / f"Database_{network_type}_{EMME_VERSION}.zip"
+            )
             dest_dir = self.model_dir / "emme_project" / f"Database_{network_type}"
+
+            # make sure the parent folder exists
+            dest_dir.parent.mkdir(parents=True, exist_ok=True)
+
             if source_file.exists():
-                # remove what was there before
-                shutil.rmtree(dest_dir)
-                # unzip the EMME version of the ntework
+                # only remove if it was there
+                if dest_dir.exists():
+                    shutil.rmtree(dest_dir)
+                # unzip into the parent; this will recreate dest_dir
                 with zipfile.ZipFile(source_file, 'r') as zf:
                     zf.extractall(dest_dir.parent)
                 self.logger.info(f"Unzipped {source_file} to {dest_dir}")
-            
-            # otherwise, copy folder
+
             else:
+                # copy into a fresh folder
+                # ensure dest_dir is there so _copy_folder won't fail
+                dest_dir.mkdir(parents=True, exist_ok=True)
                 self._copy_folder(
-                    self.setup_config.INPUT_EMME_NETWORK_DIR / DATABASE_TO_SOURCE[network_type] / "Database",
+                    self.setup_config.INPUT_EMME_NETWORK_DIR
+                        / DATABASE_TO_SOURCE[network_type]
+                        / "Database",
                     dest_dir
                 )
+
 
     def _replace_in_file(self, filepath: pathlib.Path, regex_dict: dict[str, str]):
         """
