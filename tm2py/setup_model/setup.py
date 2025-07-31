@@ -537,12 +537,66 @@ class SetupModel:
 
 _RUN_MODEL_PY_CONTENT = """
 import pathlib
+import random
+import socket
+import subprocess
+import sys
+import traceback
 import tm2py
 
+def notify_slack(message):
+    \"\"\"Send notification to Slack using the notify_slack.py script\"\"\"
+    try:
+        # Get the path to the tm2py scripts directory
+        tm2py_path = pathlib.Path(tm2py.__file__).parent.parent
+        notify_script = tm2py_path / "scripts" / "notify_slack.py"
+        
+        # Run the notification script
+        subprocess.run([sys.executable, str(notify_script), message], 
+                      check=True, capture_output=True, text=True)
+        print(f"Slack notification sent: {message}")
+    except Exception as e:
+        print(f"Failed to send Slack notification: {e}")
+
 if __name__ == "__main__":
-    controller = tm2py.RunController(
-        config_file = ["scenario_config.toml", "model_config.toml"],
-        run_dir = pathlib.Path(".")
-    )
-    controller.run()
+    run_successful = False
+    error_message = ""
+    
+    # Get current directory for context
+    current_dir = pathlib.Path(".").resolve()
+    
+    # Send start notification
+    notify_slack(f"Travel Model Two run starting in {current_dir}")
+    
+    try:
+        controller = tm2py.RunController(
+            config_file = ["scenario_config.toml", "model_config.toml"],
+            run_dir = pathlib.Path(".")
+        )
+        controller.run()
+        run_successful = True
+        
+    except Exception as e:
+        error_message = str(e)
+        print(f"Model run failed with error: {error_message}")
+        traceback.print_exc()
+    
+    # Send Slack notification based on run status
+    if run_successful:
+        rewards = [
+            "tiramisu",
+            "a long run",
+            "bunny pets",
+            "a nap",
+            "dancing parrot",
+            "well-constructed gluten-free vegan cake",
+            "a pat on the back from Dave Vautin"
+        ]
+        reward = random.choice(rewards)
+        notify_slack(f"Travel Model Two run completed successfully! Go get {reward}")
+    else:
+        notify_slack(f"Travel Model Two run failed in {current_dir}: {error_message}. They say failure is part of the process in engineering. If that's true, I must be crushing the process.")
+    
+    # Exit with appropriate code
+    sys.exit(0 if run_successful else 1)
 """
