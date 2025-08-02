@@ -538,18 +538,36 @@ class SetupModel:
 _RUN_MODEL_PY_CONTENT = """
 import pathlib
 import random
-import socket
 import subprocess
 import sys
 import traceback
 import tm2py
+import toml
 
 def notify_slack(message):
     \"\"\"Send notification to Slack using the notify_slack.py script\"\"\"
     try:
+        # Check if Slack notifications are enabled in config
+        config_file = pathlib.Path("scenario_config.toml")
+        if config_file.exists():
+            with open(config_file, "r", encoding="utf-8") as f:
+                config = toml.load(f)
+            slack_enabled = config.get("slack_notifications", {}).get("enabled", False)
+        else:
+            slack_enabled = False
+        
+        if not slack_enabled:
+            print(f"Slack notifications disabled. Message: {message}")
+            return
+        
         # Get the path to the tm2py scripts directory
         tm2py_path = pathlib.Path(tm2py.__file__).parent.parent
         notify_script = tm2py_path / "scripts" / "notify_slack.py"
+        
+        # Check if the notify script exists
+        if not notify_script.exists():
+            print(f"Slack notification script not found at {notify_script}. Message: {message}")
+            return
         
         # Run the notification script
         subprocess.run([sys.executable, str(notify_script), message], 
@@ -557,6 +575,7 @@ def notify_slack(message):
         print(f"Slack notification sent: {message}")
     except Exception as e:
         print(f"Failed to send Slack notification: {e}")
+        print(f"Message was: {message}")
 
 if __name__ == "__main__":
     run_successful = False
