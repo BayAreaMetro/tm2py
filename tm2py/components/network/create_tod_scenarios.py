@@ -595,10 +595,10 @@ class CreateTODScenarios(Component):
             other_maz_ids = sp_index_maz.within_square(x, y, buff_dist)
             # Sum total landuse attributes within buffer distance
             total_pop = sum(
-                int(maz_landuse_data[maz_id]["POP"]) for maz_id in other_maz_ids
+                int(float(maz_landuse_data[maz_id]["POP"])) for maz_id in other_maz_ids
             )
             total_emp = sum(
-                int(maz_landuse_data[maz_id]["emp_total"]) for maz_id in other_maz_ids
+                int(float(maz_landuse_data[maz_id]["emp_total"])) for maz_id in other_maz_ids
             )
             total_acres = sum(
                 float(maz_landuse_data[maz_id]["ACRES"]) for maz_id in other_maz_ids

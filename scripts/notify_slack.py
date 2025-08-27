@@ -13,29 +13,41 @@ def post_message(message):
     Also prints to console
     """
     hostname = socket.getfqdn()
-    instance = os.environ['INSTANCE']
-    if hostname.endswith(".mtc.ca.gov"):
-        SLACK_WEBHOOK_URL_FILE = "M:\Software\Slack\TravelModel_SlackWebhook.txt"
-        print("Running on mtc host; using {}".format(SLACK_WEBHOOK_URL_FILE))
-    else:
-        SLACK_WEBHOOK_URL_FILE = "C:\Software\Slack\TravelModel_SlackWebhook.txt"
-        print("Running on non-mtc host; using {}".format(SLACK_WEBHOOK_URL_FILE))
+    instance = os.environ.get('INSTANCE')
+    if not instance:
+        print("ERROR: The INSTANCE environment variable is not set. Slack notification will not be sent.")
+        instance = "UNKNOWN"
 
-    SLACK_WEBHOOK_URL      = None # will be read
-    f = open(SLACK_WEBHOOK_URL_FILE)
-    SLACK_WEBHOOK_URL = f.read()
-    f.close()
-    print("Read slack webhook URL: {}".format(SLACK_WEBHOOK_URL))
+    if hostname.endswith(".mtc.ca.gov"):
+        SLACK_WEBHOOK_URL_FILE = r"M:\\Software\\Slack\\TravelModel_SlackWebhook.txt"
+        print(f"Running on mtc host; using {SLACK_WEBHOOK_URL_FILE}")
+    else:
+        SLACK_WEBHOOK_URL_FILE = r"C:\\Software\\Slack\\TravelModel_SlackWebhook.txt"
+        print(f"Running on non-mtc host; using {SLACK_WEBHOOK_URL_FILE}")
+
+    SLACK_WEBHOOK_URL = None
+    try:
+        with open(SLACK_WEBHOOK_URL_FILE, "r") as f:
+            SLACK_WEBHOOK_URL = f.read().strip()
+        print(f"Read slack webhook URL: {SLACK_WEBHOOK_URL}")
+    except Exception as e:
+        print(f"ERROR: Could not read Slack webhook file: {SLACK_WEBHOOK_URL_FILE}. {e}")
+        SLACK_WEBHOOK_URL = None
 
     full_message = f"*{instance}*: {message}"
-    headers  = { 'Content-type':'application/json'}
-    data     = { "text": full_message }
+    headers = { 'Content-type':'application/json'}
+    data = { "text": full_message }
+    response = None
     if SLACK_WEBHOOK_URL:
-        response = requests.post(SLACK_WEBHOOK_URL, headers=headers, json=data)
+        try:
+            response = requests.post(SLACK_WEBHOOK_URL, headers=headers, json=data)
+            print(f"response: {response}")
+        except Exception as e:
+            print(f"ERROR: Failed to send Slack message: {e}")
+    else:
+        print("ERROR: Slack webhook URL not set. Message not sent to Slack.")
 
-    print("*** {}".format(full_message))
-    print("response: {}".format(response))
-    print("")
+    print(f"*** {full_message}")
 
 if __name__ == '__main__':
 
