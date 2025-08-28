@@ -536,6 +536,11 @@ class SetupModel:
         myfile.close()
 
 _RUN_MODEL_PY_CONTENT = """
+
+import os
+import socket
+server_name = socket.gethostname()
+os.environ["INSTANCE"] = f"Travel Model Two on {server_name}"
 import pathlib
 import random
 import subprocess
@@ -614,7 +619,7 @@ if __name__ == "__main__":
         reward = random.choice(rewards)
         notify_slack(f"Travel Model Two run completed successfully! Go get {reward}")
     else:
-        notify_slack(f"Travel Model Two run failed in {current_dir}: {error_message}. They say failure is part of the process in engineering. If that's true, I must be crushing the process.")
+        notify_slack(f"Travel Model Two run failed in {current_dir}: {error_message}. You've been here before. You can do this.")
     
     # Exit with appropriate code
     sys.exit(0 if run_successful else 1)

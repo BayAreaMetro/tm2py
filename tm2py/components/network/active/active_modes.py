@@ -85,14 +85,18 @@ class ActiveModesSkim(Component):
     @LogStartEnd("active mode skim")
     def run(self):
         """Run shortest path skim calculation for active modes."""
+        print("DEBUG: Entered ActiveModesSkim.run()")
         skim_list = self.config.shortest_path_skims
         self._prepare_files()
+        print("DEBUG: Prepared files in ActiveModesSkim.run()")
         for emmebank_path in [
             self.controller.config.emme.active_south_database_path,
             self.controller.config.emme.active_north_database_path,
         ]:
+            print(f"DEBUG: Entering _setup for emmebank_path: {emmebank_path}")
             with self._setup(emmebank_path):
                 mode_codes = self._prepare_network()
+                print(f"DEBUG: Prepared network, mode_codes: {mode_codes}")
                 for mode_id, spec in zip(mode_codes, skim_list):
                     for county in COUNTIES:
                         log_msg = (

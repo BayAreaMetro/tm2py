@@ -41,13 +41,17 @@ class CreateTODScenarios(Component):
         # TODO
 
     def run(self):
+        print("DEBUG: Entered CreateTODScenarios.run()")
         # project_path = self.get_abs_path(self.controller.config.emme.project_path)
         # self._emme_manager = self.controller.emme_manager
         # emme_app = self._emme_manager.project(project_path)
         # self._emme_manager.init_modeller(emme_app)
         with self._setup():
+            print("DEBUG: In _setup context of CreateTODScenarios.run()")
             self._create_highway_scenarios()
+            print("DEBUG: Called _create_highway_scenarios() in CreateTODScenarios.run()")
             self._create_transit_scenarios()
+            print("DEBUG: Called _create_transit_scenarios() in CreateTODScenarios.run()")
 
     @_context
     def _setup(self):

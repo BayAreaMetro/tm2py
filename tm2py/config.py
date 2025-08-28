@@ -1487,9 +1487,20 @@ class Configuration(ConfigItem):
             toml_path = [toml_path]
         toml_path = list(map(pathlib.Path, toml_path))
 
+        print(f"DEBUG: Config files to load: {[str(p.resolve()) for p in toml_path]}")
         data = _load_toml(toml_path[0])
+        print(f"DEBUG: Loaded base config from: {toml_path[0].resolve()}")
         for path_item in toml_path[1:]:
+            print(f"DEBUG: Merging config from: {path_item.resolve()}")
             _merge_dicts(data, _load_toml(path_item))
+        # Debug print for transit.modes[1].speed_or_time_factor
+        try:
+            modes = data.get('transit', {}).get('modes', [])
+            if len(modes) > 1 and 'speed_or_time_factor' in modes[1]:
+                val = modes[1]['speed_or_time_factor']
+                print(f"DEBUG: transit.modes[1].speed_or_time_factor = {val!r} (type: {type(val)})")
+        except Exception as e:
+            print(f"DEBUG: Error inspecting transit.modes[1].speed_or_time_factor: {e}")
         return cls(**data)
 
     @validator("highway")
