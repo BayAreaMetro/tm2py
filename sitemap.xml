@@ -2,57 +2,132 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://bayareametro.github.io/tm2py/</loc>
-         <lastmod>2025-08-02</lastmod>
+         <lastmod>2025-09-23</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://bayareametro.github.io/tm2py/api/</loc>
-         <lastmod>2025-08-02</lastmod>
+         <lastmod>2025-09-23</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://bayareametro.github.io/tm2py/architecture/</loc>
-         <lastmod>2025-08-02</lastmod>
+         <lastmod>2025-09-23</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://bayareametro.github.io/tm2py/create-base-year-inputs/</loc>
+         <lastmod>2025-09-23</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://bayareametro.github.io/tm2py/geographies/</loc>
+         <lastmod>2025-09-23</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://bayareametro.github.io/tm2py/guide/</loc>
+         <lastmod>2025-09-23</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://bayareametro.github.io/tm2py/inputs/</loc>
-         <lastmod>2025-08-02</lastmod>
+         <lastmod>2025-09-23</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://bayareametro.github.io/tm2py/install/</loc>
-         <lastmod>2025-08-02</lastmod>
+         <lastmod>2025-09-23</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://bayareametro.github.io/tm2py/maz-updates/</loc>
+         <lastmod>2025-09-23</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://bayareametro.github.io/tm2py/network-base-year/</loc>
+         <lastmod>2025-09-23</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://bayareametro.github.io/tm2py/network_qa/</loc>
+         <lastmod>2025-09-23</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://bayareametro.github.io/tm2py/outputs/</loc>
-         <lastmod>2025-08-02</lastmod>
+         <lastmod>2025-09-23</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://bayareametro.github.io/tm2py/papers/</loc>
+         <lastmod>2025-09-23</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://bayareametro.github.io/tm2py/process/</loc>
+         <lastmod>2025-09-23</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://bayareametro.github.io/tm2py/run/</loc>
-         <lastmod>2025-08-02</lastmod>
+         <lastmod>2025-09-23</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://bayareametro.github.io/tm2py/server-setup/</loc>
-         <lastmod>2025-08-02</lastmod>
+         <lastmod>2025-09-23</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://bayareametro.github.io/tm2py/contributing/development/</loc>
-         <lastmod>2025-08-02</lastmod>
+         <lastmod>2025-09-23</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://bayareametro.github.io/tm2py/contributing/documentation/</loc>
-         <lastmod>2025-08-02</lastmod>
+         <lastmod>2025-09-23</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://bayareametro.github.io/tm2py/examples/</loc>
-         <lastmod>2025-08-02</lastmod>
+         <lastmod>2025-09-23</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://bayareametro.github.io/tm2py/input/</loc>
+         <lastmod>2025-09-23</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://bayareametro.github.io/tm2py/input/commercial/</loc>
+         <lastmod>2025-09-23</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://bayareametro.github.io/tm2py/input/demand/</loc>
+         <lastmod>2025-09-23</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://bayareametro.github.io/tm2py/input/landuse/</loc>
+         <lastmod>2025-09-23</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://bayareametro.github.io/tm2py/input/network/</loc>
+         <lastmod>2025-09-23</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://bayareametro.github.io/tm2py/input/population/</loc>
+         <lastmod>2025-09-23</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://bayareametro.github.io/tm2py/input/transit/</loc>
+         <lastmod>2025-09-23</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
