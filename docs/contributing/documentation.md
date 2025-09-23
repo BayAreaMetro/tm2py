@@ -198,11 +198,74 @@ Documentation deployment is fully automated:
 3. **Deploys to GitHub Pages** → Updates https://bayareametro.github.io/tm2py
 4. **Takes 2-3 minutes** → Site is live
 
-### Manual Deployment (if needed)
-If you need to manually trigger deployment:
+### Manual Deployment Options
+
+If GitHub Actions isn't working or you need immediate deployment, you have several options:
+
+#### Option 1: Trigger GitHub Actions Manually
+
 1. Go to the repository's Actions tab on GitHub
-2. Select "Publish docs" workflow
+2. Select "Publish docs" workflow  
 3. Click "Run workflow"
+4. Wait 2-3 minutes for completion
+
+#### Option 2: Deploy from Your Local Machine
+
+If GitHub Actions is failing (e.g., due to dependency issues), you can deploy directly:
+
+```powershell
+# Make sure you have the tm2py-docs environment activated
+conda activate tm2py-docs
+
+# Deploy to GitHub Pages from your local machine
+mkdocs gh-deploy --clean
+```
+
+This will:
+
+- Build the documentation locally
+- Create/update the `gh-pages` branch  
+- Push the built site to GitHub Pages
+- Make your changes live within 1-2 minutes
+
+#### Option 3: Deploy with Force (if conflicts occur)
+
+If you encounter git conflicts or other issues:
+
+```powershell
+conda activate tm2py-docs
+mkdocs gh-deploy --clean --force
+```
+
+#### Troubleshooting Manual Deployment
+
+**Problem**: `mkdocs gh-deploy` fails with git errors  
+**Solution**: Make sure you have push permissions and try:
+
+```powershell
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+mkdocs gh-deploy --clean
+```
+
+**Problem**: GitHub Actions workflow failing due to GDAL or other dependencies  
+**Solution**: Use Option 2 (local deployment) - your local environment has the right dependencies
+
+**Problem**: Documentation not updating after deployment  
+**Solution**:
+
+- Wait 2-3 additional minutes for GitHub Pages to refresh
+- Clear your browser cache
+- Check if the deployment actually succeeded in GitHub Actions
+
+#### Verifying Deployment Success
+
+After any deployment method:
+
+1. Visit <https://bayareametro.github.io/tm2py/>
+2. Check that your changes are visible  
+3. Test navigation to new pages you added
+4. Verify all links work correctly
 
 ## Style Guidelines
 
