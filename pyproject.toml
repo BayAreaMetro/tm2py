@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tm2py"
-version = "0.1.0"
+version = "2.3"
 description = "Travel Model Two - python edition"
 authors = [
     { name = "Metropolitan Transportation Commission", email = "info@bayareametro.gov" }

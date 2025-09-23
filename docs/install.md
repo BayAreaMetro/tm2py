@@ -1,12 +1,12 @@
-## Install tm2py
+## Install tm2py 🎂
 
 First, you need to [set up your server](server-setup.md).
 
-### 1. **Clone the Repository**
+### 1. **Clone the Repository** 📥
 
 Clone the [tm2py GitHub repo](https://github.com/BayAreaMetro/tm2py) using Git Bash or GitHub Desktop, and switch to the branch you want to run.
 
-### 2. **Open the OpenPaths EMME Shell and Create a Virtual Environment**
+### 2. **Open the OpenPaths EMME Shell and Create a Virtual Environment** 🐍
 
 Open the **OpenPaths EMME Shell** and:
 
@@ -16,14 +16,13 @@ Open the **OpenPaths EMME Shell** and:
 `python -m venv <your_tm2py_env_name>`
 
 
-### 3. **Activate the Virtual Environment**
-
+### 3. **Activate the Virtual Environment** ⚡
 
 Activate the virtual environment in the OpenPaths EMME shell:
 
 `<your_tm2py_env_name>\Scripts\activate`
 
-### 4. **Copy `emme.pth` to the Virtual Environment**
+### 4. **Copy `emme.pth` to the Virtual Environment** 📋
 
 Copy the `emme.pth` file from your OpenPaths EMME installation folder to the virtual environment’s `site-packages` folder. You can do this via shell commands or manually in Windows.
 

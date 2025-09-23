@@ -27,16 +27,28 @@ theme:
 
 nav:
   - Home: index.md
-  - Getting Started: 
+  - Getting Started:
     - Server Setup: server-setup.md
     - Installing tm2py: install.md
     - Running tm2: run.md
+  - Process: process.md
   - Codebase:
     - Architecture: architecture.md
     - API Documentation: api.md
   - Input & Output:
-    - Input: inputs.md
+    - Input: input/index.md
+    - Network Data: input/network.md
+    - Transit Data: input/transit.md  
+    - Land Use Data: input/landuse.md
+    - Population Data: input/population.md
+    - Commercial Vehicle Data: input/commercial.md
+    - Fixed Demand Data: input/demand.md
     - Output: outputs.md
+  - Model Documentation:
+    - User Guide: guide.md
+    - Geographies: geographies.md
+    - Network QA: network_qa.md
+    - Papers: papers.md
   - Contributing:
     - Development: contributing/development.md
     - Documentation: contributing/documentation.md
@@ -53,7 +65,7 @@ plugins:
           setup_commands:
            - import sys
            - from unittest.mock import MagicMock as mock
-           - sys.path.append('../')  
+           - sys.path.append('../')
            - sys.modules["inro"] = mock()
            - sys.modules["inro.emme"] = mock()
            - sys.modules["inro.emme.database"] = mock()
@@ -99,4 +111,3 @@ markdown_extensions:
   - toc:
       # insert a blank space before the character
       permalink: " ¶"
-  

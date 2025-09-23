@@ -1,65 +1,20 @@
-# Input
+# Network Data 🛣️
 
-## Input File List
+!!! info "Network Preparation"
+    For information on how to prepare and process network files for the base year, see **[Creating Base Year Inputs](../create-base-year-inputs.md#network-data)** 🛣️
 
-The table below contains brief descriptions of the input files required to execute the travel model.
-
-### Current TM2.2+ Files (tm2py)
-
-| Directory | File | Description |
-|-----------|------|-------------|
-| hwy/ | complete_network.net | Highway, bike, walk network |
-| hwy/ | tolls.csv | Contains toll prices for all facilities and all time periods |
-| hwy/ | interchange_nodes.csv | Identifies nodes connected to interchanges |
-| landuse/ | mazData.csv | Micro zone data |
-| landuse/ | tazData.csv | Travel analysis zone data |
-| nonres/ | truckFF.dat | Friction factors for the commercial vehicle distribution models |
-| nonres/ | truck_kfactors_taz.csv | "K-factors" for the commercial vehicle distribution models |
-| nonres/ | ixDaily2015.tpp | Internal-external fixed trip table for year 2015 |
-| nonres/ | ixDaily2015_totals.dbf | Internal-external total trips table for year 2015 |
-| nonres/ | YYYY_fromtoAAA.csv | Airport passenger fixed trips for year YYYY and airport AAA |
-| nonres/ | ixex_config.dbf | Station-specific growth rates and commute shares for each forecast year |
-| popsyn/ | households.csv | Synthetic population household file |
-| popsyn/ | persons.csv | Synthetic population person file |
-| trn/ | transitLines.lin | Transit lines |
-| trn/ | station_attribute_data_input.csv | Station attributes |
-| trn/ | vehtype.pts | Vehicle types |
-| trn/ | roadway-assignment-names-helper.csv | Names for model links |
-| trn/ | fareMatrix.txt | Matrix containing transit fares |
-| trn/ | fares.far | Used to run fare calculations for EMME scenario |
-
-### Legacy TM2.1 Files (travel-model-two)
-
-| **File name** | **Purpose** | **Folder location** | **File type** | **File format** |
-|---------------|-------------|---------------------|---------------|-----------------|
-| `mtc_final_network.net` | Highway, bike, walk network | hwy\ | [Citilabs Cube](http://citilabs.com/products/cube)| [Roadway Network](#roadway-network) |
-| `truckkfact.k22.z1454.mat` | "K-factors" for the commercial vehicle distribution models | nonres\ | [Citilabs Cube](http://citilabs.com/products/cube) | [Truck Distribution](#truck-distribution) |
-| `ixDailyYYYY.tpp` | Internal-external fixed trip table for year YYYY | nonres\ | [Citilabs Cube](http://citilabs.com/products/cube) | [Fixed Demand](#fixed-demand) |
-| `IXDaily2006x4.may2208.new` | Internal-external input fixed trip table | nonres\ | [Citilabs Cube](http://citilabs.com/products/cube) | [Fixed Demand](#fixed-demand) |
-| `transitFactors_MMMM.fac` | Cube Public Transport (PT) factor files by transit line haul mode MMMM | trn\transit_support | [Citilabs Cube](http://citilabs.com/products/cube) | TransitNetwork |
-
-## Time Periods
-
-Time periods in Travel Model Two are consistent with Travel Model One:
-
-| Time Period | Times | Duration |
-|-------------|-------|----------|
-| EA (early AM) | 3 am to 6 am | 3 hours |
-| AM (AM peak period) | 6 am to 10 am | 4 hours |
-| MD (mid-day) | 10 am to 3 pm | 5 hours |
-| PM (PM peak period) | 3 pm to 7 pm | 4 hours |
-| EV (evening) | 7 pm to 3 am | 8 hours |
+## Roadway Networketwork Data �️
 
 ## Roadway Network
 
-The all streets highway network, walk network, and bicycle network were developed from [OpenStreetMap](https://www.openstreetmap.org/). The projection is [NAD 1983 StatePlane California VI FIPS 0406 Feet](https://epsg.io/2227).
+The all streets highway network, walk network, and bicycle network were developed from [OpenStreetMap](http://www.openstreetmap.org/). The *projection* is [**NAD 1983 StatePlane California VI FIPS 0406 Feet**](https://epsg.io/102646).
 
-### County Node Numbering System
+## County Node Numbering System
 
 The highway network uses a numbering system whereby each county has a reserved block of nodes. Within each county's block:
 
 - Nodes 1 through 9,999 are reserved for TAZs
-- Nodes 10,001 through 89,999 are for MAZs
+- Nodes 10,001 through 89,999 are for MAZs  
 - Nodes 90,001 through 99,999 are for transit access points (TAPs)
 
 The blocks are assigned to the nine counties per MTC's numbering scheme, as shown in the table below.
@@ -122,3 +77,24 @@ The following node attributes are included in the master network.
 | 900019 | State Route 17 (Santa Clara) |
 | 900020 | State Route 9 (Santa Clara) |
 | 900021 | State Route 1 (San Mateo) |
+
+## Transit Network 🚌
+
+Transit network data includes lines, stations, fares, and service attributes.
+
+### Transit Files
+
+| File | Directory | Description |
+|------|-----------|-------------|
+| `transitLines.lin` | trn/ | Transit lines definition |
+| `station_attribute_data_input.csv` | trn/ | Station attributes |
+| `vehtype.pts` | trn/ | Vehicle types |
+| `roadway-assignment-names-helper.csv` | trn/ | Names for model links |
+| `fareMatrix.txt` | trn/ | Matrix containing transit fares |
+| `fares.far` | trn/ | Used to run fare calculations for EMME scenario |
+
+### Legacy TM2.1 Transit Files
+
+| File name | Purpose | Folder location |
+|-----------|---------|-----------------|
+| `transitFactors_MMMM.fac` | Cube Public Transport (PT) factor files by transit line haul mode | trn/transit_support |

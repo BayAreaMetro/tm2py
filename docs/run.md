@@ -1,9 +1,9 @@
 
-# Run the Model Setup
+# Run the Model Setup 🚀
 
-## 1. **Set Up the Model Run Directory**
+## 1. **Set Up the Model Run Directory** 🎂
 
-### a. Open the **OpenPaths EMME Shell** and a terminal and activate your *tm2py* virtual environment:
+### a. Open the **OpenPaths EMME Shell** and a terminal and activate your *tm2py* virtual environment: 🐍
 ```batch
 OpenPaths EMME Environment is set to:
 OpenPaths EMME 25.00.01.06 64-bit,   Copyright 2025 Bentley Systems, Incorporated
@@ -16,12 +16,12 @@ C:\Users\lzorn\Documents>E:\GitHub\tm2\tm2py_env\Scripts\activate
 (tm2py_env) C:\Users\lzorn\Documents>
 ```
 
-### b. **Configure Input and Output Paths**
+### b. **Configure Input and Output Paths** ⚙️
 
 If needed, edit the configuration file located at:
 [`tm2py-utils/tm2py-utils/config/develop/setup_config_mtc_2015.toml`](https://github.com/BayAreaMetro/tm2py-utils/blob/main/tm2py_utils/config/develop/setup_config_mtc_2015.toml)
 
-### c. **Run `setup_model.py`**
+### c. **Run `setup_model.py`** 🍰
 
 This script is a light wrapper for [SetupModel](/tm2py/api/#tm2py.SetupModel) and it takes two arguments:
 
@@ -40,7 +40,7 @@ TODO: Fix this
 
 ---
 
-## 2. **Run the Model**
+## 2. **Run the Model** 🎂
 
 While still in the activated virtual environment:
 
@@ -52,22 +52,22 @@ While still in the activated virtual environment:
 (tm2py_env) E:\TM2\2023_TM2_test_20250606>python RunModel.py
 ```
    
-# User Configuration
+# User Configuration 🛠️
 
-## Model Configuration
+## Model Configuration ⚙️
 The model config file allows for customization on the the model run performance settings.
 
-### Network Acceleration
+### Network Acceleration 🚀
 
 Emme Openpaths provides the network accelerate option, which allows for faster assignment on smaller machines.  
-WARNING: This has lead to some instability with model runs completing so, especially on large machines, this should remain off 
+WARNING: This has lead to some instability with model runs completing so, especially on large machines, this should remain off 🚧
 
 To enable this under [highway] in toml
 ```
     network_acceleration=true
 ```
 
-### Parallel Highway Assignment
+### Parallel Highway Assignment 🛣️
 
 tm2py offers the option to run assignment in parallel to reduce runtime. This can be achieved by including the following configuration under [emme] in the model_config.
 ```
