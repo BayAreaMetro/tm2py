@@ -5,10 +5,18 @@ on:
     branches:
       - develop
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   mkdocs:
-    name: Publish docs
+    name: Build and Deploy docs
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,8 +33,17 @@ jobs:
           pip install --upgrade pip
           pip install -r docs/requirements.txt
 
-      - name: Deploy docs
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          mkdocs gh-deploy --force
+      - name: Build docs
+        run: mkdocs build
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
