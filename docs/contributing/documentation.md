@@ -8,15 +8,38 @@ Documentation for tm2py is built using [MkDocs](https://www.mkdocs.org/) with th
 
 For simple edits (fixing typos, updating content), you can edit directly on GitHub:
 
-1. Navigate to the file in the `docs/` folder on GitHub
-2. Click the pencil icon to edit
-3. Make your changes
-4. Commit with a descriptive message
-5. The site will automatically rebuild and deploy within 2-3 minutes
+**Quick Overview:** Go to GitHub → Switch to `develop` branch → Edit file → Commit → Wait 2-3 minutes for live site update
 
-### Local Development Setup 💻
+1. **Make sure you're on the `develop` branch** (GitHub Actions only triggers from develop)
+2. Navigate to the file in the `docs/` folder on GitHub
+3. Click the pencil icon to edit
+4. Make your changes
+5. Commit with a descriptive message **to the `develop` branch**
+6. The site will automatically rebuild and deploy within 2-3 minutes
+
+### Local Documentation Setup 💻
 
 For more complex changes or when adding new pages, set up a local development environment:
+
+**Quick Overview for New Pages:** Clone repo → Switch to `develop` → Create `.md` file in `docs/` → Add to `mkdocs.yml` navigation → Push to `develop`
+
+#### Adding Pages to Navigation
+
+To make your new page appear in the site navigation, edit `mkdocs.yml` and add your page to the `nav` section:
+
+```yaml
+nav:
+  - Home: index.md
+  - Installation: install.md
+  - Your New Section: your-new-page.md
+  # Or nested under an existing section:
+  - Contributing:
+    - Development: contributing/development.md
+    - Documentation: contributing/documentation.md
+    - Your New Guide: contributing/your-new-guide.md
+```
+
+**Important**: The file path in `mkdocs.yml` should be relative to the `docs/` folder (e.g., `your-page.md` not `docs/your-page.md`).
 
 #### Prerequisites
 - Python 3.8+ 
@@ -28,6 +51,9 @@ For more complex changes or when adding new pages, set up a local development en
 # Clone the repository (if you haven't already)
 git clone https://github.com/BayAreaMetro/tm2py.git
 cd tm2py
+
+# Switch to the develop branch (required for deployment)
+git checkout develop
 
 # Create a dedicated environment for documentation work
 # This keeps docs dependencies separate from the main tm2py environment
@@ -41,20 +67,32 @@ pip install -r docs/requirements.txt
 pip install -e .
 ```
 
-#### Running the Local Development Server
+#### Making and Pushing Changes
+
+Once you have the local environment set up, here's how to make documentation changes:
 
 ```powershell
-# Activate your docs environment
-conda activate tm2py-docs
+# 1. Make sure you're on the develop branch
+git status
+git checkout develop
 
-# Navigate to the tm2py directory
-cd path/to/tm2py
+# 2. Edit documentation files with your preferred editor
+# For example, edit docs/install.md, docs/outputs.md, etc.
 
-# Start the local development server
-mkdocs serve
+# 3. Check what files you've changed
+git status
+
+# 4. Add your changes to git
+git add docs/
+
+# 5. Commit your changes with a descriptive message
+git commit -m "Update installation instructions with new requirements"
+
+# 6. Push to the develop branch to trigger automatic deployment
+git push origin develop
 ```
 
-This will start a local server at `http://127.0.0.1:8000` that automatically reloads when you make changes to the documentation files.
+**That's it!** GitHub Actions will automatically build and deploy your changes to the live documentation site within 2-3 minutes.
 
 ## Documentation Structure
 
@@ -191,56 +229,69 @@ pre-commit run --all-files
 
 ## Deployment Process 🚀
 
-Documentation deployment is fully automated:
+Documentation deployment is **fully automated** and reliable:
 
 1. **Push to `develop` branch** → Triggers GitHub Actions workflow
-2. **Workflow runs** → Builds the MkDocs site
-3. **Deploys to GitHub Pages** → Updates https://bayareametro.github.io/tm2py
-4. **Takes 2-3 minutes** → Site is live
+2. **Workflow builds site** → Uses MkDocs with minimal dependencies (no GDAL conflicts)
+3. **Deploys via GitHub Pages** → Uses official GitHub Pages deployment action
+4. **Live in 2-3 minutes** → Updates <https://bayareametro.github.io/tm2py>
+
+### Automatic Deployment ✅
+
+The GitHub Actions workflow (`.github/workflows/docs.yml`) is now optimized and should work reliably:
+
+- **No GDAL dependencies** → Minimal requirements prevent conflicts
+- **Proper permissions** → Uses official GitHub Pages deployment actions
+- **Environment isolation** → Builds only what's needed for documentation
+
+**Key improvements made:**
+
+- Removed problematic MkDocs watch directive that caused GDAL imports
+- Uses `actions/deploy-pages@v4` instead of direct git push
+- Includes proper GitHub Pages permissions: `pages: write`, `id-token: write`
 
 ### Manual Deployment Options
 
-If GitHub Actions isn't working or you need immediate deployment, you have several options:
+While automatic deployment should work reliably, you still have manual options:
 
-#### Option 1: Trigger GitHub Actions Manually
+#### Option 1: Trigger Workflow via Github actions
 
-1. Go to the repository's Actions tab on GitHub
-2. Select "Publish docs" workflow  
-3. Click "Run workflow"
+1. Go to **Actions** tab on GitHub
+2. Select **"Publish docs"** workflow  
+3. Click **"Run workflow"** → Choose `develop` branch
 4. Wait 2-3 minutes for completion
 
-#### Option 2: Deploy from Your Local Machine
+#### Option 2: Local Deployment (Backup Method)
 
-If GitHub Actions is failing (e.g., due to dependency issues), you can deploy directly:
+If you need immediate deployment or GitHub Actions is temporarily unavailable:
 
 ```powershell
 # Make sure you have the tm2py-docs environment activated
 conda activate tm2py-docs
 
-# Deploy to GitHub Pages from your local machine
+# Deploy directly from your local machine
 mkdocs gh-deploy --clean
 ```
 
-This will:
+**Note**: Local deployment bypasses the GitHub Actions workflow but produces the same result.
 
-- Build the documentation locally
-- Create/update the `gh-pages` branch  
-- Push the built site to GitHub Pages
-- Make your changes live within 1-2 minutes
+### Troubleshooting Deployment
 
-#### Option 3: Deploy with Force (if conflicts occur)
+#### Common Solutions
 
-If you encounter git conflicts or other issues:
+**Documentation not updating after push**:
 
-```powershell
-conda activate tm2py-docs
-mkdocs gh-deploy --clean --force
-```
+- Check the **Actions** tab for workflow status
+- Wait 3-5 minutes (GitHub Pages can have a delay)
+- Clear browser cache or try incognito mode
 
-#### Troubleshooting Manual Deployment
+**GitHub Actions workflow failing**:
 
-**Problem**: `mkdocs gh-deploy` fails with git errors  
-**Solution**: Make sure you have push permissions and try:
+- Most previous issues have been resolved with the new workflow
+- Check the Actions tab for specific error messages
+- Try triggering the workflow manually (Option 1 above)
+
+**Local deployment fails with git errors**:
 
 ```powershell
 git config --global user.name "Your Name"
@@ -248,40 +299,34 @@ git config --global user.email "your.email@example.com"
 mkdocs gh-deploy --clean
 ```
 
-**Problem**: GitHub Actions workflow failing due to GDAL or other dependencies  
-**Solution**: Use Option 2 (local deployment) - your local environment has the right dependencies
+#### Verifying Successful Deployment
 
-**Problem**: Documentation not updating after deployment  
-**Solution**:
-
-- Wait 2-3 additional minutes for GitHub Pages to refresh
-- Clear your browser cache
-- Check if the deployment actually succeeded in GitHub Actions
-
-#### Verifying Deployment Success
-
-After any deployment method:
+After any deployment:
 
 1. Visit <https://bayareametro.github.io/tm2py/>
 2. Check that your changes are visible  
-3. Test navigation to new pages you added
+3. Test navigation to any new pages
 4. Verify all links work correctly
+5. Check the commit timestamp at the bottom of pages
 
 ## Style Guidelines
 
 ### Writing Style
+
 - Use clear, concise language
 - Write in present tense
 - Use active voice when possible
 - Define technical terms on first use
 
 ### Formatting
+
 - Use descriptive headers (H1 `#`, H2 `##`, etc.)
 - Break up large blocks of text with headers and lists
 - Use code blocks for commands and code samples
 - Include examples where helpful
 
 ### File Naming
+
 - Use lowercase with hyphens: `network-qa.md`
 - Be descriptive: `installation-guide.md` not `install.md`
 - Group related files in subdirectories when appropriate
@@ -291,16 +336,19 @@ After any deployment method:
 ### Common Issues
 
 **MkDocs not found**: Make sure you've activated the right environment
+
 ```powershell
 conda activate tm2py-docs
 ```
 
 **Missing dependencies**: Reinstall requirements
+
 ```powershell
 pip install -r docs/requirements.txt
 ```
 
 **Site not updating**: Clear the site cache
+
 ```powershell
 mkdocs build --clean
 ```
@@ -317,17 +365,52 @@ mkdocs build --clean
 
 ### For Small Changes
 
-1. Edit directly on GitHub web interface
-2. Commit with descriptive message
-3. Wait 2-3 minutes for deployment
+1. **Ensure you're on the `develop` branch** on GitHub web interface
+2. Edit files directly on GitHub
+3. Commit with descriptive message **to the `develop` branch**
+4. Wait 2-3 minutes for automatic deployment
 
 ### For Larger Changes
 
 1. Clone the repository if you haven't already
-2. Work directly on the `develop` branch
-3. Make changes locally and test with `mkdocs serve`
+2. **Switch to and work on the `develop` branch** (required for deployment)
+3. Make changes locally with your preferred text editor
 4. Commit changes: `git commit -m "Improve installation documentation"`
-5. Push to develop: `git push origin develop`
+5. **Push to develop**: `git push origin develop`
 6. Documentation will auto-deploy within 2-3 minutes
 
+**Important**: Only changes pushed to the `develop` branch will trigger the GitHub Actions workflow that deploys the documentation to GitHub Pages.
+
 This simplified workflow ensures that documentation stays up-to-date and maintains high quality while being easy to contribute to.
+
+## Optional: Local Development Server 💻
+
+If you want to preview your changes locally before committing (recommended for complex changes), you can run a local development server:
+
+### Prerequisites for Local Preview
+
+- Have completed the installation steps above
+- Activated the tm2py-docs environment
+
+### Running Local Preview
+
+```powershell
+# Activate your docs environment
+conda activate tm2py-docs
+
+# Navigate to the tm2py directory
+cd path/to/tm2py
+
+# Start the local development server
+mkdocs serve
+```
+
+This will:
+
+- Start a local server at `http://127.0.0.1:8000`
+- Automatically reload when you make changes to documentation files
+- Let you verify formatting, links, and navigation before pushing
+- Show you exactly what the deployed site will look like
+
+**Note**: This is completely optional. You can edit documentation files directly and rely on the automatic deployment to see your changes live.
+
