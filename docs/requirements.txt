@@ -1,13 +1,10 @@
-# Minimal requirements to avoid GDAL dependency conflicts
-# Only essential packages for building documentation
+# Core documentation requirements without GDAL-triggering features
 mkdocs>=1.4.0
 mkdocs-material>=9.0.0
 mkdocs-mermaid2-plugin>=0.6.0
 
-# Basic plugins that don't have problematic dependencies  
-mkdocs-awesome-pages-plugin
-
-# Temporarily removed to avoid GDAL/geospatial dependency issues:
+# Can likely add back safely now that watch directive is removed:
+# mkdocs-awesome-pages-plugin
 # markdown == 3.3.1  
 # mike
 # mkdocs-autorefs  

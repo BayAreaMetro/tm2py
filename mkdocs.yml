@@ -2,8 +2,9 @@ site_name: "Travel Model Two Python Package: tm2py"
 site_url: https://bayareametro.github.io/tm2py
 repo_url: https://github.com/bayareametro/tm2py
 edit_uri: edit/main/docs
-watch:
-  - tm2py
+# Temporarily removed to avoid GDAL dependency issues:
+# watch:
+#   - tm2py
 
 theme:
   name: material
@@ -60,9 +61,10 @@ nav:
     - Documentation: contributing/documentation.md
 
 plugins:
-  # Temporarily disabled to avoid dependency issues:
+  # Basic plugins that should work without GDAL dependencies:
   # - autorefs
-  - awesome-pages
+  # - awesome-pages
+  - mermaid2
   # Temporarily disable mkdocstrings to avoid GDAL dependency issues
   # - mkdocstrings:
   #     default_handler: python
