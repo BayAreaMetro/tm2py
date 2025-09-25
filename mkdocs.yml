@@ -44,6 +44,11 @@ nav:
     - Commercial Vehicle Data: input/commercial.md
     - Fixed Demand Data: input/demand.md
     - Output: outputs.md
+    - Skim Outputs: output/skims.md
+    - CTRAMP Outputs: output/ctramp.md
+    - Assignment Outputs: output/assignment.md
+    - Commercial Vehicle Outputs: output/commercial.md
+    - Summary Reports: output/summaries.md
   - Model Documentation:
     - User Guide: guide.md
     - Geographies: geographies.md

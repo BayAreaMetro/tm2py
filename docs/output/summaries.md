@@ -1,0 +1,332 @@
+# Summary Report Outputs
+
+Travel Model Two generates comprehensive summary reports for model validation, performance monitoring, and planning analysis.
+
+## Model Run Summary
+
+### Top Sheet Summary
+**File Pattern**: `output_summaries/model_run_summary.csv`
+
+**Description**: High-level performance metrics for entire model run
+
+**Key Metrics**:
+- Total population and households modeled
+- Total daily trips by mode
+- Vehicle-miles traveled (VMT) by time period
+- Transit boardings by operator
+- Model run time and convergence status
+
+**Format**: CSV with rows for each metric and columns for values/percentages
+
+### Convergence Report
+**File Pattern**: `logs/model_convergence_summary.txt`
+
+**Content**:
+- Global iteration convergence metrics
+- Assignment convergence by time period
+- Feedback loop performance indicators
+- Computational performance statistics
+
+## Travel Behavior Summaries
+
+### Trip Generation Summary
+**File Pattern**: `output_summaries/trip_generation_summary.csv`
+
+**Description**: Trip production and attraction totals by purpose and geography
+
+**Dimensions**:
+- **Purpose**: Work, school, shopping, other, etc.
+- **Geography**: County, area type, income group
+- **Person Type**: Worker, student, non-worker, etc.
+
+**Metrics**: Trips per person, trips per household, spatial distribution
+
+### Mode Choice Summary
+**File Pattern**: `output_summaries/mode_choice_summary.csv`
+
+**Description**: Mode split results by trip purpose and market segment
+
+**Mode Categories**:
+- Auto (drive alone, shared ride)
+- Transit (walk access, drive access)
+- Non-motorized (walk, bike)
+- TNC/Taxi (single, shared)
+
+**Segmentation**: By income, auto ownership, area type, trip purpose
+
+### Time-of-Day Summary
+**File Pattern**: `output_summaries/time_of_day_summary.csv`
+
+**Description**: Temporal distribution of travel demand
+
+**Content**:
+- Peak spreading analysis
+- Time period choice by purpose
+- Peak hour factors
+- Departure time distributions
+
+## Network Performance Summaries
+
+### Highway Performance
+**File Pattern**: `output_summaries/highway_performance_summary.csv`
+
+**Description**: Highway system performance indicators
+
+**Metrics by Time Period**:
+- Total VMT and VHT
+- Average network speed
+- Volume-to-capacity ratios
+- Congested lane-miles
+- Level of service distribution
+
+**Geographic Detail**:
+- County-level summaries
+- Facility type breakdown
+- Area type analysis
+- Corridor performance
+
+### Transit Performance
+**File Pattern**: `output_summaries/transit_performance_summary.csv`
+
+**Description**: Transit system performance metrics
+
+**System-Wide Metrics**:
+- Total boardings by operator
+- Passenger-miles traveled
+- Average trip length
+- Transfer rates
+- Load factor by line type
+
+**Operator Breakdown**:
+- AC Transit, BART, Muni, etc.
+- Mode-specific performance
+- Service productivity metrics
+
+### Active Transportation
+**File Pattern**: `output_summaries/active_transportation_summary.csv`
+
+**Description**: Walking and bicycling trip patterns
+
+**Content**:
+- Walk/bike mode share by trip purpose
+- Average trip distances
+- Infrastructure utilization
+- Accessibility indicators
+
+## Geographic Summaries
+
+### County Summary
+**File Pattern**: `output_summaries/county_summary.csv`
+
+**Description**: Travel patterns by county
+
+**Counties Included**: 9 Bay Area counties plus external
+
+**Metrics**:
+- Internal trips (within county)
+- External trips (cross-county)
+- Mode split by county
+- VMT per capita
+- Transit ridership per capita
+
+### Jurisdiction Summary
+**File Pattern**: `output_summaries/jurisdiction_summary.csv`
+
+**Description**: City-level travel demand indicators
+
+**Content**:
+- Trip attractions by jurisdiction
+- Jobs-housing balance impacts
+- Local vs. regional trips
+- Transportation mode access
+
+### Superdistrict Summary
+**File Pattern**: `output_summaries/superdistrict_summary.csv`
+
+**Description**: Results for 34 regional analysis districts
+
+**Applications**:
+- Regional planning analysis
+- Equity assessments  
+- Policy scenario comparisons
+- Investment prioritization
+
+## Market Segment Analysis
+
+### Income Group Summary
+**File Pattern**: `output_summaries/income_group_summary.csv`
+
+**Description**: Travel patterns by household income
+
+**Income Categories**:
+- Low income (<$30k)
+- Medium-low income ($30k-$60k)  
+- Medium income ($60k-$100k)
+- Medium-high income ($100k-$150k)
+- High income (>$150k)
+
+**Metrics**: Trip rates, mode choice, VMT, accessibility
+
+### Auto Ownership Summary
+**File Pattern**: `output_summaries/auto_ownership_summary.csv`
+
+**Description**: Travel behavior by household auto ownership
+
+**Categories**:
+- Zero-vehicle households
+- One-vehicle households  
+- Two-vehicle households
+- Three+ vehicle households
+
+**Analysis**: Mode choice differences, trip chaining, accessibility impacts
+
+### Life Cycle Summary
+**File Pattern**: `output_summaries/lifecycle_summary.csv`
+
+**Description**: Travel patterns by household life cycle stage
+
+**Life Cycle Categories**:
+- Single person households
+- Couple, no children
+- Couple with children
+- Single parent families
+- Empty nesters
+- Retirees
+
+## Accessibility Summaries
+
+### Job Accessibility
+**File Pattern**: `output_summaries/job_accessibility_by_mode.csv`
+
+**Description**: Employment accessibility by transportation mode
+
+**Content**:
+- Jobs accessible within 30/45 minutes by auto
+- Jobs accessible within 45/60 minutes by transit
+- Accessibility by income group and geography
+- Mode-specific accessibility indices
+
+### Essential Services Accessibility  
+**File Pattern**: `output_summaries/services_accessibility.csv`
+
+**Description**: Access to essential services
+
+**Service Types**:
+- Healthcare facilities
+- Educational institutions
+- Grocery stores/food access
+- Government services
+- Financial services
+
+## Equity Analysis
+
+### Transportation Equity Summary
+**File Pattern**: `output_summaries/equity_analysis_summary.csv`
+
+**Description**: Equity indicators by demographic groups
+
+**Protected Classes**:
+- Low-income households
+- Minority populations  
+- Zero-vehicle households
+- Senior citizens
+- Persons with disabilities
+
+**Metrics**: Transportation costs, accessibility, travel time, mode availability
+
+### Environmental Justice
+**File Pattern**: `output_summaries/environmental_justice_summary.csv`
+
+**Description**: Transportation impacts on disadvantaged communities
+
+**Impact Measures**:
+- VMT exposure
+- Transit access quality
+- Active transportation safety
+- Air quality exposure
+
+## Validation Summaries
+
+### Count Validation
+**File Pattern**: `output_summaries/count_validation_summary.csv`
+
+**Description**: Comparison with observed traffic and transit counts
+
+**Content**:
+- Highway count station validation
+- Transit ridership validation  
+- Screenline crossing validation
+- Percent root mean square error (PRMSE)
+- Geographic distribution of errors
+
+### Survey Validation
+**File Pattern**: `output_summaries/survey_validation_summary.csv`
+
+**Description**: Comparison with travel survey data
+
+**Survey Sources**:
+- California Household Travel Survey
+- Bay Area Travel Survey
+- Transit Onboard Surveys
+- Commercial Vehicle Survey
+
+**Validation Metrics**: Trip rates, mode splits, trip lengths, temporal patterns
+
+## Scenario Comparison
+
+### Scenario Difference Summary
+**File Pattern**: `output_summaries/scenario_comparison_[base]_vs_[alternative].csv`
+
+**Description**: Comparative analysis between model scenarios
+
+**Comparison Metrics**:
+- Change in total trips by mode
+- VMT and emissions impacts
+- Transit ridership changes
+- Accessibility improvements
+- Equity impact differentials
+
+### Policy Impact Summary
+**File Pattern**: `output_summaries/policy_impact_summary.csv`
+
+**Description**: Quantified impacts of transportation policies
+
+**Policy Types**:
+- Pricing strategies (tolls, parking)
+- Transit service improvements
+- Active transportation investments
+- Land use policy changes
+
+## Data Export Formats
+
+### CSV Files
+- **Delimiter**: Comma-separated
+- **Encoding**: UTF-8
+- **Headers**: Descriptive column names
+- **Missing Data**: Empty cells or "N/A"
+
+### Summary Statistics
+- **Central Tendency**: Mean, median, mode
+- **Variability**: Standard deviation, percentiles
+- **Geographic**: Spatially weighted averages
+- **Temporal**: Peak vs. off-peak comparisons
+
+### Visualization Ready
+- **Charts**: Pre-formatted for common chart types
+- **Maps**: Geographic identifiers for GIS integration
+- **Dashboards**: Key performance indicators highlighted
+- **Time Series**: Trend analysis format
+
+## Usage Guidelines
+
+### Reporting Standards
+- **Rounding**: Appropriate significant figures
+- **Units**: Clearly specified (miles, hours, dollars)
+- **Base Year**: 2015 base year dollars/data
+- **Confidence**: Statistical significance indicators
+
+### Quality Checks
+- **Reasonableness**: Logical value ranges
+- **Consistency**: Internal consistency checks
+- **Completeness**: All required fields populated
+- **Accuracy**: Validation against benchmarks

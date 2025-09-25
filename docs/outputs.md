@@ -1,76 +1,118 @@
 # Outputs
 
-Travel Model Two (TM2) generates a variety of output files across multiple categories.
+Travel Model Two (TM2) generates a comprehensive set of output files that capture travel behavior, network performance, and system-wide metrics. This page provides an overview of the major output categories with links to detailed documentation.
 
-## Skims
+!!! info "Cross-Reference"
+    See [Create Base Year Inputs](create-base-year-inputs.md) for information about preparing data inputs that generate these outputs.
 
-Skims represent level-of-service (LOS) indicators across transportation modes and time periods.
+## Major Output Categories
 
-- **Highway Skim Matrices**  
-  `skims\HWYSKM[TimePeriod]_taz.tpp`  
-  Include travel time, distance, bridge tolls, and other metrics for different vehicle types (e.g., DA, S2, S3).
+### [Skim Outputs](output/skims.md)
+Level-of-service matrices representing travel impedances and costs between zones.
 
-- **MAZ to MAZ Distances**  
-  - `skims\bike_distance_maz_maz.txt`  
-  - `skims\ped_distance_maz_maz.txt`  
-  Provide bike and pedestrian distances between Micro Analysis Zones (MAZs).
+- **Highway Skims**: Travel time, distance, and cost matrices for automobile modes
+- **Transit Skims**: Comprehensive transit level-of-service indicators including wait times, fares, and in-vehicle times
+- **Active Mode Skims**: Walking and bicycling distance matrices between zones
+- **Drive Access Skims**: Park-and-ride access impedances
 
-- **TAZ to TAZ Bike Distances**  
-  `skims\bike_distance_taz_taz.txt`  
-  Show bike distances between Traffic Analysis Zones (TAZs).
+[→ View detailed skim output documentation](output/skims.md)
 
-- **Transit Skims**  
-  `skims\transit_skims_[TimePeriod]_[Iteration]_[Inner Iteration].omx`  
-  Contain transit LOS indicators for various time periods and iterations.
+### [CTRAMP Outputs](output/ctramp.md)
+Detailed microsimulation results from the household travel behavior model.
 
-## CTRAMP Output
+- **Individual Travel**: Person-level tour and trip data with full demographic context
+- **Joint Travel**: Household joint tours and coordinated travel patterns
+- **Transit Resimulation**: Capacity-constrained transit trip results
+- **Park-and-Ride**: Constrained and unconstrained parking demand
 
-CTRAMP outputs provide detailed data on individual and joint travel behaviors.
+[→ View detailed CTRAMP output documentation](output/ctramp.md)
 
-- **Individual Tours File**  
-  `indivTourData_[iteration].csv`  
-  Records individual tour data.
+### [Assignment Outputs](output/assignment.md)
+Network loading results showing traffic and transit flows on infrastructure.
 
-- **Individual Trips File**  
-  `indivTripData_[iteration].csv`  
-  Logs individual trip details.
+- **Highway Assignment**: Link volumes, speeds, and congestion levels by time period
+- **Transit Assignment**: Ridership by line and segment, capacity utilization
+- **Network Performance**: System-wide metrics and convergence statistics
+- **Validation Data**: Count comparisons and screenline analysis
 
-- **Joint Tours File**  
-  `jointTourData_[iteration].csv`  
-  Captures joint tour information.
+[→ View detailed assignment output documentation](output/assignment.md)
 
-- **Joint Trips File**  
-  `jointTripData_[iteration].csv`  
-  Details joint trip data.
+### [Commercial Vehicle Outputs](output/commercial.md)
+Freight and service vehicle demand modeling results.
 
-- **Resimulated Transit Trips File**  
-  `ctramp_output/indivTripDataResim_[iteration]_[inner_iteration].csv`  
-  Contains resimulated transit trip data.
+- **Truck Trip Generation**: Employment and household-based commercial trip production
+- **Trip Distribution**: Origin-destination patterns by truck class and commodity
+- **Temporal Distribution**: Time-of-day and directional flow patterns
+- **Special Generators**: Airport, port, and industrial facility freight movements
 
-- **Unconstrained Parking Demand File**  
-  `ctramp_output/unconstrainedPNRDemand_[iteration]0.csv`  
-  Shows parking demand without constraints.
+[→ View detailed commercial vehicle output documentation](output/commercial.md)
 
-- **Constrained Parking Demand File**  
-  `ctramp_output/constrainedPNRDemand_[iteration]1.csv`  
-  Displays parking demand with constraints.
+### [Summary Reports](output/summaries.md)
+Aggregated performance metrics and validation summaries.
 
-- **Tour and Trip Mode Codes**  
-  Provides codes for different travel modes.
+- **Model Performance**: System-wide travel and network performance indicators
+- **Geographic Summaries**: County and jurisdiction-level travel patterns
+- **Market Segments**: Travel behavior by income, auto ownership, and demographics
+- **Accessibility Analysis**: Employment and services accessibility by mode
 
-- **Time Period Codes**  
-  Lists codes representing various time periods.
+[→ View detailed summary report documentation](output/summaries.md)
 
-## Assignment Outputs
+## Quick Reference
 
-Assignment outputs reflect the results of network assignments.
+### File Locations
+```
+model_run_directory/
+├── skims/                    # All skim matrices (OMX and text files)
+├── ctramp_output/           # CTRAMP microsimulation results
+├── hwy/                     # Highway assignment networks and summaries
+├── trn/                     # Transit assignment results
+├── demand_matrices/         # Trip matrices by purpose and mode
+├── output_summaries/        # Aggregated reports and validation
+└── logs/                    # Model run logs and diagnostics
+```
 
-- **Highway Assignment Networks**  
-  - `hwy\maz_preload_[TimePeriod].net`  
-  - `hwy\load[TimePeriod].net`  
-  - Other intermediate and final highway network assignment files.
+### Common File Formats
 
-- **Transit Assignment Tables**  
-  - `trn\boardings_by_line_[TimePeriod].txt`  
-  - `trn\boardings_by_segment_[TimePeriod].txt`  
-  Detail transit boardings by line and by segment.
+- **OMX Files** (.omx): Matrix data - use OpenMatrix library
+- **CSV Files** (.csv): Tabular data - any spreadsheet software
+- **Emme Networks** (.net): Network files - Emme software required
+- **Text Files** (.txt): Various formatted outputs
+
+### Time Periods
+All time-specific outputs are generated for five periods:
+
+- **EA**: Early AM (3:00-6:00)
+- **AM**: AM Peak (6:00-10:00)  
+- **MD**: Midday (10:00-15:00)
+- **PM**: PM Peak (15:00-19:00)
+- **EV**: Evening (19:00-3:00)
+
+### Model Iterations
+Files include iteration numbers reflecting the feedback process:
+
+- **Iteration 1**: Sample population, preliminary skims
+- **Iteration 2**: Full population, updated network conditions
+- **Iteration 3**: Final iteration with converged network performance
+
+## Usage Guidelines
+
+### File Size Considerations
+- Full model outputs can exceed 10 GB
+- OMX files are compressed and efficient for large matrices
+- Consider sampling trip files for analysis (except final validation)
+
+### Coordinate Systems
+- **TAZ Level**: Regional analysis (1,454 zones)
+- **MAZ Level**: Local access analysis (40,000+ zones)  
+- **Geographic**: California State Plane Zone III
+
+### Quality Assurance
+- Validation outputs compare model results with observed data
+- Convergence logs document assignment and feedback stability
+- Summary reports highlight key performance indicators
+
+### Analysis Applications
+- **Planning**: Long-range transportation plan development
+- **Project Evaluation**: Transportation investment analysis  
+- **Policy Assessment**: Pricing, land use, and service change impacts
+- **Equity Analysis**: Transportation access and burden evaluation
