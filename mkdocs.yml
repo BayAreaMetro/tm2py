@@ -60,7 +60,8 @@ nav:
     - Documentation: contributing/documentation.md
 
 plugins:
-  - autorefs
+  # Temporarily disabled to avoid dependency issues:
+  # - autorefs
   - awesome-pages
   # Temporarily disable mkdocstrings to avoid GDAL dependency issues
   # - mkdocstrings:

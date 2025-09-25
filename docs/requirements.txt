@@ -1,13 +1,17 @@
-# This file is used to install the dependencies for the documentation.
-# It is used by the GitHub Actions workflow to build the documentation.
-markdown == 3.3.1 # needs to be compatible with mkdocs, which needs > markdown 3.2.1
-mike
-mkdocs
-mkdocs-autorefs
+# Minimal requirements to avoid GDAL dependency conflicts
+# Only essential packages for building documentation
+mkdocs>=1.4.0
+mkdocs-material>=9.0.0
+mkdocs-mermaid2-plugin>=0.6.0
+
+# Basic plugins that don't have problematic dependencies  
 mkdocs-awesome-pages-plugin
-mkdocs-jupyter
-mkdocs-macros-plugin
-mkdocs-material
-mkdocstrings
-mkdocstrings-python
-mkdocs-mermaid2-plugin
+
+# Temporarily removed to avoid GDAL/geospatial dependency issues:
+# markdown == 3.3.1  
+# mike
+# mkdocs-autorefs  
+# mkdocs-jupyter
+# mkdocs-macros-plugin
+# mkdocstrings
+# mkdocstrings-python
