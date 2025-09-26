@@ -1,4 +1,4 @@
-# CT-RAMP: Comprehensive Travel Model
+﻿# CT-RAMP: Comprehensive Travel Model
 
 !!! info "About CT-RAMP"
     CT-RAMP (Comprehensive Travel-demand forecasting Research And Modeling Platform) is the activity-based travel demand modeling system used in Travel Model Two. It simulates individual and household travel decisions through a comprehensive set of choice models that represent realistic behavioral decision-making processes.
@@ -20,7 +20,7 @@
 CT-RAMP recognizes that **travel is derived from activities**, not trips. This fundamental insight leads to:
 
 - **Realistic Behavior**: Models how people actually make activity and travel decisions
-- **Household Coordination**: Captures joint decision-making within households  
+- **Household Coordination**: Captures joint decision-making within households
 - **Time-Space Integration**: Explicitly considers temporal and spatial constraints
 - **Policy Sensitivity**: Responds to detailed policy variables and scenarios
 
@@ -32,7 +32,7 @@ graph TD
     A[Population Synthesis] --> B[Auto Ownership]
     B --> C[Daily Activity Pattern]
     C --> D[Mandatory Tours]
-    C --> E[Joint Tours]  
+    C --> E[Joint Tours]
     D --> F[Individual Tours]
     E --> F
     F --> G[Tour Destination]
@@ -42,36 +42,48 @@ graph TD
     J --> K[Stop Location]
     K --> L[Trip Mode Choice]
     D --> M[At-Work Subtours]
-    
+
     subgraph "Long-term Choices"
         B
     end
-    
+
     subgraph "Daily Planning"
         C
         D
         E
         F
     end
-    
+
     subgraph "Tour Characteristics"
         G
         H
         I
     end
-    
+
     subgraph "Trip Details"
         J
         K
         L
         M
     end
-    
+
     style A fill:#e1f5fe
     style C fill:#f3e5f5
     style G fill:#e8f5e8
     style L fill:#fff3e0
 ```
+
+## Technical Framework
+
+### Core Systems
+
+#### Utility Expression Calculator (UEC) Framework
+CT-RAMP's mathematical foundation for all choice modeling:
+
+- **[UEC Framework Documentation](uec-framework.md)** - Comprehensive guide to utility calculation system
+- **Flexible Specification**: Mathematical expressions for choice utilities through Excel control files
+- **Model Integration**: Seamless interface with Java choice model implementations
+- **Performance Optimization**: Efficient calculation for large-scale microsimulation
 
 ## Model Components by Category
 
@@ -83,7 +95,7 @@ These models establish the context for daily travel decisions:
 | [**Auto Ownership**](components/auto-ownership.md) | Vehicle availability decisions | Household auto ownership level |
 | [**Daily Activity Pattern**](components/cdap.md) | Household activity coordination | Person-level activity patterns |
 
-### Tour Generation Models  
+### Tour Generation Models
 These models determine what tours each person will make:
 
 | Component | Purpose | Key Outputs |
@@ -111,16 +123,6 @@ These models add detail about intermediate stops and trip characteristics:
 | [**Trip Mode Choice**](components/trip-mode-choice.md) | Trip-level mode decisions | Individual trip modes |
 | [**At-Work Subtours**](components/at-work-subtours.md) | Tours during work hours | Subtour characteristics |
 
-## Technical Framework
-
-### Utility Expression Calculator (UEC) System
-CT-RAMP's choice models are powered by a sophisticated [**UEC Framework**](uec/index.md):
-
-- **0 UEC Classes**: Comprehensive utility calculation system
-- **Flexible Specification**: Mathematical expressions for choice utilities
-- **Parameter Management**: Organized coefficient storage and access
-- **Logsum Generation**: Accessibility measures for nested models
-
 ### Execution and Coordination
 The [**Execution System**](execution/index.md) manages:
 
@@ -135,15 +137,15 @@ The [**Execution System**](execution/index.md) manages:
 Modern CT-RAMP implementations in the Bay Area handle:
 
 - **Population**: 1+ million households, 2.5+ million persons
-- **Geography**: 40,000+ micro-zones, 1,500+ traffic zones  
+- **Geography**: 40,000+ micro-zones, 1,500+ traffic zones
 - **Travel**: 10+ million tours, 25+ million trips annually
 - **Time Resolution**: Half-hourly periods with peak spreading
 
 ### Data Requirements
 Comprehensive input data enables realistic microsimulation:
 
-- **[Input Data](data/inputs.md)**: Population, land use, networks, accessibility
-- **[Output Data](data/outputs.md)**: Individual travel patterns, household coordination
+- **[Input Data](../input/index.md)**: Population, land use, networks, accessibility
+- **[Output Data](../output/ctramp.md)**: Individual travel patterns, household coordination
 - **[Validation Data](data/validation.md)**: Observed behavior for calibration
 
 ## Integration with Travel Model Two
@@ -166,17 +168,17 @@ CT-RAMP operates as the demand forecasting component in Travel Model Two:
 1. **[System Overview](overview.md)** - Understand activity-based modeling concepts
 2. **[Model Components](components/index.md)** - Learn what each model does
 3. **[Execution Workflow](execution/workflow.md)** - Run models step-by-step
-4. **[Output Analysis](data/outputs.md)** - Interpret and use model results
+4. **[Output Analysis](../output/ctramp.md)** - Interpret and use model results
 
-### For Model Developers  
+### For Model Developers
 1. **[Architecture](architecture.md)** - Technical implementation details
-2. **[UEC Framework](uec/framework.md)** - Utility calculation system
+2. **[UEC Framework](uec-framework.md)** - Utility calculation system
 3. **[Configuration](execution/configuration.md)** - Model setup and customization
 4. **[Examples](examples/index.md)** - Development templates and patterns
 
 ### For Policy Analysts
 1. **[Overview](overview.md)** - Behavioral foundations and policy sensitivity
-2. **[Validation](data/validation.md)** - Model performance and limitations  
+2. **[Validation](data/validation.md)** - Model performance and limitations
 3. **[Examples](examples/index.md)** - Analysis templates and use cases
 4. **[Troubleshooting](execution/troubleshooting.md)** - Common issues and solutions
 
@@ -184,7 +186,7 @@ CT-RAMP operates as the demand forecasting component in Travel Model Two:
 
 ### Documentation
 - **[Comprehensive Guides](components/index.md)**: Detailed model component documentation
-- **[Technical Reference](uec/index.md)**: UEC framework and implementation details
+- **[UEC Framework](uec-framework.md)**: Utility calculation system and implementation details
 - **[User Examples](examples/index.md)**: Practical analysis templates and workflows
 
 ### Quality Assurance
@@ -195,10 +197,10 @@ CT-RAMP operates as the demand forecasting component in Travel Model Two:
 ---
 
 !!! tip "Next Steps"
-    - **New to CT-RAMP?** → [System Overview](overview.md)
-    - **Ready to run models?** → [Execution Workflow](execution/workflow.md)  
-    - **Need technical details?** → [Architecture](architecture.md)
-    - **Want examples?** → [Usage Examples](examples/index.md)
+    - **New to CT-RAMP?**  [System Overview](overview.md)
+    - **Ready to run models?**  [Execution Workflow](execution/workflow.md)
+    - **Need technical details?**  [Architecture](architecture.md) or [UEC Framework](uec-framework.md)
+    - **Want examples?**  [Usage Examples](examples/index.md)
 
 !!! warning "Model Complexity"
     CT-RAMP is a sophisticated microsimulation system. We recommend starting with the [System Overview](overview.md) to understand the behavioral foundations before diving into technical implementation details.

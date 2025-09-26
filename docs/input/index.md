@@ -1,24 +1,39 @@
 # Input Files
 
+## Overview
+
+The CT-RAMP travel demand model requires comprehensive input data covering transportation networks, land use patterns, demographic characteristics, and travel behavior. This page provides an overview of all required input files and their organization.
+
 ## Input File List
 
-The table below contains brief descriptions of the input files required to execute the travel model. 
+The table below contains brief descriptions of the input files required to execute the travel model.
 
-| **File name** | **Purpose** | **Folder location** | **File type** | **File format** |
-|---------------|-------------|---------------------|---------------|-----------------|
-| `mtc_final_network.net` | Highway, bike, walk network | hwy\ | [Citilabs Cube](http://citilabs.com/products/cube)| [Roadway Network](network.md#roadway-network) |
-| `mazData.csv` | Micro zone data  | landuse\ | CSV | [Micro Zonal Data](landuse.md#micro-zonal-data) |
-| `tazData.csv` | Travel analysis zone data | landuse\ | CSV | [Zonal Data](landuse.md#zonal-data) |
-| `truckFF.dat` | Friction factors for the commercial vehicle distribution models | nonres\ | ASCII | [Truck Distribution](commercial.md#truck-distribution) |
-| `truckkfact.k22.z1454.mat` | "K-factors" for the commercial vehicle distribution models | nonres\ | [Citilabs Cube](http://citilabs.com/products/cube) | [Truck Distribution](commercial.md#truck-distribution) |
-| `truck_kfactors_taz.csv` | "K-factors" for the commercial vehicle distribution models | nonres\ | CSV | [Truck Distribution](commercial.md#truck-distribution) |
-| `ixDailyYYYY.tpp` | Internal-external fixed trip table for year YYYY | nonres\ | [Citilabs Cube](http://citilabs.com/products/cube) | [Fixed Demand](demand.md#fixed-demand) |
-| `IXDaily2006x4.may2208.new` | Internal-external input fixed trip table | nonres\ | [Citilabs Cube](http://citilabs.com/products/cube) | [Fixed Demand](demand.md#fixed-demand) |
-|  `YYYY_fromtoAAA.csv` |  Airport passenger fixed trips for year YYYY and airport AAA  | nonres\ | CSV | [Fixed Demand](demand.md#fixed-demand) |
-| `households.csv` | Synthetic population household file | popsyn\ | CSV | [Synthetic Population](population.md#households) |
-| `persons.csv` | Synthetic population person file | popsyn\ | CSV | [Synthetic Population](population.md#persons) |
-| `transitLines.lin` | Transit lines | trn\transit_lines | [Citilabs Cube](http://citilabs.com/products/cube)| [Transit Network](transit.md#transit-network) |
-| `transitFactors_MMMM.fac` | Cube Public Transport (PT) factor files by transit line haul mode MMMM | trn\transit_support | [Citilabs Cube](http://citilabs.com/products/cube) | [Transit Network](transit.md#transit-network) |
+| **Directory** | **File** | **Purpose** | **File Type** | **Documentation** |
+|---------------|----------|-------------|---------------|------------------|
+| **Highway Network** |||||
+| hwy\ | `complete_network.net` | Highway, bike, walk network | Citilabs Cube | [Roadway Network](network.md#roadway-network) |
+| hwy\ | `tolls.csv` | Toll prices for all facilities and time periods | CSV | [Tolls](network.md#tolls) |
+| hwy\ | `interchange_nodes.csv` | Nodes connected to interchanges | CSV | [Interchanges](network.md#interchanges) |
+| **Land Use Data** |||||
+| landuse\ | `mazData.csv` | Micro Analysis Zone data | CSV | [Micro Zonal Data](landuse.md#micro-analysis-zones-maz-data) |
+| landuse\ | `tazData.csv` | Traffic Analysis Zone data | CSV | [Zonal Data](landuse.md#traffic-analysis-zones-taz-data) |
+| **Population Data** |||||
+| popsyn\ | `households.csv` | Synthetic population household file | CSV | [Households](population.md#households) |
+| popsyn\ | `persons.csv` | Synthetic population person file | CSV | [Persons](population.md#persons) |
+| **Transit Network** |||||
+| trn\ | `transitLines.lin` | Transit lines | Citilabs Cube | [Transit Network](transit.md#transit-network) |
+| trn\ | `station_attribute_data_input.csv` | Station attributes | CSV | [Transit Stations](transit.md#station-attributes) |
+| trn\ | `vehtype.pts` | Vehicle types | Citilabs Cube | [Vehicle Types](transit.md#vehicle-types) |
+| trn\ | `fareMatrix.txt` | Transit fare matrix | Text | [Transit Fares](transit.md#transit-fares) |
+| trn\ | `fares.far` | EMME fare calculations | EMME | [Transit Fares](transit.md#transit-fares) |
+| **Commercial Vehicle Data** |||||
+| nonres\ | `truckFF.dat` | Friction factors for truck distribution | ASCII | [Truck Distribution](commercial.md#truck-distribution) |
+| nonres\ | `truck_kfactors_taz.csv` | K-factors for truck distribution | CSV | [Truck Distribution](commercial.md#truck-distribution) |
+| **Fixed Demand** |||||
+| nonres\ | `ixDaily2015.tpp` | Internal-external fixed trip table | Citilabs Cube | [Fixed Demand](demand.md#fixed-demand) |
+| nonres\ | `ixDaily2015_totals.dbf` | Internal-external total trips | DBF | [Fixed Demand](demand.md#fixed-demand) |
+| nonres\ | `YYYY_fromtoAAA.csv` | Airport passenger fixed trips | CSV | [Fixed Demand](demand.md#fixed-demand) |
+| nonres\ | `ixex_config.dbf` | Station growth rates and commute shares | DBF | [Fixed Demand](demand.md#fixed-demand) |
 
 ## Time Periods
 
