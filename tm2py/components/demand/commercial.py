@@ -257,13 +257,13 @@ class CommercialVehicleTripGeneration(Subcomponent):
         TOTHH, total households
         """
         maz_data_file = self.get_abs_path(
-            self.controller.config.scenario.maz_landuse_file
+            self.controller.config.scenario.landuse_file
         )
         maz_input_data = pd.read_csv(maz_data_file)
         zones = self.component.emme_scenario.zone_numbers
-        maz_input_data = maz_input_data[maz_input_data["TAZ_ORIGINAL"].isin(zones)]
-        taz_input_data = maz_input_data.groupby(["TAZ_ORIGINAL"]).sum()
-        taz_input_data = taz_input_data.sort_values(by="TAZ_ORIGINAL")
+        maz_input_data = maz_input_data[maz_input_data["TAZ"].isin(zones)]
+        taz_input_data = maz_input_data.groupby(["TAZ"]).sum()
+        taz_input_data = taz_input_data.sort_values(by="TAZ")
         # combine categories
         taz_landuse = pd.DataFrame()
         for total_column, sub_categories in _land_use_aggregation.items():
