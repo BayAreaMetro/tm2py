@@ -235,23 +235,22 @@ Transit trips that have been resimulated for capacity constraint modeling and cr
 
 | Code | Mode | Description |
 |------|------|-------------|
-| 1 | DRIVEALONEFREE | Drive alone, free parking |
-| 2 | DRIVEALONEPAY | Drive alone, paid parking |
-| 3 | DRIVETRANSIT | Drive alone to transit (Park & Ride) |
-| 4 | SHARED2FREE | Shared ride 2 person, free parking |
-| 5 | SHARED2PAY | Shared ride 2 person, paid parking |
-| 6 | SHARED2TRANSIT | Shared ride 2 person to transit |
-| 7 | SHARED3FREE | Shared ride 3+ person, free parking |
-| 8 | SHARED3PAY | Shared ride 3+ person, paid parking |
-| 9 | SHARED3TRANSIT | Shared ride 3+ person to transit |
-| 10 | WALK | Walk |
-| 11 | BIKE | Bicycle |
-| 12 | WALK_TRANSIT | Walk-Transit-Walk |
-| 13 | PNR_PERS | Park & Ride (personal vehicle to transit) |
+| 1 | DRIVEALONEFREE | Drive alone, non-toll |
+| 2 | DRIVEALONEPAY | Drive alone, toll |
+| 3 | SHARED2GP | Shared ride 2 person, general purpose lanes (non-toll)|
+| 4 | SHARED2HOV | Shared ride 2 person, HOV-eligible (non-toll) |
+| 5 | SHARED2PAY | Shared ride 2 person, toll (HOV and toll eligible) |
+| 6 | SHARED3GP | Shared ride 3+ person, general purpose lanes (non-toll)|
+| 7 | SHARED3HOV | Shared ride 3+ person, HOV-eligible (non-toll) |
+| 8 | SHARED3PAY | Shared ride 3+ person, toll (HOV and toll eligible) |
+| 9 | WALK | Walk |
+| 10 | BIKE | Bicycle |
+| 11 | WALK_SET | Walk to transit |
+| 12 | PNR_SET | Drive to transit (Park & Ride) |
+| 13 | KNR_PERS | Kiss & Ride (personal vehicle drop-off to transit) |
 | 14 | KNR_TNC | Kiss & Ride (TNC drop-off to transit) |
 | 15 | TAXI | Taxi |
 | 16 | TNC | Transportation Network Company (Uber/Lyft) |
-| 17 | SCHBUS | School bus |
 
 ### Time Period Codes
 
@@ -304,6 +303,32 @@ CT-RAMP uses 40 time periods of 30 minutes each, starting at 3:00 AM:
 
 **At-Work Tours**:
 - `Work-Based`: Tours originating from workplace during work hours
+
+### Trip Destination Purposes
+
+The following destination purposes are found in the individual trip files (`dest_purpose` field), showing the activity at trip destinations:
+
+| Purpose | Description | Typical Share |
+|---------|-------------|---------------|
+| `Home` | Return to home location | ~33% |
+| `Maintenance` | Personal business, medical appointments, banking, etc. | ~11% |
+| `Escort` | Dropping off/picking up household members | ~10% |
+| `Work` | Primary work location | ~10% |
+| `Shop` | Shopping for goods and services | ~9% |
+| `Discretionary` | Recreation, entertainment, personal activities | ~7% |
+| `School` | K-12 educational activities | ~5% |
+| `Eating Out` | Restaurant meals and food services | ~5% |
+| `Visiting` | Social visits, family/friend gatherings | ~5% |
+| `Work-Based` | Work-related activities during work hours | ~1% |
+| `University` | Higher education activities | ~1% |
+| `work related` | Other work-related activities | <1% |
+
+**Notes:**
+- Home is the most common destination as most tours are round-trips
+- Personal activities (Maintenance, Shop, Discretionary, Eating Out) represent major trip attractors
+- Work-related destinations include both primary work locations and work-based activities
+- Escort trips reflect household coordination and dependency relationships
+- Percentages are approximate and vary by scenario and geographic area
 
 ## Model Integration and Validation
 
@@ -396,25 +421,24 @@ Output files include multiple distance/time calculations for validation:
 
 ## Tour and Trip Modes Codes
 
-| Mode | Code | Description |
+| Code | Mode | Description |
 |------|------|-------------|
-| 1 | DRIVEALONEFREE | Drive alone free (non-toll) |
-| 2 | DRIVEALONEPAY | Drive alone pay (toll eligible) |
-| 3 | SHARED2GP | Shared-2 general purpose lanes (non-toll, non-HOV) |
-| 4 | SHARED2HOV | Shared-2 HOV-eligible (non-toll) |
-| 5 | SHARED2PAY | Shared-2 pay (HOV and toll eligible) |
-| 6 | SHARED3GP | Shared 3+ general purpose lanes (non-toll, non-HOV) |
-| 7 | SHARED3HOV | Shared 3+ HOV-eligible (non-toll) |
-| 8 | SHARED3PAY | Shared 3+ pay (HOV and toll eligible) |
+| 1 | DRIVEALONEFREE | Drive alone, non-toll |
+| 2 | DRIVEALONEPAY | Drive alone, toll |
+| 3 | SHARED2GP | Shared ride 2 person, general purpose lanes (non-toll, non-HOV) |
+| 4 | SHARED2HOV | Shared ride 2 person, HOV-eligible (non-toll) |
+| 5 | SHARED2PAY | Shared ride 2 person, toll (HOV and toll eligible) |
+| 6 | SHARED3GP | Shared ride 3+ person, general purpose lanes (non-toll, non-HOV) |
+| 7 | SHARED3HOV | Shared ride 3+ person, HOV-eligible (non-toll) |
+| 8 | SHARED3PAY | Shared ride 3+ person, toll (HOV and toll eligible) |
 | 9 | WALK | Walk |
-| 10 | BIKE | Bike |
-| 11 | WALK_SET | Walk-transit tour, or walk-transit-walk trip |
-| 12 | PNR_SET | Park and Ride transit tour, or PNR-transit-walk if outbound trip, walk-transit-PNR if inbound trip |
-| 13 | KNR_PERS | Kiss and Ride transit tour, or KNR-transit-walk if outbound trip, walk-transit-KNR if inbound trip |
-| 14 | KNR_TNC | KNR tour or trip like above using TNC |
+| 10 | BIKE | Bicycle |
+| 11 | WALK_SET | Walk to transit |
+| 12 | PNR_SET | Drive to transit (Park & Ride) |
+| 13 | KNR_PERS | Kiss & Ride (personal vehicle drop-off to transit) |
+| 14 | KNR_TNC | Kiss & Ride (TNC drop-off to transit) |
 | 15 | TAXI | Taxi |
-| 16 | TNC | Riding using services like Uber or Lyft |
-| 17 | SCHBUS | School bus |
+| 16 | TNC | Transportation Network Company (Uber/Lyft) |
 
 ## Time Period Codes
 
