@@ -1,12 +1,25 @@
-# CT-RAMP Output Files
+# CTRAMP Output Files
 
-The CT-RAMP (Coordinated Travel Regional Activity-based Modeling Platform) produces comprehensive output files during model execution. This document provides detailed information about all CT-RAMP output files, their structure, and their usage in travel demand modeling.
+TM2 produces the following tour and trip microsimulation trip lists for both individual and joint travel. The files output are listed below. The modes are defined in [Tour and Trip Modes](#tour-and-trip-modes-codes) below.
 
-## Overview
+**Important Note**: It is important to consider occupancy when reviewing these tables. The model generates person trips. A mode is chosen for each person trip, for personal vehicle travel this could be SOV, HOV2, or HOV3+. At an aggregate level, 100 HOV2 person trips must result in 50 vehicle trips. While this is true at an aggregate level, it may not be possible to pair up all HOV2 person trips produced in the model. But the model produces enough HOV2 person trips to match the target mode share. When reviewing the joint table remember that these records include all travelers. So only one row per trip, as opposed to one row per person or traveler.
 
-CT-RAMP generates microsimulation trip lists for both individual and joint travel, along with comprehensive household and person-level model results. All outputs are stored in the `ctramp_output` directory within the project folder. The model produces both tour-level and trip-level data, capturing the hierarchical nature of travel decision-making in activity-based models.
+## Main Output Files
 
-**Important Note**: The model generates person trips with individual mode choices. For shared ride modes, 100 HOV2 person trips should result in approximately 50 vehicle trips at the aggregate level, though individual pairing may not be perfect. Joint travel files represent entire travel parties (one row per trip), while individual files represent person-level decisions.
+- Accessibilities - `ctramp_output/accessibilities.csv`
+- PreAutoOwnership - `ctramp_output/aoResults_pre.csv`
+- AutoOwnership - `ctramp_output/aoResults.csv`
+- Household Data - `ctramp_output/householdData_[iteration].csv`
+- Person Data - `ctramp_output/personData_[iteration].csv`
+- Work and School Location Choice - `ctramp_output/wsLocResults_[iteration].csv`
+- Shadow Pricing - `ctramp_output/ShadowPricingOutput_[work/school]_0.csv`
+- Individual Tours - `ctramp_output/indivTourData_[iteration].csv`
+- Individual Trips - `ctramp_output/indivTripData_[iteration].csv`
+- Joint Tours – `ctramp_output/jointTourData_[iteration].csv`
+- Joint Trips - `ctramp_output/jointTripData_[iteration].csv`
+- Resimulated Transit Trips - `ctramp_output/indivTripDataResim_[iteration]_[inner_iteration].csv`
+- Unconstrained Parking Demand - `ctramp_output/unconstrainedPNRDemand_[iteration]0.csv`
+- Constrained Parking Demand - `ctramp_output/constrainedPNRDemand_[iteration]1.csv`
 
 ## Core Output Files
 
@@ -380,5 +393,72 @@ Output files include multiple distance/time calculations for validation:
 - Monitor sample rates and processing times
 - Track memory usage for large populations
 - Optimize file I/O for repeated analysis
+
+## Tour and Trip Modes Codes
+
+| Mode | Code | Description |
+|------|------|-------------|
+| 1 | DRIVEALONEFREE | Drive alone free (non-toll) |
+| 2 | DRIVEALONEPAY | Drive alone pay (toll eligible) |
+| 3 | SHARED2GP | Shared-2 general purpose lanes (non-toll, non-HOV) |
+| 4 | SHARED2HOV | Shared-2 HOV-eligible (non-toll) |
+| 5 | SHARED2PAY | Shared-2 pay (HOV and toll eligible) |
+| 6 | SHARED3GP | Shared 3+ general purpose lanes (non-toll, non-HOV) |
+| 7 | SHARED3HOV | Shared 3+ HOV-eligible (non-toll) |
+| 8 | SHARED3PAY | Shared 3+ pay (HOV and toll eligible) |
+| 9 | WALK | Walk |
+| 10 | BIKE | Bike |
+| 11 | WALK_SET | Walk-transit tour, or walk-transit-walk trip |
+| 12 | PNR_SET | Park and Ride transit tour, or PNR-transit-walk if outbound trip, walk-transit-PNR if inbound trip |
+| 13 | KNR_PERS | Kiss and Ride transit tour, or KNR-transit-walk if outbound trip, walk-transit-KNR if inbound trip |
+| 14 | KNR_TNC | KNR tour or trip like above using TNC |
+| 15 | TAXI | Taxi |
+| 16 | TNC | Riding using services like Uber or Lyft |
+| 17 | SCHBUS | School bus |
+
+## Time Period Codes
+
+| Period | Time Range |
+|--------|------------|
+| 1 | 03:00 AM to 05:00 AM |
+| 2 | 05:00 AM to 05:30 AM |
+| 3 | 05:30 AM to 06:00 AM |
+| 4 | 06:00 AM to 06:30 AM |
+| 5 | 06:30 AM to 07:00 AM |
+| 6 | 07:00 AM to 07:30 AM |
+| 7 | 07:30 AM to 08:00 AM |
+| 8 | 08:00 AM to 08:30 AM |
+| 9 | 08:30 AM to 09:00 AM |
+| 10 | 09:00 AM to 09:30 AM |
+| 11 | 09:30 AM to 10:00 AM |
+| 12 | 10:00 AM to 10:30 AM |
+| 13 | 10:30 AM to 11:00 AM |
+| 14 | 11:00 AM to 11:30 AM |
+| 15 | 11:30 AM to 12:00 PM |
+| 16 | 12:00 PM to 12:30 PM |
+| 17 | 12:30 PM to 01:00 PM |
+| 18 | 01:00 PM to 01:30 PM |
+| 19 | 01:30 PM to 02:00 PM |
+| 20 | 02:00 PM to 02:30 PM |
+| 21 | 02:30 PM to 03:00 PM |
+| 22 | 03:00 PM to 03:30 PM |
+| 23 | 03:30 PM to 04:00 PM |
+| 24 | 04:00 PM to 04:30 PM |
+| 25 | 04:30 PM to 05:00 PM |
+| 26 | 05:00 PM to 05:30 PM |
+| 27 | 05:30 PM to 06:00 PM |
+| 28 | 06:00 PM to 06:30 PM |
+| 29 | 06:30 PM to 07:00 PM |
+| 30 | 07:00 PM to 07:30 PM |
+| 31 | 07:30 PM to 08:00 PM |
+| 32 | 08:00 PM to 08:30 PM |
+| 33 | 08:30 PM to 09:00 PM |
+| 34 | 09:00 PM to 09:30 PM |
+| 35 | 09:30 PM to 10:00 PM |
+| 36 | 10:00 PM to 10:30 PM |
+| 37 | 10:30 PM to 11:00 PM |
+| 38 | 11:00 PM to 11:30 PM |
+| 39 | 11:30 PM to 12:00 AM |
+| 40 | 12:00 AM to 03:00 AM |
 
 This comprehensive output specification enables detailed analysis of travel behavior patterns, model validation, and policy scenario evaluation using the CT-RAMP modeling framework.
