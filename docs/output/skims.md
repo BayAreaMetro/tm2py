@@ -5,7 +5,7 @@ Travel Model Two generates comprehensive level-of-service (LOS) matrices called 
 ## Highway Skims
 
 ### Highway Skim Matrices (OMX Format)
-**File Pattern**: `skims/HWYSKM[TimePeriod]_taz.omx`
+**File Pattern**: `skim_matrices/highway/HWYSKM[TimePeriod]_taz.omx`
 
 Contains multiple matrices with highway travel impedances between Traffic Analysis Zones (TAZs):
 
@@ -22,9 +22,26 @@ Contains multiple matrices with highway travel impedances between Traffic Analys
 - `DATOLL` - Drive Alone with toll facilities
 - `S2TOLL` - Shared 2-person with toll facilities  
 - `S3TOLL` - Shared 3+ person with toll facilities
+- `TRK` - Truck
+- `TRKTOLL` - Truck with toll facilities
+- `LRGTRK` - Large Truck
+- `LRGTRKTOLL` - Large Truck with toll facilities
+
+**Skim Components**:
+- `time` - pure travel time in minutes
+- `dist` - distance in miles
+- `cost` - cost 
+- `hovdist` - distance on HOV facilities
+- `tolldist` - distance on toll facilities
+- `freeflowtime` - free flow travel time in minutes
+- `bridgetoll_{vehicle}` - bridge tolls, {vehicle} refers to toll group
+- `valuetoll_{vehicle}` - other, non-bridge tolls, {vehicle} refers to toll group
+- `rlbty` - Reliability
+- `autotime` - Auto Time
+
 
 ### MAZ-to-MAZ Highway Skims
-**File Pattern**: `skims/maz_to_maz_skims_[period].csv`
+**File Pattern**: `skim_matrices/highway/HWYSKIM_MAZ_MAZ_DA.csv`
 
 **Format**: CSV with columns:
 ```
@@ -53,39 +70,40 @@ FTAZ,MODE,PERIOD,TTAP,TMAZ,TTAZ,DTIME,DDIST,DTOLL,WDIST
 ## Transit Skims
 
 ### Transit Skim Matrices (OMX Format)
-**File Pattern**: `skims/transit_skims_[TimePeriod]_[TransitClass].omx`
+**File Pattern**: `skims/trnskm[TimePeriod]_[TransitClass].omx`
 
 **Transit Classes**:
-- `wlk_loc` - Walk to local transit
-- `wlk_lrf` - Walk to light rail/ferry
-- `wlk_exp` - Walk to express transit
-- `wlk_hvy` - Walk to heavy rail
-- `wlk_com` - Walk to commuter rail
-- `drv_loc` - Drive to local transit
-- `drv_lrf` - Drive to light rail/ferry
-- `drv_exp` - Drive to express transit
-- `drv_hvy` - Drive to heavy rail
-- `drv_com` - Drive to commuter rail
+- `WLK_TRN_WALK` - Walk to and from transit
+- `PNR_TRN_WLK` - Drive to transit (Park and Ride) and Walk from transit
+- `WLK_TRN_PNR` - Walk to transit and Drive from transit
+- `KNR_TRN_WLK` - Kiss N Ride to Transit (Drop Off) and walk from transit
+- `WLK_TRN_KNR` - Walk from transit and kiss n ride from transit (Pick Up)
 
 **Skim Components**:
 - `IWAIT` - Initial wait time
 - `XWAIT` - Transfer wait time
+- `WAIT` - Total wait time
 - `FARE` - Transit fare cost
 - `BOARDS` - Number of boardings
 - `WAUX` - Walk auxiliary time
 - `DTIME` - Drive access time
 - `DDIST` - Drive access distance
+- `IVT` - Total in-vehicle time
+- `IN_VEHICLE_COST` - In-vehicle cost
 - `WACC` - Walk access time
 - `WEGR` - Walk egress time
-- `IVT` - Total in-vehicle time
 - `CROWD` - Crowding penalty (if enabled)
+- `XBOATIME` - Transfer Boarding Time Penalty
+- `DTOLL` - Drive access/egress toll price
+- `TRIM` -  Used to Trim demand
 
 **Mode-Specific In-Vehicle Times**:
-- `IVTBUS` - Bus in-vehicle time
-- `IVTLRT` - Light rail in-vehicle time
+- `IVTCOM` - Commuter rail in-vehicle time
+- `IVTEXP` - Express bus in-vehicle time
 - `IVTFRY` - Ferry in-vehicle time
-- `IVTHSR` - Heavy rail in-vehicle time
-- `IVTCMR` - Commuter rail in-vehicle time
+- `IVTHVY` - Heavy rail in-vehicle time
+- `IVTLOC` - Local bus in-vehicle timee
+- `IVTLTR` - Light rail in-vehicle time
 
 ### Congested Transit Skims (Optional)
 When congested transit assignment is enabled, additional skim components:
@@ -98,13 +116,10 @@ When congested transit assignment is enabled, additional skim components:
 ### Pedestrian Distance Skims
 **Files**:
 - `skims/ped_distance_maz_maz.txt` - MAZ to MAZ walking distances
-- `skims/ped_distance_maz_tap.txt` - MAZ to Transit Access Point distances
-- `skims/ped_distance_tap_tap.txt` - Transit Access Point to Transit Access Point
 
 ### Bicycle Distance Skims
 **Files**:
 - `skims/bike_distance_maz_maz.txt` - MAZ to MAZ cycling distances
-- `skims/bike_distance_maz_tap.txt` - MAZ to Transit Access Point cycling distances
 - `skims/bike_distance_taz_taz.txt` - TAZ to TAZ cycling distances
 
 **Format**: CSV with columns:
@@ -124,7 +139,7 @@ All skim matrices are generated for these time periods:
 ## Usage Notes
 
 - **OMX Files**: Use the OpenMatrix Python library or Emme to read OMX format files
-- **Matrix Names**: Follow the pattern `[SkimType]_[VehicleType]_[TimePeriod]`
+- **Matrix Names**: Follow the pattern `[TimePeriod]_[VehicleType]_[SkimComponent]`
 - **Zone Systems**: TAZ-based for regional analysis, MAZ-based for local access analysis
 - **Units**: Time in minutes, distance in miles, costs in dollars (2000$)
 - **Missing Values**: Large values (>1e19) indicate no connection between zones
