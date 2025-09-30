@@ -16,6 +16,7 @@ Contains multiple matrices with highway travel impedances between Traffic Analys
 - **Generalized Cost** - Combined time and cost impedance
 
 **Vehicle Types Included**:
+
 | Vehicle | Description|
 |---|---|
 |`DA`| Drive Alone|
@@ -30,6 +31,7 @@ Contains multiple matrices with highway travel impedances between Traffic Analys
 | `LRGTRKTOLL` | Large Truck with toll facilities|
 
 **Skim Components**:
+
 | Component| Description|
 |---|---|
 | `time` | pure travel time in minutes
@@ -77,6 +79,7 @@ FTAZ,MODE,PERIOD,TTAP,TMAZ,TTAZ,DTIME,DDIST,DTOLL,WDIST
 **File Pattern**: `skims/trnskm[TimePeriod]_[TransitClass].omx`
 
 **Transit Classes**:
+
 |Transit Class| Description|
 |---|---|
 | `WLK_TRN_WALK` | Walk to and from transit
@@ -86,6 +89,7 @@ FTAZ,MODE,PERIOD,TTAP,TMAZ,TTAZ,DTIME,DDIST,DTOLL,WDIST
 | `WLK_TRN_KNR` | Walk from transit and kiss n ride from transit (Pick Up)
 
 **Skim Components**:
+
 |Components| Description|
 |---|---|
 | `IWAIT` | Initial wait time
@@ -106,6 +110,7 @@ FTAZ,MODE,PERIOD,TTAP,TMAZ,TTAZ,DTIME,DDIST,DTOLL,WDIST
 | `TRIM` |  Used to Trim demand
 
 **Mode-Specific In-Vehicle Times**:
+
 |Mode|Description|
 |---|---|
 | `IVTCOM` | Commuter rail in-vehicle time
@@ -116,7 +121,9 @@ FTAZ,MODE,PERIOD,TTAP,TMAZ,TTAZ,DTIME,DDIST,DTOLL,WDIST
 | `IVTLTR` | Light rail in-vehicle time
 
 ### Congested Transit Skims (Optional)
+
 When congested transit assignment is enabled, additional skim components:
+
 * `LINKREL` - Link reliability
 * `EAWT` - Extra added wait time
 * `CAPPEN` - Capacity penalty
@@ -125,10 +132,12 @@ When congested transit assignment is enabled, additional skim components:
 
 ### Pedestrian Distance Skims
 **Files**:
+
 - `skims/ped_distance_maz_maz.txt` - MAZ to MAZ walking distances
 
 ### Bicycle Distance Skims
 **Files**:
+
 - `skims/bike_distance_maz_maz.txt` - MAZ to MAZ cycling distances
 - `skims/bike_distance_taz_taz.txt` - TAZ to TAZ cycling distances
 
@@ -140,6 +149,7 @@ from_zone,to_zone,dist
 ## Time Periods
 
 All skim matrices are generated for these time periods:
+
 - `EA` - Early AM (3:00-6:00)
 - `AM` - AM Peak (6:00-10:00)
 - `MD` - Midday (10:00-15:00)
