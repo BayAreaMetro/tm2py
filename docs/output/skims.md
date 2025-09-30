@@ -16,28 +16,32 @@ Contains multiple matrices with highway travel impedances between Traffic Analys
 - **Generalized Cost** - Combined time and cost impedance
 
 **Vehicle Types Included**:
-- `DA` - Drive Alone
-- `S2` - Shared 2-person
-- `S3` - Shared 3+ person
-- `DATOLL` - Drive Alone with toll facilities
-- `S2TOLL` - Shared 2-person with toll facilities  
-- `S3TOLL` - Shared 3+ person with toll facilities
-- `TRK` - Truck
-- `TRKTOLL` - Truck with toll facilities
-- `LRGTRK` - Large Truck
-- `LRGTRKTOLL` - Large Truck with toll facilities
+| Vehicle | Description|
+|---|---|
+|`DA`| Drive Alone|
+|`S2`| Shared 2-person|
+|`S3` | Shared 3+ person|
+| `DATOLL`| Drive Alone with toll facilities|
+| `S2TOLL` | Shared 2-person with toll facilities|  
+| `S3TOLL` | Shared 3+ person with toll facilities|
+| `TRK` | Truck|
+| `TRKTOLL` | Truck with toll facilities|
+| `LRGTRK` | Large Truck|
+| `LRGTRKTOLL` | Large Truck with toll facilities|
 
 **Skim Components**:
-- `time` - pure travel time in minutes
-- `dist` - distance in miles
-- `cost` - cost 
-- `hovdist` - distance on HOV facilities
-- `tolldist` - distance on toll facilities
-- `freeflowtime` - free flow travel time in minutes
-- `bridgetoll_{vehicle}` - bridge tolls, {vehicle} refers to toll group
-- `valuetoll_{vehicle}` - other, non-bridge tolls, {vehicle} refers to toll group
-- `rlbty` - Reliability
-- `autotime` - Auto Time
+| Component| Description|
+|---|---|
+| `time` | pure travel time in minutes
+| `dist` | distance in miles
+| `cost` | cost 
+| `hovdist` | distance on HOV facilities
+| `tolldist` | distance on toll facilities
+| `freeflowtime` | free flow travel time in minutes
+| `bridgetoll_{vehicle}` | bridge tolls, {vehicle} refers to toll group
+| `valuetoll_{vehicle}` | other, non-bridge tolls, {vehicle} refers to toll group
+| `rlbty` | Reliability
+| `autotime`| Auto Time
 
 
 ### MAZ-to-MAZ Highway Skims
@@ -73,43 +77,49 @@ FTAZ,MODE,PERIOD,TTAP,TMAZ,TTAZ,DTIME,DDIST,DTOLL,WDIST
 **File Pattern**: `skims/trnskm[TimePeriod]_[TransitClass].omx`
 
 **Transit Classes**:
-- `WLK_TRN_WALK` - Walk to and from transit
-- `PNR_TRN_WLK` - Drive to transit (Park and Ride) and Walk from transit
-- `WLK_TRN_PNR` - Walk to transit and Drive from transit
-- `KNR_TRN_WLK` - Kiss N Ride to Transit (Drop Off) and walk from transit
-- `WLK_TRN_KNR` - Walk from transit and kiss n ride from transit (Pick Up)
+|Transit Class| Description|
+|---|---|
+| `WLK_TRN_WALK` | Walk to and from transit
+| `PNR_TRN_WLK` | Drive to transit (Park and Ride) and Walk from transit
+| `WLK_TRN_PNR` | Walk to transit and Drive from transit
+| `KNR_TRN_WLK` | Kiss N Ride to Transit (Drop Off) and walk from transit
+| `WLK_TRN_KNR` | Walk from transit and kiss n ride from transit (Pick Up)
 
 **Skim Components**:
-- `IWAIT` - Initial wait time
-- `XWAIT` - Transfer wait time
-- `WAIT` - Total wait time
-- `FARE` - Transit fare cost
-- `BOARDS` - Number of boardings
-- `WAUX` - Walk auxiliary time
-- `DTIME` - Drive access time
-- `DDIST` - Drive access distance
-- `IVT` - Total in-vehicle time
-- `IN_VEHICLE_COST` - In-vehicle cost
-- `WACC` - Walk access time
-- `WEGR` - Walk egress time
-- `CROWD` - Crowding penalty (if enabled)
-- `XBOATIME` - Transfer Boarding Time Penalty
-- `DTOLL` - Drive access/egress toll price
-- `TRIM` -  Used to Trim demand
+|Components| Description|
+|---|---|
+| `IWAIT` | Initial wait time
+| `XWAIT` | Transfer wait time
+| `WAIT` | Total wait time
+| `FARE` | Transit fare cost
+| `BOARDS` | Number of boardings
+| `WAUX` | Walk auxiliary time
+| `DTIME` | Drive access time
+| `DDIST` | Drive access distance
+| `IVT` | Total in-vehicle time
+| `IN_VEHICLE_COST` | In-vehicle cost
+| `WACC` | Walk access time
+| `WEGR` | Walk egress time
+| `CROWD` | Crowding penalty (if enabled)
+| `XBOATIME` | Transfer Boarding Time Penalty
+| `DTOLL` | Drive access/egress toll price
+| `TRIM` |  Used to Trim demand
 
 **Mode-Specific In-Vehicle Times**:
-- `IVTCOM` - Commuter rail in-vehicle time
-- `IVTEXP` - Express bus in-vehicle time
-- `IVTFRY` - Ferry in-vehicle time
-- `IVTHVY` - Heavy rail in-vehicle time
-- `IVTLOC` - Local bus in-vehicle timee
-- `IVTLTR` - Light rail in-vehicle time
+|Mode|Description|
+|---|---|
+| `IVTCOM` | Commuter rail in-vehicle time
+| `IVTEXP` | Express bus in-vehicle time
+| `IVTFRY` | Ferry in-vehicle time
+| `IVTHVY` | Heavy rail in-vehicle time
+| `IVTLOC` | Local bus in-vehicle timee
+| `IVTLTR` | Light rail in-vehicle time
 
 ### Congested Transit Skims (Optional)
 When congested transit assignment is enabled, additional skim components:
-- `LINKREL` - Link reliability
-- `EAWT` - Extra added wait time
-- `CAPPEN` - Capacity penalty
+* `LINKREL` - Link reliability
+* `EAWT` - Extra added wait time
+* `CAPPEN` - Capacity penalty
 
 ## Active Mode Skims
 
