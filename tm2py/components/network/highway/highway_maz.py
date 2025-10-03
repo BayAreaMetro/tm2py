@@ -223,7 +223,7 @@ class AssignMAZSPDemand(Component):
         )
         network = self._network
         # maz data
-        # maz_file = self.get_abs_path(self.controller.config.scenario.maz_landuse_file)
+        # maz_file = self.get_abs_path(self.controller.config.scenario.landuse_file)
         # maz_df = pd.read_csv(maz_file)
         # maz_county_dict = dict(zip(maz_df["MAZ_ORIGINAL"], maz_df["CountyName"]))
         # NOTE: every maz must have a valid #node_county
