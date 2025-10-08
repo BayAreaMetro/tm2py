@@ -130,6 +130,7 @@ class AcceptanceCriteriaProcessor:
             # Generate additional outputs
             self._export_detailed_transit_csv()
             self._export_transit_geojson()
+            self._export_highway_geojson()
             self._export_network_shapefiles()
             
             self.logger.info("Acceptance criteria post-processing completed successfully")
@@ -202,6 +203,19 @@ class AcceptanceCriteriaProcessor:
             
         except Exception as e:
             self.logger.warning(f"Transit GeoJSON export failed: {e}")
+    
+    def _export_highway_geojson(self) -> None:
+        """Export highway assignment GeoJSON with geometry."""
+        self.logger.info("Exporting highway assignment GeoJSON")
+        
+        try:
+            exporter = HighwayGeoJSONExporter(self.highway_bank)
+            output_file = self.output_dir / "highway_assignment_by_link.geojson"
+            feature_count = exporter.export_geojson(output_file)
+            self.logger.info(f"Highway GeoJSON exported: {feature_count} features")
+            
+        except Exception as e:
+            self.logger.warning(f"Highway GeoJSON export failed: {e}")
     
     def _export_network_shapefiles(self) -> None:
         """Export network shapefiles using EMME Modeller."""
@@ -664,6 +678,91 @@ class TransitGeoJSONExporter:
                 except Exception:
                     # Skip segments with geometry issues
                     continue
+        
+        geojson_data = {
+            "type": "FeatureCollection",
+            "crs": {
+                "type": "name",
+                "properties": {"name": "urn:ogc:def:crs:EPSG::2875"},
+            },
+            "features": features
+        }
+        
+        with open(output_file, "w") as f:
+            json.dump(geojson_data, f, indent=2)
+        
+        return len(features)
+
+
+class HighwayGeoJSONExporter:
+    """Exports highway assignment data as GeoJSON with geometry."""
+    
+    def __init__(self, highway_bank):
+        self.highway_bank = highway_bank
+        self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+    
+    def _get_link_volume(self, link):
+        """Get highway volume from link, trying different attribute names."""
+        volume_attrs = ['auto_volume', 'volume', 'volau', 'data1', 'data2', 'flow_total']
+        
+        for attr in volume_attrs:
+            if hasattr(link, attr):
+                value = getattr(link, attr)
+                if value is not None and value != 0:
+                    return value
+        
+        return 0
+    
+    def export_geojson(self, output_file: Path) -> int:
+        """Export highway GeoJSON and return feature count."""
+        try:
+            from shapely.geometry import mapping, LineString
+        except ImportError:
+            raise ImportError("Shapely not available for GeoJSON export")
+        
+        scenarios = list(self.highway_bank.scenarios())
+        if not scenarios:
+            raise ValueError("No highway scenarios found")
+        
+        # Use first non-placeholder scenario (typically AM peak for highway)
+        scenario_id = scenarios[0] if scenarios[0] != 1 else scenarios[1] if len(scenarios) > 1 else scenarios[0]
+        scenario = self.highway_bank.scenario(scenario_id)
+        network = scenario.get_network()
+        
+        features = []
+        
+        for link in network.links():
+            try:
+                # Create geometry from link shape
+                geometry = mapping(LineString(link.shape))
+                
+                # Safely convert node IDs to integers
+                try:
+                    i_node_id = int(link.i_node.id)
+                    j_node_id = int(link.j_node.id)
+                except (ValueError, TypeError):
+                    i_node_id = 0
+                    j_node_id = 0
+                
+                feature = {
+                    "type": "Feature",
+                    "geometry": geometry,
+                    "properties": {
+                        "LINK_ID": f"{i_node_id}_{j_node_id}",
+                        "INODE": i_node_id,
+                        "JNODE": j_node_id,
+                        "VOLUME": self._get_link_volume(link),
+                        "CAPACITY": getattr(link, 'capacity', 0),
+                        "LANES": getattr(link, 'num_lanes', 0),
+                        "LENGTH": link.length,
+                        "LINK_TYPE": getattr(link, 'type', 0),
+                        "VDF": getattr(link, 'volume_delay_func', 0)
+                    }
+                }
+                features.append(feature)
+            except Exception:
+                # Skip links with geometry issues
+                continue
         
         geojson_data = {
             "type": "FeatureCollection",
