@@ -51,6 +51,7 @@ nav:
     - Assignment Outputs: output/assignment.md
     - Commercial Vehicle Outputs: output/commercial.md
     - Summary Reports: output/summaries.md
+    - Standalone PostProcessor: output/standalone-postprocessor.md
   - Model Documentation:
     - User Guide: guide.md
     - Geographies: geographies.md
