@@ -12,23 +12,23 @@ This page provides comprehensive technical reference documentation for TM2PY net
 The TM2PY highway network contains **85 link attributes** extracted from the actual Bay Area EMME database:
 
 #### Core Performance Attributes
-- `auto_volume` - Total automobile volume = 2.58455491065979
-- `auto_time` - Congested travel time (minutes) = 0.574384868144989
-- `@free_flow_time` - Free flow travel time (minutes) = 0.574384868144989
-- `@capacity` - Link capacity (vehicles/hour) = 6150.0
-- `@ft` - Facility type code = 8.0
-- `length` - Link length (miles) = 0.17231546342372894
+- `auto_volume` - Total automobile volume
+- `auto_time` - Congested travel time (minutes)
+- `@free_flow_time` - Free flow travel time (minutes)
+- `@capacity` - Link capacity (vehicles/hour)
+- `@ft` - Facility type code
+- `length` - Link length (miles)
 
 #### Vehicle Type Flows
-- `@flow_da` - Drive alone flow = 1.0269575119018555
-- `@flow_sr2` - Shared 2-person flow = 0.049851808696985245
-- `@flow_sr3` - Shared 3+ person flow = 0.037745535373687744
-- `@flow_trk` - Truck flow = 1.4399999380111694
+- `@flow_da` - Drive alone flow
+- `@flow_sr2` - Shared 2-person flow
+- `@flow_sr3` - Shared 3+ person flow
+- `@flow_trk` - Truck flow
 
 #### Cost and Performance
-- `@cost_da` - Drive alone cost = 2.9689953327178955
+- `@cost_da` - Drive alone cost
 - `@bridgetoll_da` - Bridge toll costs
-- `@reliability` - Reliability measure = 0.0
+- `@reliability` - Reliability measure
 
 **[→ View complete attribute list](../scripts/emme_link_attributes.txt)**
 
@@ -109,20 +109,6 @@ Enhanced script providing comprehensive highway network analysis:
 - **Load Factor**: Boarding Volume ÷ Line Capacity
 - **Passenger Miles**: Volume × Segment Length
 - **Service Frequency**: 60 ÷ Headway (vehicles per hour)
-
-## Data Validation
-
-### Highway Validation Ranges (Bay Area)
-- **Daily VMT**: 280-320 million vehicle-miles
-- **Average Speed**: 25-35 mph network-wide
-- **Freeway Speeds**: 45-65 mph average
-- **Arterial Speeds**: 25-40 mph average
-
-### Transit Validation Ranges
-- **Daily Boardings**: 1.5-2.0 million
-- **Peak Load Factors**: 0.6-0.8 on major lines
-- **System Load Factor**: 0.3-0.5 average
-- **Service Coverage**: 50+ transit agencies
 
 ## Usage Guidelines
 
