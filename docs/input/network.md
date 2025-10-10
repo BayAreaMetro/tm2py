@@ -207,20 +207,66 @@ Transit network data includes lines, stations, fares, and service attributes.
 
 ### Transit Network Attributes
 
-#### Transit Line Attributes
-- `line.id` - Transit line identifier
-- `line.mode.id` - Mode character ('b', 'l', 'h', 'r', 'f', 'e')
-- `line.headway` - Service headway in minutes
-- `line.vehicle.total_capacity` - Total vehicle capacity
-- `line["#description"]` - Line description/name
-- `line["#src_mode"]` - Source mode for fare calculations
-- `line["#faresystem"]` - Fare system ID (1-50)
+The TM2PY transit network contains **39 total attributes** (22 line + 17 segment):
 
-#### Transit Segment Attributes
-- `segment.transit_volume` - **PRIMARY** passenger volume/boardings
-- `segment.transit_boardings` - Alternative boarding attribute
-- `segment.dwell_time` - Dwell time at stops (minutes)
-- `segment.link.length` - Segment length (miles)
+#### Complete Transit Line Attributes
+
+##### Line Identification
+- `#description` - Line description (str)
+- `#short_name` - Short name (str) 
+- `#mode` - Mode code (int32)
+- `#vehtype` - Vehicle type (int32)
+- `id` - Line ID string (str)
+- `mode` - EMME Mode object
+
+##### Operations and Timing
+- `headway` - Service headway in minutes (float)
+- `speed` - Operating speed (float)
+- `layover_time` - Layover time (float)
+- `@orig_hdw` - Original headway (float)
+
+##### Fare and Penalties
+- `#faresystem` - Fare system ID (int32)
+- `@iboard_penalty` - Initial boarding penalty (float)
+- `@xboard_penalty` - Transfer boarding penalty (float)
+- `@invehicle_factor` - In-vehicle time factor (float)
+
+##### Service Period
+- `#time_period` - Time period (str) - e.g., "AM", "PM"
+- `#line_haul_name` - Line haul mode name (str) - e.g., "Local bus"
+
+##### Standard EMME Attributes
+- `data1`, `data2`, `data3` - General data fields (float)
+- `description` - EMME description field (str)
+- `network` - Network reference
+- `vehicle` - Transit vehicle reference
+
+#### Complete Transit Segment Attributes
+
+##### Stop Information
+- `#stop_name` - Stop name (str) - e.g., "MacArthur BART Station"
+- `i_node` - From node (Node)
+- `j_node` - To node (Node)
+
+##### Access Control
+- `allow_alightings` - Passengers can exit (bool)
+- `allow_boardings` - Passengers can board (bool)
+
+##### Timing and Operations
+- `dwell_time` - Dwell time at stop (float)
+- `@nntime` - Non-negative time (float)
+- `transit_time_func` - Transit time function (int)
+- `factor_dwell_time_by_length` - Scale dwell by length (bool)
+
+##### Network References
+- `id` - Segment ID string (str)
+- `line` - Parent transit line (TransitLine)
+- `link` - Associated network link (Link)
+- `loop_index` - Loop index (int)
+- `number` - Segment number (int)
+
+##### Standard EMME Attributes
+- `data1`, `data2`, `data3` - General data fields (float)
 
 ### Transit Mode Classification
 

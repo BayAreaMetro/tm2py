@@ -1,6 +1,6 @@
 name: Push Workflow
 
-# Only build documentation, skip tests/linting
+# Only build documentation, skip tests/linting  
 on: [push]
 
 jobs:

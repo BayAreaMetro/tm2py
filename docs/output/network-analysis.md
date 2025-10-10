@@ -123,6 +123,4 @@ Enhanced script providing comprehensive highway network analysis:
 - Validate results against expected ranges for Bay Area
 
 ### For Documentation Maintenance
-- Run `extract_transit_attributes.py` to update transit documentation
 - Keep attribute files synchronized with database changes
-- Update validation ranges based on model improvements
