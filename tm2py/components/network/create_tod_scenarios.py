@@ -573,7 +573,7 @@ class CreateTODScenarios(Component):
         # the average density including all MAZs within the specified buffer distance
         buff_dist = 5280 * self.controller.config.highway.area_type_buffer_dist_miles
         maz_data_file_path = self.get_abs_path(
-            self.controller.config.scenario.maz_landuse_file
+            self.controller.config.scenario.landuse_file
         )
         maz_landuse_data: Dict[
             int, Dict[Any, Union[str, int, Tuple[float, float]]]
