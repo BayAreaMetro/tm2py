@@ -95,7 +95,7 @@ class DriveAccessSkims(Component):
     def _maz_taz_correspondence(self) -> pd.DataFrame:
         """Load maz data (landuse file) which has the MAZ-> TAZ correspondence"""
         maz_data_file = self.get_abs_path(
-            self.controller.config.scenario.maz_landuse_file
+            self.controller.config.scenario.landuse_file
         )
         maz_input_data = pd.read_csv(maz_data_file)
         # drop the other landuse columns

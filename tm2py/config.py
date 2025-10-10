@@ -45,14 +45,11 @@ class ScenarioConfig(ConfigItem):
         verify: optional, default False if specified as True components will run
             additional post-process verify step to validate results / outputs
             (not implemented yet)
-        maz_landuse_file: relative path to maz_landuse_file used by multiple
-            components
         name: scenario name string
         year: model year, must be at least 2005
         landuse_file: TAZ file
     """
 
-    maz_landuse_file: pathlib.Path
     zone_seq_file: pathlib.Path
     landuse_file: pathlib.Path
     landuse_index_column: str
