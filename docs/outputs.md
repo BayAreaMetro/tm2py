@@ -57,6 +57,16 @@ Aggregated performance metrics and validation summaries.
 
 [→ View detailed summary report documentation](output/summaries.md)
 
+### [Network Analysis Reference](output/network-analysis.md)
+Technical reference documentation for TM2PY network analysis capabilities.
+
+- **Highway Attributes**: Complete reference of 85+ EMME link attributes from actual database
+- **Transit Attributes**: Line and segment attributes extracted from TM2PY source code
+- **Analysis Tools**: Shared modules, network summary script, and extraction utilities
+- **Performance Metrics**: VMT, VHT, boarding analysis, and validation ranges
+
+[→ View network analysis reference documentation](output/network-analysis.md)
+
 ## Quick Reference
 
 ### File Locations

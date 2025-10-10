@@ -2,6 +2,54 @@
 
 Travel Model Two produces detailed assignment results showing how travel demand is loaded onto the transportation network infrastructure.
 
+## Time Pe### Network Performance Summaries
+
+### System Performance Report
+**File Pattern**: `output_summaries/network_performance_[TimePeriod].csv`
+
+**Highway Metrics**:
+- Total VMT by facility type
+- Average speeds by area type
+- Congestion duration and extent
+- Level of service distribution
+
+**Transit Metrics**: 
+- Total transit ridership
+- Average load factors
+- Service miles and hours
+- Passenger-miles per revenue-mile
+
+!!! info "Network Analysis Reference"
+    For complete technical documentation on network attributes, analysis tools, and performance metrics, see the **[Network Analysis Reference](network-analysis.md)** page.
+
+### Screenline Analysisels travel across five time periods:
+
+| Code | Name | Time Range | Duration |
+|------|------|------------|----------|
+| `EA` | Early AM | 3:00 AM - 6:00 AM | 3 hours |
+| `AM` | AM Peak | 6:00 AM - 10:00 AM | 4 hours |
+| `MD` | Midday | 10:00 AM - 3:00 PM | 5 hours |
+| `PM` | PM Peak | 3:00 PM - 7:00 PM | 4 hours |
+| `EV` | Evening | 7:00 PM - 3:00 AM | 8 hours |
+
+## Highway Facility Types
+
+Highway links are classified by functional class using the `@ft` attribute:
+
+| Code | Facility Type | Description |
+|------|---------------|-------------|
+| `1` | Freeway | Interstate highways and freeways |
+| `2` | Freeway | Principal arterial - freeway facilities |
+| `3` | Arterial | Principal arterial roads |
+| `4` | Arterial | Minor arterial roads |
+| `5` | Collector | Major collector roads |
+| `6` | Collector | Minor collector roads |
+| `7` | Local | Local streets and roads |
+| `8` | Connector | Highway ramps and connectors |
+| `99` | Other | Special facilities and other links |
+
+**Note**: Facility types 1 and 2 are treated as freeways in TM2PY's reliability and delay calculations, while types 3-8 use arterial/road parameters.
+
 ## Highway Assignment Outputs
 
 ### Highway Network Files
