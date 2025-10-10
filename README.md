@@ -1,19 +1,4 @@
 ## Welcome to tm2py
-I hate this so much that I'm putting it on the README intro page so we fix it
-The model currently includes two land use input files in \inputs\landuse, both of which are referenced in the model config:
-
-maz_data.csv
-referenced by maz_landuse_file parameter in scenario.config
-it has MAZ_ORIGINAL and TAZ_ORIGINAL columns. The "_ORIGINAL" columns are not the Zone ID, they're the network node IDs which are numbered based on county.
-MAZ_ORIGINAL ranges from 10001-17386, then 110002-814500
-TAZ_ORIGINAL ranges from 1-651, then 100001-800210
-maz_data_withDensity.csv
-referenced by landuse_file parameter in scenario.config
-it has MAZ, TAZ aligned with the model's zone system
-MAZ ranges from 1-39726
-TAZ ranges from 1-4735
-it also has MAZ_ORIGINAL and TAZ_ORIGINAL for reference.
-The land use attributes (e.g., HH, POP, employment) differ between the two files.
 
 ### The python package developed to run Travel Model Two
 
