@@ -1,0 +1,93 @@
+TM2PY EMME Link Attributes
+============================================================
+Database: E:\2015-tm22-dev-sprint-04\emme_project\Database_highway\emmebank
+Scenario: 11 (ea)
+Sample Link: 1 -> 45524
+Total Attributes: 85
+============================================================
+
+#a_node              int32           = 1
+#b_node              int32           = 1001671
+#cntype              str             = TAZ
+#link_county         str             = San Francisco
+#link_id             int32           = 77108
+#shstgeometryid      str             = taz_cc1
+@area_type           float           = 1.0
+@assignable          float           = 1.0
+@auto_time           float           = 0.0
+@bike_link           float           = 0.0
+@bridgetoll_da       float           = 0.0
+@bridgetoll_lrg      float           = 0.0
+@bridgetoll_med      float           = 0.0
+@bridgetoll_sml      float           = 0.0
+@bridgetoll_sr2      float           = 0.0
+@bridgetoll_sr3      float           = 0.0
+@bridgetoll_vsm      float           = 0.0
+@bus_only            float           = 0.0
+@capacity            float           = 6150.0
+@capclass            float           = 18.0
+@cost_da             float           = 2.9689953327178955
+@cost_datoll         float           = 2.9689953327178955
+@cost_lrgtrk         float           = 5.3900275230407715
+@cost_lrgtrktoll     float           = 5.3900275230407715
+@cost_sr2            float           = 2.9689953327178955
+@cost_sr2toll        float           = 2.9689953327178955
+@cost_sr3            float           = 2.9689953327178955
+@cost_sr3toll        float           = 2.9689953327178955
+@cost_trk            float           = 5.3900275230407715
+@cost_trktoll        float           = 5.3900275230407715
+@drive_link          float           = 1.0
+@flow_da             float           = 1.0269575119018555
+@flow_datoll         float           = 0.0
+@flow_lrgtrk         float           = 0.029999999329447746
+@flow_lrgtrktoll     float           = 0.0
+@flow_sr2            float           = 0.049851808696985245
+@flow_sr2toll        float           = 0.0
+@flow_sr3            float           = 0.037745535373687744
+@flow_sr3toll        float           = 0.0
+@flow_trk            float           = 1.4399999380111694
+@flow_trktoll        float           = 0.0
+@free_flow_speed     float           = 18.0
+@free_flow_time      float           = 0.574384868144989
+@ft                  float           = 8.0
+@hov_length          float           = 0.0
+@intdist_down        float           = 0.0
+@intdist_up          float           = 0.0
+@ja                  float           = 0.0005595247494056821
+@lanes               float           = 1.0
+@managed             float           = 0.0
+@maz_flow            float           = 0.0
+@rail_link           float           = 0.0
+@reliability         float           = 0.0
+@reliability_sq      float           = 0.0
+@segment_id          float           = 0.0
+@static_rel          float           = 0.0
+@toll_length         float           = 0.0
+@tollbooth           float           = 0.0
+@tollseg             float           = 0.0
+@transit             float           = 0.0
+@useclass            float           = 0.0
+@valuetoll_da        float           = 0.0
+@valuetoll_lrg       float           = 0.0
+@valuetoll_med       float           = 0.0
+@valuetoll_sml       float           = 0.0
+@valuetoll_sr2       float           = 0.0
+@valuetoll_sr3       float           = 0.0
+@valuetoll_vsm       float           = 0.0
+@walk_link           float           = 0.0
+additional_volume    int             = 0
+auto_time            float           = 0.574384868144989
+auto_volume          float           = 2.58455491065979
+data1                float           = 0.0
+data2                float           = 0.0
+data3                float           = 0.0
+id                   str             = 1-45524
+length               float           = 0.17231546342372894
+modes                frozenset       = frozenset({Mode(t), Mode(x), Mode(l), Mode(D), Mode(E), Mode(F), Mode(T), Mode(L), Mode(c), Mode(d), Mode(e), Mode(f)})
+num_lanes            float           = 1.0
+numpy_vertices       ndarray         = []
+reverse_link         Link            = 45524-1
+shape_length         float           = 0.08410162930896813
+type                 int             = 1
+vertices             list            = []
+volume_delay_func    int             = 8

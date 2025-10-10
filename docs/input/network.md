@@ -9,6 +9,129 @@
 
 The all streets highway network, walk network, and bicycle network were developed from [OpenStreetMap](http://www.openstreetmap.org/). The *projection* is [**NAD 1983 StatePlane California VI FIPS 0406 Feet**](https://epsg.io/102646).
 
+### Highway Link Attributes
+
+The TM2PY highway network contains **85 link attributes** in the EMME database:
+
+**[→ View complete attribute list](../scripts/emme_link_attributes.txt)**
+
+#### Complete Attribute Reference
+
+##### Node and Link Identifiers
+- `#a_node` - A-node ID (int32)
+- `#b_node` - B-node ID (int32)
+- `#cntype` - Connector type (str)
+- `#link_county` - Link county (str)
+- `#link_id` - Link ID (int32)
+- `#shstgeometryid` - Shared streets geometry ID (str)
+
+##### Area and Network Classification
+- `@area_type` - Area type code (float)
+- `@assignable` - Link assignable flag (float)
+- `@auto_time` - Auto travel time (float)
+- `@bike_link` - Bicycle link flag (float)
+- `@bus_only` - Bus-only link flag (float)
+- `@capacity` - Link capacity (float)
+- `@capclass` - Capacity class (float)
+- `@drive_link` - Drive access flag (float)
+- `@ft` - Facility type code (float)
+- `@hov_length` - HOV length (float)
+- `@lanes` - Number of lanes (float)
+- `@managed` - Managed lane flag (float)
+- `@rail_link` - Rail link flag (float)
+- `@transit` - Transit link flag (float)
+- `@useclass` - Use class (float)
+- `@walk_link` - Walk access flag (float)
+
+##### Bridge Tolls
+- `@bridgetoll_da` - Bridge toll drive alone (float)
+- `@bridgetoll_lrg` - Bridge toll large truck (float)
+- `@bridgetoll_med` - Bridge toll medium truck (float)
+- `@bridgetoll_sml` - Bridge toll small truck (float)
+- `@bridgetoll_sr2` - Bridge toll shared ride 2 (float)
+- `@bridgetoll_sr3` - Bridge toll shared ride 3+ (float)
+- `@bridgetoll_vsm` - Bridge toll very small truck (float)
+
+##### Travel Costs
+- `@cost_da` - Cost drive alone (float)
+- `@cost_datoll` - Cost drive alone with toll (float)
+- `@cost_lrgtrk` - Cost large truck (float)
+- `@cost_lrgtrktoll` - Cost large truck with toll (float)
+- `@cost_sr2` - Cost shared ride 2 (float)
+- `@cost_sr2toll` - Cost shared ride 2 with toll (float)
+- `@cost_sr3` - Cost shared ride 3+ (float)
+- `@cost_sr3toll` - Cost shared ride 3+ with toll (float)
+- `@cost_trk` - Cost truck (float)
+- `@cost_trktoll` - Cost truck with toll (float)
+
+##### Traffic Flows
+- `@flow_da` - Flow drive alone (float)
+- `@flow_datoll` - Flow drive alone toll (float)
+- `@flow_lrgtrk` - Flow large truck (float)
+- `@flow_lrgtrktoll` - Flow large truck toll (float)
+- `@flow_sr2` - Flow shared ride 2 (float)
+- `@flow_sr2toll` - Flow shared ride 2 toll (float)
+- `@flow_sr3` - Flow shared ride 3+ (float)
+- `@flow_sr3toll` - Flow shared ride 3+ toll (float)
+- `@flow_trk` - Flow truck (float)
+- `@flow_trktoll` - Flow truck toll (float)
+
+##### Performance and Timing
+- `@free_flow_speed` - Free flow speed (float)
+- `@free_flow_time` - Free flow time (float)
+- `@intdist_down` - Intersection distance downstream (float)
+- `@intdist_up` - Intersection distance upstream (float)
+- `@ja` - Junction adjustment (float)
+- `@maz_flow` - MAZ flow (float)
+- `@reliability` - Reliability measure (float)
+- `@reliability_sq` - Reliability squared (float)
+- `@segment_id` - Segment ID (float)
+- `@static_rel` - Static reliability (float)
+
+##### Toll and Value Pricing
+- `@toll_length` - Toll length (float)
+- `@tollbooth` - Tollbooth flag (float)
+- `@tollseg` - Toll segment flag (float)
+- `@valuetoll_da` - Value toll drive alone (float)
+- `@valuetoll_lrg` - Value toll large truck (float)
+- `@valuetoll_med` - Value toll medium truck (float)
+- `@valuetoll_sml` - Value toll small truck (float)
+- `@valuetoll_sr2` - Value toll shared ride 2 (float)
+- `@valuetoll_sr3` - Value toll shared ride 3+ (float)
+- `@valuetoll_vsm` - Value toll very small truck (float)
+
+##### Core EMME Attributes
+- `additional_volume` - Additional volume (int)
+- `auto_time` - Auto travel time (float)
+- `auto_volume` - Auto volume (float)
+- `data1` - Data field 1 (float)
+- `data2` - Data field 2 (float)
+- `data3` - Data field 3 (float)
+- `id` - Link ID string (str)
+- `length` - Link length (float)
+- `modes` - Available modes (frozenset)
+- `num_lanes` - Number of lanes (float)
+- `numpy_vertices` - Vertex array (ndarray)
+- `reverse_link` - Reverse link reference (Link)
+- `shape_length` - Shape length (float)
+- `type` - Link type (int)
+- `vertices` - Vertex list (list)
+- `volume_delay_func` - Volume delay function (int)
+
+### Facility Type Classification
+
+| Code | Facility Type | Description |
+|------|---------------|-------------|
+| 1 | Freeway | Interstate highways and freeways |
+| 2 | Freeway | Principal arterial - freeway facilities |
+| 3 | Arterial | Principal arterial roads |
+| 4 | Arterial | Minor arterial roads |
+| 5 | Collector | Major collector roads |
+| 6 | Collector | Minor collector roads |
+| 7 | Local | Local streets and roads |
+| 8 | Connector | Highway ramps and connectors |
+| 99 | Other | Special facilities and other links |
+
 ## County Node Numbering System
 
 The highway network uses a numbering system whereby each county has a reserved block of nodes. Within each county's block:
@@ -81,6 +204,34 @@ The following node attributes are included in the master network.
 ## Transit Network 🚌
 
 Transit network data includes lines, stations, fares, and service attributes.
+
+### Transit Network Attributes
+
+#### Transit Line Attributes
+- `line.id` - Transit line identifier
+- `line.mode.id` - Mode character ('b', 'l', 'h', 'r', 'f', 'e')
+- `line.headway` - Service headway in minutes
+- `line.vehicle.total_capacity` - Total vehicle capacity
+- `line["#description"]` - Line description/name
+- `line["#src_mode"]` - Source mode for fare calculations
+- `line["#faresystem"]` - Fare system ID (1-50)
+
+#### Transit Segment Attributes
+- `segment.transit_volume` - **PRIMARY** passenger volume/boardings
+- `segment.transit_boardings` - Alternative boarding attribute
+- `segment.dwell_time` - Dwell time at stops (minutes)
+- `segment.link.length` - Segment length (miles)
+
+### Transit Mode Classification
+
+| Code | Mode | Description |
+|------|------|-------------|
+| b | Local Bus | Local bus service (modes 10-99) |
+| e | Express Bus | Express bus service (modes 80-99) |
+| l | Light Rail | Light rail transit (modes 110-119) |
+| h | Heavy Rail | Heavy rail/subway (modes 120-129) |
+| r | Commuter Rail | Commuter rail service (modes 130-139) |
+| f | Ferry | Ferry service (modes 100-109) |
 
 ### Transit Files
 

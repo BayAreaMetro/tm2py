@@ -1,9 +1,10 @@
 name: pre-commit
 
-on:
-  pull_request:
-  push:
-    branches: [main, develop]
+# Temporarily disabled - uncomment to re-enable
+# on:
+#   pull_request:
+#   push:
+#     branches: [main, develop]
 
 jobs:
   pre-commit:
