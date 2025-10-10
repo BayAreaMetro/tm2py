@@ -75,6 +75,7 @@ ComponentNames = Literal[
     "internal_external",
     "truck",
     "post_processor",
+    "network_summary",
 ]
 EmptyString = Literal[""]
 
@@ -1408,6 +1409,16 @@ class HighwayDistribution(ConfigItem):
 
 
 @dataclass(frozen=True)
+class NetworkSummaryConfig(ConfigItem):
+    """Network Summary Component Configuration.
+    
+    Properties:
+        output_path: relative path from run_dir to network summary output directory
+    """
+    output_path: str = Field(default="network_summary")
+
+
+@dataclass(frozen=True)
 class PostProcessorConfig(ConfigItem):
     "Post Processor Configuration."
     network_shapefile_path: str = Field(default=None)
@@ -1461,6 +1472,7 @@ class Configuration(ConfigItem):
     transit: TransitConfig
     post_processor: PostProcessorConfig
     emme: EmmeConfig
+    network_summary: Optional[NetworkSummaryConfig] = Field(default_factory=NetworkSummaryConfig)
     logging: Optional[LoggingConfig] = Field(default_factory=LoggingConfig)
 
     @classmethod
