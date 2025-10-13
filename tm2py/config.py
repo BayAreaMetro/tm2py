@@ -1408,14 +1408,7 @@ class HighwayDistribution(ConfigItem):
     num_processors: str = Field(pattern=r"^MAX$|^MAX-\d+$|^\d+$|^MAX/\d+$")
 
 
-@dataclass(frozen=True)
-class NetworkSummaryConfig(ConfigItem):
-    """Network Summary Component Configuration.
-    
-    Properties:
-        output_path: relative path from run_dir to network summary output directory
-    """
-    output_path: str = Field(default="network_summary")
+
 
 
 @dataclass(frozen=True)
@@ -1472,7 +1465,6 @@ class Configuration(ConfigItem):
     transit: TransitConfig
     post_processor: PostProcessorConfig
     emme: EmmeConfig
-    network_summary: Optional[NetworkSummaryConfig] = Field(default_factory=NetworkSummaryConfig)
     logging: Optional[LoggingConfig] = Field(default_factory=LoggingConfig)
 
     @classmethod

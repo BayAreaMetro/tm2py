@@ -1,0 +1,6 @@
+# TM2PY GUI Dependencies
+# Additional requirements for the Streamlit-based GUI
+
+streamlit>=1.28.0
+plotly>=5.15.0
+toml>=0.10.0
