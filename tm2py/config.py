@@ -1412,6 +1412,18 @@ class HighwayDistribution(ConfigItem):
 
 
 @dataclass(frozen=True)
+class NetworkSummaryConfig(ConfigItem):
+    """Network Summary Configuration.
+    
+    Properties:
+        output_directory: relative path from run_dir for network summary outputs
+        output_filename: filename for the main Excel summary report
+    """
+    output_directory: str = Field(default="output_summaries")
+    output_filename: str = Field(default="network_summary_report.xlsx")
+
+
+@dataclass(frozen=True)
 class PostProcessorConfig(ConfigItem):
     "Post Processor Configuration."
     network_shapefile_path: str = Field(default=None)
@@ -1465,6 +1477,7 @@ class Configuration(ConfigItem):
     transit: TransitConfig
     post_processor: PostProcessorConfig
     emme: EmmeConfig
+    network_summary: NetworkSummaryConfig = Field(default_factory=NetworkSummaryConfig)
     logging: Optional[LoggingConfig] = Field(default_factory=LoggingConfig)
 
     @classmethod

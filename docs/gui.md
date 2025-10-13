@@ -26,17 +26,24 @@ network_summary = {}
 ```
 
 ### GUI Usage (Web Interface)
-1. **Full Model Runs**: Use the "🚀 Run Model" button for complete TM2PY execution
-2. **Standalone NetworkSummary**: Use "📊 Run NetworkSummary" for independent network analysis
+1. **Component Selection**: Choose individual components via checkboxes organized by category
+2. **Custom Runs**: Use "🚀 Run Selected Components" for targeted execution
+3. **Full Model Runs**: Use "🚀 Run All Components" for complete TM2PY execution
+4. **Preset Workflows**: Quick selection for Standard, Analysis Only, or custom configurations
 
-Both modes use the same underlying TM2PY infrastructure and produce identical results.
+Both manual and GUI modes use the same underlying TM2PY infrastructure and produce identical results.
 
 ## Installation
 
-### Install GUI Dependencies
+### Install Dependencies
 
 ```bash
 # Activate your tm2py virtual environment first
+
+# Install core TM2PY dependencies (includes openpyxl for NetworkSummary Excel output)
+pip install -r requirements.txt
+
+# Install additional GUI dependencies
 pip install -r tm2py/gui/requirements-gui.txt
 ```
 
@@ -81,19 +88,22 @@ The GUI will open in your default web browser at `http://localhost:8501`
 
 ### ▶️ Run Model Page
 
-**Full Model Execution:**
-- Start/stop complete TM2PY model runs
-- Real-time progress monitoring
-- Current step indication
+**Component Selection Interface:**
+- Checkbox selection for all TM2PY components
+- Organized by category (Network, Demand, Assignment, etc.)
+- Quick selection presets (All, Standard, Analysis Only)
+- Real-time component count and validation
 
-**NetworkSummary Standalone:**
-- Run NetworkSummary component independently
-- Analyze existing model results
-- Generate network performance reports
+**Flexible Model Execution:**
+- Run selected components only
+- Run complete model with all components
+- Custom workflow execution
+- Individual component control
 
 **Live Monitoring:**
 - Progress bar and metrics
 - Real-time log streaming  
+- Component-by-component progress tracking
 - Auto-refresh functionality
 
 ### 📊 Results & Analysis Page

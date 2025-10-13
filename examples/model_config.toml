@@ -1271,9 +1271,13 @@
     seated_capacity = 1 
     total_capacity = 2
 [[transit.vehicles]]
-    vehicle_id = 133 
+    vehicle_id = 133
     mode = "r"
     name = ""
     auto_equivalent = 0.0
-    seated_capacity = 1 
+    seated_capacity = 1
     total_capacity = 2
+
+[network_summary]
+    output_directory = "output_summaries"
+    output_filename = "network_summary_report.xlsx"

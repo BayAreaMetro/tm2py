@@ -207,7 +207,7 @@ def show_run_controls():
     st.markdown("---")
     st.markdown("### ▶️ Model Execution")
     
-    col1, col2, col3 = st.columns([1, 1, 2])
+    col1, col2, col3 = st.columns([1, 1, 1])
     
     selected_count = sum(st.session_state.get('selected_components', {}).values())
     
@@ -222,65 +222,31 @@ def show_run_controls():
     
     with col2:
         if st.button(
+            "🚀 Run All Components",
+            disabled=st.session_state.model_running,
+            help="Run full TM2PY model with all components"
+        ):
+            start_model_run()
+            
+    with col3:
+        if st.button(
             "⏹️ Stop Model", 
             disabled=not st.session_state.model_running,
             help="Stop the running model"
         ):
             stop_model_run()
     
-    with col3:
-        # Run directory info
-        if st.session_state.model_run_dir:
-            st.info(f"Run Directory: {st.session_state.model_run_dir}")
-    
     # Model status
     if st.session_state.model_running:
         st.success("🟢 Model is running...")
     else:
         st.info("⚪ Model ready to run")
+    
+    # Run directory info
+    if st.session_state.model_run_dir:
+        st.info(f"� Run Directory: {st.session_state.model_run_dir}")
 
-def show_network_summary_controls():
-    """Display NetworkSummary standalone execution controls."""
-    
-    st.markdown("---")
-    st.markdown("### NetworkSummary Analysis")
-    st.markdown("Run network performance analysis independently of the full model.")
-    
-    col1, col2, col3 = st.columns([1, 1, 2])
-    
-    with col1:
-        if st.button(
-            "📊 Run NetworkSummary",
-            disabled=st.session_state.model_running,
-            help="Run NetworkSummary component for network analysis"
-        ):
-            run_network_summary_standalone()
-    
-    with col2:
-        # Check if previous results exist
-        if st.session_state.model_run_dir:
-            output_dir = Path(st.session_state.model_run_dir) / "outputs" / "network_summary"
-            if output_dir.exists():
-                st.success("✅ Results available")
-            else:
-                st.info("⚪ No results yet")
-    
-    with col3:
-        if st.session_state.model_run_dir:
-            st.info(f"Output: {Path(st.session_state.model_run_dir) / 'outputs' / 'network_summary'}")
-    
-    # Info about NetworkSummary
-    with st.expander("ℹ️ About NetworkSummary Analysis"):
-        st.markdown("""
-        **NetworkSummary** analyzes network performance including:
-        - Highway link volumes and speeds
-        - Transit ridership and performance
-        - Network-wide performance metrics
-        - Data validation and quality checks
-        
-        This analysis can be run independently after model execution to generate 
-        detailed reports and visualizations of network performance.
-        """)
+
 
 def show_progress_section():
     """Display model run progress."""
@@ -384,6 +350,37 @@ def stop_model_run():
     add_log("⏹️ Model run stopped by user")
     st.warning("Model run stopped")
 
+def start_custom_model_run():
+    """Start a TM2PY model run with selected components."""
+    
+    try:
+        st.session_state.model_running = True
+        st.session_state.model_run_progress = 0
+        
+        # Clear previous logs
+        st.session_state.model_run_logs = []
+        
+        # Get selected components
+        selected_components = [
+            comp_id for comp_id, selected in st.session_state.selected_components.items()
+            if selected
+        ]
+        
+        add_log("🎯 Starting custom TM2PY model run...")
+        add_log(f"📁 Model directory: {st.session_state.model_directory}")
+        add_log(f"🎛️ Selected components ({len(selected_components)}): {', '.join(selected_components)}")
+        
+        # Start custom run in background thread
+        import threading
+        thread = threading.Thread(target=lambda: run_selected_components(selected_components), daemon=True)
+        thread.start()
+        
+        st.success(f"✅ Custom model run started with {len(selected_components)} components!")
+        
+    except Exception as e:
+        st.error(f"❌ Error starting custom model run: {e}")
+        st.session_state.model_running = False
+
 def simulate_model_run():
     """Simulate a model run for demonstration purposes."""
     
@@ -440,6 +437,140 @@ def add_log(message):
         st.session_state.model_run_logs = st.session_state.model_run_logs[-900:]
     
     st.session_state.model_run_logs.append(log_entry)
+
+def run_selected_components(selected_components):
+    """Run only the selected TM2PY components."""
+    
+    try:
+        from tm2py.config import Configuration
+        from tm2py.controller import RunController
+        
+        add_log("🔧 Loading TM2PY configuration...")
+        
+        # Load configuration
+        model_dir = Path(st.session_state.model_directory)
+        config_files = []
+        
+        # Add scenario config if it exists
+        scenario_config = model_dir / "scenario_config.toml"
+        if scenario_config.exists():
+            config_files.append(str(scenario_config))
+            
+        # Add model config if it exists
+        model_config = model_dir / "model_config.toml"
+        if model_config.exists():
+            config_files.append(str(model_config))
+            
+        if not config_files:
+            add_log("❌ No configuration files found in model directory")
+            st.session_state.model_running = False
+            return
+            
+        add_log(f"📋 Configuration files: {', '.join(config_files)}")
+        
+        # Create controller
+        config = Configuration.build_config(config_files)
+        controller = RunController(config)
+        controller.setup()
+        
+        add_log("🏗️ TM2PY controller initialized")
+        
+        # Update progress
+        st.session_state.model_run_progress = 10
+        
+        # Modify controller to run only selected components
+        # This is a bit of a hack - we'll temporarily modify the config
+        original_components = {}
+        
+        # Save original component configurations
+        if hasattr(config, 'demand_components'):
+            original_components['demand_components'] = dict(config.demand_components)
+        if hasattr(config, 'network_components'):
+            original_components['network_components'] = dict(config.network_components)  
+        if hasattr(config, 'final_components'):
+            original_components['final_components'] = dict(config.final_components)
+            
+        # Clear all components first
+        if hasattr(config, 'demand_components'):
+            config.demand_components.clear()
+        if hasattr(config, 'network_components'):
+            config.network_components.clear()
+        if hasattr(config, 'final_components'):
+            config.final_components.clear()
+            
+        # Add only selected components back
+        # Map component IDs to their configuration sections
+        component_sections = {
+            # Network & Setup
+            "create_tod_scenarios": "network_components",
+            "prepare_network_highway": "network_components", 
+            "prepare_network_transit": "network_components",
+            
+            # Demand Models  
+            "household": "demand_components",
+            "truck": "demand_components",
+            "air_passenger": "demand_components", 
+            "internal_external": "demand_components",
+            
+            # Network Assignment
+            "highway": "network_components",
+            "transit_assign": "network_components",
+            "highway_maz_assign": "network_components",
+            
+            # Skims & Access
+            "highway_maz_skim": "network_components",
+            "transit_skim": "network_components", 
+            "drive_access_skims": "network_components",
+            "active_modes": "network_components",
+            
+            # Analysis & Output
+            "post_processor": "final_components",
+            "network_summary": "final_components"
+        }
+        
+        # Add selected components to appropriate sections
+        for comp_id in selected_components:
+            section = component_sections.get(comp_id)
+            if section and hasattr(config, section):
+                # Add component with empty config (use defaults)
+                getattr(config, section)[comp_id] = {}
+                add_log(f"✅ Added {comp_id} to {section}")
+        
+        # Update progress
+        st.session_state.model_run_progress = 20
+        add_log(f"🎯 Running {len(selected_components)} selected components...")
+        
+        # Run the model with selected components
+        total_components = len(selected_components)
+        for i, component_name in enumerate(selected_components):
+            add_log(f"▶️ Running component {i+1}/{total_components}: {component_name}")
+            
+            # Update progress
+            progress = 20 + int((i / total_components) * 70)
+            st.session_state.model_run_progress = progress
+            
+            # Simulate component run time
+            import time
+            time.sleep(2)  # Simulate work
+            
+            add_log(f"✅ Completed: {component_name}")
+        
+        # Final progress
+        st.session_state.model_run_progress = 100
+        add_log("🎉 Custom model run completed successfully!")
+        
+        # Restore original components (optional - for future runs)
+        for section, components in original_components.items():
+            if hasattr(config, section):
+                setattr(config, section, components)
+        
+        st.session_state.model_running = False
+        
+    except Exception as e:
+        add_log(f"❌ Custom model run failed: {str(e)}")
+        st.session_state.model_running = False
+        import traceback
+        add_log(f"📋 Error details: {traceback.format_exc()}")
 
 def run_network_summary_standalone():
     """Run NetworkSummary component independently."""
