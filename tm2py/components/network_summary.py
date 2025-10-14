@@ -1322,7 +1322,7 @@ class NetworkSummary(Component):
         expected_files = [
             "link_performance.xlsx",
             "network_summary.xlsx", 
-            "overall_summary.csv"
+            "topsheet.csv"
         ]
         
         files_created = []
@@ -1497,6 +1497,9 @@ class NetworkSummary(Component):
                 flow_sr3 = getattr(link, '@flow_sr3', 0)
                 flow_trk = getattr(link, '@flow_trk', 0)
                 auto_volume = flow_da + flow_sr2 + flow_sr3 + flow_trk  # Total volume
+            else:
+                # If auto_volume is available, still get truck volume separately
+                flow_trk = getattr(link, '@flow_trk', 0)
             
             auto_time = getattr(link, 'auto_time', 0) or getattr(link, '@auto_time', 0)
             length = link.length
@@ -1673,6 +1676,19 @@ class NetworkSummary(Component):
             
             # Overall summary
             self._generate_overall_summary(df, writer)
+            
+            # Transit operator summary (if transit data available)
+            operator_summary = self._get_operator_boardings_summary()
+            if not operator_summary.empty:
+                operator_summary.to_excel(writer, sheet_name="Transit by Operator", index=False)
+                
+                # Also save as separate CSV
+                csv_file = self.output_dir / "transit_boardings_by_operator.csv"
+                operator_summary.to_csv(csv_file, index=False)
+                
+                self.logger.info("Generated transit operator summary")
+            else:
+                self.logger.info("No transit data available for operator summary")
         
         self.logger.info(f"Network summary saved: {excel_file}")
     
@@ -1802,6 +1818,104 @@ class NetworkSummary(Component):
         
         self.logger.info("Generated lane mile inventory")
     
+    def _get_transit_boardings(self) -> Dict[str, float]:
+        """Calculate daily transit boardings from transit data."""
+        try:
+            self.logger.info("TRANSIT: Calculating daily boardings...")
+            
+            # Extract transit data for all time periods
+            transit_df = self._extract_all_transit_periods()
+            
+            if transit_df.empty:
+                self.logger.warn("TRANSIT: No transit data available for boarding calculations")
+                return {'Total Daily Boardings': 0}
+            
+            # Sum boardings across all time periods and segments (use actual boardings)
+            total_boardings = transit_df['boardings'].sum()
+            
+            # Also calculate by time period for detailed info
+            period_boardings = {}
+            for period in transit_df['time_period'].unique():
+                period_data = transit_df[transit_df['time_period'] == period]
+                period_total = period_data['boardings'].sum()
+                period_boardings[f'Boardings {period.upper()}'] = period_total
+            
+            self.logger.info(f"TRANSIT SUCCESS: Total daily boardings: {total_boardings:,}")
+            for period, boarding_count in period_boardings.items():
+                self.logger.info(f"  {period}: {boarding_count:,}")
+            
+            # Return summary with total and period details
+            result = {'Total Daily Boardings': total_boardings}
+            result.update(period_boardings)
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"TRANSIT ERROR: Failed to calculate boardings: {e}")
+            return {'Total Daily Boardings': 0}
+
+    def _get_operator_boardings_summary(self) -> pd.DataFrame:
+        """Generate boardings summary by operator similar to the requested format."""
+        try:
+            self.logger.info("TRANSIT: Generating operator boardings summary...")
+            
+            # Extract transit data for all time periods
+            transit_df = self._extract_all_transit_periods()
+            
+            if transit_df.empty:
+                self.logger.warn("TRANSIT: No transit data available for operator summary")
+                return pd.DataFrame()
+            
+            # Group by operator and mode_type to sum boardings  
+            operator_summary = transit_df.groupby(['operator', 'mode_type']).agg({
+                'boardings': 'sum',               # Use actual boardings
+                'transit_volume': 'sum',          # Also keep passenger volume for comparison
+                'line_id': 'nunique'              # Count unique lines per operator/mode
+            }).reset_index()
+            
+            # Rename columns to match the requested format
+            operator_summary.rename(columns={
+                'boardings': 'modelled_boardings',
+                'line_id': 'line_count'
+            }, inplace=True)
+            
+            # Create operator groupings similar to your example
+            def categorize_operator(operator):
+                major_operators = ['BART', 'SF Muni', 'AC Transit', 'VTA', 'Caltrain', 'Golden Gate Transit', 'SamTrans']
+                if operator in major_operators:
+                    return operator
+                else:
+                    return 'Smaller Operators'
+            
+            operator_summary['operator_group'] = operator_summary['operator'].apply(categorize_operator)
+            
+            # Standardize technology names to match your format
+            tech_mapping = {
+                'bus': 'local bus',
+                'local_bus': 'local bus', 
+                'express_bus': 'express bus',
+                'rail': 'light rail',
+                'light_rail': 'light rail',
+                'heavy_rail': 'heavy rail',
+                'commuter_rail': 'commuter rail',
+                'ferry': 'ferry'
+            }
+            operator_summary['technology_6groups'] = operator_summary['mode_type'].map(tech_mapping).fillna(operator_summary['mode_type'])
+            
+            # Sort by operator group and boardings
+            operator_summary = operator_summary.sort_values(['operator_group', 'modelled_boardings'], ascending=[True, False])
+            
+            # Reorder columns to match your format
+            final_columns = ['operator', 'operator_group', 'technology_6groups', 'modelled_boardings', 'line_count']
+            operator_summary = operator_summary[final_columns]
+            
+            self.logger.info(f"TRANSIT SUCCESS: Generated operator summary with {len(operator_summary)} operator/mode combinations")
+            
+            return operator_summary
+            
+        except Exception as e:
+            self.logger.error(f"TRANSIT ERROR: Failed to generate operator summary: {e}")
+            return pd.DataFrame()
+
     def _get_landuse_summaries(self) -> Dict[str, float]:
         """Read landuse data and calculate regional summaries."""
         try:
@@ -1843,7 +1957,7 @@ class NetworkSummary(Component):
             return {}
 
     def _generate_overall_summary(self, df: pd.DataFrame, writer) -> None:
-        """Generate overall system summary."""
+        """Generate topsheet summary with network performance, landuse, and transit data."""
         # Network performance summaries
         total_summary = {
             'Total Daily VMT': df['vmt'].sum(),
@@ -1859,13 +1973,17 @@ class NetworkSummary(Component):
         landuse_summaries = self._get_landuse_summaries()
         total_summary.update(landuse_summaries)
         
-        summary_df = pd.DataFrame(list(total_summary.items()), columns=['Metric', 'Value'])
-        summary_df.to_excel(writer, sheet_name="Overall Summary", index=False)
+        # Add transit boardings
+        transit_summaries = self._get_transit_boardings()
+        total_summary.update(transit_summaries)
         
-        csv_file = self.output_dir / "overall_summary.csv"
+        summary_df = pd.DataFrame(list(total_summary.items()), columns=['Metric', 'Value'])
+        summary_df.to_excel(writer, sheet_name="Topsheet", index=False)
+        
+        csv_file = self.output_dir / "topsheet.csv"
         summary_df.to_csv(csv_file, index=False)
         
-        self.logger.info("Generated overall summary with landuse totals")
+        self.logger.info("Generated topsheet with network performance, landuse, and transit summaries")
         
     def _extract_all_transit_periods(self) -> pd.DataFrame:
         """Extract transit line and segment data for all time periods."""
@@ -1938,70 +2056,146 @@ class NetworkSummary(Component):
         for line in network.transit_lines():
             lines_processed += 1
             
-            # Log progress every 50 lines for more frequent updates
-            if lines_processed % 50 == 0:
-                elapsed = time.time() - start_time
-                progress_pct = (lines_processed / total_lines) * 100
-                rate = lines_processed / elapsed if elapsed > 0 else 0
-                eta_seconds = (total_lines - lines_processed) / rate if rate > 0 else 0
-                self.logger.info(f"     Lines processed: {lines_processed:,}/{total_lines:,} ({progress_pct:.1f}%) - Rate: {rate:.1f} lines/sec - ETA: {eta_seconds:.0f}s")
-            
-            # Get line-level attributes
-            total_capacity = line.vehicle.total_capacity if line.vehicle else 0
-            seated_capacity = line.vehicle.seated_capacity if line.vehicle else 0
-            headway = line.headway
-            line_hour_total_cap = (60 * total_capacity / headway) if headway > 0 else 0
-            line_hour_seated_cap = (60 * seated_capacity / headway) if headway > 0 else 0
-            
-            # Get line mode/type information
-            mode = getattr(line, 'mode', None)
-            mode_id = mode.id if mode else 'unknown'
-            mode_type = mode.type if mode else 'unknown'
-            
-            # Count segments for this line
-            line_segments = 0
-            
-            # Process each segment of the line
-            for segment in line.segments(include_hidden=False):
-                segments_processed += 1
-                line_segments += 1
+            try:
+                # Initialize variables to ensure they're always defined
+                operator = 'unknown'
+                mode_type = 'unknown'
                 
-                # Get segment attributes
-                transit_volume = segment.transit_volume
-                dwell_time = segment.dwell_time
-                transit_time_func = getattr(segment, 'transit_time_func', 0)
-                link_length = segment.link.length if segment.link else 0
+                # Get line mode/type information first
+                mode = getattr(line, 'mode', None)
+                mode_id = mode.id if mode else 'unknown'
+                mode_type = mode.type if mode else 'unknown'
                 
-                # Additional segment data attributes
-                data1 = getattr(segment, 'data1', 0)
-                data2 = getattr(segment, 'data2', 0) 
-                data3 = getattr(segment, 'data3', 0)
+                # Try to get operator information from common EMME attributes
+                # Common EMME attributes for operator info
+                if hasattr(line, 'operator'):
+                    operator = line.operator
+                elif hasattr(line, '@operator'):
+                    operator = getattr(line, '@operator', 'unknown')
+                elif hasattr(line, 'data1'):
+                    # Sometimes operator is stored in data1
+                    operator = getattr(line, 'data1', 'unknown')
+                elif hasattr(line, 'description'):
+                    # Sometimes operator is in description field
+                    description = getattr(line, 'description', '')
+                    # Try to extract operator from description if it contains operator info
+                    if description:
+                        operator = description
                 
-                # Count segments with actual boardings
-                if transit_volume > 0:
-                    segments_with_boardings += 1
+                # Try to infer operator from line_id if no explicit operator field
+                if operator == 'unknown' and line.id:
+                    line_id_str = str(line.id)
+                    # Common operator prefixes in Bay Area transit line IDs
+                    if line_id_str.startswith(('BART', 'bart')):
+                        operator = 'BART'
+                    elif line_id_str.startswith(('MUNI', 'muni', 'SF')):
+                        operator = 'SF Muni'
+                    elif line_id_str.startswith(('AC', 'ac')):
+                        operator = 'AC Transit'
+                    elif line_id_str.startswith(('VTA', 'vta')):
+                        operator = 'VTA'
+                    elif line_id_str.startswith(('CALTRAIN', 'caltrain')):
+                        operator = 'Caltrain'
+                    elif line_id_str.startswith(('GGT', 'ggt')):
+                        operator = 'Golden Gate Transit'
+                    elif line_id_str.startswith(('SAMTRANS', 'samtrans')):
+                        operator = 'SamTrans'
+                    else:
+                        operator = f'Operator_{line_id_str[:3]}'  # Fallback with line prefix
                 
-                # Store segment data
-                data.append({
-                    'time_period': time_period,
-                    'line_id': line.id,
-                    'from_node': segment.i_node.id if segment.i_node else 0,
-                    'to_node': segment.j_node.id if segment.j_node else 0,
-                    'link_length': link_length,
-                    'transit_volume': transit_volume,  # Boardings
-                    'dwell_time': dwell_time,
-                    'transit_time_func': transit_time_func,
-                    'total_capacity': total_capacity,
-                    'seated_capacity': seated_capacity,
-                    'headway': headway,
-                    'line_hour_total_cap': line_hour_total_cap,
-                    'line_hour_seated_cap': line_hour_seated_cap,
-                    'mode_id': mode_id,
-                    'mode_type': mode_type,
-                    'data1': data1,
-                    'data2': data2,
-                    'data3': data3
-                })
+                # Log progress every 50 lines for more frequent updates
+                if lines_processed % 50 == 0:
+                    elapsed = time.time() - start_time
+                    progress_pct = (lines_processed / total_lines) * 100
+                    rate = lines_processed / elapsed if elapsed > 0 else 0
+                    eta_seconds = (total_lines - lines_processed) / rate if rate > 0 else 0
+                    self.logger.info(f"     Lines processed: {lines_processed:,}/{total_lines:,} ({progress_pct:.1f}%) - Rate: {rate:.1f} lines/sec - ETA: {eta_seconds:.0f}s")
+                
+                # Log operator detection occasionally for debugging
+                if lines_processed <= 10:
+                    self.logger.info(f"     Line {line.id}: operator='{operator}', mode='{mode_type}'")
+                elif lines_processed % 500 == 0:
+                    self.logger.info(f"     Sample line {line.id}: operator='{operator}', mode='{mode_type}'")
+                
+                # Get line-level attributes
+                total_capacity = line.vehicle.total_capacity if line.vehicle else 0
+                seated_capacity = line.vehicle.seated_capacity if line.vehicle else 0
+                headway = line.headway
+                line_hour_total_cap = (60 * total_capacity / headway) if headway > 0 else 0
+                line_hour_seated_cap = (60 * seated_capacity / headway) if headway > 0 else 0
+                
+                # Count segments for this line
+                line_segments = 0
+                
+                # Process each segment of the line
+                for segment in line.segments(include_hidden=False):
+                    segments_processed += 1
+                    line_segments += 1
+                    
+                    # Get segment attributes
+                    transit_volume = segment.transit_volume  # Passenger volume on segment
+                    dwell_time = segment.dwell_time
+                    transit_time_func = getattr(segment, 'transit_time_func', 0)
+                    link_length = segment.link.length if segment.link else 0
+                    
+                    # Try to get actual boardings (various EMME attributes for boardings)
+                    boardings = getattr(segment, 'transit_boardings', None)
+                    boardings_source = 'transit_boardings'
+                    if boardings is None:
+                        boardings = getattr(segment, 'boardings', None)
+                        boardings_source = 'boardings'
+                    if boardings is None:
+                        boardings = getattr(segment, '@transit_boardings', None)
+                        boardings_source = '@transit_boardings'
+                    if boardings is None:
+                        boardings = getattr(segment, '@boardings', None)
+                        boardings_source = '@boardings'
+                    if boardings is None:
+                        # Use transit_volume as fallback (but this is passenger volume, not boardings)
+                        boardings = transit_volume
+                        boardings_source = 'transit_volume (fallback)'
+                    
+                    # Log boardings source for first few segments to help debug
+                    if segments_processed <= 5:
+                        self.logger.info(f"     Segment {segments_processed}: boardings={boardings} from {boardings_source}, transit_volume={transit_volume}")
+                    
+                    # Additional segment data attributes
+                    data1 = getattr(segment, 'data1', 0)
+                    data2 = getattr(segment, 'data2', 0) 
+                    data3 = getattr(segment, 'data3', 0)
+                    
+                    # Count segments with actual boardings or volume
+                    if boardings > 0 or transit_volume > 0:
+                        segments_with_boardings += 1
+                    
+                    # Store segment data
+                    data.append({
+                        'time_period': time_period,
+                        'line_id': line.id,
+                        'operator': operator,
+                        'from_node': segment.i_node.id if segment.i_node else 0,
+                        'to_node': segment.j_node.id if segment.j_node else 0,
+                        'link_length': link_length,
+                        'transit_volume': transit_volume,  # Passenger volume on segment
+                        'boardings': boardings,            # Actual boardings at segment
+                        'dwell_time': dwell_time,
+                        'transit_time_func': transit_time_func,
+                        'total_capacity': total_capacity,
+                        'seated_capacity': seated_capacity,
+                        'headway': headway,
+                        'line_hour_total_cap': line_hour_total_cap,
+                        'line_hour_seated_cap': line_hour_seated_cap,
+                        'mode_id': mode_id,
+                        'mode_type': mode_type,
+                        'data1': data1,
+                        'data2': data2,
+                        'data3': data3
+                    })
+                
+            except Exception as e:
+                self.logger.error(f"TRANSIT ERROR: Failed to process line {line.id}: {e}")
+                # Continue processing other lines
+                continue
         
         # Log summary statistics
         end_time = time.time()
@@ -2090,13 +2284,10 @@ class NetworkSummary(Component):
         # 1. Transit boardings by line and time period
         self._generate_transit_boardings_by_line(df)
         
-        # 2. Transit boardings by segment and time period  
-        self._generate_transit_boardings_by_segment(df)
-        
-        # 3. All-day boarding totals by line
+        # 2. All-day boarding totals by line
         self._generate_transit_daily_totals(df)
         
-        # 4. Service type summaries by mode
+        # 3. Service type summaries by mode
         self._generate_transit_mode_summaries(df)
         
         self.logger.info("Transit performance summaries complete")
@@ -2107,7 +2298,7 @@ class NetworkSummary(Component):
         
         # Aggregate by line and time period
         line_summary = df.groupby(['time_period', 'line_id', 'mode_id']).agg({
-            'transit_volume': 'sum',           # Total boardings on line
+            'boardings': 'sum',               # Total boardings on line
             'total_capacity': 'first',        # Line capacity
             'seated_capacity': 'first',       # Line seated capacity
             'headway': 'first',               # Line headway
@@ -2116,46 +2307,19 @@ class NetworkSummary(Component):
             'line_hour_seated_cap': 'first'   # Hourly seated capacity
         }).reset_index()
         
-        # Calculate performance metrics
-        line_summary['load_factor'] = line_summary['transit_volume'] / line_summary['line_hour_total_cap']
-        line_summary['seated_load_factor'] = line_summary['transit_volume'] / line_summary['line_hour_seated_cap']
+        # Calculate performance metrics using boardings
+        line_summary['load_factor'] = line_summary['boardings'] / line_summary['line_hour_total_cap']
+        line_summary['seated_load_factor'] = line_summary['boardings'] / line_summary['line_hour_seated_cap']
         line_summary['frequency'] = 60 / line_summary['headway']  # Vehicles per hour
         
         # Save by time period
         for period in df['time_period'].unique():
             period_data = line_summary[line_summary['time_period'] == period].copy()
-            period_data = period_data.sort_values('transit_volume', ascending=False)
+            period_data = period_data.sort_values('boardings', ascending=False)
             
             output_file = self.output_dir / f"transit_boardings_by_line_{period}.csv"
             period_data.to_csv(output_file, index=False)
             self.logger.info(f"Saved transit line summary for {period}: {len(period_data)} lines")
-    
-    def _generate_transit_boardings_by_segment(self, df: pd.DataFrame) -> None:
-        """Generate transit boardings by segment for each time period."""
-        self.logger.info("Generating transit boardings by segment...")
-        
-        # Select key segment fields
-        segment_fields = [
-            'time_period', 'line_id', 'from_node', 'to_node', 'link_length',
-            'transit_volume', 'dwell_time', 'transit_time_func', 
-            'total_capacity', 'seated_capacity', 'headway',
-            'line_hour_total_cap', 'line_hour_seated_cap', 'mode_id'
-        ]
-        
-        segment_summary = df[segment_fields].copy()
-        
-        # Calculate segment performance metrics
-        segment_summary['load_factor'] = segment_summary['transit_volume'] / segment_summary['line_hour_total_cap']
-        segment_summary['seated_load_factor'] = segment_summary['transit_volume'] / segment_summary['line_hour_seated_cap']
-        
-        # Save by time period
-        for period in df['time_period'].unique():
-            period_data = segment_summary[segment_summary['time_period'] == period].copy()
-            period_data = period_data.sort_values(['line_id', 'from_node'])
-            
-            output_file = self.output_dir / f"transit_boardings_by_segment_{period}.csv"
-            period_data.to_csv(output_file, index=False)
-            self.logger.info(f"Saved transit segment summary for {period}: {len(period_data)} segments")
     
     def _generate_transit_daily_totals(self, df: pd.DataFrame) -> None:
         """Generate all-day boarding totals by line."""
@@ -2163,7 +2327,8 @@ class NetworkSummary(Component):
         
         # Sum across all time periods by line
         daily_totals = df.groupby(['line_id', 'mode_id']).agg({
-            'transit_volume': 'sum',           # Total daily boardings
+            'boardings': 'sum',               # Total daily boardings
+            'transit_volume': 'sum',          # Total daily passenger volume
             'total_capacity': 'first',        # Line capacity  
             'seated_capacity': 'first',       # Line seated capacity
             'headway': 'mean',                # Average headway
@@ -2173,12 +2338,12 @@ class NetworkSummary(Component):
         
         daily_totals.rename(columns={'time_period': 'periods_served'}, inplace=True)
         
-        # Calculate daily performance metrics
-        daily_totals['avg_hourly_boardings'] = daily_totals['transit_volume'] / daily_totals['periods_served']
+        # Calculate daily performance metrics using boardings
+        daily_totals['avg_hourly_boardings'] = daily_totals['boardings'] / daily_totals['periods_served']
         daily_totals['avg_frequency'] = 60 / daily_totals['headway']
         
         # Sort by total boardings
-        daily_totals = daily_totals.sort_values('transit_volume', ascending=False)
+        daily_totals = daily_totals.sort_values('boardings', ascending=False)
         
         output_file = self.output_dir / "transit_boardings_by_line_daily.csv"
         daily_totals.to_csv(output_file, index=False)
@@ -2322,7 +2487,7 @@ class NetworkSummary(Component):
         # Check highway output files (always expected)
         highway_files = [
             'facility_type_summary.csv',
-            'overall_summary.csv', 
+            'topsheet.csv', 
             'lane_mile_inventory.csv'
         ]
         
@@ -2524,7 +2689,7 @@ class NetworkSummary(Component):
         try:
             files_to_check = [
                 'facility_type_summary.csv',
-                'overall_summary.csv',
+                'topsheet.csv',
                 'lane_mile_inventory.csv'
             ]
             
@@ -2580,13 +2745,13 @@ class NetworkSummary(Component):
         }
         
         try:
-            overall_file = self.output_dir / 'overall_summary.csv'
-            if not overall_file.exists():
+            topsheet_file = self.output_dir / 'topsheet.csv'
+            if not topsheet_file.exists():
                 validation['status'] = 'fail'
-                validation['errors'].append("Cannot validate ranges: overall_summary.csv not found")
+                validation['errors'].append("Cannot validate ranges: topsheet.csv not found")
                 return validation
             
-            df = pd.read_csv(overall_file)
+            df = pd.read_csv(topsheet_file)
             
             # Expected ranges for Bay Area network (based on typical values)
             expected_ranges = {
@@ -2820,7 +2985,7 @@ Examples:
                 print(f"\nGenerated files include:")
                 print(f"  Highway Analysis:")
                 print(f"    - facility_type_summary.csv (VMT/VHT by facility type)")
-                print(f"    - overall_summary.csv (system-wide metrics)")
+                print(f"    - topsheet.csv (system-wide metrics with landuse and transit totals)")
                 print(f"    - lane_mile_inventory.csv (network inventory)")
                 print(f"  Transit Analysis (if transit database available):")
                 print(f"    - transit_boardings_by_line_{{period}}.csv (line boardings by time period)")
