@@ -36,6 +36,7 @@ Important travel behavior enhancements in Travel Model Two include:
 * [Creating Base Year Inputs](create-base-year-inputs.md) - How to generate base year input files
 * [Run](run.md) - How to execute the model
 * [Outputs](outputs.md) - Model outputs and analysis
+* [Network Summary Component](network_summary.md) - Comprehensive network analysis component
 * [API](api.md) - Programming interface documentation
 * [Server Setup](server-setup.md) - Server configuration
 

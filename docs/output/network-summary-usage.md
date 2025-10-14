@@ -1,4 +1,26 @@
+````markdown
 # Network Summary Script Usage Guide
+
+!!! warning "Documentation Consolidated"
+    This usage guide has been integrated into the comprehensive [Network Summary Component Documentation](../network_summary.md). 
+    
+    **Please use the new consolidated documentation which includes:**
+    
+    - Component and script usage examples
+    - Complete configuration guide
+    - Detailed output specifications
+    - Troubleshooting and validation
+    - Integration examples
+    
+    [→ Go to Network Summary Component Documentation](../network_summary.md)
+
+---
+
+*The content below is maintained for legacy reference but may be outdated. Please refer to the consolidated documentation above.*
+
+---
+
+# Legacy Network Summary Script Usage Guide
 
 This guide provides comprehensive instructions for using the enhanced TM2PY network summary script to analyze both highway and transit network performance.
 

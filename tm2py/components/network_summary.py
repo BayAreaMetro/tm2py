@@ -1211,22 +1211,15 @@ class NetworkSummary(Component):
         self.logger.info(f"VALIDATION: Checking transit boarding data...")
         self.logger.info(f"VALIDATION: Available columns: {list(df.columns)}")
         
-        boarding_cols = [col for col in df.columns if 'board' in col.lower()]
-        volume_cols = [col for col in df.columns if 'volume' in col.lower()]
+        boarding_cols = [col for col in df.columns if 'boardings' in col.lower()]
         
         self.logger.info(f"VALIDATION: Found boarding columns: {boarding_cols}")
-        self.logger.info(f"VALIDATION: Found volume columns: {volume_cols}")
-        
-        # If we have transit_volume but no explicit boarding columns, use volume for boardings
-        if not boarding_cols and 'transit_volume' in df.columns:
-            boarding_cols = ['transit_volume']
-            self.logger.info("VALIDATION: Using transit_volume as boarding data")
         
         # If we don't have boarding data at all, it's a critical error
         if not boarding_cols:
             check_result['status'] = 'fail'
-            check_result['errors'].append("Missing boarding data for validation")
-            self.logger.error(f"VALIDATION ERROR: No boarding data found")
+            check_result['errors'].append("Missing boardings column for validation")
+            self.logger.error(f"VALIDATION ERROR: No boardings column found")
             return check_result
         
         # Validate boarding data by time period
@@ -1868,7 +1861,6 @@ class NetworkSummary(Component):
             # Group by operator and mode_type to sum boardings  
             operator_summary = transit_df.groupby(['operator', 'mode_type']).agg({
                 'boardings': 'sum',               # Use actual boardings
-                'transit_volume': 'sum',          # Also keep passenger volume for comparison
                 'line_id': 'nunique'              # Count unique lines per operator/mode
             }).reset_index()
             
@@ -2164,8 +2156,8 @@ class NetworkSummary(Component):
                     data2 = getattr(segment, 'data2', 0) 
                     data3 = getattr(segment, 'data3', 0)
                     
-                    # Count segments with actual boardings or volume
-                    if boardings > 0 or transit_volume > 0:
+                    # Count segments with actual boardings
+                    if boardings > 0:
                         segments_with_boardings += 1
                     
                     # Store segment data
@@ -2176,7 +2168,6 @@ class NetworkSummary(Component):
                         'from_node': segment.i_node.id if segment.i_node else 0,
                         'to_node': segment.j_node.id if segment.j_node else 0,
                         'link_length': link_length,
-                        'transit_volume': transit_volume,  # Passenger volume on segment
                         'boardings': boardings,            # Actual boardings at segment
                         'dwell_time': dwell_time,
                         'transit_time_func': transit_time_func,
@@ -2249,22 +2240,22 @@ class NetworkSummary(Component):
         self.logger.info(f"Total transit lines: {total_lines:,}")
         
         # Check for missing critical data
-        zero_volume_pct = (df['transit_volume'] == 0).sum() / total_segments * 100
+        zero_boarding_pct = (df['boardings'] == 0).sum() / total_segments * 100
         zero_capacity_pct = (df['total_capacity'] == 0).sum() / total_segments * 100
         zero_headway_pct = (df['headway'] == 0).sum() / total_segments * 100
         
         self.logger.info(f"Transit data quality checks:")
-        self.logger.info(f"  Zero boarding segments: {zero_volume_pct:.1f}%")
+        self.logger.info(f"  Zero boarding segments: {zero_boarding_pct:.1f}%")
         self.logger.info(f"  Zero capacity segments: {zero_capacity_pct:.1f}%")
         self.logger.info(f"  Zero headway segments: {zero_headway_pct:.1f}%")
         
         # Check value ranges
-        volume_stats = df['transit_volume'].describe()
+        boarding_stats = df['boardings'].describe()
         capacity_stats = df['total_capacity'].describe()
         headway_stats = df['headway'].describe()
         
         self.logger.info(f"Transit value ranges:")
-        self.logger.info(f"  Boardings: {volume_stats['min']:.0f} to {volume_stats['max']:.0f} (mean: {volume_stats['mean']:.0f})")
+        self.logger.info(f"  Boardings: {boarding_stats['min']:.0f} to {boarding_stats['max']:.0f} (mean: {boarding_stats['mean']:.0f})")
         self.logger.info(f"  Capacity: {capacity_stats['min']:.0f} to {capacity_stats['max']:.0f} (mean: {capacity_stats['mean']:.0f})")
         self.logger.info(f"  Headway: {headway_stats['min']:.1f} to {headway_stats['max']:.1f} (mean: {headway_stats['mean']:.1f})")
         
@@ -2328,7 +2319,6 @@ class NetworkSummary(Component):
         # Sum across all time periods by line
         daily_totals = df.groupby(['line_id', 'mode_id']).agg({
             'boardings': 'sum',               # Total daily boardings
-            'transit_volume': 'sum',          # Total daily passenger volume
             'total_capacity': 'first',        # Line capacity  
             'seated_capacity': 'first',       # Line seated capacity
             'headway': 'mean',                # Average headway
@@ -2516,8 +2506,7 @@ class NetworkSummary(Component):
             # Check for time-period specific transit files
             for period in ['ea', 'am', 'md', 'pm', 'ev']:
                 transit_files.extend([
-                    f'transit_boardings_by_line_{period}.csv',
-                    f'transit_boardings_by_segment_{period}.csv'
+                    f'transit_boardings_by_line_{period}.csv'
                 ])
             
             transit_missing = []
@@ -2989,7 +2978,6 @@ Examples:
                 print(f"    - lane_mile_inventory.csv (network inventory)")
                 print(f"  Transit Analysis (if transit database available):")
                 print(f"    - transit_boardings_by_line_{{period}}.csv (line boardings by time period)")
-                print(f"    - transit_boardings_by_segment_{{period}}.csv (segment boardings by time period)")
                 print(f"    - transit_boardings_by_line_daily.csv (all-day totals by line)")
                 print(f"    - transit_boardings_by_service_type.csv (summary by mode)")
             else:

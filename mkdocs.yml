@@ -52,7 +52,7 @@ nav:
     - Commercial Vehicle Outputs: output/commercial.md
     - Summary Reports: output/summaries.md
     - Network Analysis Reference: output/network-analysis.md
-    - Network Summary Usage Guide: output/network-summary-usage.md
+    - Network Summary Component: network_summary.md
     - Standalone PostProcessor: output/standalone-postprocessor.md
   - Model Documentation:
     - User Guide: guide.md
