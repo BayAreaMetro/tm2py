@@ -1313,8 +1313,7 @@ class NetworkSummary(Component):
         
         # Check if output files were created
         expected_files = [
-            "link_performance.xlsx",
-            "network_summary.xlsx", 
+            self.controller.config.network_summary.output_filename,  # Main Excel report
             "topsheet.csv"
         ]
         
@@ -1458,7 +1457,7 @@ class NetworkSummary(Component):
         links_missing_attributes = 0
         attribute_stats = {
             # Volume attributes (actual TM2PY)
-            'auto_volume': 0, '@flow_da': 0, '@flow_sr2': 0,
+            'auto_volume': 0, '@flow_da': 0, '@flow_sr2': 0, '@flow_sr3': 0, '@flow_trk': 0,
             # Time/performance attributes  
             'auto_time': 0, '@auto_time': 0, '@free_flow_time': 0,
             # Facility type and classification
@@ -1480,19 +1479,16 @@ class NetworkSummary(Component):
                 self.logger.info(f"     Processing links: {links_processed:,}/{total_links:,} ({progress_pct:.1f}%)")
             
             # Get key link attributes using actual TM2PY attribute names
-            # Get auto_volume directly from EMME (should be populated after assignment)
-            auto_volume = getattr(link, 'auto_volume', 0)
+            # Get flow components from EMME (should be populated after assignment)
+            flow_da = getattr(link, '@flow_da', 0)
+            flow_sr2 = getattr(link, '@flow_sr2', 0)
+            flow_sr3 = getattr(link, '@flow_sr3', 0)
+            flow_trk = getattr(link, '@flow_trk', 0)
             
-            # If auto_volume is not available, fall back to summing flow components
-            if auto_volume == 0:
-                flow_da = getattr(link, '@flow_da', 0)
-                flow_sr2 = getattr(link, '@flow_sr2', 0)
-                flow_sr3 = getattr(link, '@flow_sr3', 0)
-                flow_trk = getattr(link, '@flow_trk', 0)
-                auto_volume = flow_da + flow_sr2 + flow_sr3 + flow_trk  # Total volume
-            else:
-                # If auto_volume is available, still get truck volume separately
-                flow_trk = getattr(link, '@flow_trk', 0)
+            # Calculate total auto volume and separate components
+            auto_volume = flow_da + flow_sr2 + flow_sr3 + flow_trk  # Total volume
+            car_volume = flow_da + flow_sr2 + flow_sr3  # Car volume (excluding trucks)
+            truck_volume = flow_trk  # Truck volume only
             
             auto_time = getattr(link, 'auto_time', 0) or getattr(link, '@auto_time', 0)
             length = link.length
@@ -1528,7 +1524,8 @@ class NetworkSummary(Component):
             # Log detailed info for first 5 links
             if links_processed <= 5:
                 self.logger.debug(f"  Link {links_processed}: {link.i_node.id}->{link.j_node.id}")
-                self.logger.debug(f"    Volume: {auto_volume}, Time: {auto_time}, Length: {length}")
+                self.logger.debug(f"    Auto Vol: {auto_volume}, Car Vol: {car_volume}, Truck Vol: {truck_volume}")
+                self.logger.debug(f"    Time: {auto_time}, Length: {length}")
                 self.logger.debug(f"    FT: {functional_class} ({facility_type}), County: {county_id} ({county_name})")
             
             # Track missing critical attributes
@@ -1544,6 +1541,8 @@ class NetworkSummary(Component):
                 'j_node': int(link.j_node.id),
                 'time_period': time_period,
                 'auto_volume': auto_volume,
+                'car_volume': car_volume,
+                'truck_volume': truck_volume,
                 'auto_time': auto_time,
                 'length': length,
                 'num_lanes': num_lanes,
@@ -1559,16 +1558,31 @@ class NetworkSummary(Component):
                 'vol_over_cap': vol_over_cap
             })
         
-        # Log final summary statistics
+        # Log final summary statistics with truck diagnostics
+        df_temp = pd.DataFrame(data)
+        total_auto_volume = df_temp['auto_volume'].sum()
+        total_truck_volume = df_temp['truck_volume'].sum()
+        truck_pct = (total_truck_volume / total_auto_volume * 100) if total_auto_volume > 0 else 0
+        
         self.logger.info(f"📋 LINK EXTRACTION COMPLETE FOR {time_period.upper()}:")
         self.logger.info(f"     Total links processed: {links_processed:,}")
         self.logger.info(f"     Links with volume > 0: {links_with_volume:,} ({links_with_volume/links_processed*100:.1f}%)")
-        self.logger.info(f"     Links missing key attributes: {links_missing_attributes:,} ({links_missing_attributes/links_processed*100:.1f}%)")
+        self.logger.info(f"     Truck % of total volume: {truck_pct:.2f}%")
         
-        # Log attribute availability (only for key attributes)
+        # Log attribute availability (key attributes and flow components)
         key_attrs = ['auto_volume', '@capacity', '@lanes', '@ft']
+        flow_attrs = ['@flow_da', '@flow_sr2', '@flow_sr3', '@flow_trk']
+        
         self.logger.info("     Key attribute coverage:")
         for attr in key_attrs:
+            if attr in attribute_stats:
+                count = attribute_stats[attr]
+                pct = count / links_processed * 100 if links_processed > 0 else 0
+                status = "GOOD" if pct > 80 else "WARNING" if pct > 50 else "POOR"
+                self.logger.info(f"       {status} {attr}: {pct:.1f}% ({count:,} links)")
+        
+        self.logger.info("     Flow attribute coverage:")
+        for attr in flow_attrs:
             if attr in attribute_stats:
                 count = attribute_stats[attr]
                 pct = count / links_processed * 100 if links_processed > 0 else 0
@@ -1689,8 +1703,10 @@ class NetworkSummary(Component):
         """Calculate VMT, VHT, and delay metrics."""
         self.logger.info("Calculating performance metrics")
         
-        # Calculate VMT and VHT
-        df['vmt'] = df['auto_volume'] * df['length']
+        # Calculate VMT and VHT - split by car and truck
+        df['car_vmt'] = df['car_volume'] * df['length']
+        df['truck_vmt'] = df['truck_volume'] * df['length']
+        df['vmt'] = df['auto_volume'] * df['length']  # Total VMT
         df['vht'] = df['auto_volume'] * df['auto_time'] / 60  # Convert to hours
         
         # Calculate lane miles
@@ -1717,7 +1733,7 @@ class NetworkSummary(Component):
     
     def _summarize_by_facility_type(self, df: pd.DataFrame, writer) -> None:
         """Generate summaries by facility type."""
-        metrics = ['vmt', 'vht', 'total_delay']
+        metrics = ['car_vmt', 'truck_vmt', 'vmt', 'vht', 'total_delay']
         
         for metric in metrics:
             summary = pd.pivot_table(
@@ -1745,6 +1761,8 @@ class NetworkSummary(Component):
     def _summarize_by_time_period(self, df: pd.DataFrame, writer) -> None:
         """Generate summaries by time period."""
         summary = df.groupby('time_period').agg({
+            'car_vmt': 'sum',
+            'truck_vmt': 'sum',
             'vmt': 'sum',
             'vht': 'sum', 
             'total_delay': 'sum',
@@ -1770,6 +1788,8 @@ class NetworkSummary(Component):
     def _summarize_by_county(self, df: pd.DataFrame, writer) -> None:
         """Generate county-level summaries."""
         county_summary = df.groupby('county_name').agg({
+            'car_vmt': 'sum',
+            'truck_vmt': 'sum',
             'vmt': 'sum',
             'vht': 'sum',
             'total_delay': 'sum',
@@ -1799,8 +1819,16 @@ class NetworkSummary(Component):
         ).reset_index()
         
         # Add VMT for context
-        vmt_summary = df.groupby('county_name')['vmt'].sum().reset_index()
-        vmt_summary.rename(columns={'vmt': 'total_daily_vmt'}, inplace=True)
+        vmt_summary = df.groupby('county_name').agg({
+            'car_vmt': 'sum',
+            'truck_vmt': 'sum', 
+            'vmt': 'sum'
+        }).reset_index()
+        vmt_summary.rename(columns={
+            'car_vmt': 'total_daily_car_vmt',
+            'truck_vmt': 'total_daily_truck_vmt',
+            'vmt': 'total_daily_vmt'
+        }, inplace=True)
         
         lane_miles = lane_miles.merge(vmt_summary, on='county_name', how='left')
         
@@ -1952,12 +1980,18 @@ class NetworkSummary(Component):
         """Generate topsheet summary with network performance, landuse, and transit data."""
         # Network performance summaries
         total_summary = {
+            'Total Daily Car VMT': df['car_vmt'].sum(),
+            'Total Daily Truck VMT': df['truck_vmt'].sum(),
             'Total Daily VMT': df['vmt'].sum(),
             'Total Daily VHT': df['vht'].sum(),
             'Total Daily Delay (hours)': df['total_delay'].sum(),
             'Average System Speed (mph)': df['vmt'].sum() / df['vht'].sum() if df['vht'].sum() > 0 else 0,
             'Total Lane Miles': df[df['time_period'] == 'am']['lane_miles'].sum(),
+            'Peak Hour Car VMT (AM)': df[df['time_period'] == 'am']['car_vmt'].sum(),
+            'Peak Hour Truck VMT (AM)': df[df['time_period'] == 'am']['truck_vmt'].sum(),
             'Peak Hour VMT (AM)': df[df['time_period'] == 'am']['vmt'].sum(),
+            'Peak Hour Car VMT (PM)': df[df['time_period'] == 'pm']['car_vmt'].sum(),
+            'Peak Hour Truck VMT (PM)': df[df['time_period'] == 'pm']['truck_vmt'].sum(),
             'Peak Hour VMT (PM)': df[df['time_period'] == 'pm']['vmt'].sum(),
         }
         
@@ -2345,7 +2379,7 @@ class NetworkSummary(Component):
         
         # Aggregate by mode and time period
         mode_summary = df.groupby(['time_period', 'mode_id']).agg({
-            'transit_volume': 'sum',           # Total boardings by mode
+            'boardings': 'sum',               # Total boardings by mode
             'line_id': 'nunique',             # Number of lines
             'from_node': 'count',             # Number of segments
             'total_capacity': 'sum',          # Total capacity  
@@ -2359,13 +2393,13 @@ class NetworkSummary(Component):
         }, inplace=True)
         
         # Calculate mode performance metrics
-        mode_summary['avg_boardings_per_line'] = mode_summary['transit_volume'] / mode_summary['num_lines']
-        mode_summary['boardings_per_route_mile'] = mode_summary['transit_volume'] / mode_summary['link_length']
+        mode_summary['avg_boardings_per_line'] = mode_summary['boardings'] / mode_summary['num_lines']
+        mode_summary['boardings_per_route_mile'] = mode_summary['boardings'] / mode_summary['link_length']
         mode_summary['avg_frequency'] = 60 / mode_summary['headway']
         
         # Add all-day totals
         daily_mode_summary = df.groupby(['mode_id']).agg({
-            'transit_volume': 'sum',
+            'boardings': 'sum',
             'line_id': 'nunique', 
             'from_node': 'count',
             'total_capacity': 'sum',
