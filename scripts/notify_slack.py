@@ -13,9 +13,16 @@ def post_message(message):
     Also prints to console
     """
     hostname = socket.getfqdn()
+    
+    # Get instance name with fallbacks
     instance = os.environ.get('INSTANCE')
     if not instance:
-        print("ERROR: The INSTANCE environment variable is not set. Slack notification will not be sent.")
+        # Try to get computer name
+        instance = os.environ.get('COMPUTERNAME')
+    if not instance:
+        # Use hostname without domain
+        instance = hostname.split('.')[0]
+    if not instance:
         instance = "UNKNOWN"
 
     if hostname.endswith(".mtc.ca.gov"):
