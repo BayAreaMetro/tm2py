@@ -30,8 +30,8 @@ class HouseholdModel(Component):
         self.config = self.controller.config.household
         self._start_household_manager()
         self._start_matrix_manager()
-        self._run_resident_model()
-        self._stop_java()
+        # self._run_resident_model()
+        # self._stop_java()
         # consume ctramp person trip list and create trip tables for assignment
         self._prepare_demand_for_assignment()
         self._copy_auto_maz_demand()
