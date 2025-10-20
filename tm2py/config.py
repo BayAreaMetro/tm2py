@@ -976,6 +976,7 @@ class HighwayConfig(ConfigItem):
     interchange_nodes_file: str = Field()
     apply_msa_demand: bool = True
     reliability: bool = Field(default=True)
+    maz_drive_distance_threshold: float = Field()
 
     @validator("output_skim_filename_tmpl")
     def valid_skim_template(value):
