@@ -111,6 +111,32 @@ class AssignMAZSPDemand(Component):
         """Validate inputs files are correct, raise if an error is found."""
         # TODO
         pass
+    
+    def get_maz_demand(self, time: str, maz_id_to_node: list) -> tuple[float, list[dict]]:
+        """
+        gets maz demands from Emme bank and encode in dict list of dicts
+        """
+        demands_df = pd.read_csv(f"D:\\TEMP\\maz_trips{time}.csv")
+
+
+        demands_dicts = []
+        for maz_x_id, maz_y_id, demand in zip(demands_df["MAZ_x"], demands_df["MAZ_y"], demands_df["eq_cnt"]):
+            # if (maz_x_id not in maz_id_to_node) or (maz_y_id not in maz_id_to_node):
+            #     continue
+            try:
+                origin_node, dest_node = maz_id_to_node[maz_x_id], maz_id_to_node[maz_y_id]
+                dist = _sqrt(
+                    (origin_node.x - dest_node.x)**2 + (origin_node.y - dest_node.y)**2
+                )
+                demands_dicts.append(
+                    {"orig": origin_node, "dest": dest_node, "dem": demand, "distance": dist}
+                )
+            except Exception:
+                continue
+        
+        max_radius = max(demand_dict["distance"] for demand_dict in demands_dicts)
+        return max_radius, demands_dicts
+
 
     @LogStartEnd()
     def run(self):
@@ -130,13 +156,56 @@ class AssignMAZSPDemand(Component):
                             f"warning: no mazs for counties {', '.join(names)}"
                         )
                         continue
-                    self._process_demand(time, i, maz_ids)
-                demand_bins = self._group_demand()
-                for i, demand_group in enumerate(demand_bins):
-                    self._find_roots_and_leaves(demand_group["demand"])
-                    self._set_link_cost_maz()
-                    self._run_shortest_path(time, i, demand_group["dist"])
-                    self._assign_flow(time, i, demand_group["demand"])
+                    # self._process_demand(time, i, maz_ids)
+                
+                distance, demands = self.get_maz_demand(time, maz_ids)
+                
+                self._find_roots_and_leaves(demands)
+                self._set_link_cost_maz()
+
+                # second argument is zero, this method lets you do assignment in multiple passes
+                # and assign the flow based on the index, for now we will just set to zero
+                # if you want multiple passes do
+                # for i in number of passes:
+                #     self._run_shortest_path(time, i, distance)
+                self._run_shortest_path(time, 0, distance)
+                self._assign_flow(time, 0, demands)
+
+
+        # we want a quick lookup from int to the Emme node object, used in maz_demands
+
+        # for time in self.time_period_names:
+
+            # self._scenario = self.highway_emmebank.scenario(time)
+            # with self._setup(time):
+            #     if self._network is None:
+            #         self._prepare_network()
+            #         network = self._network
+            
+            #     if self._mazs is None:
+            #         self._mazs = _defaultdict(lambda: [])
+            #         for node in network.nodes():
+            #             if node["@maz_id"]:
+            #                 # self._mazs[maz_county_dict[node["@maz_id"]]].append(node)
+            #                 self._mazs[node["#node_county"]].append(node)
+
+            #             if self._mazs is None:
+            #                 breakpoint()
+
+                
+
+                # distance, demands = self.get_maz_demand(time, maz_ids)
+                
+                # self._find_roots_and_leaves(demands)
+                # self._set_link_cost_maz()
+
+                # # second argument is zero, this method lets you do assignment in multiple passes
+                # # and assign the flow based on the index, for now we will just set to zero
+                # # if you want multiple passes do
+                # # for i in number of passes:
+                # #     self._run_shortest_path(time, i, distance)
+                # self._run_shortest_path(time, 0, distance)
+                # self._assign_flow(time, 0, demands)
 
     @_context
     def _setup(self, time: str):
@@ -269,6 +338,8 @@ class AssignMAZSPDemand(Component):
             f"Process demand for time period {time} index {index}", level="DETAIL"
         )
         data = self._read_demand_array(time, index)
+        data[0:100, 0:100] = 5
+        
         origins, destinations = data.nonzero()
         self.logger.log(
             f"non-zero origins {len(origins)} destinations {len(destinations)}",
@@ -294,6 +365,13 @@ class AssignMAZSPDemand(Component):
             check = maz_ids[99]
             orig_node = maz_ids[orig]
             dest_node = maz_ids[dest]
+
+            if isinstance(orig_node, dict) or isinstance(dest_node, dict):
+                # I DONT KNOW WHY EMME GIVES US A DICTIONARY SOMETIMES?????
+                # THIS WILL BE DEPRECATED SO IT IS NOT A CONCERN 
+                continue
+
+            # this below stuff we dont need anymore, the trips are only included if they are already short
             dist = _sqrt(
                 (dest_node.x - orig_node.x) ** 2 + (dest_node.y - orig_node.y) ** 2
             )

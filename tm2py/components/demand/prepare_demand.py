@@ -338,7 +338,6 @@ class PrepareHighwayDemand(EmmeDemand):
             combined_sum = combined_trips.groupby(["orig_taz", "dest_taz"])[
                 "eq_cnt"
             ].sum()
-            combined_sum.to_clipboard()
             return combined_sum.reindex(OD_full_index, fill_value=0).unstack().values
 
         def create_zero_passenger_trips(
@@ -460,20 +459,23 @@ class PrepareHighwayDemand(EmmeDemand):
             # IT = individual trips
             # JT = joint trips
             it_is_maz_trip = (
-                (it_both_taz_and_maz["trip_dist"] > self.controller.config.highway.maz_drive_distance_threshold) &
+                (it_both_taz_and_maz["trip_dist"] < self.controller.config.highway.maz_drive_distance_threshold) &
                 it_both_taz_and_maz["trip_mode"].isin(DRIVE_MODES)
             )
             it_maz = it_both_taz_and_maz[it_is_maz_trip]
             it = it_both_taz_and_maz[~it_is_maz_trip]
 
             jt_is_maz_trip = (
-                (jt_both_taz_and_maz["trip_dist"] > self.controller.config.highway.maz_drive_distance_threshold) &
+                (jt_both_taz_and_maz["trip_dist"] < self.controller.config.highway.maz_drive_distance_threshold) &
                 jt_both_taz_and_maz["trip_mode"].isin(DRIVE_MODES)
             )
             jt_maz = jt_both_taz_and_maz[jt_is_maz_trip]
             jt = jt_both_taz_and_maz[~jt_is_maz_trip]
 
             maz_trips = pd.concat([it_maz, jt_maz])
+            # TODO: replace this with emmebank database
+            grouped_maz_trips_df = maz_trips.groupby(["MAZ_x", "MAZ_y"])['eq_cnt'].sum().reset_index()
+            grouped_maz_trips_df.to_csv(f"D:\\TEMP\\maz_trips{time_period}.csv", index=False)
             
             # export everything into full taz_drive_matrices 
             for trip_mode in mode_name_dict:
