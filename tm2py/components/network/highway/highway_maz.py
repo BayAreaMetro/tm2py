@@ -134,7 +134,7 @@ class AssignMAZSPDemand(Component):
             except Exception:
                 continue
         
-        max_radius = max(demand_dict["distance"] for demand_dict in demands_dicts)
+        max_radius = max(demand_dict["distance"] for demand_dict in demands_dicts) / 5280
         return max_radius, demands_dicts
 
 
