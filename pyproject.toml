@@ -20,6 +20,7 @@ dependencies = [
     "scipy",
     "geopandas",
     "openmatrix",
+    "pandera",
     # these would be in an EMME environment
     "pyproj",
     "shapely"
