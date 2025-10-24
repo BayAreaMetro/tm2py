@@ -69,6 +69,7 @@ class PostProcessor(Component):
                 highway_scenario = self.highway_emmebank.scenario(period)
                 
                 indiv_trip = self._attach_highway_skims_to_trip(highway_scenario, period, indiv_trip)
+                indiv_trip = self._attach_transit_skims_to_trip(transit_scenario, period, indiv_trip)
 
                 #self._export_transit_network_as_shapefile(transit_scenario, period)
                 #self._export_highway_network_as_shapefile(highway_scenario, period)
@@ -274,24 +275,15 @@ class PostProcessor(Component):
             json.dump(geojson_data, f, indent=2)
 
     def _attach_highway_skims_to_trip(self, scenario: EmmeScenario, time_period: str, output: pd.DataFrame):
-        """Attach skim values to trips and tours.
+        """Attach skim (time, dist, cost, bridge toll, value toll) values to trips. 
         Args:
+            scenario (EmmeScenario): Emme Scenario (i.e., TIme Period for Emme)
             time_period (str): Time period name.
-            output (pd.DataFrame): DataFrame of CTRAMP trips or tours outputs (Indiv/Joint).
+            output (pd.DataFrame): DataFrame of CTRAMP trips (Indiv/Joint).
         """
-        # TODO
-        # Filter dataframe from mode and time period
-        # Mode not taken is null
-        # Use EmmeMatrix to get skim values
-        # establish columns for the trips 
-        # Established time periods based on start and end periods (won't need to establish this as part of core summaries)
-
-        # Time, Distance, Cost skims
-        # Motor Vehicle:
-        # {timeperiod}_{mode}_[time, cost, distance]
-        # {timeperiod}_{mode}_bridgetoll_{mode}
-        #Subset of Trip/Tour DataFrame by time period
+        self.logger.log(f"Attaching highway skim to trips for time period {time_period}")
         emmebank = scenario.emmebank
+        # Establishing matrix mode naming
         modes = {'da', 'datoll', 'sr2', 'sr2toll', 'sr3', 'sr3toll'}
         # Based on TripMode UEC, correlating the proper OMX modes to ctramp output modes
         modes_to_output = {'da': [1, 3, 6, 17], 
@@ -301,47 +293,10 @@ class PostProcessor(Component):
                            'sr3': [7],
                            'sr3toll': [8]
                            }
-        print(output.head(10))
-        # Get EmmeMatrix for the time period and concat them togther by modes
-        # for mode in modes:
-        #     self.logger.log(f"Attaching skims for {time_period} and {mode}")
-        #     print(f"Attaching skims for {time_period} and {mode}")
-        #     matrix_time = emmebank.matrix(f"{time_period}_{mode}_time").get_numpy_data()
-        #     matrix_dist = emmebank.matrix(f"{time_period}_{mode}_dist").get_numpy_data()
-        #     matrix_cost = emmebank.matrix(f"{time_period}_{mode}_cost").get_numpy_data()
-
-        #     origins, destinations = np.indices(matrix_time.shape)
-        #     df_mode = pd.DataFrame({
-        #     'origin_TAZ_SEQ': origins.flatten() + 1,
-        #     'destination_TAZ_SEQ': destinations.flatten() + 1,
-        #     'auto_time': matrix_time.flatten(),
-        #     'auto_dist': matrix_dist.flatten(),
-        #     'auto_cost': matrix_cost.flatten()
-        # })
-            
-        #     #TODO: Need to revamp this naming since valuetolls are only if its a toll
-        #     if 'toll' in mode:
-        #         matrix_btoll = emmebank.matrix(f"{time_period}_{mode}_bridgetoll_{mode[:-4]}").get_numpy_data()
-        #         matrix_vtoll = emmebank.matrix(f"{time_period}_{mode}_valuetoll_{mode[:-4]}").get_numpy_data()
-        #         df_mode['auto_bridge_toll'] = matrix_btoll.flatten()
-        #         df_mode['auto_value_toll'] = matrix_vtoll.flatten()
-
-
-        #     print(f"Printing matrices: \n {df_mode}")
-        #     # Filter output by timeperiod and mode type
-        #     output_by_time_mode = output[(output['timeperiod'] == time_period) & (output['trip_mode'].isin(modes_to_output.get(mode)))]
-        #     print(output_by_time_mode.head())
-        #     output_by_time_mode['index'] = output_by_time_mode.index
-        #     output_by_time_mode= output_by_time_mode.merge(df_mode, how = 'left', on= ['origin_TAZ_SEQ', 'destination_TAZ_SEQ'], validate = "m:1", suffixes=('_old', None))
-        #     output_by_time_mode.drop(columns = list(output_by_time_mode.filter(regex = '_old')), inplace = True)
-        #     output_by_time_mode.set_index('index', inplace = True)
-            
-        #     output.update(output_by_time_mode[['auto_time', 'auto_dist', 'auto_cost']] )
-        #     print(f"Printing outputs: \n {output.head()}")
-        
-        # TODO: Optimization Code from Claude - to review
+   
         for mode in modes:
         # Read all matrices at once
+            self.logger.log(f"Reading highway matrices from Emmebank for mode: {mode}")
             matrices = {
                 'auto_time': emmebank.matrix(f"{time_period}_{mode}_time").get_numpy_data(),
                 'auto_dist': emmebank.matrix(f"{time_period}_{mode}_dist").get_numpy_data(),
@@ -355,38 +310,37 @@ class PostProcessor(Component):
                     'auto_value_toll': emmebank.matrix(f"{time_period}_{mode}_valuetoll_{mode[:-4]}").get_numpy_data()
                 })
             
+            self.logger.log(f"Emmebank Highway Matrices: \n{matrices}", level = 'DEBUG')
             # Filter trips for this mode once
+            self.logger.log(f"Filtering trips for mode: {mode} and timeperiod: {time_period}")
             mode_trips = output['trip_mode'].isin(modes_to_output[mode])
             period_trips = output['timeperiod'] == time_period
             mask = mode_trips & period_trips
             
             if not mask.any():
+                self.logger.log(f"No trips for mode: {mode} in timeperiod: {time_period}")
                 continue
                 
-            # Only create indices where needed
+            # Only create indices where needed - converting 1-based index to 0-based index for matrices lookup
+            self.logger.log("Creating indices for trip origins and destinations", level = 'DETAIL')
+            self.logger.log("Converting OD index from 1-based to 0-based for matrices lookup", level = 'DETAIL')
             trip_origins = output.loc[mask, 'origin_TAZ_SEQ'].values - 1
             trip_dests = output.loc[mask, 'destination_TAZ_SEQ'].values - 1
             
             # Extract values directly using advanced indexing
             for name, matrix in matrices.items():
+                self.logger.log(f'Extracting values for {name}')
                 output.loc[mask, name] = matrix[trip_origins, trip_dests]
-            
+
+        # Adjust time for school bus based on TripModeChoice UEC (Time at 20 mph = sov_dist * 3)
+        self.logger.log("Adjust time for school bus mode")
+        output.loc[output['trip_mode'] == 17, 'auto_time'] = output.loc[output['trip_mode'] == 17, 'auto_dist'] * 3
         
+
         return output
-            # Join the modes to trip outputs
-            
 
-        # 
-        # Get the following skims
-        # Look through matrix for each mode ()
-        # Get modes from config? -> highway classes
-    
 
-        # Join on origin and destination (MAZ_SEQ)
-
-        # Rejoin df to main dataframe with pandas combine first or update
-
-    def _attach_transit_skims_to_trip_tour(self, time_period: str, trip_tour: pd.DataFrame):
+    def _attach_transit_skims_to_trip(self, scenario: EmmeScenario, time_period: str, output: pd.DataFrame):
         """Attach transit skim values to trips and tours.
         Args:
             scenario (EmmeScenario): Emme scenario for the time period.
@@ -402,7 +356,67 @@ class PostProcessor(Component):
 
         # Transit:
         # {timeperiod}_transit_[in-vehicle time, wait time, walk time, cost, distance]
-        df_by_time_mode = trip_tour[trip_tour['timeperiod'] == time_period & trip_tour['trip_mode'].isin([11,12,13,14])]
+        # Need to filter by: time, mode, and return trip
+        self.logger.log(f"Attaching transit skim to trips for time period: {time_period}")
+
+        emmebank =scenario.emmebank
+
+        # Transit skims mode to ctramp modes association
+        transit_modes = {
+            'WLK_TRN_WLK': [11],
+            'WLK_TRN_KNR' : [13, 14],
+            'WLK_TRN_PNR' : [12],
+            'KNR_TRN_WLK' :[13, 14],
+            'PNR_TRN_WLK' :[12]
+
+        }
+        for mode in transit_modes:
+            self.logger.log(f"Attaching skims for mode: {mode}")
+            matrices = {
+                'transit_ivt': emmebank.matrix(f"{time_period}_{mode}_IVT").get_numpy_data(),
+                'transit_iwait': emmebank.matrix(f"{time_period}_{mode}_IWAIT").get_numpy_data(),
+                'transit_xwait': emmebank.matrix(f"{time_period}_{mode}_XWAIT").get_numpy_data(),
+                'transit_transfer': emmebank.matrix(f"{time_period}_{mode}_XWAIT").get_numpy_data(),
+                'transit_fare': emmebank.matrix(f"{time_period}_{mode}_FARE").get_numpy_data(),
+                'transit_wacc': emmebank.matrix(f"{time_period}_{mode}_WACC").get_numpy_data(),
+                'transit_waux': emmebank.matrix(f"{time_period}_{mode}_WAUX").get_numpy_data(),
+                'transit_wegr': emmebank.matrix(f"{time_period}_{mode}_WEGR").get_numpy_data(),
+                'transit_dtime': emmebank.matrix(f"{time_period}_{mode}_DTIME").get_numpy_data(),
+            }
+
+        # Total Transit Time = IVT + IWAIT + XTRANSFER + WAUX + [WACC/WEGR/DTIME] depending on path taken
+
+            period_trips = output['timeperiod'] == time_period
+            mode_trips = output['trip_mode'].isin(transit_modes[mode])
+            
+            # Determining whether trip was walk to or walk from transit based on if trip is inbound or outbound
+            # If trip is inbound (inbound == 0), then they are driving to transit
+            if mode in ['KNR_TRN_WLK', 'PNR_TRN_WLK']:
+                inbound = output['inbound'] == 0
+                mask = period_trips & mode_trips & inbound
+
+            elif mode in ['WLK_TRN_KNR', 'WLK_TRN_PNR']:
+                inbound = output['inbound'] == 1
+                mask = period_trips & mode_trips & inbound
+           
+            else:
+                mask = period_trips & mode_trips
+
+            if not mask.any():
+                self.logger.log(f"No trips for mode: {mode} in timeperiod: {time_period}")
+                continue
+
+            trip_origins = output.loc[mask, 'origin_TAZ_SEQ'].values - 1
+            trip_dests = output.loc[mask, 'destination_TAZ_SEQ'].values - 1
+
+            for name, matrix in matrices.items():
+                #self.logger.log(f'Extracting values for {name}')
+                output.loc[mask, name] = matrix[trip_origins, trip_dests]
+
+        return output
+
+
+
 
 
 
@@ -419,7 +433,8 @@ class PostProcessor(Component):
         # Add columns for skims
         self.logger.log("Adding time, distance, cost, and time period columns to trips")
         df[['auto_time', 'auto_dist', 'auto_cost', 'auto_bridge_toll', 'auto_value_toll', 
-           'transit_ivt', 'transit_wait', 'transit_access', 'transit_transfer' ,'transit_cost', 'transit_dist',
+           'transit_ivt', 'transit_iwait', 'transit_xwait', 'transit_waux', 
+           'transit_wacc', 'transit_wegr', 'transit_dtime','transit_fare',
            'walk_time', 'walk_dist', 'bike_time', 'bike_dist']] = None
         df['timeperiod'] = pd.cut(df['stop_period'], bins = [1, 4, 12, 22, 30, 40], labels = ['EA', 'AM', 'MD', 'PM', 'EV'], include_lowest= True)
 
