@@ -22,6 +22,7 @@ import re
 from collections import deque
 from pathlib import Path
 from typing import Collection, List, Tuple, Union
+from pandera.typing import DataFrame
 
 from datetime import datetime
 from tm2py.components.component import Component
@@ -46,6 +47,7 @@ from tm2py.logger import Logger
 from tm2py.tools import emme_context
 from tm2py.tools import initialize_log
 from tm2py.tools import add_run_log
+from tm2py.datamodels.maz_landuse import MAZLandUse, load_maz_data
 
 
 # mapping from names referenced in config.run to imported classes
@@ -131,6 +133,8 @@ class RunController:
         self._component = None
         self._component_name = None
         self._queued_components = deque()
+
+        self._maz_landuse = None
 
         # create logger before creating components so we can log if issues arise in the component creation
         self.logger = Logger(self)
@@ -253,6 +257,15 @@ class RunController:
     @property
     def runtime_log_col_width(self):
         return [8, 30, 25, 25, 10]
+
+    @property
+    def maz_landuse(self) -> DataFrame[MAZLandUse]:
+        if self._maz_landuse is None:
+            maz_data_file = self.get_abs_path(
+                self.config.scenario.landuse_file
+            )
+            self._maz_landuse = load_maz_data(maz_data_file)
+        return self._maz_landuse
 
     def run(self):
         """Main interface to run model.
