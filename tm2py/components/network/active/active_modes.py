@@ -350,49 +350,39 @@ class ActiveModesSkim(Component):
         )
         # convert node id to sequential (1-based) zone id
         # consistent with tm2.1 - java expects this
-        zone_seq_file = self.get_abs_path(self.controller.config.scenario.zone_seq_file)
-        zone_seq_df = pd.read_csv(zone_seq_file)
+        maz_data_df = self.controller.maz_landuse
         taz_seq = dict(
             zip(
-                zone_seq_df[zone_seq_df.TAZSEQ > 0].N,
-                zone_seq_df[zone_seq_df.TAZSEQ > 0].TAZSEQ,
+                maz_data_df.TAZ_ORIGINAL,
+                maz_data_df.TAZ,
             )
         )
         maz_seq = dict(
             zip(
-                zone_seq_df[zone_seq_df.MAZSEQ > 0].N,
-                zone_seq_df[zone_seq_df.MAZSEQ > 0].MAZSEQ,
+                maz_data_df.MAZ_ORIGINAL,
+                maz_data_df.MAZ,
             )
         )
-        tap_seq = dict(
-            zip(
-                zone_seq_df[zone_seq_df.TAPSEQ > 0].N,
-                zone_seq_df[zone_seq_df.TAPSEQ > 0].TAPSEQ,
-            )
-        )
-        ext_seq = dict(
-            zip(
-                zone_seq_df[zone_seq_df.EXTSEQ > 0].N,
-                zone_seq_df[zone_seq_df.EXTSEQ > 0].EXTSEQ,
-            )
-        )
-        taz_seq = {**taz_seq, **ext_seq}
+        # TODO: external TAZ
+        # ext_seq = dict(
+        #     zip(
+        #         zone_seq_df[zone_seq_df.EXTSEQ > 0].N,
+        #         zone_seq_df[zone_seq_df.EXTSEQ > 0].EXTSEQ,
+        #     )
+        # )
+        # taz_seq = {**taz_seq, **ext_seq}
         for c in ["root_ids", "leaf_ids", "leaf_ids_2"]:
             taz_bool = distances[c].isin(list(taz_seq.keys()))
             maz_bool = distances[c].isin(list(maz_seq.keys()))
-            tap_bool = distances[c].isin(list(tap_seq.keys()))
             if taz_bool.any():
                 distances[c] = distances[c].map(taz_seq)
                 continue
             elif maz_bool.any():
                 distances[c] = distances[c].map(maz_seq)
                 continue
-            elif tap_bool.any():
-                distances[c] = distances[c].map(tap_seq)
-                continue
             else:
                 raise Exception(
-                    "{} has N values not in the {} file".format(c, zone_seq_file)
+                    "{} has Node values not in the maz landuse file".format(c)
                 )
         # drop 0's / 1e20
         distances = distances.query("dist > 0 & dist < 1e19")

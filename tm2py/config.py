@@ -50,7 +50,6 @@ class ScenarioConfig(ConfigItem):
         landuse_file: TAZ file
     """
 
-    zone_seq_file: pathlib.Path
     landuse_file: pathlib.Path
     landuse_index_column: str
     name: str
