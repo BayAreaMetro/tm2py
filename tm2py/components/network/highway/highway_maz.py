@@ -222,16 +222,11 @@ class AssignMAZSPDemand(Component):
             f"Processing county MAZs for {', '.join(counties)}", level="DETAIL"
         )
         network = self._network
-        # maz data
-        # maz_file = self.get_abs_path(self.controller.config.scenario.landuse_file)
-        # maz_df = pd.read_csv(maz_file)
-        # maz_county_dict = dict(zip(maz_df["MAZ_ORIGINAL"], maz_df["CountyName"]))
         # NOTE: every maz must have a valid #node_county
         if self._mazs is None:
             self._mazs = _defaultdict(lambda: [])
             for node in network.nodes():
                 if node["@maz_id"]:
-                    # self._mazs[maz_county_dict[node["@maz_id"]]].append(node)
                     self._mazs[node["#node_county"]].append(node)
         mazs = []
         for county in counties:

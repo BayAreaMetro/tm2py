@@ -572,17 +572,13 @@ class CreateTODScenarios(Component):
         # set area type for links based on average density of MAZ closest to I or J node
         # the average density including all MAZs within the specified buffer distance
         buff_dist = 5280 * self.controller.config.highway.area_type_buffer_dist_miles
-        maz_data_file_path = self.get_abs_path(
-            self.controller.config.scenario.landuse_file
-        )
+        maz_data_df = self.controller.maz_landuse
         maz_landuse_data: Dict[
             int, Dict[Any, Union[str, int, Tuple[float, float]]]
         ] = {}
-        with open(maz_data_file_path, "r") as maz_data_file:
-            header = [h.strip() for h in next(maz_data_file).split(",")]
-            for line in maz_data_file:
-                data = dict(zip(header, line.split(",")))
-                maz_landuse_data[int(data["MAZ_ORIGINAL"])] = data
+        for index, row in maz_data_df.iterrows():
+            row_dict = row.to_dict()
+            maz_landuse_data[row_dict["MAZ_ORIGINAL"]] = row_dict        
         # Build spatial index of MAZ node coords
         sp_index_maz = SpatialGridIndex(size=0.5 * 5280)
         for node in network.nodes():
