@@ -59,7 +59,7 @@ class PostProcessor(Component):
         # Prepare trip and tour dataframes by adding skim columns and time period (from start duration) """
         indiv_trip = self._add_skim_columns(indiv_trip)
         #joint_trip = self._add_skim_columns(joint_trip)
-
+        indiv_trip = self._attach_nonmotorized_skims_to_trips(indiv_trip)
         for period in self.controller.time_period_names:
             with self.controller.emme_manager.logbook_trace(
                 f"exporting networks for {period}"
@@ -76,7 +76,7 @@ class PostProcessor(Component):
                 # if period.upper() == "AM":
                 #     self._export_boardings_by_segment(transit_scenario, period)
                 #     self._export_boardings_by_segment_geofile(transit_scenario, period)
-        #indiv_trip.to_csv(self.get_abs_path("updated_output/indivTripData_3.csv"))
+        # #indiv_trip.to_csv(self.get_abs_path("updated_output/indivTripData_3.csv"))
         indiv_trip.to_parquet(self.get_abs_path("updated_output/indivTripData_3.parquet"))
 
     def validate_inputs(self):
@@ -275,7 +275,7 @@ class PostProcessor(Component):
             json.dump(geojson_data, f, indent=2)
 
     def _attach_highway_skims_to_trip(self, scenario: EmmeScenario, time_period: str, output: pd.DataFrame):
-        """Attach skim (time, dist, cost, bridge toll, value toll) values to trips. 
+        """Attach skim (time, dist, cost, bridge toll, value toll) values to trips. Skims are attached at a taz level
         Args:
             scenario (EmmeScenario): Emme Scenario (i.e., TIme Period for Emme)
             time_period (str): Time period name.
@@ -341,7 +341,7 @@ class PostProcessor(Component):
 
 
     def _attach_transit_skims_to_trip(self, scenario: EmmeScenario, time_period: str, output: pd.DataFrame):
-        """Attach transit skim values to trips and tours.
+        """Attach transit skim values to trips and tours. Skims are attached at a TAZ level
         Args:
             scenario (EmmeScenario): Emme scenario for the time period.
             time_period (str): Time period name.
@@ -417,7 +417,84 @@ class PostProcessor(Component):
 
 
 
+    def _attach_nonmotorized_skims_to_trips(self, output: pd.DataFrame):
+        """Attach nomotorized skims (bike and walk) on MAZ to MAZ level to trips
+        Nonmotorized time skims are calculated by dividing skim distance by average bike/ped walking time
 
+        Args:
+            output (pd.DataFrame): Trip Dataframe to join nonmotorized skims
+
+        Returns:
+            output: Updated Dataframe with nonmotorized skims attached
+        """
+
+        # Skims are not saved in the Emmebank and does not rely on time period
+        # Read skims directly from skim_matrices and attach based on OD
+        skim_files = {
+            'walk': next((s['output'] for s in self.controller.config.active_modes.shortest_path_skims
+                          if s['mode'] == 'walk'), None),
+            'bike': next((s['output'] for s in self.controller.config.active_modes.shortest_path_skims
+                          if s['mode'] == 'bike' and s.get('roots') == 'MAZ'), None)
+        }
+
+        # Pre-filter output to only relevant OD pairs for each mode
+        walk_mask = output['trip_mode'] == 9
+        bike_mask = output['trip_mode'] == 10
+
+        # Get unique OD pairs needed
+        od_cols = ['origin_MAZ_SEQ', 'destination_MAZ_SEQ']
+        needed_od_pairs = output.loc[walk_mask | bike_mask, od_cols].drop_duplicates()
+          
+        # Formatting for the skims are: From MAZ, TO MAZ, To MAZ, Dist, Dist in Feet
+        # This is based on: https://github.com/BayAreaMetro/tm2py/blob/master/tm2py/components/network/active/active_modes.py#L338
+        
+        # Currently MAZs are output as MAZ_SEQ
+        dtypes = {0: 'int32', 1: 'int32', 3: 'float32', 4: 'float32'}
+        self.logger.log(f"Reading in ped distance skim from {skim_files['walk']}")
+        walk_dist = pd.read_csv(self.get_abs_path(skim_files['walk']), header = None, 
+                               names = ['origin_MAZ_SEQ', 'destination_MAZ_SEQ', 'dest1', 
+                                        'walk_dist', 'walk_dist_ft'],
+                               dtype = dtypes,
+                               usecols = [0, 1, 3,4]) # Skip second destination columns
+        
+
+        self.logger.log(f"Reading in bike distance skim file: {skim_files['bike']}")
+        bike_dist = pd.read_csv(self.get_abs_path(skim_files['bike']), header = None, 
+                                names = ['origin_MAZ_SEQ', 'destination_MAZ_SEQ', 'dest1', 
+                                         'bike_dist', 'bike_dist_ft'],
+                                dtype = dtypes,
+                                usecols = [0, 1, 3, 4])
+
+        #Merging distance to needed OD Pair
+        walk_dist = walk_dist.merge(needed_od_pairs, on = od_cols, how = 'inner', validate = '1:1')
+        bike_dist = bike_dist.merge(needed_od_pairs, on = od_cols, how = 'inner', validate = '1:1')
+
+        # Merge skims to output
+        self.logger.log("Attaching skims to trips based on OD columns")
+        output = output.merge(walk_dist, on = od_cols, how = 'left', validate = 'm:1')
+        output = output.merge(bike_dist, on = od_cols, how = 'left', validate = 'm:1')
+
+        # Set walk columns to NaN if trip is not walk
+        output.loc[~walk_mask, ['walk_dist', 'walk_dist_ft']] = np.nan
+        output.loc[~bike_mask, ['bike_dist', 'bike_dist_ft']] = np.nan
+
+        if output[output['trip_mode']==9]['walk_dist'].isna().sum() > 0:
+            self.logger.log(f"Could not find the OD skim pair for {output[output['trip_mode']==9]['walk_dist'].isna().sum()} walk trips", level = "WARN")
+        if output[output['trip_mode']==10]['bike_dist'].isna().sum() > 0:
+            self.logger.log(f"Could not find the OD skim pair for {output[output['trip_mode']==10]['bike_dist'].isna().sum()} bike trips", level = "WARN")
+
+        ## Walk and Bike Speed from CTRAMP: https://github.com/BayAreaMetro/travel-model-two/blob/3b765dd96f28c46dea92c77b8113b6fa6685cb57/src/java/com/pb/mtctm2/abm/ctramp/Constants.java#L32
+        # In MPH
+        self.logger.log("Calculating time based on distance and walk/bike speed")
+        walk_speed = 3
+        bike_speed = 12
+        walk_speed_minpft = (1/walk_speed)*60/5280
+        bike_speed_minpft = (1/bike_speed)*60/5280
+
+        output['walk_time'] = output['walk_dist_ft'] * walk_speed_minpft
+        output['bike_time'] = output['bike_dist_ft'] * bike_speed_minpft
+
+        return output
 
 
     def _add_skim_columns(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -435,7 +512,8 @@ class PostProcessor(Component):
         df[['auto_time', 'auto_dist', 'auto_cost', 'auto_bridge_toll', 'auto_value_toll', 
            'transit_ivt', 'transit_iwait', 'transit_xwait', 'transit_waux', 
            'transit_wacc', 'transit_wegr', 'transit_dtime','transit_fare',
-           'walk_time', 'walk_dist', 'bike_time', 'bike_dist']] = None
+           #'walk_time', 'walk_dist', 'walk_dist_ft','bike_time', 'bike_dist'
+           ]] = None
         df['timeperiod'] = pd.cut(df['stop_period'], bins = [1, 4, 12, 22, 30, 40], labels = ['EA', 'AM', 'MD', 'PM', 'EV'], include_lowest= True)
 
         # Add TAZ Sequential/TAZ_NODE to dataframe based on landuse input file
