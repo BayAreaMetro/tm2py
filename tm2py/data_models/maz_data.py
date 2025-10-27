@@ -8,11 +8,9 @@ from pandera import Field
 from pandera.typing import Series, DataFrame
 
 
-# TODO:
-DENSITY_COLUMNS = ['EmpDen','DUDen','PopDen','IntDenBin','EmpDenBin','DuDenBin','PopEmpDenPerMi']
 SEQ_INDEX_COLUMNS = ['MAZ','TAZ']
 
-class MAZLandUse(pa.DataFrameModel):
+class MAZData(pa.DataFrameModel):
     """
     TODO: add docstring
     Datamodel used to validate if maz landuse input is in correct format and types
@@ -62,36 +60,36 @@ class MAZLandUse(pa.DataFrameModel):
         publicEnrollGrade9to12 (int): Public enrollment grades 9-12
         privateEnrollGrade9to12 (int): Private enrollment grades 9-12
         comm_coll_enroll (int): Community college enrollment
-        EnrollGradeKto8 (int): enrollment grades k-8
-        EnrollGrade9to12 (float): enrollment grades 9-12
-        collegeEnroll (float): college enrollment
-        otherCollegeEnroll (float): other college enrollment
-        AdultSchEnrl (int): adult school enrollment 
-        hstallsoth (float): Number of hourly stalls, different mgra
-        hstallssam (float): Number of hourly stalls, same mgra
-        dstallsoth (float): Number of daily stalls, different mgra
-        dstallssam (float): Number of daily stalls, same mgra
-        mstallsoth (float): Number of monthly stalls, different mgra
-        mstallssam (float): Number of monthly stalls, same mgra
+        EnrollGradeKto8 (int): Total enrollment grades k-8
+        EnrollGrade9to12 (float): Total enrollment grades 9-12
+        collegeEnroll (float): Major College enrollment
+        otherCollegeEnroll (float): Other College enrollment
+        AdultSchEnrl (int): Adult School enrollment 
+        hstallsoth (float): Number of stalls allowing hourly parking for trips with destinations in other MAZs
+        hstallssam (float): Number of stalls allowing hourly parking for trips with destinations in the same MAZ
+        dstallsoth (float): Stalls allowing daily parking for trips with destinations in other MAZs
+        dstallssam (float): Stalls allowing daily parking for trips with destinations in the same MAZ
+        mstallsoth (float): Stalls allowing monthly parking for trips with destinations in other MAZs
+        mstallssam (float): Stalls allowing monthly parking for trips with destinations in the same MAZ
         park_area (float): Area of parks in sq. meters
-        hparkcost (float): hourly parking cost
-        numfreehrs (float): number of free hours
-        dparkcost (float): daily parking cost
-        mparkcost (float): monthly parking cost
-        ech_dist (int):
-        hch_dist (int):
-        parkarea (int):
+        hparkcost (float): Average cost of parking for one hour in hourly stalls in this MAZ, dollars
+        numfreehrs (float): Number of hours of free parking allowed before parking charges begin in hourly stalls
+        dparkcost (float): Average cost of parking for one day in daily stalls, dollars
+        mparkcost (float): Average cost of parking for one day in monthly stalls, amortized over 22 workdays, dollars
+        ech_dist (int): Elementary school district
+        hch_dist (int): High school district
+        parkarea (int): parking area (1 through 4)
         TERMINAL (float):
         MAZ_X (float):
         MAZ_Y (float):
-        TotInt (float): Intersection count in 1/2 mile radius of household MGRA from 4D file
-        EmpDen (float): employement density
-        RetEmpDen (float): Retail Trade Employment Density in 1/2 mile radius of household MGRA from 4D file
-        DUDen (float): Dwelling density
-        PopDen (float): Population Density in 1/2 mile radius of household MGRA from 4D file
-        IntDenBin (int):
-        EmpDenBin (int): employment density category (1,2,3) of workplace
-        DUDenBin (int): mix category (1,2,3,4) of workplace
+        TotInt (float): Total intersections within 1/2 mile of MAZ
+        EmpDen (float): Employment per acre within 1/2 mile of MAZ
+        RetEmpDen (float): Retail employment per acre within 1/2 mile of MAZ
+        DUDen (float): Households per acre within 1/2 mile of MAZ
+        PopDen (float): Population per acre within 1/2 mile of MAZ
+        IntDenBin (int): Intersection density bin (1 through 3 where 3 is the highest)
+        EmpDenBin (int): Employment density bin (1 through 3 where 3 is the highest)
+        DUDenBin (int): Houseold density bin (1 through 3 where 3 is the highest)
         PopEmpDenPerMi (float):
     """
     MAZ: Series[int] = Field(nullable=False, unique=True)
@@ -203,7 +201,7 @@ def create_sequential_index(df: pd.DataFrame) -> pd.DataFrame:
     )
     return df
 
-def add_variables(df: pd.DataFrame) -> pd.DataFrame:
+# def add_variables(df: pd.DataFrame) -> pd.DataFrame:
     """
     TODO: add docstring
     """
@@ -211,12 +209,12 @@ def add_variables(df: pd.DataFrame) -> pd.DataFrame:
     # calculate densities
     # maz_data_df["EmpDen"] = maz_data_df["emp_total"]/maz_data_df["ACRES"]
 
-    return df
+    # return df
 
-def load_maz_data(maz_data_file: pathlib.Path) -> DataFrame[MAZLandUse]:
+def load_maz_data(maz_data_file: pathlib.Path) -> DataFrame[MAZData]:
     """
     load MAZ landuse data, create MAZ and TAZ sequential IDs,
-    add additional variables, and validate against the MAZLandUse schema.
+    add additional variables, and validate against the MAZData schema.
 
     Args:
         maz_data_file: path to maz landuse data
@@ -226,7 +224,7 @@ def load_maz_data(maz_data_file: pathlib.Path) -> DataFrame[MAZLandUse]:
     """
     maz_data_df = pd.read_csv(maz_data_file)
     maz_data_df = create_sequential_index(maz_data_df)
-    maz_data_df = add_variables(maz_data_df)
+    # maz_data_df = add_variables(maz_data_df)
 
-    return MAZLandUse.validate(maz_data_df, lazy=True)
+    return MAZData.validate(maz_data_df, lazy=True)
 

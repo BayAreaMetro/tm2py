@@ -47,7 +47,7 @@ from tm2py.logger import Logger
 from tm2py.tools import emme_context
 from tm2py.tools import initialize_log
 from tm2py.tools import add_run_log
-from tm2py.datamodels.maz_landuse import MAZLandUse, load_maz_data
+from tm2py.data_models.maz_data import MAZData, load_maz_data
 
 
 # mapping from names referenced in config.run to imported classes
@@ -259,7 +259,7 @@ class RunController:
         return [8, 30, 25, 25, 10]
 
     @property
-    def maz_landuse(self) -> DataFrame[MAZLandUse]:
+    def maz_landuse(self) -> DataFrame[MAZData]:
         if self._maz_landuse is None:
             maz_data_file = self.get_abs_path(
                 self.config.scenario.landuse_file
