@@ -572,7 +572,7 @@ class CreateTODScenarios(Component):
         # set area type for links based on average density of MAZ closest to I or J node
         # the average density including all MAZs within the specified buffer distance
         buff_dist = 5280 * self.controller.config.highway.area_type_buffer_dist_miles
-        maz_data_df = self.controller.maz_landuse
+        maz_data_df = self.controller.maz_data
         maz_landuse_data: Dict[
             int, Dict[Any, Union[str, int, Tuple[float, float]]]
         ] = {}

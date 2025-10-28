@@ -1942,7 +1942,7 @@ class NetworkSummary(Component):
             self.logger.info("LANDUSE: Reading landuse data for regional summaries...")
             
             # Get landuse file (same way other components do)
-            landuse_df = self.controller.maz_landuse
+            landuse_df = self.controller.maz_data
             
             self.logger.info(f"LANDUSE: Loading data")
             

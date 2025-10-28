@@ -350,7 +350,7 @@ class ActiveModesSkim(Component):
         )
         # convert node id to sequential (1-based) zone id
         # consistent with tm2.1 - java expects this
-        maz_data_df = self.controller.maz_landuse
+        maz_data_df = self.controller.maz_data
         taz_seq = dict(
             zip(
                 maz_data_df.TAZ_ORIGINAL,

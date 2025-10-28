@@ -302,7 +302,7 @@ class PrepareHighwayDemand(EmmeDemand):
         zp_cav = self.controller.config.household.OwnedAV_ZPV_factor
         zp_tnc = self.controller.config.household.TNC_ZPV_factor
 
-        maz_taz_df = self.controller.maz_landuse
+        maz_taz_df = self.controller.maz_data
         maz_taz_df = maz_taz_df[["MAZ", "TAZ"]]
         it_full = it_full.merge(
             maz_taz_df, left_on="orig_mgra", right_on="MAZ", how="left"
@@ -575,7 +575,7 @@ class PrepareHighwayDemand(EmmeDemand):
 
     @property
     def num_internal_zones(self):
-        df = self.controller.maz_landuse
+        df = self.controller.maz_data
         df = df[[self.controller.config.scenario.landuse_index_column]]
         return len(df["TAZ"].unique())
 

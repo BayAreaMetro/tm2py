@@ -256,7 +256,7 @@ class CommercialVehicleTripGeneration(Subcomponent):
         MWTEMPN, manufacturing, warehousing, and transportation employment per NAICS
         TOTHH, total households
         """
-        maz_input_data = self.controller.maz_landuse
+        maz_input_data = self.controller.maz_data
         zones = self.component.emme_scenario.zone_numbers
         maz_input_data = maz_input_data[maz_input_data["TAZ"].isin(zones)]
         taz_input_data = maz_input_data.groupby(["TAZ"]).sum()

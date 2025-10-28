@@ -134,7 +134,7 @@ class RunController:
         self._component_name = None
         self._queued_components = deque()
 
-        self._maz_landuse = None
+        self._maz_data = None
 
         # create logger before creating components so we can log if issues arise in the component creation
         self.logger = Logger(self)
@@ -259,13 +259,13 @@ class RunController:
         return [8, 30, 25, 25, 10]
 
     @property
-    def maz_landuse(self) -> DataFrame[MAZData]:
-        if self._maz_landuse is None:
+    def maz_data(self) -> DataFrame[MAZData]:
+        if self._maz_data is None:
             maz_data_file = self.get_abs_path(
                 self.config.scenario.landuse_file
             )
-            self._maz_landuse = load_maz_data(maz_data_file)
-        return self._maz_landuse
+            self._maz_data = load_maz_data(maz_data_file)
+        return self._maz_data
 
     def run(self):
         """Main interface to run model.
