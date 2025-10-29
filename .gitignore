@@ -139,6 +139,7 @@ notebooks/acceptance-transit-network.geojson
 notebooks/boardings_by_segment_am.geojson
 notebooks/tl_2010_06_bg10.*
 notebooks/*.twbx
+notebooks/.~*.twbr
 
 # Interim data
 data/interim/*
@@ -147,3 +148,6 @@ data/interim/*
 scripts/.Rproj.user/*
 scripts/.Rhistory
 .Rproj.user
+
+# temp excel file
+.~*.xlsx

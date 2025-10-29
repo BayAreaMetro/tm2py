@@ -28,7 +28,7 @@ The `mazData.csv` file contains detailed land use characteristics at the micro-z
 | `CountyName` | County name string | | Administrative boundaries |
 | `DistID` | District ID number | [TourModeChoice.xls] | District system definition |
 | `DistName` | District name | | District system definition |
-| `ACRES` | MAZ area in acres | [createMazDensityFile.py] | Calculated from shapefile |
+| `ACRES` | MAZ area in acres | [TBD](https://github.com/BayAreaMetro/tm2py/pull/216) | Calculated from shapefile |
 
 ### Population and Household Data
 
@@ -148,10 +148,10 @@ Detailed parking supply and cost information for mode choice modeling:
 
 | Column Name | Description | Used by | Source |
 |-------------|-------------|---------|--------|
-| `TotInt` | Total intersections | [MgraDataManager], [AutoOwnership] | [createMazDensityFile.py] |
-| `DUDen` | Dwelling unit density | [MgraDataManager] | [createMazDensityFile.py] |
-| `EmpDen` | Employment density | [MgraDataManager] | [createMazDensityFile.py] |
-| `PopDen` | Population density | | [createMazDensityFile.py] |
+| `TotInt` | Total intersections | [MgraDataManager], [AutoOwnership] | [TBD](https://github.com/BayAreaMetro/tm2py/pull/216) |
+| `DUDen` | Dwelling unit density | [MgraDataManager] | [TBD](https://github.com/BayAreaMetro/tm2py/pull/216) |
+| `EmpDen` | Employment density | [MgraDataManager] | [TBD](https://github.com/BayAreaMetro/tm2py/pull/216) |
+| `PopDen` | Population density | | [TBD](https://github.com/BayAreaMetro/tm2py/pull/216) |
 
 ## Traffic Analysis Zones (TAZ Data)
 
@@ -184,7 +184,7 @@ The `tazData.csv` file contains zone-level data used for specific model componen
 
 ### Density Calculations
 
-Density measures calculated using [createMazDensityFile.py]:
+Density measures calculated using [TBD](https://github.com/BayAreaMetro/tm2py/pull/216):
 
 - **Dwelling Unit Density**: Households per acre
 - **Employment Density**: Jobs per acre  
@@ -243,10 +243,9 @@ Land use data drives accessibility calculations used throughout the model:
 
 This comprehensive land use data structure supports detailed spatial analysis and realistic travel behavior modeling in the CT-RAMP framework.
 
-[Accessibilities]: https://github.com/BayAreaMetro/travel-model-two/blob/master/model-files/model/Accessibilities.xls
-[AutoOwnership]: https://github.com/BayAreaMetro/travel-model-two/blob/master/model-files/model/AutoOwnership.xls
-[createMazDensityFile.py]: https://github.com/BayAreaMetro/travel-model-two/blob/master/model-files/scripts/preprocess/createMazDensityFile.py
-[MgraDataManager]: https://github.com/BayAreaMetro/travel-model-two/blob/master/core/src/java/com/pb/mtctm2/abm/ctramp/MgraDataManager.java#L47
+[Accessibilities]: https://github.com/BayAreaMetro/travel-model-two/blob/master/uec/Accessibilities.xls
+[AutoOwnership]: https://github.com/BayAreaMetro/travel-model-two/blob/master/uec/AutoOwnership.xls
+[MgraDataManager]: https://github.com/BayAreaMetro/travel-model-two/blob/master/src/java/com/pb/mtctm2/abm/ctramp/MgraDataManager.java#L47
 [NAICS]: https://www.census.gov/eos/www/naics/
-[TazDataManager]: https://github.com/BayAreaMetro/travel-model-two/blob/master/core/src/java/com/pb/mtctm2/abm/ctramp/TazDataManager.java#L37
-[TourModeChoice.xls]: https://github.com/BayAreaMetro/travel-model-two/blob/master/model-files/model/TourModeChoice.xls
+[TazDataManager]: https://github.com/BayAreaMetro/travel-model-two/blob/master/src/java/com/pb/mtctm2/abm/ctramp/TazDataManager.java#L37
+[TourModeChoice.xls]: https://github.com/BayAreaMetro/travel-model-two/blob/master/uec/TourModeChoice.xls
