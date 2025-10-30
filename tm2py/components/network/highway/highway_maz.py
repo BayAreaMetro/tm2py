@@ -112,30 +112,31 @@ class AssignMAZSPDemand(Component):
         # TODO
         pass
     
-    def get_maz_demand(self, time: str, maz_id_to_node: list) -> tuple[float, list[dict]]:
+    def _read_maz_demand(self, time: str) -> tuple[pd.Series, pd.Series, pd.Series]:
         """
         gets maz demands from Emme bank and encode in dict list of dicts
         """
         demands_df = pd.read_csv(f"D:\\TEMP\\maz_trips{time}.csv")
+        return demands_df["MAZ_x"], demands_df["MAZ_y"], demands_df["eq_cnt"]
 
 
-        demands_dicts = []
-        for maz_x_id, maz_y_id, demand in zip(demands_df["MAZ_x"], demands_df["MAZ_y"], demands_df["eq_cnt"]):
-            # if (maz_x_id not in maz_id_to_node) or (maz_y_id not in maz_id_to_node):
-            #     continue
-            try:
-                origin_node, dest_node = maz_id_to_node[maz_x_id], maz_id_to_node[maz_y_id]
-                dist = _sqrt(
-                    (origin_node.x - dest_node.x)**2 + (origin_node.y - dest_node.y)**2
-                )
-                demands_dicts.append(
-                    {"orig": origin_node, "dest": dest_node, "dem": demand, "distance": dist}
-                )
-            except Exception:
-                continue
+        # demands_dicts = []
+        # for maz_x_id, maz_y_id, demand in zip(demands_df["MAZ_x"], demands_df["MAZ_y"], demands_df["eq_cnt"]):
+        #     # if (maz_x_id not in maz_id_to_node) or (maz_y_id not in maz_id_to_node):
+        #     #     continue
+        #     try:
+        #         origin_node, dest_node = maz_id_to_node[maz_x_id], maz_id_to_node[maz_y_id]
+        #         dist = _sqrt(
+        #             (origin_node.x - dest_node.x)**2 + (origin_node.y - dest_node.y)**2
+        #         )
+        #         demands_dicts.append(
+        #             {"orig": origin_node, "dest": dest_node, "dem": demand, "distance": dist}
+        #         )
+        #     except Exception:
+        #         continue
         
-        max_radius = max(demand_dict["distance"] for demand_dict in demands_dicts) / 5280
-        return max_radius, demands_dicts
+        # max_radius = max(demand_dict["distance"] for demand_dict in demands_dicts) / 5280
+        # return max_radius, demands_dicts
 
 
     @LogStartEnd()
@@ -156,20 +157,25 @@ class AssignMAZSPDemand(Component):
                             f"warning: no mazs for counties {', '.join(names)}"
                         )
                         continue
-                    # self._process_demand(time, i, maz_ids)
+                    self._process_demand(time, i, maz_ids)
                 
-                distance, demands = self.get_maz_demand(time, maz_ids)
-                
-                self._find_roots_and_leaves(demands)
-                self._set_link_cost_maz()
+                # distance, demands = self._read_maz_demand(time)
+                demand_bins = self._group_demand()
+                for i, demand_group in enumerate(demand_bins):
+                    self._find_roots_and_leaves(demand_group["demand"])
+                    self._set_link_cost_maz()
+                    self._run_shortest_path(time, i, demand_group["dist"])
+                    self._assign_flow(time, i, demand_group["demand"])
+                # self._find_roots_and_leaves(demands)
+                # self._set_link_cost_maz()
 
                 # second argument is zero, this method lets you do assignment in multiple passes
                 # and assign the flow based on the index, for now we will just set to zero
                 # if you want multiple passes do
                 # for i in number of passes:
                 #     self._run_shortest_path(time, i, distance)
-                self._run_shortest_path(time, 0, distance)
-                self._assign_flow(time, 0, demands)
+                # self._run_shortest_path(time, 0, distance)
+                # self._assign_flow(time, 0, demands)
 
 
         # we want a quick lookup from int to the Emme node object, used in maz_demands
@@ -337,16 +343,14 @@ class AssignMAZSPDemand(Component):
         self.logger.log(
             f"Process demand for time period {time} index {index}", level="DETAIL"
         )
-        data = self._read_demand_array(time, index)
-        data[0:100, 0:100] = 5
+        origins, destinations, demands = self._read_maz_demand(time)
         
-        origins, destinations = data.nonzero()
         self.logger.log(
             f"non-zero origins {len(origins)} destinations {len(destinations)}",
             level="DEBUG",
         )
         total_demand = 0
-        for orig, dest in zip(origins, destinations):
+        for orig, dest, demand in zip(origins, destinations, demands):
             # skip intra-maz demand
             if orig == dest:
                 continue
@@ -383,7 +387,7 @@ class AssignMAZSPDemand(Component):
                 continue
             if dist > self._max_dist:
                 self._max_dist = dist
-            demand = data[orig][dest]
+
             total_demand += demand
             self._demand[orig_node].append(
                 {
