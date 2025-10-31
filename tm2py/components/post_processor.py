@@ -104,7 +104,11 @@ class PostProcessor(Component):
                 #     self._export_boardings_by_segment(transit_scenario, period)
                 #     self._export_boardings_by_segment_geofile(transit_scenario, period)
         # #indiv_trip.to_csv(self.get_abs_path("updated_output/indivTripData_3.csv"))
-        
+        indiv_trip = self._sum_time_dist_cost(indiv_trip, 'trip')
+        joint_trip = self._sum_time_dist_cost(joint_trip, 'trip')
+        indiv_tour = self._sum_time_dist_cost(indiv_tour, 'tour')
+        joint_tour = self._sum_time_dist_cost(joint_tour, 'tour')
+
         indiv_trip.to_parquet(self.get_abs_path("updated_output/indivTripData_3.parquet"))
         joint_trip.to_parquet(self.get_abs_path("updated_output/jointTripData_3.parquet"))
 
@@ -368,6 +372,9 @@ class PostProcessor(Component):
         # Adjust time for school bus based on TripModeChoice UEC (Time at 20 mph = sov_dist * 3)
         self.logger.log("Adjust time for school bus mode")
         output.loc[output['trip_mode'] == 17, 'auto_time'] = output.loc[output['trip_mode'] == 17, 'auto_dist'] * 3
+
+        # Attaching distance to transit trips
+        output = self._attach_dist_skim_to_transit_trip(scenario, time_period, output)
         
 
         return output
@@ -457,6 +464,8 @@ class PostProcessor(Component):
         self.logger.log("Adjust time for school bus mode")
         output.loc[output[f'tour_mode'] == 17, 'auto_time'] = output.loc[output['tour_mode'] == 17, 'auto_dist'] * 3
 
+        # Attach highway distance skim to transit
+        output = self._attach_dist_skim_to_transit_tour(scenario, time_period, output)
         
         return output
 
@@ -491,6 +500,9 @@ class PostProcessor(Component):
             'PNR_TRN_WLK' :[12]
 
         }
+
+        period_trips = output['timeperiod'] == time_period
+
         for mode in transit_modes:
             self.logger.log(f"Reading skims for mode: {mode}")
             matrices = {
@@ -506,7 +518,6 @@ class PostProcessor(Component):
 
         # Total Transit Time = IVT + IWAIT + XTRANSFER + WAUX + [WACC/WEGR/DTIME] depending on path taken
 
-            period_trips = output['timeperiod'] == time_period
             mode_trips = output['trip_mode'].isin(transit_modes[mode])
             
             # Determining whether trip was walk to or walk from transit based on if trip is inbound or outbound
@@ -618,6 +629,65 @@ class PostProcessor(Component):
         return output
 
 
+    def _attach_dist_skim_to_transit_trip(self, scenario: EmmeScenario, time_period: str, output:pd.DataFrame):
+        """"
+        Getting highway distance skims for transit trips since transit trips do not have distance. Distance is based on drive-alone no toll distance
+
+        """
+        # Transit modes do not have a distance so distance is the da distance between the OD
+        transit_modes = output['trip_mode'].isin([11,12,13,14])
+        period_trips = output['timeperiod'] == time_period
+        mask = transit_modes & period_trips
+        if not mask.any():
+            self.logger.log(f"No transit trips for timeperiod: {time_period}")
+            return output
+        
+        emmebank = scenario.emmebank
+
+        self.logger.log(f"Attaching drive-alone distance for transit trips")
+        matrix = emmebank.matrix(f"{time_period}_da_dist").get_numpy_data()
+        origins = output.loc[mask, 'origin_TAZ_SEQ'].values - 1
+        dests = output.loc[mask, 'destination_TAZ_SEQ'].values - 1 
+
+        output.loc[mask, 'transit_dist'] = matrix[origins, dests]
+
+        return output
+
+    def _attach_dist_skim_to_transit_tour(self, scenario: EmmeScenario, time_period: str, output:pd.DataFrame):
+        """
+        Getting highway distance skims for transit tours since transit tours do not have distance. Distance is based on drive-alone no toll distance
+
+        """
+        # Transit modes do not have a distance so distance is the da distance between the OD
+        transit_modes = output['tour_mode'].isin([11,12,13,14])
+        start_period_trips = output['timeperiod_start'] == time_period
+        end_period_trips = output['timeperiod_end'] == time_period
+        mask_out = transit_modes & start_period_trips
+        mask_in = transit_modes & end_period_trips
+
+        emmebank = scenario.emmebank
+        matrix = emmebank.matrix(f"{time_period}_da_dist").get_numpy_data()
+
+        if mask_out.any():
+            self.logger.log(f"Attaching drive-alone distance for outbound transit tours")
+            origins = output.loc[mask_out, 'origin_TAZ_SEQ'].values - 1
+            dests = output.loc[mask_out, 'destination_TAZ_SEQ'].values - 1 
+
+            output.loc[mask_out, 'transit_dist_out'] = matrix[origins, dests]
+
+        if mask_in.any():
+            self.logger.log(f"Attaching drive-alone distance for inbound transit tours")
+            origins = output.loc[mask_in, 'origin_TAZ_SEQ'].values - 1
+            dests = output.loc[mask_in, 'destination_TAZ_SEQ'].values - 1 
+
+            output.loc[mask_in, 'transit_dist_in'] = matrix[origins, dests]
+
+        output['transit_dist'] = output['transit_dist_out'] + output['transit_dist_in']
+
+        
+        return output
+
+
     def _attach_nonmotorized_skims_to_trip_tour(self, output: pd.DataFrame, trip_tour: str):
         """Attach nomotorized skims (bike and walk) on MAZ to MAZ level to trips
         Nonmotorized time skims are calculated by dividing skim distance by average bike/ped walking time
@@ -724,9 +794,6 @@ class PostProcessor(Component):
         #'walk_time', 'walk_dist', 'walk_dist_ft','bike_time', 'bike_dist'
         ]] = None
         
-
-
-    
         return df
     
     def _add_tour_skim_columns(self, df: pd.DataFrame):
@@ -742,11 +809,11 @@ class PostProcessor(Component):
                 'auto_time_out', 'auto_dist_out', 'auto_cost_out', 'auto_bridge_toll_out', 'auto_value_toll_out',
                 'auto_time_in', 'auto_dist_in', 'auto_cost_in', 'auto_bridge_toll_in', 'auto_value_toll_in',
                 'transit_ivt', 'transit_iwait', 'transit_xwait', 'transit_waux', 
-                'transit_wacc', 'transit_wegr', 'transit_dtime','transit_fare',
+                'transit_wacc', 'transit_wegr', 'transit_dtime','transit_fare', 'transit_dist',
                 'transit_ivt_out', 'transit_iwait_out', 'transit_xwait_out', 'transit_waux_out', 
-                'transit_wacc_out', 'transit_wegr_out', 'transit_dtime_out','transit_fare_out',
+                'transit_wacc_out', 'transit_wegr_out', 'transit_dtime_out','transit_fare_out', 'transit_dist_out',
                 'transit_ivt_in', 'transit_iwait_in', 'transit_xwait_in', 'transit_waux_in', 
-                'transit_wacc_in', 'transit_wegr_in', 'transit_dtime_in','transit_fare_in'
+                'transit_wacc_in', 'transit_wegr_in', 'transit_dtime_in','transit_fare_in', 'transit_dist_in'
            ]] = None  
 
         return df
@@ -776,4 +843,28 @@ class PostProcessor(Component):
         return df 
 
 
+    def _sum_time_dist_cost(self, df: pd.DataFrame, trip_tour: str):
+        """
+        Calculate total time, dist, cost based on the skims variables for trips and tour
+
+        Total Transit Time = IVT + IWAIT + XTRANSFER + WAUX + [WACC/WEGR/DTIME] depending on path taken
+
+        """  
+
+        # Since variables are null if trip/tour mode does not match, sum across every possible variable
+        time_column = ['auto_time', 'transit_ivt', 'transit_iwait', 'transit_xwait', 'transit_waux',
+                       'transit_wacc', 'transit_wegr', 'transit_dtime', 'walk_time', 'bike_time'
+                       ]
         
+        dist_column = ['auto_dist', 'walk_dist', 'bike_dist']
+
+        cost_column = ['auto_cost', 'transit_fare']
+        df[f'{trip_tour}_time'] = df[time_column].sum(axis = 1)
+        self.logger.log(f"Calculating {trip_tour} distance - transit trips do not have distances")
+        df[f'{trip_tour}_dist'] = df[dist_column].sum(axis = 1)
+        self.logger.log(f"Calculating {trip_tour} cost - nonmotorized modes do not have cost")
+        df[f'{trip_tour}_cost'] = df[cost_column].sum(axis = 1)
+
+        return df
+
+
