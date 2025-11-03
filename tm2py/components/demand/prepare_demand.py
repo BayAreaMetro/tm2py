@@ -469,8 +469,8 @@ class PrepareHighwayDemand(EmmeDemand):
             # active_out_file.open()
 
             # Transit and active modes: one matrix per time period per mode
-            it_both_taz_and_maz = it_full[it_full.time_period == time_period]
-            jt_both_taz_and_maz = jt_full[jt_full.time_period == time_period]
+            individual_trip_both_taz_and_maz_df = it_full[it_full.time_period == time_period]
+            joint_trip_both_taz_and_maz = jt_full[jt_full.time_period == time_period]
 
             # currently hard-coded based on Travel Mode trip mode codes
             DRIVE_MODES = [
@@ -489,20 +489,20 @@ class PrepareHighwayDemand(EmmeDemand):
             # IT = individual trips
             # JT = joint trips
             it_is_maz_trip = (
-                (it_both_taz_and_maz["trip_dist"] < self.controller.config.highway.maz_drive_distance_threshold) &
-                it_both_taz_and_maz["trip_mode"].isin(DRIVE_MODES)
+                (individual_trip_both_taz_and_maz_df["trip_dist"] < self.controller.config.highway.maz_drive_distance_threshold) &
+                individual_trip_both_taz_and_maz_df["trip_mode"].isin(DRIVE_MODES)
             )
-            it_maz = it_both_taz_and_maz[it_is_maz_trip]
-            it = it_both_taz_and_maz[~it_is_maz_trip]
+            it_maz_df = individual_trip_both_taz_and_maz_df[it_is_maz_trip]
+            it = individual_trip_both_taz_and_maz_df[~it_is_maz_trip]
 
             jt_is_maz_trip = (
-                (jt_both_taz_and_maz["trip_dist"] < self.controller.config.highway.maz_drive_distance_threshold) &
-                jt_both_taz_and_maz["trip_mode"].isin(DRIVE_MODES)
+                (joint_trip_both_taz_and_maz["trip_dist"] < self.controller.config.highway.maz_drive_distance_threshold) &
+                joint_trip_both_taz_and_maz["trip_mode"].isin(DRIVE_MODES)
             )
-            jt_maz = jt_both_taz_and_maz[jt_is_maz_trip]
-            jt = jt_both_taz_and_maz[~jt_is_maz_trip]
+            jt_maz_df = joint_trip_both_taz_and_maz[jt_is_maz_trip]
+            jt = joint_trip_both_taz_and_maz[~jt_is_maz_trip]
 
-            maz_trips = pd.concat([it_maz, jt_maz])
+            maz_trips = pd.concat([it_maz_df, jt_maz_df])
             # TODO: replace this with emmebank database
             grouped_maz_trips_df = maz_trips.groupby(["MAZ_x", "MAZ_y"])['eq_cnt'].sum().reset_index()
             grouped_maz_trips_df.to_csv(f"D:\\TEMP\\maz_trips{time_period}.csv", index=False)
