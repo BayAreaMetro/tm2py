@@ -16,6 +16,7 @@ from tm2py.emme.matrix import OMXManager
 from tm2py.logger import LogStartEnd
 from tm2py.matrix import redim_matrix
 from collections import defaultdict
+from tm2py.canonical_mode_choice import ModeChoice
 
 
 if TYPE_CHECKING:
@@ -290,10 +291,20 @@ class PrepareHighwayDemand(EmmeDemand):
         )
         it_full["eq_cnt"] = 1 / it_full.sampleRate
         it_full["eq_cnt"] = np.where(
-            it_full["trip_mode"].isin([3, 4, 5]),
+            it_full["trip_mode"].isin(
+                [
+                    ModeChoice.SHARED2GP.value, 
+                    ModeChoice.SHARED2HOV.value, 
+                    ModeChoice.SHARED2PAY.value
+                ]
+            ),
             0.5 * it_full["eq_cnt"],
             np.where(
-                it_full["trip_mode"].isin([6, 7, 8]),
+                it_full["trip_mode"].isin([
+                    ModeChoice.SHARED3GP.value, 
+                    ModeChoice.SHARED3HOV.value, 
+                    ModeChoice.SHARED3PAY.value
+            ]),
                 0.35 * it_full["eq_cnt"],
                 it_full["eq_cnt"],
             ),
@@ -319,10 +330,10 @@ class PrepareHighwayDemand(EmmeDemand):
             maz_taz_df, left_on="dest_mgra", right_on="MAZ", how="left"
         ).rename(columns={"TAZ": "dest_taz"})
         it_full["trip_mode"] = np.where(
-            it_full["trip_mode"] == 14, 13, it_full["trip_mode"]
+            it_full["trip_mode"] == ModeChoice.KNR_TNC.value, ModeChoice.PNR_SET.value, it_full["trip_mode"]
         )
         jt_full["trip_mode"] = np.where(
-            jt_full["trip_mode"] == 14, 13, jt_full["trip_mode"]
+            jt_full["trip_mode"] == ModeChoice.KNR_TNC.value, ModeChoice.PNR_SET.value, jt_full["trip_mode"]
         )
 
         num_zones = self.num_internal_zones
@@ -341,7 +352,11 @@ class PrepareHighwayDemand(EmmeDemand):
             return combined_sum.reindex(OD_full_index, fill_value=0).unstack().values
 
         def create_zero_passenger_trips(
-            trips, deadheading_factor, trip_modes=[1, 2, 3]
+            trips, deadheading_factor, trip_modes=[
+                ModeChoice.DRIVEALONEFREE.value, 
+                ModeChoice.DRIVEALONEPAY.value, 
+                ModeChoice.SHARED2GP.value
+            ]
         ):
             """
             For taxis ect, 
@@ -358,7 +373,11 @@ class PrepareHighwayDemand(EmmeDemand):
         # create zero passenger trips for auto modes
         if it_full["avAvailable"].sum() > 0:
             it_zpav_trp = create_zero_passenger_trips(
-                it_full, zp_cav, trip_modes=[1, 2, 3]
+                it_full, zp_cav, trip_modes=[
+                ModeChoice.DRIVEALONEFREE.value, 
+                ModeChoice.DRIVEALONEPAY.value, 
+                ModeChoice.SHARED2GP.value
+            ]
             )
             it_zptnc_trp = create_zero_passenger_trips(it_full, zp_tnc, trip_modes=[9])
             # Combining zero passenger trips to trip files
@@ -454,7 +473,18 @@ class PrepareHighwayDemand(EmmeDemand):
             jt_both_taz_and_maz = jt_full[jt_full.time_period == time_period]
 
             # currently hard-coded based on Travel Mode trip mode codes
-            DRIVE_MODES = [1,2,3,4,5,6,7,8,9,10,15,16,17]
+            DRIVE_MODES = [
+                ModeChoice.DRIVEALONEFREE.value,
+                ModeChoice.DRIVEALONEPAY.value,
+                ModeChoice.SHARED2GP.value,
+                ModeChoice.SHARED2HOV.value,
+                ModeChoice.SHARED2PAY.value,
+                ModeChoice.SHARED3GP.value,
+                ModeChoice.SHARED3HOV.value,
+                ModeChoice.SHARED3PAY.value,
+                ModeChoice.TAXI.value,
+                ModeChoice.TNC.value,
+            ]
             
             # IT = individual trips
             # JT = joint trips
@@ -541,7 +571,20 @@ class PrepareHighwayDemand(EmmeDemand):
                     # that the ordering of keys is preserved.  See
                     # https://github.com/toml-lang/toml/issues/162
 
-                    if trip_mode in DRIVE_MODES:
+                    if trip_mode in [
+                        ModeChoice.DRIVEALONEFREE.value,
+                        ModeChoice.DRIVEALONEPAY.value,
+                        ModeChoice.SHARED2GP.value,
+                        ModeChoice.SHARED2HOV.value,
+                        ModeChoice.SHARED2PAY.value,
+                        ModeChoice.SHARED3GP.value,
+                        ModeChoice.SHARED3HOV.value,
+                        ModeChoice.SHARED3PAY.value,
+                        ModeChoice.WALK.value,
+                        ModeChoice.BIKE.value,
+                        ModeChoice.TAXI.value,
+                        ModeChoice.TNC.value,
+                    ]:
                         highway_cache[mode_name_dict[trip_mode]] = combine_trip_lists(
                             it, jt, trip_mode
                         )
@@ -556,7 +599,7 @@ class PrepareHighwayDemand(EmmeDemand):
                             name=matrix_name,
                         )
 
-                    elif trip_mode in [15, 16]:
+                    elif trip_mode in [ModeChoice.TAXI.value, ModeChoice.TNC.value]:
                         # identify the correct mode split factors for da, sr2, sr3
                         self.logger.debug(
                             f"Splitting ridehail trips into shared ride trips"
