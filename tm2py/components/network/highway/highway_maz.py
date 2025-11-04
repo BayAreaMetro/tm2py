@@ -334,7 +334,6 @@ class AssignMAZSPDemand(Component):
                         "dist": dist,
                     }
                 )
-        print("num demands:", len(self._demand))
         self.logger.log(f"Max distance found {self._max_dist}", level="DEBUG")
         self.logger.log(f"Total inter-zonal demand {total_demand}", level="DEBUG")
 
