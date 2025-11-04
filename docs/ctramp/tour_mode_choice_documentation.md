@@ -113,6 +113,9 @@ TNC_Cost = base_fare + time_rate * total_time +
            distance_rate * distance + surge_pricing
 ```
 
+!!! note "Value of Time Calculations"
+    Cost components in tour mode choice are evaluated using income-stratified value of time calculations. The system differentiates between individual and joint tours when applying time values. See [Value of Time Analysis](VALUE_OF_TIME_ANALYSIS.md) for detailed specifications of the heterogeneous time value assignment system.
+
 **Reliability and Comfort**:
 
 ```text

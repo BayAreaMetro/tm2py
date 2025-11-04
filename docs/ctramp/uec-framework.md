@@ -51,6 +51,14 @@ UEC Framework
 - **`StopLocationChoiceModel`**: Intermediate stop location choice
 - **`AutoOwnershipChoiceModel`**: Household auto ownership decisions
 
+## Related Documentation
+
+### Mode Choice Systems
+
+- **[Tour Mode Choice Documentation](tour_mode_choice_documentation.md)** - Comprehensive tour-level mode choice model guide
+- **[Trip Mode Choice Documentation](trip_mode_choice_documentation.md)** - Trip-level mode choice implementation
+- **[Value of Time Analysis](VALUE_OF_TIME_ANALYSIS.md)** - Income-stratified value of time assignment system used in mode choice utilities
+
 ## UEC Control File Structure
 
 UEC control files are Excel spreadsheets (.xls) that define utility expressions for choice models.
@@ -151,11 +159,15 @@ Defines input variables and their data sources.
 ```
 
 **Utility Categories**:
+
 - **Mode Constants**: Base preference for each mode
 - **Level-of-Service**: Time, cost, and reliability impacts
 - **Personal Characteristics**: Age, gender, income interactions
-- **Spatial Factors**: Density, accessibility measures
+- **Spatial Factors**: Density, accessibility measures  
 - **Tour Characteristics**: Purpose, time-of-day, duration
+
+!!! note "Value of Time in Mode Choice"
+    Tour mode choice utilities incorporate income-stratified value of time calculations that differentiate between individual and joint tours. See [Value of Time Analysis](VALUE_OF_TIME_ANALYSIS.md) for the complete specification of the heterogeneous time value assignment system.
 
 ### 2. Destination Choice UEC
 
