@@ -12,7 +12,7 @@ from .controller import RunController
 from .examples import get_example
 from .logger import Logger, LogStartEnd
 from .setup_model.setup import SetupModel
-from .canonical_mode_choice import ModeChoice
+from .enum import ModeChoice
 
 __all__ = [
     # component

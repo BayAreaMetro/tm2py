@@ -16,7 +16,7 @@ from tm2py.emme.matrix import OMXManager
 from tm2py.logger import LogStartEnd
 from tm2py.matrix import redim_matrix
 from collections import defaultdict
-from tm2py.canonical_mode_choice import ModeChoice
+from tm2py.enum import ModeChoice
 
 
 if TYPE_CHECKING:
@@ -404,7 +404,7 @@ class PrepareHighwayDemand(EmmeDemand):
 
         # read properties from config
 
-        mode_name_dict = self.controller.config.household.ctramp_mode_names
+        mode_name_dict = ModeChoice.id_to_matrix_name.value
         income_segment_config = self.controller.config.household.income_segment
 
         if income_segment_config["enabled"]:
@@ -530,7 +530,7 @@ class PrepareHighwayDemand(EmmeDemand):
                         name=matrix_name,
                     )
 
-                elif trip_mode in [12, 13]:
+                elif trip_mode in [ModeChoice.PNR_SET.value, ModeChoice.KNR_PERS.value]:
                     it_outbound, it_inbound = it[it.inbound == 0], it[it.inbound == 1]
                     jt_outbound, jt_inbound = jt[jt.inbound == 0], jt[jt.inbound == 1]
 
@@ -559,6 +559,7 @@ class PrepareHighwayDemand(EmmeDemand):
                     )
 
             # Highway modes: one matrix per suffix (income class) per time period per mode
+            
             for suffix in suffixes:
                 highway_cache = {}
 
@@ -572,6 +573,13 @@ class PrepareHighwayDemand(EmmeDemand):
                 else:
                     jt = pd.DataFrame(None, columns=jt_full.columns)
 
+                defer_matrix_write = {
+                    class_name
+                    for mode_type in self.controller.config.household.rideshare_mode_split.keys()
+                    for class_name in self.controller.config.household.__dict__[
+                        f"{mode_type}_split"
+                    ]
+                }
                 for trip_mode in sorted(mode_name_dict):
                     # Python preserves keys in the order they are inserted but
                     # mode_name_dict originates from TOML, which does not guarantee
@@ -589,8 +597,6 @@ class PrepareHighwayDemand(EmmeDemand):
                         ModeChoice.SHARED3PAY.value,
                         ModeChoice.WALK.value,
                         ModeChoice.BIKE.value,
-                        ModeChoice.TAXI.value,
-                        ModeChoice.TNC.value,
                     ]:
                         highway_cache[mode_name_dict[trip_mode]] = combine_trip_lists(
                             it, jt, trip_mode
@@ -601,10 +607,11 @@ class PrepareHighwayDemand(EmmeDemand):
                             if suffix
                             else f"{out_mode}_{time_period.upper()}"
                         )
-                        highway_out_file.write_array(
-                            numpy_array=highway_cache[mode_name_dict[trip_mode]],
-                            name=matrix_name,
-                        )
+                        if mode_name_dict[trip_mode] not in defer_matrix_write:
+                            highway_out_file.write_array(
+                                numpy_array=highway_cache[mode_name_dict[trip_mode]],
+                                name=matrix_name,
+                            )
 
                     elif trip_mode in [ModeChoice.TAXI.value, ModeChoice.TNC.value]:
                         # identify the correct mode split factors for da, sr2, sr3
@@ -624,16 +631,19 @@ class PrepareHighwayDemand(EmmeDemand):
 
                         ridehail_trips = combine_trip_lists(it, jt, trip_mode)
                         for out_mode in ridehail_split_factors:
-                            matrix_name = f"{out_mode}_{suffix}" if suffix else out_mode
+                            matrix_name = f"{out_mode}_{suffix}_{time_period}" if suffix else f"{out_mode}_{time_period}"
                             self.logger.debug(f"Writing out mode {out_mode}")
                             highway_cache[out_mode] += (
                                 (ridehail_trips * ridehail_split_factors[out_mode])
                                 .astype(float)
                                 .round(2)
                             )
-                            highway_out_file.write_array(
-                                numpy_array=highway_cache[out_mode], name=matrix_name
-                            )
+
+                            # it is last iteration, we can safely write these mats
+                            if trip_mode == ModeChoice.TNC.value:
+                                highway_out_file.write_array(
+                                    numpy_array=highway_cache[out_mode], name=matrix_name.upper()
+                                )
 
             highway_out_file.close()
             transit_out_file.close()

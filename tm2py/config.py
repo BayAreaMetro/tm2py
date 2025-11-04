@@ -332,7 +332,7 @@ class HouseholdConfig(ConfigItem):
     taxi_split: Dict[str, float]
     single_tnc_split: Dict[str, float]
     shared_tnc_split: Dict[str, float]
-    ctramp_mode_names: Dict[float, str]
+    # ctramp_mode_names: Dict[float, str]
     income_segment: Dict[str, Union[float, str, list]]
     ctramp_hh_file: str
     sample_rate_by_iteration: List[float]
