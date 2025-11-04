@@ -598,6 +598,9 @@ class PrepareHighwayDemand(EmmeDemand):
                         ModeChoice.SHARED3PAY.value,
                         ModeChoice.WALK.value,
                         ModeChoice.BIKE.value,
+                        ModeChoice.TAXI.value,
+                        ModeChoice.TNC.value,
+                        ModeChoice.SCHLBUS.value,
                     ]:
                         highway_cache[mode_name_dict[trip_mode]] = combine_trip_lists(
                             it, jt, trip_mode
