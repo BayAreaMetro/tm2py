@@ -125,6 +125,7 @@ class AssignMAZSPDemand(Component):
             emme_node_id: maz_id for emme_node_id, maz_id in 
             zip(full_crosswalk_df["emme_node_id"], full_crosswalk_df["MAZSEQ"])
         }
+        # END Temporary
         
 
         county_groups = {}
@@ -144,9 +145,6 @@ class AssignMAZSPDemand(Component):
                     self._process_demand(time, i, maz_ids, model_id_to_maz)
                 demand_bins = self._group_demand()
                 for i, demand_group in enumerate(demand_bins):
-                    print("Distance: ", demand_group["dist"])
-                    print("    Num: ", len(demand_group["demand"]))
-                    
                     self._find_roots_and_leaves(demand_group["demand"])
                     self._set_link_cost_maz()
                     self._run_shortest_path(time, i, demand_group["dist"])
@@ -281,17 +279,9 @@ class AssignMAZSPDemand(Component):
         """
         emme_node_by_maz_id = {model_id_to_maz_id[int(maz_id)]: maz_id for maz_id in maz_ids if not isinstance(maz_id, dict)}
 
-        if self._demand is not None:
-            print("pre_ass_demand: ", len(self._demand))
-        else: 
-            print("pre_ass_demand:", self._demand)
-        self.logger.log(
-            f"Process demand for time period {time} index {index}", level="DETAIL"
-        )
-        # data = self._read_demand_array(time, index)
+        # TEMP -> WAITING ON BENTLY TO GET BACK TO US 
         data = pd.read_csv(f"D:\\TEMP\\maz_trips{time}.csv")
-        print("time: ", time)
-        print(data.shape[0])
+
         origin_mazs, destination_mazs, demands = data["MAZ_x"], data["MAZ_y"], data["eq_cnt"]
 
         # origins, destinations = data.nonzero()
