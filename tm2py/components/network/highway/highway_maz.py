@@ -116,13 +116,14 @@ class AssignMAZSPDemand(Component):
     def run(self):
         """Run MAZ-to-MAZ shortest path assignment."""
         # model config replace / scenario config
+
+        # TEMPORARY - WAITING ON YUE to confirm source of truth 
         MAZSEQ_TO_N_DF = pd.read_csv(r"Z:\MTC\US0024934.9168\TM2.2.1.3_testing_maz_changes2\inputs\landuse\mtc_final_network_zone_seq.csv")
         N_TO_EMME_NODE_DF = pd.read_csv(r"Z:\MTC\US0024934.9168\TM2.2.1.3_testing_maz_changes2\emme_project\Database_highway\emme_drive_network_node_id_crosswalk.csv")
         full_crosswalk_df = MAZSEQ_TO_N_DF[["MAZSEQ", "N"]].merge(N_TO_EMME_NODE_DF[["emme_node_id", "model_node_id"]], left_on="N", right_on="model_node_id", how="left", validate="1:1")
         model_id_to_maz = {
-            emme_node_id: maz_id for 
-            maz_id, emme_node_id in 
-            zip(full_crosswalk_df["MAZSEQ"], full_crosswalk_df["emme_node_id"])
+            emme_node_id: maz_id for emme_node_id, maz_id in 
+            zip(full_crosswalk_df["emme_node_id"], full_crosswalk_df["MAZSEQ"])
         }
         
 

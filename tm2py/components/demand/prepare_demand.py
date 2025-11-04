@@ -379,7 +379,10 @@ class PrepareHighwayDemand(EmmeDemand):
                 ModeChoice.SHARED2GP.value
             ]
             )
-            it_zptnc_trp = create_zero_passenger_trips(it_full, zp_tnc, trip_modes=[9])
+            it_zptnc_trp = create_zero_passenger_trips(it_full, zp_tnc, trip_modes=[
+                ModeChoice.WALK.value
+                ]
+            )
             # Combining zero passenger trips to trip files
             it_full = pd.concat(
                 [it_full, it_zpav_trp, it_zptnc_trp], ignore_index=True
@@ -387,9 +390,13 @@ class PrepareHighwayDemand(EmmeDemand):
 
         if jt_full["avAvailable"].sum() > 0:
             jt_zpav_trp = create_zero_passenger_trips(
-                jt_full, zp_cav, trip_modes=[1, 2, 3]
+                jt_full, zp_cav, trip_modes=[
+                ModeChoice.DRIVEALONEFREE.value, 
+                ModeChoice.DRIVEALONEPAY.value, 
+                ModeChoice.SHARED2GP.value
+            ]
             )
-            jt_zptnc_trp = create_zero_passenger_trips(jt_full, zp_tnc, trip_modes=[9])
+            jt_zptnc_trp = create_zero_passenger_trips(jt_full, zp_tnc, trip_modes=[ModeChoice.WALK.value])
             # Combining zero passenger trips to trip files
             jt_full = pd.concat(
                 [jt_full, jt_zpav_trp, jt_zptnc_trp], ignore_index=True
@@ -514,7 +521,7 @@ class PrepareHighwayDemand(EmmeDemand):
                 #                    self.logger.debug(f"Writing out mode {mode_name_dict[trip_mode]}")
                 #                    active_out_file.write_array(numpy_array=combine_trip_lists(it,jt, trip_mode), name = matrix_name)
 
-                if trip_mode == 11:
+                if trip_mode == ModeChoice.WALK_SET.value:
                     matrix_name = "WLK_TRN_WLK"
                     self.logger.debug(f"Writing out mode WLK_TRN_WLK")
                     # other_trn_trips = np.array(hsr_trips_file[matrix_name])+np.array(interregional_trips_file[matrix_name])
