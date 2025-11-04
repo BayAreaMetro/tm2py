@@ -425,14 +425,15 @@ class AssignmentRunner:
 
     def _copy_maz_flow(self):
         """Copy maz_flow from MAZ demand assignment to ul1 for background traffic."""
-        self._network_calculator("ul1", "0")
+        self._network_calculator("ul1", "@maz_flow")
 
     def _reset_background_traffic(self):
         """Set ul1 for background traffic to 0 (no maz-maz flow)."""
         self.logger.log(
             "Set ul1 to 0 for background traffic", indent=True, level="DETAIL"
         )
-        self._network_calculator("ul1", "@maz_flow")
+        self._network_calculator("ul1", "0")
+        
 
     def _create_skim_matrices(self):
         """Create matrices to store skim results in Emme database.
