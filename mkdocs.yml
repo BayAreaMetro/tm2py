@@ -38,6 +38,7 @@ nav:
     - System Architecture: ctramp/architecture.md
     - System Overview: ctramp/overview.md
     - Model Components:
+      - Components Overview: ctramp/components/index.md
       - Auto Ownership: ctramp/components/auto-ownership.md
       - Daily Activity Pattern: ctramp/components/cdap.md
       - Mandatory Tours: ctramp/components/mandatory-tours.md
