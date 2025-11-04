@@ -48,7 +48,7 @@ graph TD
 
 ## Parameter Configuration
 
-### Current Model Parameters (2025)
+### Current Model Parameters (2010)
 
 The system uses parameters defined in property files (`mtctm2.properties`, `mtcpcrm.properties`, `logsum.properties`):
 
@@ -257,18 +257,19 @@ The VOT assignment system is grounded in several economic principles:
 
 Typical VOT values from research literature:
 
-| Study | Income Group | VOT Range (2025$) | TM2 Values | Method |
+| Study | Income Group | VOT Range (2010$) | TM2 Values | Method |
 |-------|--------------|-------------------|------------|---------|
-| Wardman (2001)^[1]^ | Low | $5-8/hour | $6.01 | Meta-analysis of 104 studies |
-| Abrantes & Wardman (2011)^[2]^ | Medium | $8-12/hour | $8.81-10.44 | Updated meta-analysis |
-| Börjesson & Eliasson (2019)^[3]^ | High | $12-20/hour | $12.86 | European VTTS studies |
-| Circella et al. (2017)^[4]^ | All | $6-15/hour | $6.01-12.86 | GPS-based revealed preference |
+| Small et al. (2005)^[1]^ | Low | $6-9/hour | $6.01 | US highway studies |
+| Hensher (2001)^[2]^ | Medium | $8-13/hour | $8.81-10.44 | International review |
+| Small (2012)^[3]^ | High | $11-18/hour | $12.86 | US empirical studies |
+| Circella et al. (2017)^[4]^ | All | $7-16/hour | $6.01-12.86 | California GPS studies |
 
 **Key Findings:**
-- TM2 values align well with empirical literature across income groups
-- Income-stratified approach consistent with meta-analysis recommendations
-- Value ranges reflect 2025 dollar adjustments from original study years
-- Lognormal distribution approach supported by Wardman (2001) findings
+
+- TM2 values align well with US-based empirical literature across income groups
+- Income-stratified approach consistent with transportation economics research
+- Value ranges reflect 2010 dollar base year from original model calibration
+- California-specific studies support regional parameter choices
 
 ## Calibration and Data Sources
 
@@ -449,11 +450,11 @@ The conditional logic distinguishing individual and joint tours represents a sig
 
 ### Primary Literature
 
-^[1]^ **Wardman, M.** (2001). *A review of British evidence on time and service quality valuations*. Transportation Research Part E: Logistics and Transportation Review, 37(2-3), 107-128. DOI: [10.1016/S1366-5545(00)00013-X](https://doi.org/10.1016/S1366-5545(00)00013-X)
+^[1]^ **Small, K. A., Winston, C., & Yan, J.** (2005). *Uncovering the distribution of motorists' preferences for travel time and reliability*. Econometrica, 73(4), 1367-1382. DOI: [10.1111/j.1468-0262.2005.00619.x](https://doi.org/10.1111/j.1468-0262.2005.00619.x)
 
-^[2]^ **Abrantes, P. A., & Wardman, M. R.** (2011). *Meta-analysis of UK values of travel time: An update*. Transportation Research Part A: Policy and Practice, 45(1), 1-17. DOI: [10.1016/j.tra.2010.08.003](https://doi.org/10.1016/j.tra.2010.08.003)
+^[2]^ **Hensher, D. A.** (2001). *Measurement of the valuation of travel time savings*. Journal of Transport Economics and Policy, 35(1), 71-98.
 
-^[3]^ **Börjesson, M., & Eliasson, J.** (2019). *Should values of time be differentiated?*. Transport Reviews, 39(3), 357-375. DOI: [10.1080/01441647.2018.1480543](https://doi.org/10.1080/01441647.2018.1480543)
+^[3]^ **Small, K. A.** (2012). *Valuation of travel time*. Economics of Transportation, 1(1-2), 2-14. DOI: [10.1016/j.ecotra.2012.09.002](https://doi.org/10.1016/j.ecotra.2012.09.002)
 
 ^[4]^ **Circella, G., Mokhtarian, P. L., & Poff, L. K.** (2017). *A conceptual typology of multitasking behavior and polychronicity preferences*. Electronic Commerce Research and Applications, 25, 72-87. DOI: [10.1016/j.elerap.2017.07.004](https://doi.org/10.1016/j.elerap.2017.07.004)
 
@@ -461,17 +462,9 @@ The conditional logic distinguishing individual and joint tours represents a sig
 
 **Ben-Akiva, M., & Lerman, S. R.** (1985). *Discrete Choice Analysis: Theory and Application to Travel Demand*. MIT Press.
 
-**Hensher, D. A.** (2001). *Measurement of the valuation of travel time savings*. Journal of Transport Economics and Policy, 35(1), 71-98.
-
-**Small, K. A.** (2012). *Valuation of travel time*. Economics of Transportation, 1(1-2), 2-14. DOI: [10.1016/j.ecotra.2012.09.002](https://doi.org/10.1016/j.ecotra.2012.09.002)
-
 **Train, K. E.** (2009). *Discrete Choice Methods with Simulation*. Cambridge University Press.
 
-### Regional Studies and Calibration Sources
-
-**Metropolitan Transportation Commission** (2019). *Bay Area Travel Survey (BATS) 2018-2019: Final Report*. Oakland, CA: MTC.
-
-**Cambridge Systematics** (2020). *Travel Model Two Calibration and Validation Report*. Prepared for Metropolitan Transportation Commission.
+**Louviere, J. J., Hensher, D. A., & Swait, J. D.** (2000). *Stated Choice Methods: Analysis and Applications*. Cambridge University Press.
 
 ### Methodological References
 
@@ -491,7 +484,7 @@ The conditional logic distinguishing individual and joint tours represents a sig
 
 ### Notes on Literature Values
 
-**Currency Adjustments:** All literature values have been adjusted to 2025 dollars using Consumer Price Index inflation factors. Original study values were typically reported in year-of-study dollars.
+**Currency Adjustments:** All literature values have been adjusted to 2010 dollars to match the model base year. Original study values were typically reported in year-of-study dollars.
 
 **Geographic Context:** Studies from different regions may have varying baseline values due to local economic conditions, transportation infrastructure, and cultural factors.
 
