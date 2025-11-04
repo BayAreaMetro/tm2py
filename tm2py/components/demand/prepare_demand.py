@@ -491,6 +491,7 @@ class PrepareHighwayDemand(EmmeDemand):
                 ModeChoice.SHARED3PAY.value,
                 ModeChoice.TAXI.value,
                 ModeChoice.TNC.value,
+                ModeChoice.SCHLBUS.value,
             ]
             
             # IT = individual trips
