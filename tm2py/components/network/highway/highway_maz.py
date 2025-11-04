@@ -622,7 +622,7 @@ class AssignMAZSPDemand(Component):
         )
 
     @staticmethod
-    def _get_path_indices(paths_file: BinaryIO) -> [int, int, _array.array]:
+    def _get_path_indices(paths_file: BinaryIO) -> tuple[int, int, _array.array]:
         """Get the path header indices.
 
         See the Emme Shortest path tool doc for additional details on reading
@@ -654,7 +654,7 @@ class AssignMAZSPDemand(Component):
         dest: EmmeNode,
         leaves_nb: int,
         path_indicies: _array.array,
-    ) -> [int, int]:
+    ) -> tuple[int, int]:
         """Get the location in the paths_file to read.
 
         Args:
