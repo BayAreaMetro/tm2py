@@ -4,6 +4,12 @@
 
 The Trip Mode Choice Model determines the transportation mode for individual trip segments within tours, building upon the tour-level mode decisions by allowing mode changes during intermediate stops. This model captures the flexibility and complexity of mixed-mode travel patterns and the optimization of transportation choices for specific trip segments.
 
+## Related Documentation
+
+- **[UEC Framework](uec-framework.md)** - Mathematical framework underlying mode choice calculations
+- **[Tour Mode Choice](tour_mode_choice_documentation.md)** - Tour-level mode choice decisions that constrain trip choices
+- **[Value of Time Analysis](VALUE_OF_TIME_ANALYSIS.md)** - Income-stratified time value assignments used in mode choice utilities
+
 ## Model Purpose
 
 **Primary Function**: Select optimal transportation modes for individual trip legs within tours, allowing for mode changes at intermediate stops and optimizing mode choice for specific trip characteristics.
@@ -159,6 +165,9 @@ V_walk_in_transit = ASC_walk_in_transit_tour +
                    β_safety * pedestrian_safety +
                    β_directness * route_directness
 ```
+
+!!! note "Value of Time in Trip Mode Choice"
+    Trip mode choice utilities incorporate the same income-stratified value of time calculations as tour mode choice, with conditional logic for individual vs. joint tours. Time coefficients in the utility functions are multiplied by person-specific value of time parameters. See [Value of Time Analysis](VALUE_OF_TIME_ANALYSIS.md) for complete system specifications.
 
 **Mixed-Mode Tour Trip Choice**:
 

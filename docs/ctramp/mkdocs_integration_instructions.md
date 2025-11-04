@@ -32,7 +32,8 @@ nav:
       - At-Work Subtours: ctramp/components/at-work-subtours.md
     - UEC Framework:
       - UEC Overview: ctramp/uec/index.md
-      - Technical Framework: ctramp/uec/framework.md
+      - Technical Framework: ctramp/uec-framework.md
+      - Value of Time Analysis: ctramp/VALUE_OF_TIME_ANALYSIS.md
       - UEC Files Reference: ctramp/uec/files.md
       - Usage Examples: ctramp/uec/examples.md
     - Execution:

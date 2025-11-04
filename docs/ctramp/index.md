@@ -85,6 +85,14 @@ CT-RAMP's mathematical foundation for all choice modeling:
 - **Model Integration**: Seamless interface with Java choice model implementations
 - **Performance Optimization**: Efficient calculation for large-scale microsimulation
 
+#### Value of Time Assignment System
+Income-stratified time value framework for mode choice modeling:
+
+- **[Value of Time Analysis](VALUE_OF_TIME_ANALYSIS.md)** - Complete specification of heterogeneous time value assignment system
+- **Income Stratification**: Four income categories with distinct lognormal value of time distributions
+- **Tour Type Logic**: Conditional value of time selection for individual vs. joint tours
+- **Mode Choice Integration**: Seamless integration with tour and trip mode choice utility calculations
+
 ## Model Components by Category
 
 ### Long-term and Coordination Models
