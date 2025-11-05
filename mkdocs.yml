@@ -65,6 +65,9 @@ nav:
       - Stop Location Choice: ctramp/stop_location_choice_documentation.md
       - School Location Choice: ctramp/school_location_choice_documentation.md
       - Tour Time-of-Day: ctramp/tour_tod_documentation.md
+  - Assignment:
+    - Overview: assignment/index.md
+    - Highway Value of Time: assignment/highway_value_of_time.md
   - Codebase:
     - Architecture: architecture.md
     # Temporarily disabled due to GDAL dependency issues
