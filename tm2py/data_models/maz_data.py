@@ -8,7 +8,31 @@ from pandera import Field
 from pandera.typing import Series, DataFrame
 
 
-SEQ_INDEX_COLUMNS = ['MAZ','TAZ']
+external_N_list = list(range(900001, 1000000))
+taz_N_list = (
+    list(range(1, 10000)) 
+    + list(range(100001, 110000)) 
+    + list(range(200001, 210000)) 
+    + list(range(300001, 310000))
+    + list(range(400001, 410000)) 
+    + list(range(500001, 510000)) 
+    + list(range(600001, 610000)) 
+    + list(range(700001, 710000))
+    + list(range(800001, 810000))
+)
+maz_N_list = (
+    list(range(10001, 90000)) 
+    + list(range(110001, 190000)) 
+    + list(range(210001, 290000)) 
+    + list(range(310001, 390000))
+    + list(range(410001, 490000)) 
+    + list(range(510001, 590000)) 
+    + list(range(610001, 690000)) 
+    + list(range(710001, 790000))
+    + list(range(810001, 890000))
+)
+disconnected_maz_N_list = [10186, 16084, 111432, 111433, 411178]
+
 
 class MAZData(pa.DataFrameModel):
     """
@@ -173,58 +197,120 @@ class MAZData(pa.DataFrameModel):
         coerce = True
         unique_column_names = True
 
+class NodeIDCrosswalk(pa.DataFrameModel):
+    """
+    Datamodel used to validate node ID crosswalk
 
-def create_sequential_index(df: pd.DataFrame) -> pd.DataFrame:
+    Attributes:
+        N (int): model node ID
+        MAZSEQ (int): MAZ sequential index
+        TAZSEQ (int): TAZ sequential index
+        EXTSEQ (int): External sequential index
+    """
+    N: Series[int] = Field(nullable=False, unique=True)
+    MAZSEQ: Series[int] = Field(nullable=False)
+    TAZSEQ: Series[int] = Field(nullable=False)
+    EXTSEQ: Series[int] = Field(nullable=False)
+
+    class Config:
+        coerce = True
+        unique_column_names = True
+
+
+def create_sequential_index(
+    model_to_emme_node_id_xwalk: pathlib.Path
+) -> DataFrame[NodeIDCrosswalk]:
     """
     Create stable sequential IDs for MAZ and TAZ nodes.
 
     Args:
-        df: input maz landuse
+        model_to_emme_node_id_xwalk: model ID to Emme node ID crosswalk written out by Lasso
 
     Returns:
-        maz landuse with two additional sequential index columns: MAZ and TAZ
+        crosswalk file of model ID to TAZ, MAZ, and external TAZ sequential ID.
+        Will be further used to validate the TAZ, MAZ columns in maz data input.   
     """
-    df = df.drop(columns=SEQ_INDEX_COLUMNS, errors="ignore")
-    
-    # MAZ sequential index
-    maz_ordered = df["MAZ_ORIGINAL"].sort_values(kind="stable")
-    maz_ordered.reset_index(drop=True, inplace=True)
-    maz_map = pd.DataFrame({"MAZ_ORIGINAL": maz_ordered, "MAZ": np.arange(1, len(maz_ordered) + 1)})
-    
-    # TAZ sequential index
-    taz_ordered = df["TAZ_ORIGINAL"].drop_duplicates().sort_values(kind="stable")
-    taz_ordered.reset_index(drop=True, inplace=True)
-    taz_map = pd.DataFrame({"TAZ_ORIGINAL": taz_ordered, "TAZ": np.arange(1, len(taz_ordered) + 1)})
-
-    df = df.merge(maz_map, on="MAZ_ORIGINAL", how="left").merge(
-        taz_map, on="TAZ_ORIGINAL", how="left"
+    node_id_df = pd.read_csv(model_to_emme_node_id_xwalk)
+    node_id_df = node_id_df.rename(columns={"model_node_id":"N"})
+    # taz node
+    taz_node_id_df = (
+        node_id_df[node_id_df["N"].isin(taz_N_list)]
+        .copy()
+        .rename(columns={"emme_node_id":"TAZSEQ"})
     )
-    return df
+    # external taz node
+    ext_node_id_df = (
+        node_id_df[node_id_df["N"].isin(external_N_list)]
+        .copy()
+        .rename(columns={"emme_node_id":"EXTSEQ"})
+    )
+    # maz node, including the five disconnected mazs
+    maz_node_id_df = (
+        node_id_df[node_id_df["N"].isin(maz_N_list)]
+        .copy()
+        .rename(columns={"emme_node_id":"MAZSEQ"})
+    )
+    maz_node_id_df = pd.concat(
+        [maz_node_id_df[["N"]],
+        pd.DataFrame({"N":disconnected_maz_N_list})]
+    )
+    maz_node_id_df = maz_node_id_df.sort_values(by="N").reset_index(drop=True)
+    maz_node_id_df["MAZSEQ"] = maz_node_id_df.index + 1
 
-# def add_variables(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    TODO: add docstring
-    """
-    # maz_data_df = maz_data_df.drop(columns=DENSITY_COLUMNS, errors="ignore")
-    # calculate densities
-    # maz_data_df["EmpDen"] = maz_data_df["emp_total"]/maz_data_df["ACRES"]
+    out = (
+        taz_node_id_df.merge(maz_node_id_df, on="N", how="outer")
+        .merge(ext_node_id_df, on="N", how="outer")
+        .fillna(0)
+        .astype(int)
+    )
+    
+    return NodeIDCrosswalk.validate(out, lazy=True)
 
-    # return df
-
-def load_maz_data(maz_data_file: pathlib.Path) -> DataFrame[MAZData]:
+def validate_sequential_id(
+    maz_data_df: pd.DataFrame,
+    node_seq_id_xwalk: DataFrame[NodeIDCrosswalk]
+) -> None:
     """
-    load MAZ landuse data, create MAZ and TAZ sequential IDs,
-    add additional variables, and validate against the MAZData schema.
+    Validate the TAZ, MAZ columns in maz data input
+
+    Args:
+        maz_data_df: maz landuse input
+        node_seq_id_xwalk: validated node ID to sequential ID crosswalk
+
+    Return:
+        None
+        Fail if any node ID mismatch
+    """
+    xwalk = node_seq_id_xwalk.set_index("N")
+    maz = maz_data_df["MAZ_ORIGINAL"].map(xwalk["MAZSEQ"])
+    taz = maz_data_df["TAZ_ORIGINAL"].map(xwalk["TAZSEQ"])
+
+    bad_maz = maz_data_df.index[maz_data_df["MAZ"]!=maz]
+    bad_taz = maz_data_df.index[maz_data_df["TAZ"]!=taz]
+
+    if len(bad_maz)>0 or len(bad_taz)>0:
+        raise ValueError(
+            f"Node ID crosswalk mismatch: {len(bad_maz)} MAZ, {len(bad_taz)} TAZ"
+        )
+
+def load_maz_data(
+    maz_data_file: pathlib.Path, 
+    node_seq_id_xwalk: DataFrame[NodeIDCrosswalk]
+) -> DataFrame[MAZData]:
+    """
+    load MAZ landuse data, validate the TAZ and MAZ IDs,
+    validate against the MAZData schema.
 
     Args:
         maz_data_file: path to maz landuse data
+        node_seq_id_xwalk: validated node ID to sequential ID crosswalk
 
     Returns:
-        Validated dataframe with MAZ and TAZ sequential IDs and any calculated variables.
+        Validated maz data.
     """
+    
     maz_data_df = pd.read_csv(maz_data_file)
-    maz_data_df = create_sequential_index(maz_data_df)
-    # maz_data_df = add_variables(maz_data_df)
+    validate_sequential_id(maz_data_df, node_seq_id_xwalk)
 
     return MAZData.validate(maz_data_df, lazy=True)
 

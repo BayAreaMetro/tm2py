@@ -350,27 +350,26 @@ class ActiveModesSkim(Component):
         )
         # convert node id to sequential (1-based) zone id
         # consistent with tm2.1 - java expects this
-        maz_data_df = self.controller.maz_data
+        zone_seq_df = self.controller.node_seq_id_xwalk
         taz_seq = dict(
             zip(
-                maz_data_df.TAZ_ORIGINAL,
-                maz_data_df.TAZ,
+                zone_seq_df[zone_seq_df.TAZSEQ > 0].N,
+                zone_seq_df[zone_seq_df.TAZSEQ > 0].TAZSEQ,
             )
         )
         maz_seq = dict(
             zip(
-                maz_data_df.MAZ_ORIGINAL,
-                maz_data_df.MAZ,
+                zone_seq_df[zone_seq_df.MAZSEQ > 0].N,
+                zone_seq_df[zone_seq_df.MAZSEQ > 0].MAZSEQ,
             )
         )
-        # TODO: external TAZ
-        # ext_seq = dict(
-        #     zip(
-        #         zone_seq_df[zone_seq_df.EXTSEQ > 0].N,
-        #         zone_seq_df[zone_seq_df.EXTSEQ > 0].EXTSEQ,
-        #     )
-        # )
-        # taz_seq = {**taz_seq, **ext_seq}
+        ext_seq = dict(
+            zip(
+                zone_seq_df[zone_seq_df.EXTSEQ > 0].N,
+                zone_seq_df[zone_seq_df.EXTSEQ > 0].EXTSEQ,
+            )
+        )
+        taz_seq = {**taz_seq, **ext_seq}
         for c in ["root_ids", "leaf_ids", "leaf_ids_2"]:
             taz_bool = distances[c].isin(list(taz_seq.keys()))
             maz_bool = distances[c].isin(list(maz_seq.keys()))
@@ -382,7 +381,7 @@ class ActiveModesSkim(Component):
                 continue
             else:
                 raise Exception(
-                    "{} has Node values not in the maz landuse file".format(c)
+                    "{} has Node values not in the maz data file".format(c)
                 )
         # drop 0's / 1e20
         distances = distances.query("dist > 0 & dist < 1e19")

@@ -48,8 +48,10 @@ class ScenarioConfig(ConfigItem):
         name: scenario name string
         year: model year, must be at least 2005
         landuse_file: TAZ file
+        model_to_emme_node_id_xwalk: model ID to Emme node ID crosswalk written out by Lasso
     """
-
+    
+    model_to_emme_node_id_xwalk: pathlib.Path
     landuse_file: pathlib.Path
     landuse_index_column: str
     name: str
