@@ -865,11 +865,11 @@ class PostProcessor(Component):
                        'transit_wacc', 'transit_wegr', 'transit_dtime', 'walk_time', 'bike_time'
                        ]
         
-        dist_column = ['auto_dist', 'walk_dist', 'bike_dist']
+        dist_column = ['auto_dist', 'walk_dist', 'bike_dist', 'transit_dist']
 
         cost_column = ['auto_cost', 'transit_fare']
         df[f'{trip_tour}_time'] = df[time_column].sum(axis = 1)
-        self.logger.log(f"Calculating {trip_tour} distance - transit trips do not have distances")
+        self.logger.log(f"Calculating {trip_tour} distance")
         df[f'{trip_tour}_dist'] = df[dist_column].sum(axis = 1)
         self.logger.log(f"Calculating {trip_tour} cost - nonmotorized modes do not have cost")
         df[f'{trip_tour}_cost'] = df[cost_column].sum(axis = 1)
