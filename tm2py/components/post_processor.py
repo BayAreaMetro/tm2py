@@ -64,13 +64,13 @@ class PostProcessor(Component):
         joint_tour = pd.read_csv(self.get_abs_path(joint_tour_file))
         
 
-        # Prepare trip and tour dataframes by adding skim columns and time period (from start duration) """
+        ## Prepare trip and tour dataframes by adding skim columns and time period (from start duration) """
         indiv_trip = self._add_trip_skim_columns(indiv_trip)
         joint_trip = self._add_trip_skim_columns(joint_trip)
         indiv_tour = self._add_tour_skim_columns(indiv_tour)
         joint_tour = self._add_tour_skim_columns(joint_tour)
 
-        # Attach nonmotorized skims
+        ## Attach nonmotorized skims
         indiv_trip = self._attach_nonmotorized_skims_to_trip_tour(indiv_trip, 'trip')
         joint_trip = self._attach_nonmotorized_skims_to_trip_tour(joint_trip, 'trip')
 
@@ -98,12 +98,13 @@ class PostProcessor(Component):
                 joint_tour = self._attach_transit_skims_to_tour(transit_scenario, period, joint_tour)
 
 
-                #self._export_transit_network_as_shapefile(transit_scenario, period)
-                #self._export_highway_network_as_shapefile(highway_scenario, period)
+                # self._export_transit_network_as_shapefile(transit_scenario, period)
+                # self._export_highway_network_as_shapefile(highway_scenario, period)
                 # if period.upper() == "AM":
                 #     self._export_boardings_by_segment(transit_scenario, period)
                 #     self._export_boardings_by_segment_geofile(transit_scenario, period)
-        # #indiv_trip.to_csv(self.get_abs_path("updated_output/indivTripData_3.csv"))
+
+        #indiv_trip.to_csv(self.get_abs_path("updated_output/indivTripData_3.csv"))
         indiv_trip = self._sum_time_dist_cost(indiv_trip, 'trip')
         joint_trip = self._sum_time_dist_cost(joint_trip, 'trip')
         indiv_tour = self._sum_time_dist_cost(indiv_tour, 'tour')
@@ -577,7 +578,10 @@ class PostProcessor(Component):
 
         }
         for mode in transit_modes:
+            mask_out = None
+            mask_in = None
             self.logger.log(f"Reading skims for mode: {mode}")
+            print(f"Reading skims for {mode}")
             matrices = {
                 'transit_ivt': emmebank.matrix(f"{time_period}_{mode}_IVT").get_numpy_data(),
                 'transit_iwait': emmebank.matrix(f"{time_period}_{mode}_IWAIT").get_numpy_data(),
@@ -589,23 +593,26 @@ class PostProcessor(Component):
                 'transit_dtime': emmebank.matrix(f"{time_period}_{mode}_DTIME").get_numpy_data(),
             }
 
-        # Total Transit Time = IVT + IWAIT + XTRANSFER + WAUX + [WACC/WEGR/DTIME] depending on path taken
-
+            # Total Transit Time = IVT + IWAIT + XTRANSFER + WAUX + [WACC/WEGR/DTIME] depending on path taken
             start_period_trips = output['timeperiod_start'] == time_period
             end_period_trips = output['timeperiod_end'] == time_period
             mode_trips = output['tour_mode'].isin(transit_modes[mode])
-            
+
             # Determining whether trip was walk to or walk from transit based on if trip is inbound or outbound
             # If trip is outbound, then they are driving to transit
-            if mode in ['KNR_TRN_WLK', 'PNR_TRN_WLK', 'WLK_TRN_WLK']:
+            if mode in ['KNR_TRN_WLK', 'PNR_TRN_WLK']:
                 mask_out = start_period_trips & mode_trips
 
             # Trip is inbound (end period), they are walking to transit
-            if mode in ['WLK_TRN_KNR', 'WLK_TRN_PNR', 'WLK_TRN_WLK']:
+            if mode in ['WLK_TRN_KNR', 'WLK_TRN_PNR']:
                 mask_in = end_period_trips & mode_trips
            
-            # Finding the values for outbound trips
-            if mask_out.any():
+            if mode in ['WLK_TRN_WLK']:
+                mask_out = start_period_trips & mode_trips
+                mask_in = end_period_trips & mode_trips
+
+            if mask_out is not None:
+                self.logger.log(f"{time_period}: Processing for outbound trips: {mode}")
                 origins = output.loc[mask_out, 'origin_TAZ_SEQ'].values - 1
                 dests = output.loc[mask_out, 'destination_TAZ_SEQ'].values - 1
 
@@ -613,7 +620,9 @@ class PostProcessor(Component):
                     self.logger.log(f'Extracting values for outbound tour for {name} for mode: {mode} in timeperiod: {time_period}')
                     output.loc[mask_out, f'{name}_out'] = matrix[origins, dests]
 
-            if mask_in.any():
+
+            if mask_in is not None:
+                self.logger.log(f"{time_period}: Processing for inbound trips: {mode}")
                 origins = output.loc[mask_in, 'destination_TAZ_SEQ'].values - 1
                 dests = output.loc[mask_in, 'origin_TAZ_SEQ'].values - 1
 
