@@ -139,7 +139,7 @@ Person-level model outputs capturing individual characteristics and choice outco
 - `cdap`: Individual CDAP result (M/N/H)
 - `imf_choice`: Individual mandatory tour frequency choice
 - `inmf_choice`: Individual non-mandatory tour frequency choice
-- `fp_choice`: Free parking availability choice
+- `fp_choice`: Free parking availability choice (-1: No Reimbursement Choice, 1: Free Available, 2: Must Pay, 3: Reimbursed)
 - `reimb_pct`: Parking reimbursement percentage
 - `workDCLogsum`: Work destination choice logsum
 - `schoolDCLogsum`: School destination choice logsum
