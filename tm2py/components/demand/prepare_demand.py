@@ -330,10 +330,10 @@ class PrepareHighwayDemand(EmmeDemand):
             maz_taz_df, left_on="dest_mgra", right_on="MAZ", how="left"
         ).rename(columns={"TAZ": "dest_taz"})
         it_full["trip_mode"] = np.where(
-            it_full["trip_mode"] == ModeChoice.KNR_TNC.value, ModeChoice.PNR_SET.value, it_full["trip_mode"]
+            it_full["trip_mode"] == ModeChoice.KNR_TNC.value, ModeChoice.KNR_PERS.value, it_full["trip_mode"]
         )
         jt_full["trip_mode"] = np.where(
-            jt_full["trip_mode"] == ModeChoice.KNR_TNC.value, ModeChoice.PNR_SET.value, jt_full["trip_mode"]
+            jt_full["trip_mode"] == ModeChoice.KNR_TNC.value, ModeChoice.KNR_PERS.value, jt_full["trip_mode"]
         )
 
         num_zones = self.num_internal_zones
@@ -462,14 +462,6 @@ class PrepareHighwayDemand(EmmeDemand):
                 .format(period=time_period, iter=self.controller.iteration),
                 "w",
             )
-            # active_out_file = OMXManager(
-            #    self.controller.get_abs_path(self.controller.config.household.active_demand_file).__str__().format(period=time_period), 'w')
-
-            # hsr_trips_file = _omx.open_file(
-            #    self.controller.get_abs_path(self.controller.config.household.hsr_demand_file).format(year=self.controller.config.scenario.year, period=time_period))
-
-            # interregional_trips_file = _omx.open_file(
-            #   self.controller.get_abs_path(self.controller.config.household.interregional_demand_file).format(year=self.controller.config.scenario.year, period=time_period))
 
             highway_out_file.open()
             transit_out_file.open()
