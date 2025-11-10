@@ -226,7 +226,17 @@ class PrepareHighwayDemand(EmmeDemand):
     @LogStartEnd("Prepare household demand matrices.")
     def prepare_household_demand(self):
         """Prepares highway and transit household demand matrices from trip lists produced by CT-RAMP."""
+        # this function broadly executes in 4 broad steps, although there are some smaller steps in between
+        # 1) Read Person Trip list according to config - as it was generated from ct-ramp
+        # 2) Convert Person trips into vehicle trips
+        # 3) Separate out trips less than maz_drive_distance_threshold (in model_config) and export as csv according 
+        #    model config
+        # 4) Export Remaining TAZ Trips into demand matrices
+
         iteration = self.controller.iteration
+
+        # --------------------------------------------------------------------------
+        # 1) Read Data
 
         # Create folders if they don't exist
         pathlib.Path(
@@ -239,7 +249,6 @@ class PrepareHighwayDemand(EmmeDemand):
                 self.controller.config.household.transit_demand_file
             )
         ).parents[0].mkdir(parents=True, exist_ok=True)
-        #    pathlib.Path(self.controller.get_abs_path(self.controller.config.household.active_demand_file)).parents[0].mkdir(parents=True, exist_ok=True)
 
         indiv_trip_file = (
             self.controller.config.household.ctramp_indiv_trip_file.format(
@@ -252,7 +261,11 @@ class PrepareHighwayDemand(EmmeDemand):
             )
         )
         it_full, jt_full = pd.read_csv(indiv_trip_file), pd.read_csv(joint_trip_file)
+        
 
+        # -----------------
+        # it_full and jt_full dont have time period, just departure times, we need to convert
+        # to time period
         # Add time period, expanded count
         time_period_start = dict(
             zip(
@@ -289,6 +302,10 @@ class PrepareHighwayDemand(EmmeDemand):
             .fillna(time_periods_sorted[-1])
             .astype(str)
         )
+        # --------------------------------------------------------------------------
+        # 2) Convert Person Trips into Vehicle trips
+
+        # half if 2 person vehicle, 1/3 if 3 person 0.35???
         it_full["eq_cnt"] = 1 / it_full.sampleRate
         it_full["eq_cnt"] = np.where(
             it_full["trip_mode"].isin(
@@ -313,6 +330,8 @@ class PrepareHighwayDemand(EmmeDemand):
         zp_cav = self.controller.config.household.OwnedAV_ZPV_factor
         zp_tnc = self.controller.config.household.TNC_ZPV_factor
 
+        # -------------------------------
+        # add maz based ids based on the orig_mgra column - used for taz and maz later
         maz_taz_df = pd.read_csv(
             self.controller.get_abs_path(self.controller.config.scenario.landuse_file),
             usecols=["MAZ", "TAZ"],
@@ -336,13 +355,14 @@ class PrepareHighwayDemand(EmmeDemand):
             jt_full["trip_mode"] == ModeChoice.KNR_TNC.value, ModeChoice.KNR_PERS.value, jt_full["trip_mode"]
         )
 
+        # -----------------------
+        # function for getting numpy matrix from individual trips, joint trips and mode
         num_zones = self.num_internal_zones
         OD_full_index = pd.MultiIndex.from_product(
             [range(1, num_zones + 1), range(1, num_zones + 1)]
         )
-
         def combine_trip_lists(it, jt, trip_mode):
-            # combines individual trip list and joint trip list
+            # combines individual trip list and joint trip lists in a consistent way
             combined_trips = pd.concat(
                 [it[(it["trip_mode"] == trip_mode)], jt[(jt["trip_mode"] == trip_mode)]]
             )
@@ -351,6 +371,8 @@ class PrepareHighwayDemand(EmmeDemand):
             ].sum()
             return combined_sum.reindex(OD_full_index, fill_value=0).unstack().values
 
+        
+        # expand zero passenger trips by a factor
         def create_zero_passenger_trips(
             trips, deadheading_factor, trip_modes=[
                 ModeChoice.DRIVEALONEFREE.value, 
@@ -359,7 +381,9 @@ class PrepareHighwayDemand(EmmeDemand):
             ]
         ):
             """
-            For taxis ect, 
+            For taxis ect, if there is nobody in the car, it will still be driving around.
+            we can model this by multiplying existing trips by a constant increasing the
+            number of trips to account for total vehicles.
             """
             zpv_trips = trips.loc[
                 (trips["avAvailable"] == 1) & (trips["trip_mode"].isin(trip_modes))
@@ -403,7 +427,6 @@ class PrepareHighwayDemand(EmmeDemand):
             ).reset_index(drop=True)
 
         # read properties from config
-
         mode_name_dict = ModeChoice.id_to_matrix_name.value
         income_segment_config = self.controller.config.household.income_segment
 
@@ -463,14 +486,15 @@ class PrepareHighwayDemand(EmmeDemand):
                 "w",
             )
 
-            highway_out_file.open()
-            transit_out_file.open()
             # active_out_file.open()
 
             # Transit and active modes: one matrix per time period per mode
             individual_trip_both_taz_and_maz_df = it_full[it_full.time_period == time_period]
-            joint_trip_both_taz_and_maz = jt_full[jt_full.time_period == time_period]
-
+            joint_trip_both_taz_and_maz_df = jt_full[jt_full.time_period == time_period]
+            # ----------------------------------------------------------------------
+            # Note: below is happening for each time period
+            # 3) Separate out trips less than maz_drive_distance_threshold (in model_config) and export as csv according 
+            #    model config
             # currently hard-coded based on Travel Mode trip mode codes
             DRIVE_MODES = [
                 ModeChoice.DRIVEALONEFREE.value,
@@ -496,24 +520,29 @@ class PrepareHighwayDemand(EmmeDemand):
             it = individual_trip_both_taz_and_maz_df[~it_is_maz_trip]
 
             jt_is_maz_trip = (
-                (joint_trip_both_taz_and_maz["trip_dist"] < self.controller.config.highway.maz_drive_distance_threshold) &
-                joint_trip_both_taz_and_maz["trip_mode"].isin(DRIVE_MODES)
+                (joint_trip_both_taz_and_maz_df["trip_dist"] < self.controller.config.highway.maz_drive_distance_threshold) &
+                joint_trip_both_taz_and_maz_df["trip_mode"].isin(DRIVE_MODES)
             )
-            jt_maz_df = joint_trip_both_taz_and_maz[jt_is_maz_trip]
-            jt = joint_trip_both_taz_and_maz[~jt_is_maz_trip]
+            jt_maz_df = joint_trip_both_taz_and_maz_df[jt_is_maz_trip]
+            jt = joint_trip_both_taz_and_maz_df[~jt_is_maz_trip]
 
             maz_trips = pd.concat([it_maz_df, jt_maz_df])
             # TODO: replace this with emmebank database
             grouped_maz_trips_df = maz_trips.groupby(["MAZ_x", "MAZ_y"])['eq_cnt'].sum().reset_index()
             grouped_maz_trips_df.to_csv(f"D:\\TEMP\\maz_trips{time_period}.csv", index=False)
+
+            # 
+            highway_out_file.open()
+            transit_out_file.open()
             
-            # export everything into full taz_drive_matrices 
+            # 4) Export Remaining TAZ Trips into demand matrices
             for trip_mode in mode_name_dict:
-                #                if trip_mode in [9,10]:
+                #                if trip_mode in [9,10]: < 9/10 is bike and walk, they dont need tp be assigned?
                 #                    matrix_name =  mode_name_dict[trip_mode]
                 #                    self.logger.debug(f"Writing out mode {mode_name_dict[trip_mode]}")
                 #                    active_out_file.write_array(numpy_array=combine_trip_lists(it,jt, trip_mode), name = matrix_name)
 
+                # Deal With Non-Drive Modes for transit_out_file
                 if trip_mode == ModeChoice.WALK_SET.value:
                     matrix_name = "WLK_TRN_WLK"
                     self.logger.debug(f"Writing out mode WLK_TRN_WLK")
@@ -552,7 +581,11 @@ class PrepareHighwayDemand(EmmeDemand):
                     )
 
             # Highway modes: one matrix per suffix (income class) per time period per mode
-            
+            # if self.controller.config.household.income_segment is True
+            # suffixes will look ile 
+            #     ["LowInc", "MedInc", "HighInc", "XHighInc"]
+            # else
+            #     [""]
             for suffix in suffixes:
                 highway_cache = {}
 
