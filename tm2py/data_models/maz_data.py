@@ -202,12 +202,12 @@ class NodeIDCrosswalk(pa.DataFrameModel):
     Datamodel used to validate node ID crosswalk
 
     Attributes:
-        N (int): model node ID
+        model_node_id (int): model node ID
         MAZSEQ (int): MAZ sequential index
         TAZSEQ (int): TAZ sequential index
         EXTSEQ (int): External sequential index
     """
-    N: Series[int] = Field(nullable=False, unique=True)
+    model_node_id: Series[int] = Field(nullable=False, unique=True)
     MAZSEQ: Series[int] = Field(nullable=False)
     TAZSEQ: Series[int] = Field(nullable=False)
     EXTSEQ: Series[int] = Field(nullable=False)
@@ -224,45 +224,50 @@ def create_sequential_index(
     Create stable sequential IDs for MAZ and TAZ nodes.
 
     Args:
-        model_to_emme_node_id_xwalk: model ID to Emme node ID crosswalk written out by Lasso
+        model_to_emme_node_id_xwalk: model ID to Emme node ID crosswalk 
+        written out by Lasso in the network build process
 
     Returns:
         crosswalk file of model ID to TAZ, MAZ, and external TAZ sequential ID.
         Will be further used to validate the TAZ, MAZ columns in maz data input.   
     """
     node_id_df = pd.read_csv(model_to_emme_node_id_xwalk)
-    node_id_df = node_id_df.rename(columns={"model_node_id":"N"})
     # taz node
     taz_node_id_df = (
-        node_id_df[node_id_df["N"].isin(taz_N_list)]
+        node_id_df[node_id_df["model_node_id"].isin(taz_N_list)]
         .copy()
         .rename(columns={"emme_node_id":"TAZSEQ"})
     )
     # external taz node
     ext_node_id_df = (
-        node_id_df[node_id_df["N"].isin(external_N_list)]
+        node_id_df[node_id_df["model_node_id"].isin(external_N_list)]
         .copy()
         .rename(columns={"emme_node_id":"EXTSEQ"})
     )
     # maz node, including the five disconnected mazs
     maz_node_id_df = (
-        node_id_df[node_id_df["N"].isin(maz_N_list)]
+        node_id_df[node_id_df["model_node_id"].isin(maz_N_list)]
         .copy()
         .rename(columns={"emme_node_id":"MAZSEQ"})
     )
     maz_node_id_df = pd.concat(
-        [maz_node_id_df[["N"]],
-        pd.DataFrame({"N":disconnected_maz_N_list})]
+        [maz_node_id_df[["model_node_id"]],
+        pd.DataFrame({"model_node_id":disconnected_maz_N_list})]
     )
-    maz_node_id_df = maz_node_id_df.sort_values(by="N").reset_index(drop=True)
+    maz_node_id_df = (
+        maz_node_id_df
+        .sort_values(by="model_node_id")
+        .reset_index(drop=True)
+    )
     maz_node_id_df["MAZSEQ"] = maz_node_id_df.index + 1
 
     out = (
-        taz_node_id_df.merge(maz_node_id_df, on="N", how="outer")
-        .merge(ext_node_id_df, on="N", how="outer")
+        taz_node_id_df.merge(maz_node_id_df, on="model_node_id", how="outer")
+        .merge(ext_node_id_df, on="model_node_id", how="outer")
         .fillna(0)
         .astype(int)
     )
+    out = out[["model_node_id"] + [c for c in out.columns if c!="model_node_id"]]
     
     return NodeIDCrosswalk.validate(out, lazy=True)
 
@@ -281,7 +286,7 @@ def validate_sequential_id(
         None
         Fail if any node ID mismatch
     """
-    xwalk = node_seq_id_xwalk.set_index("N")
+    xwalk = node_seq_id_xwalk.set_index("model_node_id")
     maz = maz_data_df["MAZ_ORIGINAL"].map(xwalk["MAZSEQ"])
     taz = maz_data_df["TAZ_ORIGINAL"].map(xwalk["TAZSEQ"])
 

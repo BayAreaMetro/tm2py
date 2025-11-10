@@ -353,19 +353,19 @@ class ActiveModesSkim(Component):
         zone_seq_df = self.controller.node_seq_id_xwalk
         taz_seq = dict(
             zip(
-                zone_seq_df[zone_seq_df.TAZSEQ > 0].N,
+                zone_seq_df[zone_seq_df.TAZSEQ > 0].model_node_id,
                 zone_seq_df[zone_seq_df.TAZSEQ > 0].TAZSEQ,
             )
         )
         maz_seq = dict(
             zip(
-                zone_seq_df[zone_seq_df.MAZSEQ > 0].N,
+                zone_seq_df[zone_seq_df.MAZSEQ > 0].model_node_id,
                 zone_seq_df[zone_seq_df.MAZSEQ > 0].MAZSEQ,
             )
         )
         ext_seq = dict(
             zip(
-                zone_seq_df[zone_seq_df.EXTSEQ > 0].N,
+                zone_seq_df[zone_seq_df.EXTSEQ > 0].model_node_id,
                 zone_seq_df[zone_seq_df.EXTSEQ > 0].EXTSEQ,
             )
         )
