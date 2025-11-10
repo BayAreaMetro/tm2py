@@ -260,14 +260,15 @@ class RunController:
     @property
     def node_seq_id_xwalk(self) -> DataFrame[NodeIDCrosswalk]:
         if self._node_seq_id_xwalk is None:
-            model_to_emme_node_id_xwalk = (
-                self.run_dir 
-                / "emme_project/Database_highway/emme_drive_network_node_id_crosswalk.csv"
+            model_to_emme_node_id_xwalk = self.get_abs_path(
+                self.config.highway.model_to_emme_node_id_xwalk
             )
             self._node_seq_id_xwalk = create_sequential_index(model_to_emme_node_id_xwalk)
             # write out the xwalk for ctramp
             self._node_seq_id_xwalk.to_csv(
-                self.run_dir / "inputs/hwy/mtc_final_network_zone_seq.csv", 
+                self.get_abs_path(
+                    self.config.highway.output_node_sequential_id_xwalk
+                ),
                 index=False
             )
         return self._node_seq_id_xwalk

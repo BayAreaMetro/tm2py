@@ -232,6 +232,10 @@ def create_sequential_index(
         Will be further used to validate the TAZ, MAZ columns in maz data input.   
     """
     node_id_df = pd.read_csv(model_to_emme_node_id_xwalk)
+    required_cols = ["emme_node_id", "model_node_id"]
+    missing_cols = [c for c in required_cols if c not in node_id_df.columns]
+    if missing_cols:
+        raise ValueError(f"Missing columns in model_to_emme_node_id_xwalk: {missing_cols}")
     # taz node
     taz_node_id_df = (
         node_id_df[node_id_df["model_node_id"].isin(taz_N_list)]
