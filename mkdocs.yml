@@ -68,6 +68,7 @@ nav:
   - Assignment:
     - Overview: assignment/index.md
     - Highway Value of Time: assignment/highway_value_of_time.md
+    - Volume Delay Functions: assignment/volume_delay_functions.md
   - Codebase:
     - Architecture: architecture.md
     # Temporarily disabled due to GDAL dependency issues

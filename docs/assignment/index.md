@@ -75,6 +75,8 @@ Highway assignment uses **value of time** to convert monetary costs to time-equi
 
 **[Value of Time in Highway Assignment](highway_value_of_time.md)** - Detailed documentation of VOT parameters and implementation
 
+**[Volume Delay Functions](volume_delay_functions.md)** - Mathematical specifications for link travel time calculations
+
 **Components**:
 
 - **Travel Time**: Link-specific travel times (minutes)

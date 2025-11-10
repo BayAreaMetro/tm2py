@@ -1,0 +1,1881 @@
+Activity-Based Travel Model Specifications:
+Coordinated Travel – Regional Activity Based Modeling Platform (CT-RAMP) for San Diego County
+
+
+
+Prepared for:
+San Diego Association Of Governments
+401 B Street, Suite 800
+San Diego, California 92101Prepared by:
+PB Americas, Inc.
+303 2nd Avenue, Suite 700 North
+San Francisco, CA 94107? 
+With:
+Dr. Chandra BhatDecember 2012 (Working Version)
+
+
+
+
+Table of Contents
+Introduction	1
+Model Features and SANDAG Planning Needs	2
+General Model Design	3
+Treatment of Space	3
+Decision-making units	5
+Person-type segmentation	5
+Activity Type Segmentation	7
+Treatment of time	8
+Trip Modes	8
+Basic Design of the SANDAG CT-RAMP Implementation	10
+Main Sub-Models and Procedures of the Core Demand Model	14
+1.1	Population Synthesizer	14
+General Formulation	14
+Solution Algorithm	16
+Base Year Controls	16
+1.2	Accessibilities	20
+2.1	Pre-Mandatory Car Ownership Model	24
+2.2	Work from Home Choice	25
+2.3	Mandatory (workplace/university/school) Activity Location Choice	26
+3.1	 Employer Parking Provision Model	28
+3.2	Car Ownership Model	28
+3.3	Toll Transponder Ownership Model	30
+4.1	Coordinated Daily Activity Pattern (DAP) Model	30
+4.2.1	Individual Mandatory Tour Frequency	33
+4.2.2	Individual Mandatory Tour Time of Day Choice	34
+4.2.3	Individual Mandatory Tour Mode Choice Model	35
+4.3	Generation of Joint Household Tours	40
+4.3.1	Joint Tour Frequency and Composition	41
+4.3.2	Joint Tour Participation	42
+4.3.3	Joint Tour Primary Destination Choice	43
+4.3.4	Joint Tour Time of Day Choice	44
+4.3.5	Joint Tour Mode Choice Model	44
+4.4.1	Individual Non-Mandatory Tour Frequency	46
+4.4.2	Individual Non-Mandatory Tour Primary Destination Choice	47
+4.4.3	Individual Non-Mandatory Tour Time of Day Choice	47
+4.4.4	Individual Non-Mandatory Tour Mode Choice Model	48
+4.5.1	At-Work Sub-Tour Frequency	50
+4.5.2	At-Work Sub-Tour Primary Destination Choice	50
+4.5.3	At-Work Sub-Tour Time of Day Choice	51
+4.5.4	At-Work Sub-Tour Mode Choice Model	51
+5.1	Intermediate Stop Frequency Model	53
+5.2	Intermediate Stop Purpose Choice Model	55
+5.3	Intermediate Stop Location Choice Model	56
+5.4	Intermediate Stop Departure Model	57
+6.1	Trip Mode Choice Model	57
+6.2	Parking Location Choice	60
+Special Market Models	61
+Cross Border Model	61
+Cross Border Modeled Travel Dimensions	61
+2.1	Border Crossing Primary Destination and Station Crossing Choice	64
+2.2	Border Crossing Tour Time-of-Day Choice	64
+2.3	Border Crossing Tour Mode Choice	65
+3.1	Border Crossing Stop Frequency Choice	67
+3.2	Border Crossing Stop Purpose Choice	67
+3.3	Border Crossing Stop Location Choice	67
+4.1	Border Crossing Trip Departure Choice	68
+4.2	Border Crossing Trip Mode Choice	68
+Airport Ground Access Model	70
+Airport Model Travel Dimensions	70
+Airport Model Trip Mode	70
+Airport Model Treatment of Time	71
+Airport Model Treatment of Space	72
+Airport Model Inputs	72
+Airport Model Description	72
+2.1	Airport Destination Choice Model	75
+2.2	Airport Trip Mode Choice	75
+Visitor Model	78
+1.	Model Inputs	78
+2.	Model Description	79
+2.1	Visitor Time of Day	85
+2.2	Visitor Destination Choice	85
+2.3	Visitor Tour Mode Choice	86
+3.1	Visitor Stop Frequency	88
+3.2	Visitor Stop Purpose	89
+3.3	Visitor Stop Location	89
+4.1	Visitor Trip Time of Day	89
+4.2	Visitor Trip Mode Choice	89
+Special Event Model	91
+Survey Data	91
+Model Form	98
+Trip Enumeration	99
+Tour Model	99
+External Model	101
+External Model Definition of Trip Type	101
+External Model Estimation of Trip Counts by Type	102
+External Model Design Overview	102
+External-External (EE) Trips	103
+US-SD External-Internal (EI) Trips	105
+External-Internal Destination Choice Model	105
+External-Internal Toll Choice Model	106
+Internal-External (IE) Trips	106
+
+
+
+Table of Tables
+Table 1: Person Types	6
+Table 2: Occupation Types	6
+Table 3: Activity Types	7
+Table 4: Time periods for level-of-service skims and assignment	8
+Table 5: Trip Modes For Assignment	9
+Table 6: Controls and contribution coefficients	15
+Table 7: Accessibility measures for the SANDAG ABM	20
+Table 8: Correspondence of LU variables to travel purposes and relative attraction rate	22
+Table 9: Mode utility components for accessibility calculations	23
+Table 10: Number of Choices in CDAP Model	32
+Table 11: Skims used in Tour Mode Choice	38
+Table 12: Observed Stop Frequency Distribution by Tour Purpose	54
+Table 13: Observed Stop Frequency Distribution by At-work Sub Tour Purpose	55
+Table 14: Tour and Trip Mode Correspondence Rules	59
+Table 15: Survey Respondents by Purpose and Trip Mode	71
+Table 16: Frequency of Survey Respondents by Purpose and Trip Mode	71
+Table 17: Number of Visitors	80
+Table 18: Survey Respondents by Visitor Segment	81
+Table 19: Share of Visitor Parties by Segment and Overnight Accommodation	81
+Table 20: Visitor Parties by Visitor Segment and Household Income	82
+Table 21: Tour Purpose by Visitor Segment	82
+Table 22: Tour Distribution, Business Parties	83
+Table 23: Tour Distribution, Personal Parties	83
+Table 24: Average Party Size	83
+Table 25: Tours by Party Size and Tour Purpose	84
+Table 26: Auto Availability by Segment	84
+Table 27: Auto Availability by Tour Purpose	85
+Table 28: Special Attractors	86
+Table 29: Survey Respondents by Purpose and Trip Mode	87
+Table 30: Frequency of Stops on Tour	88
+Table 31: Stops by Purpose	89
+Table 32: Special Events Surveyed, Location, Samples and Annual Attendance	91
+Table 33: Average Distance by Special Event	95
+Table 34: Parking Costs by Venue	98
+Table 35: Example Special Event Input File	98
+Table 36: Estimated Size Terms (Exponentiated Coefficients)	100
+Table 37: Special Event Trip Mode Choice Model Asserted Parameters	101
+Table 38: External-External Trip Matrix	103
+Table 39: US-SD Trips by Production Location	105
+Table 40: US-SD Vehicle Occupancy Factors	105
+Table 41: US-SD Diurnal Factors	106
+Table of Figures
+Figure 1: Example MGRA – TAP Transit Accessibility	4
+Figure 2: Treatment of Space – TAZs and MGRAs	5
+Figure 3: Basic Model Design and Linkage Between Sub-Models	12
+Figure 4: Auto Ownership Nesting Structure	25
+Figure 5: Example of DAP Model Alternatives for a 3-Person Household	33
+Figure 6: Tour Mode Choice Model Structure	38
+Figure 7: Model Structure for Joint Non-Mandatory Tours	41
+Figure 8: Application of the Person Participation Model	43
+Figure 9: Total Population of Áreas Geoestadísticas Básicas (AGEB) in Tijuana	62
+Figure 10: Mexican Resident Travel Model	63
+Figure 11: Potential Border Crossing Mode Choice Nesting Structure	66
+Figure 12: Mexican Resident Trip Mode Choice Model for Travel in US	69
+Figure 13: SAN Airport Ground Access Travel Mode	74
+Figure 14: SANDAG Airport Ground Access Mode Choice Nesting Structure	77
+Figure 15: SANDAG Visitor Model Design	79
+Figure 16: SANDAG Nested Tour Mode Choice model structure	88
+Figure 17: Survey Respondents by Age Range and Event	92
+Figure 18: Respondents by Party Size and Event	92
+Figure 19: Survey Respondents by Household Income Range and Event	93
+Figure 20: Survey Respondents by Origin Place Type and Event	93
+Figure 21: Respondents by Destination Location	94
+Figure 22: Respondents by Distance To Special Event	94
+Figure 23: Respondents by Mode to Event	96
+Figure 24: Transit Trips by Mode of Access to Transit	97
+Figure 25: Special Event Model Form	99
+Figure 26: San Diego County Cordons	104
+
+
+
+Introduction
+This document describes the San Diego Association of Governments (SANDAG) Activity-Based Model (ABM) specification. This ABM will serve as the major travel forecasting tool in the San Diego region for decades to come. This model has been developed to ensure that the regional transportation planning process can rely on forecasting tools that will be adequate for new socioeconomic environments and emerging planning challenges. It is equally suitable for conventional highway projects, transit projects, and various policy studies such as highway pricing and HOV analysis. 
+The SANDAG model is based on the CT-RAMP (Coordinated Travel Regional Activity-Based Modeling Platform) family of Activity-Based Models. This model system is an advanced, but operational, AB model that fits the needs and planning processes of SANDAG. The CT-RAMP model, which is fully described in the following section, adheres to the following basic principles:
+* The CT-RAMP design corresponds to the most advanced principles of modeling individual travel choices with maximum behavioral realism. In particular, it addresses both household-level and person-level travel choices including intra-household interactions between household members. This approach is fundamentally different from the more simplified AB models developed or being developed in such regions as San Francisco County, Sacramento and Denver, where all travel choices are modeled at the person level, independently of choices made by other household members.
+* CT-RAMP is a proven design, intensively tested in practice in several regions. The New York model was developed in 2002, and was used in the New York region to analyze numerous projects. The Columbus, Ohio model (the first fully-fledged member of the CT-RAMP family) was developed in 2004 and has since been applied by the MORPC for various transit and highway projects. The Lake Tahoe model was created in 2006 largely by transferring main components of the Columbus model. The Atlanta, Georgia (ARC) model has been co-developed with the MTC Model. Future developments of CT-RAMP include models for the San Diego region (SANDAG) and Jerusalem, Israel (JTMT). In each case, the model system has been tailored to address the specific issues and markets that are particular to the region. 
+* Operates at a detailed temporal (half-hourly) level, and considers congestion and pricing effects on travel time-of-day and peak spreading of traffic volume.
+* Reflects and responds to detailed demographic information, including household structure, aging, changes in wealth, and other key attributes1.
+* Is implemented in the PB Common Modeling Framework, an open-source library created specifically for implementing advanced models. 
+* Offers sensitivity to demographic and socio-economic changes observed or expected in the dynamic San Diego metropolitan region. This is ensured by the enhanced and flexible population synthesis procedures as well as by the fine level of model segmentation. In particular, the SANDAG ABM incorporates different household, family, and housing types including a detailed analysis of different household compositions in their relation to activity-travel patterns.
+* Accounts for the full set of travel modes. Our experience with previously developed ABMs has shown that mode choice is one of the least transferable model components due to regional differences in mode choice and accessibility. 
+* Integrates with other model components. The CT-RAMP model is one component (person travel) and can easily integrate with other components such as the existing SANDAG truck model, a model of inter-border commuting (particularly important given the interaction of San Diego with Mexico and with Riverside County), models of non-resident visitor travel, airport travel, and special event travel. Furthermore, the model developed for SANDAG will be integrated with the Production, Exchange, and Consumption (PECAS) land-use model system.
+* Provides detailed inputs to traffic micro-simulation software. The CT-RAMP model operates at a half-hour time scale, which can provide detailed inputs to traffic micro-simulation software for engineering-level analysis of corridor and intersection design. 
+Model Features and SANDAG Planning Needs 
+The SANDAG CT-RAMP model has been tailored specifically to meet SANDAG planning applications, as outlined below. These planning applications consider current and future projects and policies and also take into account the special markets that exist in the San Diego Region. The model system addresses requirements of the metropolitan planning process, relevant federal requirements, and provides support to SANDAG member agencies and other stakeholders. The ABM structure fully complies with the following major planning applications: 
+* RTP, TIP, and Air Quality Conformity Analysis. The ABM will be carefully validated and calibrated to replicate observed traffic counts and other monitoring data sources with the necessary level of accuracy. The output of traffic assignment can be processed in a format required by the emission calculation software used by SANDAG, including either EMFAC or MOVES. 
+* Corridor Studies, Development Impact Studies, and other planning studies. The ABM will have more realistic travel patterns that will lend itself to a high level of credibility with respect to routine planning studies conducted by SANDAG staff and other model users. 
+* FTA New Starts Analysis. The ABM application software package includes an option that produces the model output in a format required by FTA for the New Starts process. This output can be used as a direct input to the FTA software Summit used for calculation and analysis of the User Benefits. In order to meet the FTA “fixed total demand” requirement for comparison across the Baseline and Build alternatives, the ABM includes a run option for the Build alternative with certain travel dimensions fixed from the Baseline run. 
+* Different highway pricing and managed lanes studies. One of the advantages of an ABM over a 4-step model is a significantly improved sensitivity to highway pricing. This includes various forms of toll roads, congestion pricing, dynamic real-time pricing, daily area pricing, license plate rationing and other innovative policies that cannot be effectively modeled with a simplified 4-step model. The explicit modeling of joint travel was specifically introduced to enhance modeling of HOV/HOT facilities. 
+* Other transportation demand management measures. There are many new policies aimed at reducing highway congestion in major metropolitan areas, including telecommuting and teleshopping, compressed work weeks, and flexible work hours. ABMs are specifically effective for modeling these types of policies since these models are based on an individual micro-simulation of daily activity-travel patterns. 
+* Enhanced Environmental Justice analysis. The model system features a full micro-simulation of the population, providing the ability to perform virtually unlimited market analysis. Environmental justice disparity analysis can be performed across highly disaggregated user groups, providing information for Title VI and other types of environmental justice studies. 
+General Model Design
+The SANDAG ABM has its roots in a wide array of analytical developments. They include discrete choice forms (multinomial and nested logit), activity duration models, time-use models, models of individual micro-simulation with constraints, entropy-maximization models, etc. These advanced modeling tools are combined in the ABM design to ensure maximum behavioral realism, replication of the observed activity-travel patterns, and ensure model sensitivity to key projects and policies. The model is implemented in a micro-simulation framework. Micro-simulation methods capture aggregate behavior through the representation of the behavior of individual decision-makers. In travel demand modeling these decision-makers are typically households and persons. The following section describes the basic conceptual framework at which the model operates.
+Treatment of Space
+Activity-based and tour-based models can exploit fine-scale spatial data, but the advantages of additional spatial detail must be balanced against the additional efforts required to develop zone and associated network information at this level of detail. The increase in model runtime and necessary computing power associated primarily with path-building and assignment to more zones must also be considered.
+The use of a spatially disaggregate zone system helps ensure model sensitivity to phenomena that occur at a fine spatial scale. Use of large zones may produce aggregation biases, especially in destination choice, where the use of aggregate data can lead to illogical parameter estimates due to reduced variation in estimation data, and in mode choice, where modal access may be distorted. Smaller zones help minimize these effects, and can also support more detailed road network assignments. Strategies to address the modal access limitations of large zones through the use of transit sub-zonal procedures are discussed in the transit network section of this document.
+The SANDAG CT-RAMP model will take advantage of SANDAG Master-Geographic Reference Area (MGRA) zone system, which is the most disaggregate zonal system currently in use in any travel demand model in the United States. Most large metropolitan area travel demand models consider between 1,500 and 4,000 zones. SANDAG’s current MGRA system consists of 32,000 zones, which are roughly equivalent to Census block groups (see Figure 2). To avoid computational burden, SANDAG relies on a 4,600 Transportation Analysis Zone (TAZ) system for highway skims and assignment, but performs transit calculations at the more detailed MGRA level. This is accomplished by generalizing transit stops into pseudo-TAZs called Transit Access Points (TAPs), and relying on TransCAD to generate TAP-TAP level-of-service matrices (also known as “skims”) such as in-vehicle time, first wait, transfer wait, and fare. All access and egress calculations, as well as paths following the Origin MGRA – Boarding TAP – Alighting TAP- Destination MGRA patterns are computed within custom-built software. These calculations rely upon detailed geographic information regarding MGRA-TAP distances and accessibilities. A graphical depiction of the MGRA – TAP transit calculations is given in Figure 1. It shows potential walk paths from an origin MGRA, through three potential boarding TAPs (two of which are local bus and one of which is rail), with three potential alighting TAPs at the destination end.
+Figure 1: Example MGRA – TAP Transit Accessibility
+
+All activity locations are tracked at the MGRA level. There are model systems in use or under development which allocate activities to a unit smaller than the MGRA, such as a parcel. However, these model systems assume that the closest transit stop to the parcel is consistent with the zone-zone impedances calculated by the commercial transport software (TransCAD). In transit-rich environments, this may not be the case, and such assumptions can cloud User Benefit calculations required by FTA New Starts. The MGRA geography offers both the advantage of fine spatial resolution, and consistency with network levels-of-service, that makes it ideal for tracking activity locations.
+
+
+
+Figure 2: Treatment of Space – TAZs and MGRAs
+Decision-making units
+Decision-makers in the model system include both persons and households. These decision-makers are created (synthesized) for each simulation year based on tables of households and persons from census data and forecasted TAZ-level distributions of households and persons by key socio-economic categories. These decision-makers are used in the subsequent discrete-choice models to select a single alternative from a list of available alternatives according to a probability distribution. The probability distribution is generated from a logit model which takes into account the attributes of the decision-maker and the attributes of the various alternatives. The decision-making unit is an important element of model estimation and implementation, and is explicitly identified for each model specified in the following sections.
+Person-type segmentation
+The SANDAG ABM system is implemented in a micro-simulation framework. A key advantage of using the micro-simulation approach is that there are essentially no computational constraints on the number of explanatory variables can be included in a model specification. However, even with this flexibility, the model system will include some segmentation of decision-makers. Segmentation is a useful tool to both structure models, such that each person-type segment could have their own model for certain choices) and to characterize person roles within a household. Segments can be created for persons as well as households.
+A total of eight segments of person-types, shown in Table 1, are used for the SANDAG model system. The person-types are mutually exclusive with respect to age, work status, and school status.
+Table 1: Person Types
+NUMBERPERSON-TYPEAGEWORK STATUSSCHOOL STATUS1Full-time worker218+Full-timeNone2Part-time worker18+Part-timeNone3College student18+AnyCollege +4Non-working adult18 – 64UnemployedNone5Non-working senior65+UnemployedNone6Driving age student16-17AnyPre-college7Non-driving student6 – 15NonePre-college8Pre-school0-5NoneNone
+Further, workers are stratified by their occupation, to take full advantage of information provided by the PECAS land-use model. The categories are given in Table 2. These are used to segment destination choice size terms for work location choice, based on the occupation of the worker.
+Table 2: Occupation Types
+NUMBERDESCRIPTION1Management Business Science and Arts2Services3Sales and Office4Natural Resources Construction and Maintenance5Production Transportation and Material Moving6Military
+
+
+Activity Type Segmentation
+The 2006 SANDAG home-interview survey included 24 different activity codes. Modeling all 24 activity types would add significant complexity to estimating and implementing the model system, so these detailed activity types are grouped into more aggregate activity types, based on the similarity of the activities. The activity types are used in most model system components, from developing daily activity patterns and to predicting tour and trip destinations and modes by purpose. 
+The proposed set of activity types is shown in Table 3. The activity types are grouped according to whether the activity is mandatory, maintenance, or discretionary. Eligibility requirements are assigned to determine which person-types can be used for generating each activity type. The classification scheme of each activity type reflects the relative importance or natural hierarchy of the activity, where work and school activities are typically the most inflexible in terms of generation, scheduling and location, whereas discretionary activities are typically the most flexible on each of these dimensions. When generating and scheduling activities, this hierarchy is not rigid and is informed by both activity-type and activity-duration.
+Each out-of-home location that a person travels to in the simulation is assigned one of these activity types.
+Table 3: Activity Types
+TYPEPURPOSEDESCRIPTIONCLASSIFICATIONELIGIBILITY1WorkWorking at regular workplace or work-related activities outside the home.MandatoryWorkers and students2UniversityCollege +MandatoryAge 18+3High SchoolGrades 9-12MandatoryAge 14-174Grade SchoolGrades K-8MandatoryAge 5-135EscortingPick-up/drop-off passengers 
+(auto trips only).MaintenanceAge 16+6ShoppingShopping away from home.Maintenance5+ (if joint travel, 
+all persons)7Other MaintenancePersonal business/services, and medical appointments.Maintenance5+ (if joint travel, 
+all persons)8Social/RecreationalRecreation, visiting friends/family.Discretionary5+ (if joint travel, 
+all persons)9Eat OutEating outside of home.Discretionary5+ (if joint travel, 
+all persons)10Other DiscretionaryVolunteer work, religious activities.Discretionary5+ (if joint travel, 
+all persons)Treatment of time
+The model system functions at a temporal resolution of one-half hour. These one-half hour increments begin with 3 A.M. and end with 3 A.M. the next day, though the hours between 1 AM and 5 AM will be aggregated to reduce computational burden. Temporal integrity is ensured so that no activities are scheduled with conflicting time windows, with the exception of short activities/tours that are completed within a one-half hour increment. For example, a person may have a very short tour that begins and ends within the 8:00 am-8:30 am period, as well as a second longer tour that begins within this time period, but ends later in the day.
+Time periods are typically defined by their midpoint in the scheduling software. For example, in a model system using 1/2-hour temporal resolution, the 9:00am time period would capture activities or travel between 8:45am and 9:15am. If there is a desire to break time periods at “round” half-hourly intervals, either the estimation data must be processed to reflect the aggregation of activity and travel data into these discrete half-hourly bins, or a more detailed temporal resolution must be used, such as half-hours (which could then potentially be aggregated to “round” half-hours). 
+A critical aspect of the model system is the relationship between the temporal resolution used for scheduling activities, and the temporal resolution of the network simulation periods. Although each activity generated by the model system is identified with a start time and end time in one-half hour increments, level-of-service matrices are only created for five aggregate time periods – early A.M., A.M., Midday, P.M., and night. The trips occurring in each time period reference the appropriate transport network depending on their trip mode and the mid-point trip time. The definition of time periods for level-of-service matrices is given in Table 4, below. 
+Table 4: Time periods for level-of-service skims and assignment
+NUMBERDESCRIPTIONBEGIN TIMEEND TIME1Early3:00 A.M.5:59 A.M.2A.M. Peak6:00 A.M.8:59 A.M.3Midday9:00 A.M.3:29 P.M.4P.M. Peak3:30 P.M.6:59 P.M.5Evening7:00 P.M.2:59 A.M.Trip Modes
+Table 5 lists the trip modes defined in the SANDAG models. There are 19 modes available to residents, including auto by occupancy and toll/non-toll choice, walk and bike non-motorized modes, and walk and drive access to five different transit line-haul modes. Note that the pay modes are those that involve paying a choice or “value” toll. Tolls on bridges are counted as a travel cost, but the mode is considered “free.”
+
+
+Table 5: Trip Modes For Assignment
+NUMBERMODE1Auto SOV (Non-Toll) 2Auto SOV (Toll) 3Auto 2 Person (Non-Toll, Non-HOV) 4Auto 2 Person (Non-Toll, HOV) 5Auto 2 Person (Toll, HOV) 6Auto 3+ Person (Non-Toll, Non-HOV) 7Auto 3+ Person (Non-Toll, HOV) 8Auto 3+ Person (Toll, HOV) 9Walk-Local Bus 10Walk-Express Bus 11Walk-Bus Rapid Transit 12Walk-Light Rail 13Walk-Heavy Rail 14PNR-Local Bus 15PNR-Express Bus 16PNR-Bus Rapid Transit 17PNR-Light Rail 18PNR-Heavy Rail 19KNR-Local Bus 20KNR-Express Bus 21KNR-Bus Rapid Transit 22KNR-Light Rail 23KNR-Heavy Rail 24Walk 25Bike26School Bus (only available for school purpose)Basic Design of the SANDAG CT-RAMP Implementation
+The general design of the SANDAG CT-RAMP model is presented in Figure 3 below. The following outline describes the basic sequence of sub-models and associated travel choices: 
+1. Input Creation:
+1.1. Synthetic population creation 
+1.2. Calculation of destination-choice accessibilities for use in mobility models and tour generation
+2. Long term level:
+2.1. Household car ownership (based on household/person attributes and household accessibilities)
+2.2. Work from home model that indicates whether a worker’s regular workplace is their home
+2.3. The location for each mandatory activity for each relevant household member (workplace/university/school)
+3. Mobility Level:
+3.1. Free Parking Eligibility (determines whether workers pay to park if workplace is a MGRA with parking cost)
+3.2. Household car ownership (based on household/person attributes, household, and mandatory accessibilities)
+3.3. Transponder ownership for use of toll lanes
+4. Daily pattern/schedule level: 
+4.1. Daily pattern type for each household member (main activity combination, at home versus on tour) with a linkage of choices across various person categories, and generation of a joint tour indicator at the household level.
+4.2. Individual mandatory activities/tours for each household member (note that locations of mandatory tours have already been determined in long-term choice model)
+4.2.1. Frequency of mandatory tours
+4.2.2. Mandatory tour time of day (departure/arrival time combination)
+4.2.3. Mandatory tour mode choice
+4.3. Joint travel tours (conditional upon the available time window left for each person after the scheduling of mandatory activities, and the presence of a joint tour indicated from Model 4.1)
+4.3.1. Joint tour frequency/composition, which predicts the exact number of joint tours (1 or 2), the purpose of each tour, and the composition of each tour (adults, children, or mixed)
+4.3.2. Person participation in each joint tour
+4.3.3. Primary destination for each joint tour 
+4.3.4. Joint tour time of day (departure/arrival time combination)
+4.3.5. Joint tour mode choice
+4.4. Individual non-mandatory tours (conditional upon the available time window left for each person after the scheduling of mandatory and joint non-mandatory activities)
+4.4.1. Individual non-mandatory tour frequency, applied for each person
+4.4.2. Individual non-mandatory tour primary destination 
+4.4.3. Individual non-mandatory tour departure/arrival time
+4.4.4. Individual non-mandatory tour mode choice
+4.5. At-work sub-tours (conditional upon the available time window within the work tour duration)
+4.5.1. At-work sub-tour frequency, applied for each work tour
+4.5.2. At-work sub-tour primary destination 
+4.5.3. At-work sub-tour departure/arrival time
+4.5.4. At-work sub-tour mode choice
+5. Stop level: 
+5.1. Frequency of secondary stops
+5.2. Intermediate stop purpose
+5.3. Intermediate stop location choice
+5.4. Intermediate stop departure time choice
+6. Trip level:
+6.1. Trip mode choice conditional upon the tour mode
+6.2. Auto trip parking location choice for parking constrained areas
+6.3. Trip assignment
+
+
+Figure 3: Basic Model Design and Linkage Between Sub-Models
+
+Shadowed boxes in Figure 3 indicate choices that relate to the entire household or a group of household members and assume explicit modeling of intra-household interactions (sub-models 2.1, 3.2, 4.1, and 4.3.1). The other models are applied to individuals, though they may consider household-level influences on choices. 
+The model system uses synthetic household population as a base input (sub-model 1.1). Certain models also utilize destination-choice logsums, which are represented as MGRA variables (sub-model 1.2). Once these inputs are created, the travel model simulation begins. 
+An auto ownership model is run before workplace/university/school location choice in order to select a preliminary auto ownership level for calculation of accessibilities for location choice. The model uses the same variables as the full auto ownership model, with the exception of the work/university/school-specific accessibilities that are used in the full model. It is followed by long-term choices that relate to the workplace/university/school for each worker and student (sub-models 2.2 and 2.3). Medium-term mobility choices relate to free parking eligibility for workers in the CBD (sub-model 3.1), household car ownership (sub-model 3.2), and transponder ownership (sub-model 3.3). 
+The daily activity pattern type of each household member (model 4.1) is the first travel-related sub-model in the modeling hierarchy. This model classifies daily patterns by three types: 1) mandatory (that includes at least one out-of-home mandatory activity), 2) non-mandatory (that includes at least one out-of-home non-mandatory activity, but does not include out-of-home mandatory activities), and 3) home (that does not include any out-of-home activity and travel). The pattern type model also predicts whether any joint tours will be undertaken by two or more household members on the simulated day. However, the exact number of tours, their composition, and other details are left to subsequent models. The pattern choice set contains a non-travel option in which the person can be engaged in in-home activity only (purposely or because of being sick) or can be out of town. In the model system application, a person who chooses a non- travel pattern is not considered further in the modeling stream, except that they can make an internal-external trip. Daily pattern-type choices of the household members are linked in such a way that decisions made by some members are reflected in the decisions made by the other members. 
+The next set of sub-models (4.2.1-4.2.3) defines the frequency, time-of-day, and mode for each mandatory tour. The scheduling of mandatory activities is generally considered a higher priority decision than any decision regarding non-mandatory activities for either the same person or for the other household members. “Residual time windows,” or periods of time with no person-level activity, are calculated as the time remaining after tours have been scheduled. The temporal overlap of residual time windows among household members are estimated after mandatory tours have been generated and scheduled. Time window overlaps, which are left in the daily schedule after the mandatory commitment of the household members has been made, affect the frequency of joint and individual non-mandatory tours, and the probability of participation in joint tours. At-work sub-tours are modeled next, taking into account the time-window constraints imposed by their parent work tours (sub-models 4.5.1-4.5.4).
+The next major model component relates to joint household travel. Joint tours are tours taken together by two or more members of the same household. This component predicts the exact number of joint tours by travel purpose and party composition (adults only, children only, or mixed) for the entire household (4.3.1), and then defines the participation of each household member in each joint household tour (4.3.2). It is followed by choice of destination (4.3.3) time-of-day (4.3.4), and mode (4.3.5).
+The next stage relates to individual maintenance (escort, shopping and other household-related errands) and discretionary (eating out, social/recreation, and other discretionary) tours. All of these tours are generated by person in model 4.4.1. Their destination, time of day, and mode are chosen next (4.4.2, 4.4.3, and 4.4.4). 
+The next set of sub-models relate to the stop-level details for each tour. They include the frequency of stops in each direction (5.2), the purpose of each stop (5.2), the location of each stop (5.3) and the stop departure time (5.4). It is followed by the last set of sub-models that add details for each trip including trip mode (6.1) and parking location for auto trips (6.2). The trips are then assigned to highway and transit networks depending on trip mode and time period (6.3). 
+Main Sub-Models and Procedures of the Core Demand Model
+This section describes each model component in greater detail, including the general algorithm for each model, the decision-making unit, the choices considered, the market segmentation utilized (if any), and the explanatory variables used. 
+1.1	Population Synthesizer 
+The population synthesis procedure takes into account zonal and regional controls and includes a procedure to allocate households to MGRAs. A synthetic population is created using a modified open source PopSyn software originally designed for Atlanta Regional Commission (ARC). The ARC population synthesizer was developed by Parsons Brinckerhoff to be a flexible tool for creating synthetic populations for AB modeling. The population synthesizer inputs are U.S. Census data at the zonal- and regional-levels describing the distribution of households by various characteristics. The synthetic population is forced to match the zonal and regional characteristics. The ARC population synthesizer is being enhanced to consider person-level attributes in the population controls in order to match workers by occupation provided by PECAS.
+The population synthesis approach includes the following steps:
+1. Create a sample of households in each TAZ (all households from the correspondent PUMA can be used in a simplified case).
+2. Balance the individual household weights to ensure the controlled totals across all person and household dimensions.
+3. Create a list of households by discretizing the individual weights.
+
+The advantage of working with the list of households compared to a multi-way distribution is that both person and household variables can be incorporated. If only household or person attributes are controlled, the proposed procedure yields exactly the same multidimensional distribution as conventional matrix balancing. Also, the elimination of the drawing procedure allows for a theoretically closed formulation with no unnecessary empirical components. 
+General Formulation
+Since the procedure is applied for each TAZ separately, we formulate the model for a single TAZ. Introduce the following notation:
+	=	household and person controls,
+	=	seed set of households in the PUMA (or any other sample),
+	=	a priori weights assigned in the PUMA (or any other sample),
+A^i	=	zonal controls,
+a_n^i?0	=	coefficients of contribution of household to each control.
+The principal flexibility of the procedure is that the contribution coefficients can take any non-negative value. In the conventional procedure, the contribution coefficients are implied to be Boolean incidence indicators (belong or not belong). An example is shown in Table 6 below for controls specified by household size and person age brackets.
+Table 6: Controls and contribution coefficients
+HH IDHH sizePerson ageHH initial weight1234+0-1516-3536-6465+1120111201122012220113220….…Control100200250300400400650250
+The first household has one person of age 65+. The second household has two persons: one age 0-15 and one age 16-35. The third household has three persons: one age 16-35 and aother two aged 36-64. The fourth household has four persons: two age 16-35 and two aged 36-64. The fifth household has size persons: one person age 0-15, three persons aged 16-35, and two persons aged 36-64. 
+The balancing problem can be written as a convex mathematical program of the entropy-maximization type in the following way: 
+min?{x_n } ??_n??x_n  ln??x_n/w_n ? ?,	Equation 1
+Subject to constraints:
+?_n??a_n^i x_n=A^i,(?^i ) ?,	Equation 2
+x_n?0 ,	Equation 3
+where ?^i represents dual variables that give rise to balancing factors.
+The objective function expresses the principle of using all households uniformly (proportionally to the assigned a priori weight). The constraints ensure matching the controls.
+By forming the Lagrangian and equating the derivatives to zero we obtain the following solution:
+x_n=?k×w?_n×exp(?_i?a_n^i  ?^i )=w_n×?_i??[exp(?^i )]^(a_n^i )=? w_n×?_i?(? ?^i )^(a_n^i ) ,	Equation 4
+where ? ?^i represents balancing factors that have to be calculated. Note that the balancing factors correspond to the controls, not to households. For each household, the weight is calculated as a product of the initial weight by the relevant balancing factors exponentiated according to the participation coefficient. A zero participation coefficient automatically results in a balancing factor reset to 1 that does not affect the household weight. 
+Solution Algorithm
+The problem formulated in the previous section has a unique solution that can be achieved by the following iterative procedure:
+Step 0: Set the iteration counter k=1. Set zero-iteration weight x_n (0,0)= w_n. 
+For k=1 to K (number of iterations):
+       For i=1 to I (number of controls):
+Step 1: Calculate balancing factor
+? ?^i (k,i)=A^i/(?_n??a_n^i x_n (k-1,i-1) ?).	Equation 5
+Step 2: Apply balancing factor (note exponentiation!)
+x_n (k-1,i)=x_n (k-1,i-1)×[? ?^i (k,i)]^(a_n^i ).	Equation 6
+       Step 3: Set starting weights for the next iteration
+x_n (k,0)=x_n (k-1,I).	Equation 7
+       Step 4: Calculate convergence criterion:
+C(k)=max?i?{abs[? ?^i (k,i)-1]}.	Equation 8
+	If C(k)?? (degree of accuracy) or k=K Stop.
+Note that the solution is unique and independent of the order of controls. Normally, 100 iterations guarantee very good degree of convergence. 
+Base Year Controls
+The population synthesizer first develops a “base year” population distribution using year 2000 Census or 2005-2009 ACS data, and a set of control attributes are defined. Census Summary File 1, Summary File 3, and the Census Transportation Planning Package information are used to develop single and multi-dimensional distributions of these attributes. These attributes, which are specified at the TAZ level in the base-year, include:
+Household Controls:
+* Housing Unit Type
+* Household Size
+* Household Income
+* Number of Workers in Household
+* Number of Units in Structure and Quality
+Person Controls:
+* Age
+* Occupation
+Once this distribution is established, the population synthesis tool samples PUMS records to create a fully enumerated representation of the population.
+Household Controls
+Each household is defined by eight dimensions. The dimensions are:
+* Household unit type (3)
+o Household
+o Non-Institutional Group Quarters
+o Institutional Group Quarters; 
+* Income in 2007 dollars (5)
+o <$30k
+o $30-60k
+o $60-100k
+o $100-150k
+o $150k+
+* Household size (4)
+o 1
+o 2
+o 3
+o 4+ 
+* Number of Workers (4)
+o 0
+o 1
+o 2
+o 3+; 
+* Number of Units in Structure & Quality (8)
+o Single-Family Attached/Luxury
+o Single-Family Attached/Economy
+o Single-Family Detached/Luxury
+o Single-Family Detached/Economy
+o Multi-Family/Luxury
+o Multi-Family/Economy
+o Mobile Home
+o Military
+Person Controls
+* Age (9)
+o 0-17
+o 18-24
+o 25-34
+o 35-49
+o 50-64
+o 65-69
+o 80+
+* Occupation (7)
+o White collar labor
+o Work at home labor
+o Service labor
+o Health labor
+o Retail and food labor
+o Blue collar labor
+o Military labor
+Group quarters residents are treated as a separate category of households. In the PUMS data, each group quarters resident has a record in the person format as well as a record in the household format representing a one-person pseudo-household containing only that individual. These fields are distinguished from the normal household records by the UNITTYPE field, which indicates if the record is a household record, a non-institutional group quarters record, or an institutional group quarters record. The UNITTYPE field is used to distinguish the type of household, and group quarters residents are otherwise treated just like any other household record. Institutional group quarters residents are generated so that the total population matches control totals. However, because institutional residents are not expected to travel, these records are not printed to the population output file used by the model system. 
+Combinations of the dimensions that are excluded or merged include:
+* Illogical combinations of workers and household size are excluded 
+* For group quarters, no distinctions are made by household income
+* For group quarters, no distinctions are made by household size
+* For group quarters, no distinctions are made by person dimensions 
+* For group quarters, no distinction is made by the number of units in the structure.
+Base-Year Control Totals
+For the base-year application, the control totals are derived entirely from 2000 Census data tabulated at the block-group level and converted to a TAZ-level. The controls include:
+* Households by Household Size (4 controls); 
+* Households by Household Size x Number of Workers (4x4=16 controls); 
+* Households by Household Income x Household Size (4x4=16 controls); 
+* Households by Household Income x Number of Workers (4x4=16 controls); 
+* Households By Household Income x Household Size x Number of Workers (3x4x4=48 controls); 
+* Households By Household Size x Number of Units (4x2=8 controls); 
+* Households By Number of Units (2 controls);
+* Households By Group Quarters Type x Number of Workers (2x2=4 controls); 
+* Persons by age (9 controls);
+* Workers by occupation (7 controls); and,
+Future-Year Control Totals
+For the forecast years, a more limited set of control totals is available from PECAS. The forecast-year control totals from PECAS include:
+* Housing type and quality (available at a TAZ level)
+* Group Quarters (held constant except where known changes occur)
+* Household income (available at an MGRA level, summarized to a TAZ level)
+* Household size (will be available at a TAZ level)
+* Workers per household (will be available at a TAZ level)
+* Workers by occupation (available at a PECAS-zone level)
+* Persons by age (county-level control)
+This second IPF process results in a floating point future-year seed distribution for the 608 categories. That distribution is then converted to an integer seed distribution using a randomized rounding method. The randomized rounding works such that if a cell contains the value 0.14, it has an 86% chance of being rounded to 0, and a 14% chance of being rounded to 1. This randomized rounding is preferred because it avoids bias, but it does not guarantee that the total number of households in a TAZ exactly matches the targets. Households are drawn from the PUMS sample to fill this integer distribution and create the synthetic population. Any income values less than zero are set to zero prior to writing the population. 
+The forecast-year control totals are based on PECAS land-use model projections and other supplemental data (such as distributions of persons by age). PECAS operates at a 350 zone system, but also tracks certain data at the TAZ and parcel level. Housing type and quality, for example, are tracked at the TAZ level, while workers by occupation and place of residence are tracked at the PECAS-zone level. The distribution of persons by age is specified as a county-wide control.
+The population synthesizer currently operates at the TAZ level. Every household is automatically assigned to a TAZ based on the marginal distributions generated for each TAZ. This model assigns an MGRA to each household as follows: 
+1. The quantity of housing by type (single-family attached, single-family detached, multi-family, mobile-home, non-institutional group quarters, and military) will be summarized by MGRA (Qh). This data is available at the parcel level.
+2. A probability for each housing type will be computed for each MGRA as the quantity of housing by type for the MGRA divided by the sum of housing by type across all MGRAs in the TAZ (Pi,h=Qi,h/?Qh). 
+A Monte-Carlo random number draw will be made for each synthetic household, and that household will select a residential MGRA based on its housing type and the probability distribution for that housing type across all MGRAs in the TAZ.
+1.2	Accessibilities 
+All accessibility measures for the SANDAG ABM are calculated at the MGRA level. The auto travel times and cost are TAZ-based and the size variables are MGRA-based. This necessitates that auto accessibilities be calculated at the MGRA level. The SANDAG ABM requires accessibility indices only for non-mandatory travel purposes since the usual location of work/school activity for each worker/student is modeled prior to the DAP, tour frequency, and tour destination choice for non-mandatory tours. In addition, school proximity to the residential MGRA and travel time by transit for each student can be used as an explanatory variable for escorting frequency. 
+The set of accessibility measures for the SANDAG ABM model is summarized in Table 7.
+Table 7: Accessibility measures for the SANDAG ABM
+No.DescriptionModel utilization Attraction size variable  Travel cost Dispersion coefficient 1Access to non-mandatory attractions by SOV in off-peakCar ownershipTotal weighted employment for all purposes Generalized SOV time including tolls-0.052Access to non-mandatory attractions by transit in off peakCar ownershipTotal weighted employment for all purposes Generalized best path walk-to-transit time including fares -0.053Access to non-mandatory attractions by walkCar ownershipTotal weighted employment for all purposes SOV off-peak distance
+(set to 999 if >3)-1.004-6Access to non-mandatory attractions by all modes except HOVCDAPTotal weighted employment for all purposes Off-peak mode choice logsums (SOV skims for ipersons) segmented by 3 car-availability groups +1.007-9Access to non-mandatory attractions by all modes except SOVCDAPTotal weighted employment for all purposes Off-peak mode choice logsums (HOV skims for interaction) segmented by 3 car-availability groups +1.0010-12Access to shopping attractions by all modes except SOV Joint tour frequencyWeighted employment for shoppingOff-peak mode choice logsum (HOV skims) segmented by 3 HH adult car-availability groups+1.0013-15Access to maintenance attractions by all modes except SOVJoint tour frequencyWeighted employment for maintenanceOff-peak mode choice logsum (HOV skims) segmented by 3 adult car-availability groups+1.0016-18Access to eating-out attractions by all modes except SOVJoint tour frequencyWeighted employment for eating outOff-peak mode choice logsum (HOV skims) segmented by 3 adult HH car-availability groups+1.0019-21Access to visiting attractions by all modes except SOVJoint tour frequencyTotal householdsOff-peak mode choice logsum (HOV skims) segmented by 3 adult car-availability groups+1.0022-24Access to discretionary attractions by all modes except SOVJoint tour frequencyWeighted employment for discretionaryOff-peak mode choice logsum (HOV skims) segmented by 3 adult car-availability groups+1.0025-27Access to escorting attractions by all modes except SOVAllocated tour frequencyTotal householdsAM mode choice logsum (HOV skims) segmented by 3 adult car-availability groups+1.0028-30Access to shopping attractions by all modes except HOV Allocated tour frequencyWeighted employment for shoppingOff-peak mode choice logsum (SOV skims) segmented by 3 adult car-availability groups+1.0031-33Access to maintenance attractions by all modes except HOVAllocated tour frequencyWeighted employment for maintenanceOff-peak mode choice logsum (SOV skims) segmented by 3 adult car-availability groups+1.0034-36Access to eating-out attractions by all modes except HOVIndividual tour frequencyWeighted employment for eating outOff-peak mode choice logsum (SOV skims) segmented by 3 car-availability groups+1.0036-39Access to visiting attractions by all modes except HOVIndividual tour frequencyTotal householdsOff-peak mode choice logsum (SOV skims) segmented by 3 car-availability groups+1.0040-41Access to discretionary attractions by all modes except HOVIndividual tour frequencyWeighted employment for discretionaryOff-peak mode choice logsum (SOV skims) segmented by 3 car-availability groups+1.0043-44Access to at-work attractions by all modes except HOVIndividual sub-tour frequencyWeighted employment for at workOff-peak mode choice logsum (SOV skims) segmented by adult 2 car-availability groups (0 cars and cars equal or graeter than workers)+1.0045Access to all attractions by all modes of transport in the peakWork location, CDAPTotal weighted employment for all purposes Peak mode choice logsums????46Access to at-work attractions by walkIndividual sub-tour frequencyWeighted employment for at workSOV off-peak distance
+(set to 999 if >3)?47Access to all households by all modes of transport in the peak??Total weighted households for all purposes Generalized best path walk-to-transit time including fares ??Size Variables by Travel Purpose
+Table 8: Correspondence of LU variables to travel purposes and relative attraction rate
+Employment by PECAS Model categories of Industry and other variablesNon-mandatory travel purpose in the ABM4=escort5=shop6=main7=eat8=visit9=discAt-workAll12Retail Activity 3.1940.7760.3250.0980.1543.97013Professional and Business Services 0.2430.0290.08719Amusement Services 0.0890.3640.40720Hotels Activity (479, 480)0.31821Restaurants and Bars 3.0812.1030.2530.7690.3678.12322Personal Services Retail Based 0.5000.0540.99923Religious Activity 5.1547.78625State and Local Government Enterprises Activity 27Federal Non-Military Activity 1.0251.31329/30State and Local Non-Education Activity 0.214Total number of households 1.00.1050.1560.489
+The size variable is calculated as a linear combination of the MGRA LU variables with the specified coefficients. The values of coefficients in the table have been estimated by means of an auxiliary regression model that used the LU variables as independent variables and expanded trip ends by travel purpose as dependent variables. The intercept was set to zero. The regressions were applied at the MGRA level (approximately 15,000 out of 33,334 MGRAs have non-zero values at least for some LU activity and/or observed trip ends). 
+The following travel cost functions are used in the accessibility calculations: generalized single-occupancy vehicle (SOV) time; generalized best path walk-to-transit time; SOV off-peak distance; off-peak mode choice logsum. These travel cost functions are explained below.
+* Generalized SOV time, including tolls and parking cost; time equivalent of tolls and operation cost should be included (approximately $1 per 6 minutes, that is Value of Time (VOT)=$10/h), 
+* Generalized best path walk-to-transit time including fares; this includes total in-vehicle time (reset to 10,000 if no transit path), walk, weight, transfer penalty, and time equivalent of fare according to the average VOT. It is suggested to use the relative in-vehicle and out-vehicle coefficients in the current mode choice model. First wait = 1.5, transfer wait = 3.0, Short walk (less than 1/4 mile) = 1.5, long walk (1/4 + miles) = 2.5, and there are additional transfer penalties equal to 2 minutes for the first transfer for LRT or Commuter rail only, and 15 minutes for all ride modes for the second transfer. The current cost coefficient is $5.41/hour which is for the middle income category; but I think we ought to use 1/2 of the average annual salary in San Diego in 2005 (which was $43,824 according to BLS) divided by 2080 = $10.53. 
+* SOV off-peak distance (set to 999 if distance>3) for non-motorized travel,
+* Off-peak mode choice logsum calculated over 3 modes in trinary multinomial logit (auto/SOV skims, walk to transit, and non-motorized) segmented by 4 individual car-availability groups; the utility specifications are below in Table 9.
+* Off-peak mode choice logsum calculated over 3 modes in trinary multinomial logit (auto/HOV skims, walk to transit, and non-motorized) segmented by 3 household car-availability groups; the specifications are below in Table 9. It should be noted that despite a large number of measures to be calculated (42), this set is not computationally intensive since the most detailed model portion (mode choice logsum) is calculated for only 7 different types (4 for individual activities and 3 for household joint activities). These 7 logsums are then combined with different size variables.
+Table 9: Mode utility components for accessibility calculations
+SegmentModeConstantTravel timeCost, $VariableCoefficientVariableCoefficientU16
+Adult, 0 carsSOV*-999SOV time / off-peakFrom the 4-step modelSOV toll plus operating cost plus parkingFrom the 4-step modelAdult, cars fewer than adults2.0Adult, cars equal or greater that adults 3.50 carsHOV*0.5HOV time / off-peakFrom the 4-step modelHOV toll plus operating cost plus parkingFrom the 4-step model divided by 2 (if not scaled in the model)Cars fewer than adults1.5Cars equal or greater than adults 1.0U16
+Adult, 0 carsTransit (best path)-0.5Total in-vehicle time (10,000 if no transit path) plus weighted walk plus weighted wait plus transfer penalty as defined in the 4-setp modelFrom the 4-step modelFareFrom the 4-step modelAdult, cars fewer than adultsAdult, cars equal or greater than adults U16Non-motorizedSOV off-peak distance (set to 999 if distance>3)-1.00Adult, 0 carsAdult, cars fewer than adultsAdult, cars equal or greater than adults *Only one utility (SOV or HOV) is used at a time depending on the accessibility type as specified in Table 7.
+2.1	Pre-Mandatory Car Ownership Model 
+Number of Models:	1
+Decision-Making Unit:	Household 
+Model Form:	Nested Logit
+Alternatives:	Five (0, 1, 2, 3, 4++ autos)
+The car ownership models predict the number of vehicles owned by each household. It is formulated as a nested logit choice model with five alternatives, including “no car”, “one car”, “two cars”, “three cars”, and “four or more cars”. The nesting structure is shown in Figure 4. 
+There are two instances of the auto ownership model. The first instance, model 2.1, is used to select a preliminary auto ownership level for the household, based upon household demographic variables, household ‘4D’ variables, and destination-choice accessibility terms created in sub-model 1.2 (see above). This auto ownership level is used to create mode choice logsums for workers and students in the household, which are then used to select work and school locations in model 2.2. The auto ownership model is re-run (sub-model 3.2) in order to select the actual auto ownership for the household, but this subsequent version is informed by the work and school locations chosen by model 2.2. All other variables and coefficients are held constant between the two models, except for alternative-specific constants. 
+The model includes the following explanatory variables: 
+* Number of driving-age adults in household
+* Number of persons in household by age range
+* Number of workers in household
+* Number of high-school graduates in household
+* Dwelling type of household
+* Household income
+* Intersection density (per acre) within one-half mile radius of household MGRA
+* Population density (per acre) within one-half mile radius of household MGRA
+* Retail employment density (per acre) within one-half mile radius of household MGRA
+* Non-motorized accessibility from household MGRA to non-mandatory attractions (accessibility term #3)
+* Off-peak auto accessibility from household MGRA to non-mandatory attractions (accessibility term #1)
+* Off-peak transit accessibility from household MGRA to non-mandatory attractions (accessibility term #2)
+Note that the model includes both household and person-level characteristics, ‘4D’ density measures, and accessibilities. The accessibility terms are destination choice (DC) logsums, which represent the accessibility of non-mandatory activities from the home location by various modes (auto, non-motorized, and transit). They are fully described under 1.2, above.
+Figure 4: Auto Ownership Nesting Structure
+
+2.2	Work from Home Choice
+Number of Models:	1 
+Decision-Making Unit:	Workers
+Model Form:	Binary Logit
+Alternatives:	Two (regular workplace is home, regular workplace is not home)
+The work from home choice model determines whether each worker works from home. It is a binary logit model, which takes into account the following explanatory variables:
+* Household income
+* Person age
+* Gender
+* Worker education level
+* Whether the worker is full-time or part-time
+* Whether there are non-working adults in the household
+* Peak accessibility across all modes of transport from household MGRA to employment (accessibility term #45 , see section 1.2)
+2.3	Mandatory (workplace/university/school) Activity Location Choice
+Number of Models:	4 (Work, Grade School, High School, University)
+Decision-Making Unit:	Workers for Work Location Choice; Persons Age 5-13 for Grade School; 
+	Persons Age 14-17 for High School; University Students for University Model
+Model Form:	Multinomial Logit
+Alternatives:	MGRAs
+A workplace location choice model assigns a workplace MGRA for every employed person in the synthetic population who does not choose ‘works at home’ from Model 2.2. Every worker is assigned a regular work location zone (TAZ) and MGRA according to a multinomial logit destination choice model. Size terms in the model vary according to worker occupation, to reflect the different types of jobs that are likely to attract different (white collar versus blue-collar) workers. There are six occupation categories used in the segmentation of size terms, as shown in Table 2. Each occupation category utilizes different coefficients for categories of employment by industry, to reflect the different likelihood of workers by occupation to work in each industry. Accessibility from the workers home to the alternative workplace is measured by a mode choice logsum taken directly from the tour mode choice model, based on peak period travel (A.M. departure and P.M. return). Various distance terms are also used. 
+The explanatory variables in work location choice include:
+* Household income
+* Work status (full versus part-time)
+* Worker occupation
+* Gender
+* Distance
+* The tour mode choice logsum for the worker from the residence MGRA to each sampled workplace MGRA using peak level-of-service
+* The size of each sampled MGRA
+Since mode choice logsums are required for each destination, a two-stage procedure is used for all destination choice models in the CT-RAMP system for SANDAG in order to reduce computational time (it would be computationally prohibitive to compute a mode choice logsum for over 20,000 MGRAs and every tour). In the first stage, a simplified destination choice model is applied in which all TAZs are alternatives. The only variables in this model are the size term (accumulated from all MGRAs in the TAZ) and distance. This model creates a probability distribution for all possible alternative TAZs (TAZs with no employment are not sampled). A set of alternatives are sampled from the probability distribution, and each for each TAZ, an MGRA is chosen according to its size relative to the sum of all MGRAs within the TAZ. These sampled alternatives constitute the choice set in the full destination choice model. Mode choice logsums are computed for these alternatives and the destination choice model is applied. A discrete choice of MGRA is made for each worker from this more limited set of alternatives. In the case of the work location choice model, a set of 40 alternatives is sampled.
+The application procedure utilizes an iterative shadow pricing mechanism in order to match workers to input employment totals. The shadow pricing process compares the share of workers who choose each MGRA by occupation to the relative size of the MGRA compared to all MGRAs. A shadow prices is computed which scales the size of the MGRA based on the ratio of the observed share to the estimated share. The model is re-run until the estimated and observed shares are within a reasonable tolerance. The shadow prices are written to a file and can be used in subsequent model runs to cut down computational time. 
+There are four school location choice models: a pre-school model, a grade school model, a high school model, and a university model.
+The pre-school mandatory location choice model assigns a school location for pre-school children (person type 8) who are enrolled in pre-school and daycare. The size term for this model includes a number of employment types and population, since daycare and pre-school enrollment and employment are not explicitly tracked in the input land-use data. Explanatory variables include:
+* Income
+* Age
+* Distance
+* The tour mode choice logsum for the student from the residential MGRA to each sampled pre-school MGRA using peak levels-of-service
+* Size of each sampled pre-school MGRA
+* The grade school location choice model assigns a school location for every K-8 student in the synthetic population The size term for this model is K-8 enrollment. School district boundaries are used to restrict the choice set of potential school location zones based on residential location. The explanatory variables used in the grade school model include:School district boundaries
+* Distance
+* The tour mode choice logsum for the student from the residence MGRA to the sampled school MGRA using peak levels-of-service
+* The size of the school MGRA
+The high school location choice model assigns a school location for every high-school student in the synthetic population. The size term for this model is high school enrollment. District boundaries are also used in the high school model to restrict the choice set. The explanatory variables in the high school model include:
+* School district boundaries
+* Distance
+* The tour mode choice logsum for the student from the residence MGRA to the sampled school MGRA using peak levels-of-service
+* The size of the school MGRA
+A university location choice model assigns a university location for every university student in the synthetic population. There are three types of college/university enrollment in the input land-use data file: College enrollment, which measures enrollment at major colleges and universities; other college enrollment, which measures enrollment at community colleges, and adult education enrollment, which includes trade schools and other vocational training. The size terms for this model are segmented by student age, where students aged less than 30 use a ‘typical’ university size term, which gives a lower weight to adult education enrollment, while students age 30 or greater have a higher weight for adult education.
+Explanatory variables in the university location choice model include:
+* Student worker status
+* Student age
+* Distance
+* Tour mode choice logsum for student from residence MGRA to sampled school MGRA using peak levels-of-service
+3.1	 Employer Parking Provision Model
+Number of Models:	1
+Decision-Making Unit:	Workers whose workplace is in CBD or other priced-parking area (parkarea1)
+Model Form:	Multinomial Logit
+Alternatives:	Three (Free on-site parking, parking reimbursement, and no parking provision)
+The Employer Parking Provision Model predicts which persons have on-site parking provided to them at their workplaces and which persons receive reimbursement for off-site parking costs. The provision model takes the form of a multinomial logit discrete choice between free on-site parking, parking reimbursement (including partial or full reimbursement of off-site parking and partial reimbursement of on-site parking) and no parking provision. 
+It should be noted that free-onsite parking is not the same as full reimbursement. Many of those with full reimbursement in the survey data could have chosen to park closer to their destinations and accepted partial reimbursement. Whether parking is fully reimbursed will be determined both by the reimbursement model and the location choice model.
+Persons with workplaces outside of parkarea1 are assumed to receive free parking at their workplaces.
+Explanatory variables in the provision model include:
+* Household income
+* Occupation
+* Average daily equivalent of monthly parking costs in nearby MGRAs
+3.2	Car Ownership Model 
+Number of Models:	1
+Decision-Making Unit:	Households 
+Model Form:	Nested Logit
+Alternatives:	Five (0, 1, 2, 3, 4+ autos)
+The car ownership model is described under 2.1, above. The model is re-run after work/school location choice, so that auto ownership can be influenced by the actual work and school locations predicted by model 3.1. 
+The explanatory variables in model 3.2 include the ones listed under 2.1 above, with the addition of the following:
+* A variable measuring auto dependency for workers in the household based upon their home to work tour mode choice logsum
+* A variable measuring auto dependency for students in the household based upon their home to school tour mode choice logsum
+* A variable measuring the time on rail transit (light-rail or commuter rail) as a proportion of total transit time to work for workers in the household
+* A variable measuring the time on rail transit (light-rail or commuter rail) as a proportion of total transit time to school for students in the household
+The household mandatory activity auto dependency variable is calculated using the difference between the single-occupant vehicle (SOV) and the walk to transit mode choice logsum, stratified by person type (worker versus student). The logsums are computed based on the household MGRA and the work MGRA (for workers) or school MGRA (for students). The household auto dependency is obtained by aggregating individual auto dependencies of each person type (worker versus student) in the household. The auto dependency variable is calculated according to the following formula:
+Dependencyauto = min( (Logsumauto – Logsumtransit)/3 , 1.0) * Factornon-motorized
+Where:
+Factornon-motorized = 0.5 * min( (max(Distancehome,work/school, 1.0), 3.0)) – 0.5
+The non-motorized factor takes a value of 0 if the distance between home and work or school is less than one mile. If the distance between home and work/school is between one and three miles, the factor takes a value between 1.0 and 3.0. If the distance between home and work/school is greater than 3 miles (which serves as an upper cap on walkability), the non-motorized factor takes the maximum value of 1.0. The effect of this factor is to reduce the auto dependency variable if the work or school location is within walking distance of the residential MGRA. 
+The difference between auto and transit utility is divided by 3.0 to represent the resulting utility difference in units of hours (assuming an ‘average’ time coefficient of -0.05 multiplied by 60 minutes per hour). The difference is capped at 1.0, in effect representing the difference in scaled utility as a fraction between zero and one.
+The household mandatory activity rail mode index is calculated using the ratio of the rail mode in-vehicle time over the total transit in-vehicle time for trips that used rail as part of their transit path, stratified by person type (worker versus student). The household rail mode index is obtained by aggregating individual rail indices of worker/student members in the household. All mandatory mode choice logsums and accessibilities are calculated using AM peak skims.
+
+
+3.3	Toll Transponder Ownership Model 
+Number of Models:	1
+Decision-Making Unit: 	Households 
+Model Form:	Binomial Logit
+Alternatives:	Two (Yes or No)
+This model predicts whether a household owns a toll transponder unit. It was estimated based on aggregate transponder ownership data using a quasi-binomial logit model to account for over-dispersion. It predicts the probability of owning a transponder unit for each household based on aggregate characteristics of the zone. 
+The explanatory variables in the model include:
+* Percent of households in the zone with more than one auto
+* The number of autos owned by the household
+* The straight-line distance from the MGRA to the nearest toll facility, in miles
+* The average transit accessibility to non-mandatory attractions using off-peak levels-of-service (accessibility measure #2)
+* The average expected travel time savings provided by toll facilities to work
+* The percent increase in time to downtown San Diego incurred if toll facilities were avoided entirely (see below).
+The accessibility terms are destination choice (DC) logsums, which represent the accessibility of non-mandatory activities from the home location by various modes (auto, non-motorized, and transit). They are fully described under 1.2, above.
+The average expected travel time savings provided by toll facilities to work is calculated using a simplified destination choice logsum. The expected travel time savings of households in a zone z is:
+(?_d??(?AutoTime?_zd-?TollTime?_zd)??Employment?_d?exp?(-0.01 ?AutoTime?_zd)?)/(?_d???Employment?_d?exp?(-0.01 ?AutoTime?_zd)?)
+The times are calculated in minutes and include both the AM peak travel time to the destination and the PM peak time returning from the destination. The percent difference between the AM non-toll travel time to downtown zone 3781 and the AM non-toll travel time to downtown when the general purpose lanes parallel to all toll lanes requiring transponders were made unavailable in the path-finder. This variable is calculated as:
+(Non Toll Time Avoiding Facility-Non Toll Time )/(Non Toll Time).
+4.1	Coordinated Daily Activity Pattern (DAP) Model 
+Number of Models: 	1
+Decision-Making Unit:	Households 
+Model Form: 	Multinomial Logit
+Alternatives: 	691 total alternatives, but depends on household size (see Table 10)
+This model predicts the main daily activity pattern (DAP) type for each household member. The activity types that the model considers are:
+* Mandatory pattern (M) that includes at least one of the three mandatory activities – work, university or school. This constitutes either a workday or a university/school day, and may include additional non-mandatory activities such as separate home-based tours or intermediate stops on the mandatory tours. 
+* Non-mandatory pattern (N) that includes only maintenance and discretionary tours. Note that the way in which tours are defined, maintenance and discretionary tours cannot include travel for mandatory activities.
+* At-home pattern (H) that includes only in-home activities. At-home patterns are not distinguished by any specific activity (e.g., work at home, take care of child, being sick, etc). Cases where someone is not in town (e.g., business travel) are also combined with this category. 
+Statistical analysis performed in a number of different regions has shown that there is an extremely strong correlation between DAP types of different household members, especially for joint N and H types. For this reason, the DAP for different household members should not be modeled independently, as doing so would introduce significant error in the types of activity patterns generated at the household level. This error has implications for a number of policy sensitivities, including greenhouse gas policies. Therefore, the model is applied across all household members simultaneously; the interactions or influences of different types of household members (e.g. the effect of a child who stays at home on the simulation day on the probability of a part-time worker also staying at home) is taken into account through a specific set of interaction variables. 
+The model also simultaneously predicts the presence of fully-joint tours for the household. Fully-joint tours are tours in which two or more household members travel together for all stops on the tour. Joint tours are only a possible alternative at the household level when two or more household members have an active (M or N) travel day. The joint tour indicator predicted by this model is then considered when generating and scheduling mandatory tours, in order to reflect the likelihood of returning home from work earlier in order to participate in a joint tour with other household members.
+The choice structure includes 363 alternatives with no joint travel and 328 alternatives with joint travel, totaling to 691 alternatives as shown in Table 10. Note that the choices are available based on household size. There are also two facets of the model that reduce the complexity. First of all, mandatory DAP types are only available for appropriate person types (workers and students). Even more importantly, intra-household coordination of DAP types is relevant only for the N and H patterns. Thus, simultaneous modeling of DAP types for all household members is essential only for the trinary choice (M, N, H), while the sub-choice of the mandatory pattern can be modeled for each person separately.
+
+
+Table 10: Number of Choices in CDAP Model
+Household SizeAlternatives – 
+no Joint TravelAlternatives with 
+Joint TravelAll Alternatives130323x3=9 3x3-(3x2-1)=41333x3x3=273x3x3-(3x3-2)=204743x3x3x3=813x3x3x3-(3x4-3) =721535 or more3x3x3x3x3=2433x3x3x3x3-(3x5-4)=232475Total363328691
+The structure is shown graphically in Figure 5 for a three-person household. Each of the 27 daily activity pattern choices is made at the household level and describes an explicit pattern-type for each household member. For example, the fourth choice from the left is person 1 mandatory (M), person 2 non-mandatory (N), and person 3 mandatory (M). The exact tour frequency choice is a separate choice model conditional upon the choice of alternatives in the trinary choice. This structure is much more powerful for capturing intra-household interactions than sequential processing. The choice of 0 or 1+ joint tours is shown below the DAP choice for each household member. The choice of 0 or 1+ joint tours is active for this DAP choice because at least two members of the household would be assigned active travel patterns in this alternative. 
+For a limited number of households of size greater than five, the model is applied for the first five household members by priority while the rest of the household members are processed sequentially, conditional upon the choices made by the first five members. The rules by which members are selected for inclusion in the main model are that first priority is given to any full-time workers (up to two), then to any part-time workers (up to two), then to children, youngest to oldest (up to three). 
+The CDAP model explanatory variables include:
+* Household Size
+* Number of Adults in household
+* Number of children in household
+* Auto Sufficiency
+* Household Income
+* Dwelling Type
+* Person type
+* Age
+* Gender
+* Usual Work location
+* The tour mode choice logsum for the worker from the residential MGRA to each sampled workplace MGRA using peak levels-of-service
+* The tour mode choice logsum for the student from the residential MGRA to each sampled school MGRA using peak levels-of-service
+* Accessibility across all modes of transport from household MGRA to retail employment or non-mandatory locations (accessibility term #45 , see section 1.2)
+Figure 5: Example of DAP Model Alternatives for a 3-Person Household
+
+4.2.1	Individual Mandatory Tour Frequency
+Number of Models: 	1
+Decision-Making Unit:	Persons 
+Model Form: 	Multinomial Logit
+Alternatives: 	5 (1 Work Tour, 2 Work Tours, 1 School Tour, 2 School Tours, 
+1 Work/1 School Tour)
+Based on the DAP chosen for each person, individual mandatory tours, such as work, school and university tours are generated at person level. The model is designed to predict the exact number and purpose of mandatory tours (e.g., work and school/university) for each person who chose the mandatory DAP type at the previous decision-making stage. Since the DAP type model at the household level determines which household members engage in mandatory tours, all persons subjected to the individual mandatory tour model implement at least one mandatory tour. The model has the following five alternatives, 1 Work Tour, 2 or more Work Tours, 1 School Tour, 2 or more School Tours, 1 Work/1 School Tour.
+DAPs and subsequent behavioral models of travel generation include these explanatory variables:
+* Auto sufficiency
+* Household income
+* Non-family household indicator
+* Number of preschool children in household
+* Number of school aged children 6-18 years old in household NOT going to school
+* Person type
+* Gender
+* Age
+* Distance to work location
+* Distance to school location
+* Best travel time to work location
+* HOV accessibility from household MGRA to employment (accessibility terms #25, 26, 27 
+(by auto sufficiency) , see section 1.2)
+4.2.2	Individual Mandatory Tour Time of Day Choice
+Number of Models: 	3 (Work, University, and School)
+Decision-Making Unit: 	Persons 
+Model Form: 	Multinomial Logit
+Alternatives: 	820 (combinations of tour departure half-hour and arrival half-hour back at home, with aggregation between 1 AM and 5 AM)
+After individual mandatory tours have been generated, the tour departure time from home and arrival time back at home is chosen simultaneously. Note that it is not necessary to select the destination of the tour, as this has already been determined in Model 2.1. The model is a discrete-choice construct that operates with tour departure-from-home and arrival-back-home time combinations as alternatives. The proposed utility structure is based on “continuous shift” variables, and represents an analytical hybrid that combines the advantages of a discrete-choice structure (flexible in specification and easy to estimate and apply) with the advantages of a duration model (a simple structure with few parameters, and which supports continuous time). The model has a temporal resolution of one-half hour that is expressed in 820 half-hour departure/arrival time alternatives. The model utilizes direct availability rules for each subsequently scheduled tour, to be placed in the residual time window left after scheduling tours of higher priority. This conditionality ensures a full consistency for the individual entire-day activity and travel schedule as an outcome of the model. 
+In the CT-RAMP model structure, the tour-scheduling model is placed after destination choice and before mode choice. Thus, the destination of the tour and all related destination and origin-destination attributes are known and can be used as variables in the model estimation.
+For model estimation, the following practical rules can be used to set the alternative departure/arrival time combinations:
+* Each reported/modeled departure/arrival time is rounded to the nearest half-hour. For example, the half-hour “17” includes all times from 10:45 A.M. to 11:14 A.M.
+* Any times before 5 A.M. are shifted to 5 A.M., and any times after 1 A.M. are shifted to 1 A.M. This typically results in a shift for relatively few cases, and limits the number of half-hours in the model to 41.
+* Every possible combination of the 41 departure half-hours with the 41 arrival half-hours (where the arrival half-hour is the same or later than the departure hour) is an alternative. This gives 41 × 42/2 = 861 choice alternatives. 
+The network simulations to obtain travel time and cost skims are implemented for five broad periods, early A.M., A.M. peak, midday, P.M. peak, and night (evening, and late night) for the three mandatory tour purposes, work, university, and school. 
+The model includes the following explanatory variables:
+* Household income
+* Person type
+* Gender
+* Age
+* Mandatory tour frequency
+* Auto travel distance
+* Destination employment density
+* Tour departure time
+* Tour arrival time
+* Tour duration
+* The tour mode choice logsum by tour purpose from the residence MGRA to each sampled MGRA location
+4.2.3	Individual Mandatory Tour Mode Choice Model 
+Number of Models: 	3 (Work, University, K-12) 
+Decision-Making Unit: 	Person 
+Model Form: 	Nested Logit
+Alternatives: 	26 (See Figure 6)
+This model determines the “main tour mode” used to get from the origin to the primary destination and back is determined. The tour-based modeling approach requires a certain reconsideration of the conventional mode choice structure. Instead of a single mode choice model pertinent to a four-step structure, there are two different levels where the mode choice decision is modeled: 
+* The tour mode level (upper-level choice),
+* The trip mode level (lower-level choice conditional upon the upper-level choice).
+The tour mode choice model considers the following alternatives:
+1. Drive-alone
+2. Shared-Ride 2
+3. Shared-Ride 3+
+4. Walk
+5. Bike
+6. Walk-Transit
+7. Park-and-Ride Transit (drive to transit station and ride transit)
+8. Kiss-and-Ride Transit (drop-off at transit station and ride transit)
+9. School Bus (only available for grade school and high school tour purposes).
+The mode of each tour is identified based on the combination of modes used for all trips on the tour, according to the following rules:
+1. If any trip on the tour is Park-and-Ride Transit, then the tour mode is Park-and-Ride Transit.
+2. If any trip on the tour is Kiss-and-Ride Transit, then the tour mode is Kiss-and-Ride Transit.
+3. If any trip on the tour is School Bus, then the tour mode is School Bus.
+4. If any trip on the tour is Walk-Transit, then the tour mode is Walk-Transit.
+5. If any trip on the tour is Bike, then the tour mode is Bike.
+6. If any trip on the tour is Shared-Ride 3+, then the tour mode is Shared-Ride 3+
+7. If any trip on the tour is Shared-Ride 2, then the tour mode is Shared-Ride 2.
+8. If any trip on the tour is Drive-Alone, then the tour mode is Drive-Alone.
+9. All remaining tours are Walk.
+These tour modes create a hierarchy of importance that ensures that transit is available for trips on tours with transit as the preferred mode, and that high-occupancy vehicle lanes are available for trips on tours where shared-ride is the preferred mode. It also ensures that if drive-transit is utilized for the outbound trip on the tour, that mode is also available for the return journey (such that the traveler can pick up their car at the parking lot on the way home).
+Modes for the tour mode choice model are shown in Figure 6. The model is distinguished by the following characteristics:
+* Segmentation of the HOV mode by occupancy categories, which is essential for modeling specific HOV/HOT lanes and policies
+* An explicit modeling of toll vs. non-toll choices as highway sub-modes, which is essential for modeling highway pricing projects and policies
+* Distinguishing between certain transit sub-modes that are characterized by their attractiveness, reliability, comfort, convenience, and other characteristics beyond travel time and cost (such as Express Bus, Bus-Rapid Transit, Light-Rail Transit, and Commuter Rail)
+* Distinguishing between walk and bike modes if the share of bicycle trips is significant 
+Note that free and pay alternatives for each auto mode provide an opportunity for toll choice as a path choice within the nesting structure. This requires separate free and pay skims to be provided as inputs to the model (where free paths basically “turn off” all toll and HOT lanes). Transit skims are segmented by local versus premium (express bus, BRT, LRT, and commuter rail) modes, but as described below, the mode used for the longest segment of in-vehicle time is used to define the actual premium ride mode in the creation of transit level-of-service. Transit ride modes are based on a modal hierarchy in which modes that are ranked lower in the hierarchy are used as feeder modes to modes ranked higher. Table 11 describes skims used in tour mode choice. A number of mode codes have been reserved for future use.
+The tour mode choice model is based on the round-trip (outbound and return) level-of-service (LOS) between the tour anchor location (home for home-based tours and work for at-work sub-tours) and the tour primary destination. The tour mode choice model assumes that the mode of the outbound journey is the same as the mode for the return journey in the consideration of level-of-service information. This is a simplification that results in a model with a relatively modest number of alternatives, and also allows the estimation process to utilize data from an on-board survey in which the mode for only one direction is known (see below). Only these aggregate tour modes are used in lower level model components such as stop frequency, stop location, and as constraints in trip mode choice. 
+However, the estimation and application process calculates utilities for a more disaggregate set of modes in lower level alternatives that are consistent with the more detailed modes in trip mode choice. This allows the tour mode choice model to consider the availability of multiple transit line-haul modes and/or managed lane route choices in the choice of tour mode, with their specific levels-of-service and modal constants. The more aggregate tour modes act as constraints in trip mode choice; for example, if walk-transit is chosen in tour mode choice, only shared-ride, walk, and walk-transit modes are available in trip mode choice. Ultimately, trips are assigned to networks using the more disaggregate trip modes.
+The lower level nest mode choices (which are same as the trip mode choice model alternatives) are:
+1. Drive-alone Free
+2. Drive-Alone Pay
+3. Shared-Ride 2 Free (General Purpose Lane)
+4. Shared-Ride 2 Free (HOV Lane)
+5. Shared-Ride 2 Pay
+6. Shared-Ride 3+ Free (General Purpose Lane)
+7. Shared-Ride 3+ Free (HOV Lane)
+8. Shared-Ride 3+ Pay
+9. Walk
+10. Bike
+11. Walk-Local Bus
+12. Walk-Express Bus
+13. Walk-Bus Rapid Transit
+14. Walk-Light Rail Transit
+15. Walk-Commuter Rail
+16. PNR-Local Bus
+17. PNR-Express Bus
+18. PNR-Bus Rapid Transit
+19. PNR-Light Rail Transit
+20. PNR-Commuter Rail
+21. KNR-Local Bus
+22. KNR-Express Bus
+23. KNR-Bus Rapid Transit
+24. KNR-Light Rail Transit
+25. KNR-Commuter Rail
+26. School Bus
+The appropriate skim values for the tour mode choice are a function of the MGRA of the tour origin and MGRA of the tour primary destination. As described in the section on Treatment of Space, all transit level-of-service and certain non-motorized level of service (for MGRAs within 1.5 miles of each other) are computed “on-the-fly” in mode choice. Transit access and egress times are specifically determined via detailed MGRA-to-TAP distances computed within Geographic Information System (GIS) software. Actual TAP-TAP pairs used for the MGRA-pair, and therefore actual transit levels-of-service, are based on a selection of the path with the best overall utility for each of five transit ride modes (local bus, express bus, bus rapid-transit, light-rail, and heavy rail).
+Figure 6: Tour Mode Choice Model Structure
+
+Table 11: Skims used in Tour Mode Choice
+ModeSkimsDrive-alone Non-TollAll general purpose lanes available. HOV lanes, HOT lanes, and toll lanes unavailable. Toll bridges are available.Drive-alone TollAll general purpose lanes and toll lanes are available. HOV lanes are unavailable. HOT lanes are available for the SOV toll rate. Toll bridges are available.Shared-2 Non-Toll, Non-HOVAll general purpose lanes available. HOV lanes, HOT lanes, and toll lanes unavailable. Toll bridges are available.Shared-2 Non-Toll, HOVAll general purpose lanes available. 2+ occupancy HOV lanes available. Toll lanes unavailable. HOT lanes where 2+ occupant vehicles go free are available. Toll bridges are available.Shared-2 Toll, HOVAll general purpose lanes available. 2+ occupancy HOV lanes and HOT lanes where 2+ occupant vehicles go free are available for free. Toll lanes and HOT lanes where 2-occupant vehicles are tolled at the 2-occupant toll rate. Toll bridges are available.Shared-3+ Non-Toll, 
+Non-HOVAll general purpose lanes available. HOV lanes, HOT lanes, and toll lanes unavailable. Toll bridges are available.Shared-3+ Non-Toll, HOVAll general purpose lanes available. 2+ and 3+ occupancy HOV lanes available. Toll lanes unavailable. HOT lanes where 2+ or 3+ occupant vehicles go free are available. Toll bridges are available.Shared-3+ Toll, HOVAll general purpose lanes available. 2+ and 3+ occupancy HOV lanes and HOT lanes where 2 or 3+ occupant vehicles go free are available for free. Toll lanes and HOT lanes where 3+ occupant vehicles are tolled at the 3+ occupant toll rate. Toll bridges are available.WalkHighway distance, excluding freeways, but allowing select bridges with sidewalks. This is used for any MGRA-pair whose distance is greater than 1.5 miles. The walk time for MGRA-pairs whose distance is less than 1.5 miles relies on the GIS-based walk distances. BikeHighway distance, excluding freeways, but allowing select bridges with bike lanes. This is used for any MGRA-pair whose distance is greater than 1.5 miles. The bike time for MGRA-pairs whose distance is less than 1.5 miles relies on the GIS-based bike distances. Transit-LocalLocal Bus TAP-to-TAP skims, including in-vehicle time, first wait time, transfer wait time, and fare.Transit-PremiumPremium TAP-to-TAP skims, including in-vehicle time, first wait time, transfer wait time, and fare. These include local bus as a feeder mode, as well as express bus, bus rapid transit, light rail, and commuter rail. A premium mode designator is also included in the skim for each interchange, to identify which of the 4 premium ride-modes is used, based on the mode for which the greatest distance was travelled.
+The individual mandatory tour mode choice model contains the following explanatory variables:
+* Auto sufficiency
+* Household size
+* Age
+* Gender
+* In-vehicle time (auto and transit)
+* Walk and bike time
+* Auto operating cost
+* Auto parking cost
+* Auto terminal time
+* Auto toll value
+* Transit first wait time
+* Transit transfer time
+* Number of transit transfers
+* Transit walk access time
+* Transit walk egress time
+* Transit walk auxiliary time
+* Transit fare
+* Transit drive access time
+* Transit drive access cost
+* Intersection density
+* Employment density
+* Dwelling unit density
+4.3	Generation of Joint Household Tours
+In the CT-RAMP structure, joint travel for non-mandatory activities is modeled explicitly in the form of fully joint tours (where all members of the travel party travel together from the beginning to the end and participate in the same activities). This accounts for more than 50% of joint travel. 
+Each fully joint tour is considered a modeling unit with a group-wise decision-making process for the primary destination, mode, frequency and location of stops. Modeling joint activities involves two linked stages – see Figure 7.
+* A tour generation and composition stage that generates the number of joint tours by purpose/activity type made by the entire household. This is the joint tour frequency model.
+* A tour participation stage at which the decision whether to participate or not in each joint tour is made for each household member and tour.
+Figure 7: Model Structure for Joint Non-Mandatory Tours
+
+Joint tour party composition is modeled for each tour. Travel party composition is defined in terms of person categories (e.g., adults and children) participating in each tour. Person participation choice is then modeled for each person sequentially. In this approach, a binary choice model is calibrated for each activity, party composition and person type. The model iterates through household members, and applies a binary choice to each to determine if the member participates. The model is constrained to only consider members with available time-windows overlapping with the generated joint tour. The approach offers simplicity, but at the cost of overlooking potential non-independent participation probabilities across household members. The joint tour frequency, composition, and participation models are described below.
+4.3.1	Joint Tour Frequency and Composition
+Number of Models:	1
+Decision-Making Unit:	Households with a Joint Tour Indicator predicted by the CDAP model
+Model Form:	Multinomial Logit
+Alternatives:	105 (1 Tour segmented by 5 purposes and 3 composition classes, 2 tours segmented by 5 purposes and 3 composition classes)
+Joint tour frequencies (1 or 2+) are generated by households , purpose, and tour composition (adults only, children only, adults and children). Later models determine who in the household participates in the joint tour. The model is only applied to households with a joint tour indicator at the household level, as predicted by the CDAP model. 
+The explanatory variables in the joint tour frequency model include:
+* Auto sufficiency
+* Household income
+* Number of full time workers in household
+* Number of part time workers in household
+* Number of university students in household
+* Number of non-workers in household
+* Number of retirees in household
+* Number of driving age school children in household
+* Number pre-driving age school children in household
+* Number of preschool children in household
+* Number of adults in household not staying home
+* Number of children in household not staying home
+* Shopping HOV Accessibility from household MGRA to employment (accessibility terms #10, 11, 12 (by auto sufficiency) , see section 1.2
+* Maintenance HOV Accessibility from household MGRA to employment (accessibility terms #13, 14, 15 (by auto sufficiency) , see section 1.2
+* Discretionary HOV Accessibility from household MGRA to employment (accessibility terms #22, 23, 24 (by auto sufficiency) , see section 1.2
+* Presence and size of overlapping time-windows, which represent the availability of household members to travel together after mandatory tours have been generated and scheduled
+4.3.2	Joint Tour Participation
+Number of Models:	1
+Decision-Making Unit:	Persons
+Model Form:	Multinomial Logit
+Alternatives:	2 (Yes or No)
+Joint tour participation is modeled for each person and each joint tour. If the person does not correspond to the composition of the tour determined in the joint tour composition model, they are ineligible to participate in the tour. Similarly, persons whose daily activity pattern type is home are excluded from participating. The model relies on heuristic process to assure that the appropriate persons participate in the tour as per the composition model. The model follows the logic depicted in Figure 8.
+The explanatory variables in the participation model include:
+* Auto sufficiency
+* Household income
+* Frequency of joint tours in the household
+* Number of adults not including decision maker in household
+* Number of children not including decision maker in household
+* Person type
+* Maximum pair-wise overlaps between the decision-maker and other household members of the same person type (adults or children)
+Figure 8: Application of the Person Participation Model
+
+4.3.3	Joint Tour Primary Destination Choice
+Number of Models:	1 
+Decision-Making Unit:	Tour 
+Model Form:	Multinomial Logit
+Alternatives:	MGRAs
+The joint tour primary destination choice model determines the location of the tour primary destination. The destination is chosen for the tour and assigned to all tour participants. The model works at an MGRA level, and sampling of destination alternatives is implemented in order to reduce computation time. 
+The explanatory variables for the joint tour primary destination choice model include:
+* Household income
+* Gender
+* Age
+* Maximum pair-wise overlaps between the decision-maker and other household members of the same person type (adults or children)
+* Number of tours left over (including the current tour) to be scheduled
+* Off-peak MGRA to MGRA distance
+* The tour mode choice logsum for the person from the residence MGRA to each sampled MGRA location. 
+* Non-mandatory HOV accessibility from household MGRA to employment (accessibility terms #7, 8, 9 (by auto sufficiency)??? (section 1.2 )
+* The size of each sampled MGRA by tour purpose (see section 1.2)
+4.3.4	Joint Tour Time of Day Choice
+Number of Models: 	1
+Decision-Making Unit: 	Persons 
+Model Form: 	Multinomial Logit
+Alternatives: 	861 (combinations of tour departure half-hour and arrival half-hour back at home)
+After joint tours have been generated and assigned a primary location, the tour departure time from home and arrival time back at home is chosen simultaneously. The model is fully described under 4.2.2, above. However, a unique condition applies when applying the time-of-day choice model to joint tours. That is, the tour departure and arrival period combinations are restricted to only those available for each participant on the tour, after scheduling mandatory activities. Once the tour departure/arrival time combination is chosen, it is applied to all participants on the tour. 
+The model includes the following explanatory variables:
+* Household income
+* Person type
+* Gender
+* Age
+* Mandatory tour frequency
+* Auto travel distance
+* Destination employment density
+* Tour Departure time
+* Tour Arrival time
+* Tour duration
+* The tour mode choice logsum by tour purpose from the residence MGRA to each sampled MGRA location
+4.3.5	Joint Tour Mode Choice Model 
+Number of Models: 	2 (Maintenance, Discretionary) 
+Decision-Making Unit: 	Person 
+Model Form: 	Nested Logit
+Alternatives: 	23 (See Figure 6 under the Individual Mandatory Tour Mode Choice Section)
+Like the individual mandatory tour mode choice model, the joint tour model determines the “main tour mode” used to get from the origin to the primary destination and back is determined. 
+The joint tour mode choices are (drive alone, and school bus is eliminated for this model):
+1. Shared-Ride 2 Free (General Purpose Lane)
+2. Shared-Ride 2 Free (HOV Lane)
+3. Shared-Ride 2 Pay
+4. Shared-Ride 3+ Free (General Purpose Lane)
+5. Shared-Ride 3+ Free (HOV Lane)
+6. Shared-Ride 3+ Pay
+7. Walk
+8. Bike
+9. Walk-Local Bus
+10. Walk-Express Bus
+11. Walk-Bus Rapid Transit
+12. Walk-Light Rail Transit
+13. Walk-Commuter Rail
+14. PNR-Local Bus
+15. PNR-Express Bus
+16. PNR-Bus Rapid Transit
+17. PNR-Light Rail Transit
+18. PNR-Commuter Rail
+19. KNR-Local Bus
+20. KNR-Express Bus
+21. KNR-Bus Rapid Transit
+22. KNR-Light Rail Transit
+23. KNR-Commuter Rail
+The joint tour mode choice model contains the following explanatory variables:
+* Auto sufficiency
+* Household size
+* Age
+* Gender
+* In-vehicle time (auto and transit)
+* Walk and bike time
+* Auto operating cost
+* Auto parking cost
+* Auto terminal time
+* Auto toll value
+* Transit first wait time
+* Transit transfer time
+* Number of transit transfers
+* Transit walk access time
+* Transit walk egress time
+* Transit walk auxiliary time
+* Transit fare
+* Transit drive access time
+* Transit drive access cost
+* Intersection density
+* Employment density
+* Dwelling unit density
+4.4.1	Individual Non-Mandatory Tour Frequency
+Number of Models: 	1
+Decision-Making Unit: 	Households (at least one household member must have a DAP type of M or N) 
+Model Form: 	Multinomial Logit
+Alternatives: 	Approximately 197 alternatives, composed of 0-1+ or 2+ tours of each type of maintenance activity (Escort, Shop, Other Maintenance, Eat Out, Visit, and Other Discretionary)
+Allocated tours cover non-mandatory activities taken on by an individual on behalf of the household, and include escort, shopping, other maintenance, eat out, visit, and other discretionary tours. They are generated by the household, and later assigned to an individual in the household based on their residual time window. The choices include the number (0-2) and type of tours generated by each of the non-mandatory tour purposes. The explanatory variables include:
+* Auto sufficiency
+* Household income
+* Dwelling type
+* Number of full time workers in household
+* Number of part time workers in household
+* Number of university students in household
+* Number of non-workers in household
+* Number of retirees in household
+* Number of driving age school children in household
+* Number pre-driving age school children in household
+* Number of preschool children in household
+* Number of adults in household not staying home
+* Number of children in household not staying home
+* Gender
+* Age
+* Education level
+* Indicator variable for whether person works at home regularly
+* Number of individual/joint tours per person by tour purpose
+* Population density at the origin
+* Work Accessibility from household MGRA to employment (accessibility terms #45, see section 1.2
+* School Accessibility from household MGRA to employment (accessibility terms #45???????? , see section 1.2
+* Escorting HOV Accessibility from household MGRA to employment (accessibility terms #25, 26, 27???????? (by auto sufficiency) , see section 1.2
+* Shopping SOV/HOV Accessibility from household MGRA to employment (accessibility terms #10, 11, 12, 28, 29, 30??????? (by auto sufficiency) , see section 1.2
+* Maintenance SOV/HOV Accessibility from household MGRA to employment (accessibility terms #13, 14, 15, 31, 32, 33??????? (by auto sufficiency) , see section 1.2
+* Eating Out SOV/HOV Accessibility from household MGRA to employment (accessibility terms #16, 17, 18, 34, 35, 36??????? (by auto sufficiency) , see section 1.2
+* Walk Accessibility from household MGRA to non-mandatory activities (accessibility terms #3 , see section 1.2
+4.4.2	Individual Non-Mandatory Tour Primary Destination Choice 
+Number of Models:	6 (Escort, Shop, Other Maintenance, Eat Out, Visit, and Other Discretionary)
+Decision-Making Unit:	Person
+Model Form:	Multinomial Logit
+Alternatives:	MGRAs
+The six non-mandatory tour purposes are escorting, shopping, other maintenance, eating out, visiting, and other discretionary. The non-mandatory tour primary destination choice model determines the location of the tour primary destination for each of the 6 non-mandatory tour purposes. The model works at an MGRA level, and sampling of destination alternatives is implemented in order to reduce computation time. Note that the mode choice logsum used is based on a ‘representative’ time period for individual non-mandatory tours, which is currently off-peak, since the actual time period is not chosen until model 4.4.3. 
+The explanatory variables in non-mandatory tour location choice models include:
+* Household income
+* Age of the traveler	
+* Gender
+* Distance
+* The tour mode choice logsum for the traveler from the residence MGRA to each sampled destination MGRA using off-peak level-of-service
+* Time Pressure calculated as the log of the maximum time divided by number of tours left to be scheduled
+* The size of each sampled MGRA
+4.4.3	Individual Non-Mandatory Tour Time of Day Choice
+Number of Models: 	6 (Escort, Shop, Other Maintenance, Eat Out, Visit, and Other Discretionary)
+Decision-Making Unit: 	Person 
+Model Form: 	Multinomial Logit
+Alternatives: 	861 (combinations of tour departure half-hour and arrival half-hour back at home)
+After individual non-mandatory tours have been generated, allocated, and assigned a primary location, the tour departure time from home and arrival time back at home is chosen simultaneously. The model is fully described under 4.1.2, above. The tour departure and arrival period combinations are restricted to only those available for each participant on the tour, after scheduling individual mandatory tours and joint tours. 
+The model includes the following explanatory variables:
+* Household Income
+* Person type
+* Gender
+* Age
+* Mandatory tour frequency
+* Joint tour indicator
+* Auto travel distance
+* Tour Departure time
+* Tour Arrival time
+* Tour duration
+* Time Pressure calculated as the log of the maximum time divided by number of tours left to be scheduled
+* The tour mode choice logsum by tour purpose from the residence MGRA to each sampled MGRA location
+4.4.4	Individual Non-Mandatory Tour Mode Choice Model 
+Number of Models: 	2 (Maintenance, Discretionary) 
+Decision-Making Unit: 	Person 
+Model Form: 	Nested Logit
+Alternatives: 	25 (See Figure 6 under the Individual Mandatory Tour Mode Choice Section)
+Like the individual mandatory tour mode choice model, the individual non-mandatory tour model determines the “main tour mode” used to get from the origin to the primary destination and back is determined. 
+The individual non-mandatory tour mode choices are (school bus is eliminated):
+1. Drive-alone Free
+2. Drive-Alone Pay
+3. Shared-Ride 2 Free (General Purpose Lane)
+4. Shared-Ride 2 Free (HOV Lane)
+5. Shared-Ride 2 Pay
+6. Shared-Ride 3+ Free (General Purpose Lane)
+7. Shared-Ride 3+ Free (HOV Lane)
+8. Shared-Ride 3+ Pay
+9. Walk
+10. Bike
+11. Walk-Local Bus
+12. Walk-Express Bus
+13. Walk-Bus Rapid Transit
+14. Walk-Light Rail Transit
+15. Walk-Commuter Rail
+16. PNR-Local Bus
+17. PNR-Express Bus
+18. PNR-Bus Rapid Transit
+19. PNR-Light Rail Transit
+20. PNR-Commuter Rail
+21. KNR-Local Bus
+22. KNR-Express Bus
+23. KNR-Bus Rapid Transit
+24. KNR-Light Rail Transit
+25. KNR-Commuter Rail
+The individual non-mandatory tour mode choice model contains the following explanatory variables:
+* Auto sufficiency
+* Household size
+* Age
+* Gender
+* In-vehicle time (auto and transit)
+* Walk and bike time
+* Auto operating cost
+* Auto parking cost
+* Auto terminal time
+* Auto toll value
+* Transit first wait time
+* Transit transfer time
+* Number of transit transfers
+* Transit walk access time
+* Transit walk egress time
+* Transit walk auxiliary time
+* Transit fare
+* Transit drive access time
+* Transit drive access cost
+* Intersection density
+* Employment density
+* Dwelling unit density
+4.5.1	At-Work Sub-Tour Frequency
+Number of Models:	1 
+Decision-Making Unit:	Persons
+Model Form:	Multinomial Logit
+Alternatives:	6 (None, 1 eating out tour, 1 work tour, 1 other tour, 2 work tours, 2 other tours, and a combination of eating out, work, and other tours)
+At-work-based sub-tours are modeled last, and are relevant only for those persons who implement at least one work tour. These underlying activities are mostly individual (e.g., business-related and dining-out purposes), but may include some household maintenance functions as well as person and household maintenance tasks. There are seven alternatives in the model, corresponding to the most frequently observed patterns of at-work sub-tours. The alternatives define both the number of at-work sub-tours and their purpose. 
+The at-work sub tour frequency model includes the following explanatory variables:
+* Household income
+* Number of driving age adults
+* Number of preschool children
+* Person type
+* Gender
+* Number of individual and joint mandatory and non-mandatory tours generated in the day
+* Employment density at the work place
+* Mixed use category at the work place
+* Non-motorized eating out accessibility from work MGRA to destination MGRA(accessibility terms #46 , see section 1.2
+4.5.2	At-Work Sub-Tour Primary Destination Choice 
+Number of Models:	1 
+Decision-Making Unit:	Person
+Model Form:	Multinomial Logit
+Alternatives:	MGRAs
+The at-work sub-tour primary destination choice model determines the location of the tour primary destination. The model works at an MGRA level, and sampling of destination alternatives is implemented in order to reduce computation time Note that the mode choice logsum used is based a ‘representative’ time period for individual non-mandatory tours, which is currently off-peak, since the actual time period is not chosen until model 3.6.3. The model is constrained such that only destinations within a reasonable time horizon from the workplace are chosen, such that the tour can be completed within the total available time window for the sub-tour. 
+The explanatory variables in the at-work sub tour choice models include:
+* Person type
+* Distance
+* The tour mode choice logsum for the traveler from the residence MGRA to each sampled destination MGRA using off-peak level-of-service
+* The size of each sampled MGRA
+4.5.3	At-Work Sub-Tour Time of Day Choice
+Number of Models: 	1
+Decision-Making Unit: 	Person 
+Model Form: 	Multinomial Logit
+Alternatives: 	861 (combinations of tour departure half-hour and arrival half-hour back at home, with aggregation of time between 1 AM and 5 AM)
+After at-work sub-tours have been generated and assigned a primary location, the tour departure time from workplace and arrival time back at the workplace is chosen simultaneously. The model is fully described under 3.1.2, above. The tour departure and arrival period combinations are restricted to only those available based on the time window of the parent work tour. 
+The model includes the following explanatory variables:
+* Household Income
+* Sub-tour purpose
+* Auto travel distance
+* Tour Departure time
+* Tour Arrival time
+* Tour duration
+* Maximum Available Continuous Time Window (in hours) between 5 am to 11 pm before this tour is scheduled
+* The tour mode choice logsum from the work MGRA to each sampled MGRA location
+4.5.4	At-Work Sub-Tour Mode Choice Model 
+Number of Models: 	1
+Decision-Making Unit: 	Person 
+Model Form: 	Nested Logit
+Alternatives: 	25 (See Figure 6 under the Individual Mandatory Tour Mode Choice Section)
+Like the individual mandatory tour mode choice model, the at-work sub- tour model determines the “main tour mode” used to get from the origin to the primary destination and back is determined. 
+The at-work sub- tour mode choices are (school bus is eliminated):
+1. Drive-alone Free
+2. Drive-Alone Pay
+3. Shared-Ride 2 Free (General Purpose Lane)
+4. Shared-Ride 2 Free (HOV Lane)
+5. Shared-Ride 2 Pay
+6. Shared-Ride 3+ Free (General Purpose Lane)
+7. Shared-Ride 3+ Free (HOV Lane)
+8. Shared-Ride 3+ Pay
+9. Walk
+10. Bike
+11. Walk-Local Bus
+12. Walk-Express Bus
+13. Walk-Bus Rapid Transit
+14. Walk-Light Rail Transit
+15. Walk-Commuter Rail
+16. PNR-Local Bus
+17. PNR-Express Bus
+18. PNR-Bus Rapid Transit
+19. PNR-Light Rail Transit
+20. PNR-Commuter Rail
+21. KNR-Local Bus
+22. KNR-Express Bus
+23. KNR-Bus Rapid Transit
+24. KNR-Light Rail Transit
+25. KNR-Commuter Rail
+The at work sub-tour mode choice model contains the following explanatory variables:
+* Auto sufficiency
+* Household size
+* Age
+* Gender
+* In-vehicle time (auto and transit)
+* Walk and bike time
+* Auto operating cost
+* Auto parking cost
+* Auto terminal time
+* Auto toll value
+* Transit first wait time
+* Transit transfer time
+* Number of transit transfers
+* Transit walk access time
+* Transit walk egress time
+* Transit walk auxiliary time
+* Transit fare
+* Transit drive access time
+* Transit drive access cost
+* Intersection density
+* Employment density
+* Dwelling unit density
+5.1	Intermediate Stop Frequency Model 
+Number of Models: 	9 (By purpose plus one model for at-work subtours) 
+Decision-Making Unit: 	Person 
+Model Form: 	Multinomial Logit
+Alternatives: 	16, with a maximum of 3 stops per tour direction, 6 total stops on tour
+The stop frequency choice model determines the number of intermediate stops on the way to and from the primary destination. The SANDAG model allowed more than one stop in each direction (up to a maximum of 3) for a total of 8 trips per tour (four on each tour leg). An additional constraint placed on this model was that no stops were allowed on drive-transit tours. This was enforced to ensure that drivers who drive to transit picked up their cars at the end of the tour.
+The stop frequency model was based on the following explanatory variables:
+* Household income
+* Number of full time workers in the household
+* Number of part time workers in the household
+* Number of non-workers in the household
+* Number of children in the household
+* Number of individual/joint mandatory and non-mandatory tours made by household
+* Person type
+* Age
+* Tour mode
+* Tour distance from anchor location (home) to primary destination
+* Maintenance accessibility (#s31, 32, 33)
+* Discretionary accessibility (#s40, 41,42) 
+The observed stop frequency distributions are given in Table 12 and Table 13.
+
+
+Table 12: Observed Stop Frequency Distribution by Tour Purpose
+Primary Tour PurposeInbound StopsOutbound StopsWorkUniversitySchoolEscortingShoppingMaintenanceEating OutVisitingDiscretionaryTotal002,0611741,1621,0387268693363189687,652105112220315114116526351181,372201246403634662326337308523118182701110202012942384842169517416491811154873256243111930425214731952013051512731321721410002680278562356223121522012270711221841999222203014521855321500222012240317031020113767713131061180224323900115007233350015100113Total3,4942451,6381,4131,3621,3604044561,28311,655
+Table 13: Observed Stop Frequency Distribution by At-work Sub Tour Purpose
+Inbound StopsOutbound StopsAt-Work Sub Tour Purpose0044110252023010126118212310021120220320031130230330Total507
+5.2	Intermediate Stop Purpose Choice Model
+Number of Models: 	1 
+Decision-Making Unit: 	Stop 
+Model Form: 	Lookup Table
+Alternatives: 	9 Stop Purposes (Work, University, School, Escort, Shop, Maintenance, Eating Out, Visiting, or Discretionary)
+The stop purpose choice model will be a lookup table of probabilities based upon tour purpose, stop direction, departure time, and person type. 
+
+
+5.3	Intermediate Stop Location Choice Model 
+Number of Models: 	1 
+Decision-Making Unit: 	Person 
+Model Form: 	Multinomial Logit
+Alternatives: 	MGRA
+The stop location choice model predicts the location (the Master Geographic Reference Area, or MGRA) of each intermediate stop (each location other than the origin and primary destination) on the tour. In this model, a maximum of 3 stops in outbound and 3 stops in inbound direction are modeled for each tour. Since there are a large number (over 33,000) of alternative destinations it is not possible to include all alternatives in the estimation dataset. A sampling-by-importance approach was used to choose a set of alternatives. Each record was duplicated 20 times, then different choice sets with 30 alternatives each were selected based on the size term and distance of the alternative destination. This approach is statistically equivalent to selecting 600 alternatives for the choice set. It is not straightforward to segment the model by purpose because size (or attraction) variables are related to purpose of the stop activity while impedance variables are strongly related to the tour characteristics – primary tour purpose, primary mode used for the tour, etc. Therefore, a single model is estimated with size variables based on stop purpose and utility variables based on both stop and tour characteristics.
+The stop location choice model includes the following explanatory variables:
+1. Household Income
+2. Gender
+3. Age
+4. Mode choice logsum
+5. Distance deviation or “out-of-the-way” distance for stop location when compared to the half-tour distance without detour for any stop
+6. Distance of stop location from tour origin and destination is used to define closeness to tour origin or destination. 
+7. Stop purpose
+8. Tour purpose
+9. Tour mode 
+10. Stop Number
+11. Direction of the half-tour
+* Size variables
+a.	Employment by categories 
+b.	Number of households
+c.	School enrollments – pre-school, K to 6 grade and 7th to 12th grade, based on type of school child in the household
+d.	University and other college enrollments
+
+
+5.4	Intermediate Stop Departure Model
+Number of Models: 	1 
+Decision-Making Unit:	Trips other than first trip and last trip on tour
+Model Form: 	Lookup Table
+Alternatives: 	40 (stop departure half-hour time periods, with aggregation between 1 AM and 5 AM)
+The stop departure model will be a lookup table of probabilities based upon tour purpose, stop direction, tour departure time, and stop number. 
+6.1	Trip Mode Choice Model 
+Number of Models: 	6 (Work, University, K-12, Maintenance, Discretionary, and At-work subtours) 
+Decision-Making Unit: 	Person 
+Model Form: 	Multinomial Logit
+Alternatives: 	26 (See Figure 6)
+The trip mode choice model determines the mode for each trip along the tour. Trip modes are constrained by the main tour mode. The linkage between tour and trip levels is implemented through correspondence rules (which trip modes are allowed for which tour modes). The model can incorporate asymmetric mode combinations, but in reality, there is a great deal of symmetry between outbound and inbound modes used for the same tour. In particular, symmetry is enforced for drive-transit tours, by excluding intermediate stops from drive-transit tours. 
+The tour and trip mode correspondence rules are shown in Table 14. Note that in the SANDAG trip mode choice model, the trip modes are exactly the same as the modes in the tour mode choice model. However, every trip mode is not necessarily available for every tour mode. The correspondence rules depend on a hierarchy with the following rules:
+1. The highest occupancy across all trips is used to code the occupancy of the tour. 
+2. There are no mode switching on walk and bike tour modes. 
+3. Shared-ride trips are allowed on walk-transit tours. 
+4. Drive-alone is disallowed for walk-transit and KNR-transit tours, since driving on a trip leg in combination with walk-transit would imply PNR-transit as a tour mode. 
+5. Walk trips are allowed on all tour modes with the exception of driving alone and biking, since these modes imply that the traveler is attached to the mode of transport (the auto or bicycle) for the entire tour. 
+6. Note that cases in which a traveler parks at a lot and then walks to their destination are treated as a single trip in the context of trip mode choice. A subsequent parking location choice model will break out these trips into the auto leg and the walk leg, for trips to parking-constrained locations. 
+7. An additional restriction on availability is imposed on work-based sub-tours, where drive-alone is disallowed if the mode to work is not one of the three auto modes (drive-alone, shared 2, or shared 3+). 
+The school bus tour mode, which is only available for the School tour purpose, implies symmetry – all trips on school bus tours must be made by school bus.
+The trip mode choice model’s explanatory variables include:
+* Household Size
+* Auto sufficiency
+* Age
+* Gender
+* Tour mode
+* Individual or joint tour indicator
+* Number of outbound and return stops
+* First and last stop indicators
+* In-vehicle time (auto and transit)
+* Walk and bike time
+* Auto operating cost
+* Auto parking cost
+* Auto terminal time
+* Auto toll value
+* Transit first wait time
+* Transit transfer time
+* Number of transit transfers
+* Transit walk access time
+* Transit walk egress time
+* Transit walk auxiliary time
+* Transit fare
+* Transit drive access time
+* Transit drive access cost
+* Intersection density
+* Employment density
+* Dwelling unit density
+
+
+Table 14: Tour and Trip Mode Correspondence Rules
+Trip ModeTour ModeDrive-AloneShared 2Shared 3+WalkBikeWalk-TransitPNR-TransitKNR-TransitDrive-alone FreeAAAADrive-Alone PayAAAAShared-Ride 2 Free (GP Lane)AAAAAShared-Ride 2 Free (HOV Lane)AAAAAShared-Ride 2 PayAAAAAShared-Ride 3+ Free (GP Lane)AAAAShared-Ride 3+ Free (HOV Lane)AAAAShared-Ride 3+ PayAAAAWalkAAAAAABikeAWalk-Local BusAAAWalk-Express BusAAAWalk-Bus Rapid TransitAAAWalk-Light Rail TransitAAAWalk-Commuter RailAAAPNR-Local BusAPNR-Express BusAPNR-Bus Rapid TransitAPNR-Light Rail TransitAPNR-Commuter RailAKNR-Local BusAKNR-Express BusAKNR-Bus Rapid TransitAKNR-Light Rail TransitAKNR-Commuter RailASchool BusAvailable for school bus tour mode only, on school tours.A = Trip mode is available by that particular tour mode.
+6.2	Parking Location Choice
+Number of Models: 	2 (Work, and other) 
+Decision-Making Unit: 	Trips with non-home destinations in areas with paid parking
+Model Form: 	Multinomial Logit
+Alternatives: 	In estimation, lots sampled in the parking behavior survey
+In application, MGRAs within 3/4 mile of the destination MGRA
+The parking location choice model determines where vehicles are parked at the terminal end of each trip with a destination in parkarea 1 (downtown San Diego area). For work trips, the model will subtract the output from the employer parking reimbursement model from the daily price of parking at each alternative destination to determine the effective price borne by the individual. The output of the model will be used to obtain traffic assignments that are more accurate at small scales in the downtown area during the morning and afternoon peaks. The coefficients from the parking location choice model estimation are also used in defining the logsum-weighted average parking cost used in mode choice. 
+The parking location model explanatory variables include:
+* Number of stalls available to the driver (size variable)
+* Parking cost
+* Walk distance to destination
+
+
+Special Market Models
+Cross Border Model
+In 2010, SANDAG collected data on Mexican resident border crossings into the United States and their travel patterns within the US. Data was collected at the three border crossing stations – San Ysidro, Otay Mesa, and Tecate. Based upon this data, PB is developing a travel demand model for Mexican residents. The purpose of this model is two-fold. The primary purpose of the model is to measure the impact of Mexican resident travel on the San Diego transport network. The model will account for Mexican resident demand (such as auto volume, transit boarding, and toll revenue) for transportation infrastructure in San Diego County. The other purpose of the model is to forecast border crossings at each current and potential future border crossing station. 
+The model flow and inputs are shown in Figure 10, and described in detail in the following sections. 
+Cross Border Modeled Travel Dimensions
+Cross Border Tour Purposes
+There are six tour purposes for the Mexican resident model. They were coded based on the activity purposes engaged in by the traveler in the United States, according to a hierarchy of activity purposes as follows:
+* Work: At least one trip on the tour is for working in the US.
+* School: At least one trip on the tour is made for attending school in the US, and no work trips were made on the tour.
+* Cargo: At least one trip on the tour was made for picking up or dropping off cargo in the US, and no work or school trips were made on the tour. 
+* Shop: No trips on the tour were made for work, school, or cargo, and the activity with the longest duration on the tour was shopping in the US.
+* Visit: No trips on the tour were made for work, school, or cargo, and the activity with the longest duration on the tour was visiting friends/relatives in the US.
+* Other: No trips on the tour were made for work, school, or cargo, and the activity with the longest duration on the tour was other (collapsed escort, eat, personal, medical, recreation, sport, and other activity purposes).
+Tour Mode
+The tour mode is the mode used to cross the border, which conditions the mode used for all trips on the tour, including the trip from the border crossing to the first destination in the United States. The tour modes are defined by whether the border was crossed via auto or by foot, the occupancy if by auto, and also whether the SENTRI lane was used or not. SENTRI lanes offer expedited border crossings to pre-qualified citizens of the United States and Mexico. One must apply for a SENTRI pass, which requires extensive background checks. Mexican residents must have a valid US Visa, Mexican passport, and contact number in the US. This typically means that in order to obtain a pass, Mexican residents must be lawfully employed in the US.
+Trip Mode
+The trip modes used in the Mexican resident travel model are the same modes available in the resident activity-based model. Note that toll and HOV usage was not asked as part of the survey. Usage of these facilities in the model will be based upon the characteristics of the trips/vehicle occupancies and income (value-of-time) of travelers, and validated along with resident demand models.
+Treatment of Time
+Every trip will be allocated to a half-hourly period consistent with the resident travel demand model treatment of time. Travel skims will also be consistent with resident travel demand models; currently there are three sets of skims, for the AM peak, PM peak, and off-peak periods. Eventually the off-peak period will be represented as four time periods (early AM, early midday, late midday, and evening), for a total of six sets of skims.
+Treatment of Space
+Every trip end in San Diego County will be allocated to an MGRA. Within Tijuana, each border crossing origin will be assigned to a colonia, or neighborhood with which survey respondents identify. Population estimates are collected by the Instituto Nacional de Estadistica y Geographifia (INEGI) at the level of a basic geostatistical area (Area Geostadistica Basica, or AGEB, roughly equivalent to U.S. Census Tracts). AGEBs and colonia largely overlap within Tijuana city boundaries (though there is no coherent spatial nesting scheme), and AGEB population estimates were redistributed to colonia based on a proportional area operation to operationalize colonia trip origins in the model. Outside of Tijuana, the origins will be distributed to a localidad, or locality. These units are similar to the Census Designated Place in the US.
+Figure 9: Total Population of Áreas Geoestadísticas Básicas (AGEB) in Tijuana
+
+Figure 10: Mexican Resident Travel Model
+
+
+
+2.1	Border Crossing Primary Destination and Station Crossing Choice
+Number of Models:	6 (Work, School, Cargo, Shop, Visit, Other)
+Decision-Making Unit:	Person-tour
+Model Form:	Multinomial Logit
+Alternatives:	MGRAs and border crossing stations
+The primary destination and border crossing choice model is a joint choice model of tour primary destination in the US and border crossing station. Due to the number of alternatives in the model, sampling will be used to select a sub-set (50) of primary destination MGRAs and border crossing pairs. The sampling procedure will be based upon a simplified destination choice model that takes into account:
+* The weighted distance from the TAZ to all border crossing stations S
+* The time and cost that it takes to cross each station S
+* The accessibility of the border crossing station to persons in Mexico
+The explanatory variables in the primary destination and station crossing choice model are:
+* Distance
+* Station index
+* The tour mode choice logsum for the traveler from the residence MGRA to each sampled destination MGRA using a representative departure and arrival periods for each purpose.
+* Station accessibility to population
+* The size of each sampled MGRA
+2.2	Border Crossing Tour Time-of-Day Choice
+Number of Models:	1-6 (Work, School, Cargo, Shop, Visit, Other – depending on significance of purpose-specific parameters)
+Decision-Making Unit:	Person-tour
+Model Form:	Lookup table
+Alternatives:	820 (combinations of border entry half-hour and return half-hour, with aggregation between 1 AM and 5 AM)
+The border crossing tour time of day choice model will be a lookup table of probabilities based upon tour purpose, tour entry and tour return.
+
+
+2.3	Border Crossing Tour Mode Choice 
+Number of Models:	1-6 (Work, School, Cargo, Shop, Visit, Other – depending on significance of purpose-specific parameters)
+Decision-Making Unit:	Person-tour
+Model Form:	Multinomial or Nested Logit
+Alternatives:	Tour Mode (4: Drive Alone, Shared 2 person, Shared 3+ person, Walk)
+This model chooses tour mode based on a known tour destination, border crossing station, and entry/return time-of-day. The mode choice will be based upon a simplified trip mode choice logsum representing the accessibility of relevant modes for each border crossing mode as well as the time and cost of crossing the station by border crossing mode.
+Figure 11 shows a potential nesting structure of the border crossing mode choice model. In this figure, trip modes are shown in blue and border crossing modes are shown in green. The choice of mode will be made from one of the green (border crossing mode) alternatives, but the accessibility between the border crossing station and the tour primary destination by the trip modes shown in blue will influence the choice.
+The border crossing tour mode choice model includes the following explanatory variables:
+* Traveler has a SENTRI pass indicator
+* Trip mode choice logsum by mode and stop direction
+* Border wait time for automobiles
+* Border wait time for travelers with a SENTRI pass
+* Border wait time for pedestrians
+
+
+Figure 11: Potential Border Crossing Mode Choice Nesting Structure
+
+
+
+3.1	Border Crossing Stop Frequency Choice
+Number of Models:	1-6 (Work, School, Cargo, Shop, Visit, Other – depending on significance of purpose-specific parameters)
+Decision-Making Unit:	Person-tour
+Model Form:	Lookup table
+Alternatives:	16 (0, 1, 2, 3 stops per half-tour)
+The stop frequency choice model will be a lookup table of probabilities based upon tour purpose and duration.
+3.2	Border Crossing Stop Purpose Choice
+Number of Models:	1-6 (Work, School, Cargo, Shop, Visit, Other – depending on significance of purpose-specific parameters)
+Decision-Making Unit:	Stop
+Model Form:	Lookup table
+Alternatives:	6 (Work, School, Cargo, Shop, Visit, Other)
+The stop purpose choice model will be a lookup table of probabilities based upon tour purpose and number of stops on tour. The purpose-segmentation will be based on the tour purpose, if implemented.
+3.3	Border Crossing Stop Location Choice
+Number of Models:	1 (with stop-purpose-specific size terms)
+Decision-Making Unit:	Stop
+Model Form:	Multinomial Logit
+Alternatives:	MGRAs
+The stop location choice model predicts the location of stops along the tour other than the primary destination. The stop-location model is structured as a multinomial logit model using MGRA attraction size variable and route deviation measure as impedance. The alternatives are sampled from the full set of MGRAs, based upon the out-of-direction distance to the stop and the size of the MGRA. The sampling mechanism is also subject to certain rules based on tour mode. All destinations are available for auto tour modes, so long as there is a positive size term for the MGRA. Intermediate stops on walk tours must be within 3 miles of both the tour origin and primary destination MGRAs. The sampling for intermediate stops on walk-transit tours is based upon the MGRAs that are within walking distance of the boarding or alighting stops at the tour origin and primary destination.
+The intermediate stop location choice model works by cycling through stops on tours. The level-of-service variables (including mode choice logsums) are calculated as the additional utility between the last location and the next known location on the tour. For example, the LOS variable for the first stop on the outbound direction of the tour is based on additional impedance between the tour origin and the tour primary destination. The LOS variable for the next outbound stop is based on the additional impedance between the previous stop and the tour primary destination. Stops on return tour legs work similarly, except that the location of the first stop is a function of the additional impedance between the tour primary destination and the tour origin. The next stop location is based on the additional impedance between the first stop on the return leg and the tour origin, and so on. 
+The cross border stop location choice model explanatory variables included were:
+* Mode choice logsum
+* Tour duration
+* Distance of stop location from tour origin and destination is used to define closeness to tour origin or destination. 
+* Stop Number
+* Direction of the half-tour
+* Stop frequency
+* The size of each sampled stop location MGRA
+4.1	Border Crossing Trip Departure Choice
+Number of Models:	1
+Decision-Making Unit:	Trips other than first trip and last trip on tour
+Model Form:	Lookup from Probabilities
+Alternatives:	Number of half-hour time after outbound period for outbound trips/number of half-hour time periods before return period for return trips
+Each trip will be assigned to a trip departure time period. The first and last trips of the tour are set to the entry/return time periods from Model 2.2, respectively. Each intermediate trip departure time is calculated from a lookup table of probabilities that consider the number of remaining half-hour periods in the tour from the last scheduled trip and whether the stop is made on the outbound or return direction.
+4.2	Border Crossing Trip Mode Choice
+Number of Models:	1
+Decision-Making Unit:	Trip
+Model Form:	Nested Logit
+Alternatives:	13 Trip Modes
+A trip mode is chosen for each trip on the tour. Trip modes are consistent with the resident travel model, as shown in Figure 12, though certain modes (bike, drive-transit, and school bus) are unavailable for Mexican residents. The utility of each mode is a function of the time and cost of the mode for the period that the trip occurs in, and is influenced by the mode used to cross the border.
+Figure 12: Mexican Resident Trip Mode Choice Model for Travel in US
+
+The border crossing trip mode choice model includes the following explanatory variables:
+* Tour mode
+* Tour purpose
+* Traveler has a SENTRI pass indicator
+* In-vehicle time (auto and transit)
+* Walk and bike time
+* Auto operating cost
+* Auto parking cost
+* Auto terminal time
+* Auto toll value
+* Transit first wait time
+* Transit transfer time
+* Number of transit transfers
+* Transit walk access time
+* Transit walk egress time
+* Transit walk auxiliary time
+* Transit fare
+
+
+Airport Ground Access Model
+In 2008, San Diego International Airport (SDIA) conducted a survey of airport passengers in which data was collected on their travel to the airport prior to their departure. Based upon this data, PB is developing a model of travel to and from the airport for arriving and departing passengers. The purpose of this model is to capture the demand of airport travel on transport facilities in San Diego County. Additionally, the model will allow SANDAG to test the impacts of various parking price and supply scenarios at the airport. 
+The airport ground access model has the following features:
+* A disaggregate micro-simulation treatment of air passengers, with explicit representation of duration of stay or trip in order to accurately represent costs associated with various parking and modal options
+* The full set of modes within San Diego County, including auto trips by occupancy, transit trips by line-haul mode (bus versus trolley), and toll/HOT/HOV lanes modes
+* Forecasts of airport ground access travel based upon the official SDIA enplanement projections
+The model flow and inputs are shown in Figure 13, and described in detail in the following sections. 
+Airport Model Travel Dimensions
+Airport Model Trip Purposes
+There are four trip purposes and these were coded based on the resident status of air passengers and the purpose of air travel, as follows:
+* Resident Business: Business travel made by San Diego County residents (or residents of neighboring counties who depart from SDIA)
+* Resident Personal: Personal travel made by San Diego County residents (or residents of neighboring counties who depart from SDIA)
+* Visitor Business: Business travel made by visitors to San Diego County (or a neighboring county)
+* Visitor Personal: Personal travel made by visitors to San Diego County (or a neighboring county) 
+Airport Model Trip Mode
+The model of airport ground access will be trip-based, since the survey did not collect the full tour from origin to airport. In addition, the survey only collected information on the trip to the airport before the passenger boarded their plane; information was not collected on the trip in which passengers arrived at the airport and traveled to a destination in San Diego County. Therefore, symmetry will be assumed for the non-reported trip. Finally, the survey did not collect data on whether an HOV lane or toll lane was used for the trip, so path-level mode cannot be determined. The number of survey respondents by trip mode is listed in Table 15, and shares of respondents by trip mode are shown in Table 16. Note that if private auto is used to access the airport, the choice of parking versus curbside pickup/dropoff is explicitly represented. For travelers that park, the chosen lot (terminal, airport remote lot, private remote lot) is explicit as well. Also note that auto occupancy is not a choice for airport ground access trips. Auto occupancy will be based upon travel party size, which will be simulated as part of the attribution of ground access trips.
+Table 15: Survey Respondents by Purpose and Trip Mode
+ModePurpose*TotalRes-BusRes-PersVis-BusVis-PersExternalUnknown/Walk1775222Park-terminal163133146639415Park-SAN Offsite61743412154Park-PVT Offsite1742536733473PUDO-Escort39100185327237PUDO-Curbside6271,5383101,0962053,776Rental Car996957611231,597Taxi/Limo/Towncar155227520288151,205Shuttle6614330125921790Transit133210388101Total1,3082,5161,8842,5774858,770
+Table 16: Frequency of Survey Respondents by Purpose and Trip Mode
+ ModePurpose TotalRes-BusRes-PersVis-BusVis-PersExternalPark-terminal12%5%1%3%8%5%Park-SAN Offsite5%3%0%0%2%2%Park-PVT Offsite13%10%0%0%7%5%PUDO-Escort3%4%1%2%6%3%PUDO-Curbside48%61%16%43%42%43%Rental Car1%0%37%30%25%18%Taxi/Limo/Towncar12%9%28%11%3%14%Shuttle5%6%16%10%4%9%Transit1%1%1%1%2%1%Total100%100%100%100%100%100%
+Airport Model Treatment of Time
+Every trip will be allocated to a half-hour period consistent with the resident travel demand model treatment of time. Travel skims will also be consistent with resident travel demand models; currently there are three sets of skims, one each for the AM peak, PM peak, and off-peak periods. Eventually the off-peak period will be represented as four time periods (early AM, early midday, late midday, and evening), for a total of six sets of skims.
+Airport Model Treatment of Space
+Every trip end in San Diego County will be allocated to an MGRA. The trips that are external to the region will be modeled by the internal-external travel model.
+Airport Model Inputs
+The model system requires the following exogenously-specified inputs (note that three additional data sets are required in addition to the data currently input to the resident activity-based models):
+* SDIA Enplanement Forecast: The total number of yearly enplanements, without counting transferring passengers, at SDIA, and an annualization factor to convert the yearly enplanements to a daily estimate. This would be given for each simulation year. The data is available in the Aviation Activity Forecast Report3.
+* Traveler characteristics distributions: There are a number of distributions of traveler characteristics that are assumed to be fixed but can be changed by the analyst to determine their effect on the results. These include the following:
+o The distribution of travelers by purpose (as per Table 15)
+o The distribution of travelers by purpose and household income.
+o The distribution of travelers by purpose and travel party size.
+o The distribution of travelers by purpose and trip duration (number of nights).
+o The distribution of travelers by purpose, direction (arriving versus departing), and time period departing for airport.
+* MGRA data. The population and employment (by type) in each MGRA, parking cost and supply, etc. This data provides sensitivity to land-use forecasts in San Diego County. These are the same data sets as are used in the resident activity-based model.
+* TAP skim data. Transit network level-of-service between each transit access point (transit stop). This provides sensitivity to transit network supply and cost. These are the same data sets as are used in the resident activity-based model.
+* TAZ skim data. Auto network level-of-services between each transportation analysis zone. This provides sensitivity to auto network supply and cost. These are the same data sets as are used in the resident activity-based model.
+Airport Model Description
+This section describes the model system briefly, followed by a more in-depth discussion of each model component.
+1. Trip Enumeration and attribution: A total number of airport trips is created by dividing the input total enplanements (minus transferring passengers) by an annualization factor. The result will be divided by an average travel party size to convert passengers to travel parties. This will be converted into a list format that will then be exposed to the set of traveler characteristic distributions, as identified above, to attribute each travel party with the following characteristics:
+* Travel purpose
+* Party size
+* Duration of trip
+* Household income
+* Trip direction (it will be assumed that 50% of the daily enplanements are arriving passengers and 50% are departing passengers)
+* Departure time for airport
+2. Trip Models
+2.1. Trip origin: Each travel party will be assigned an origin MGRA.
+2.2. Trip mode: Each travel party will be assigned a trip mode.
+
+
+Figure 13: SAN Airport Ground Access Travel Mode
+
+
+
+2.1	Airport Destination Choice Model
+Number of Models:	4 (Resident-Business, Resident- Personal, Visitor-Business, Visitor-Personal)
+Decision-Making Unit:	Travel party
+Model Form:	Multinomial Logit
+Alternatives:	MGRAs 
+The airport destination choice model chooses the origin or destination MGRA, depending on whether the travel party is arriving or departing. The model is based upon the airport survey data, which collected the zip code of the origin location for trips made to the airport by departing passengers.
+The airport destination choice model explanatory variables include:
+* Trip Distance
+* La Jolla destination indicator
+* Size of sampled MGRA
+To speed calculations, the TAZ will be sampled first since distance is the only measure of impedance used to represent accessibility of primary destination to station, and distance is represented at the TAZ level. Zone size in this case will be equal to the sum of the sizes of the MGRAs within the TAZ. Once the TAZ is sampled, an MGRA within the TAZ can be chosen based on the pre-calculated probability of the MGRA within the TAZ, which is based on the MGRA proportion of the TAZ size. 
+2.2	Airport Trip Mode Choice 
+Number of Models:	4 (Resident-Business, Resident-Personal, Visitor-Business, Visitor-Personal)
+Decision-Making Unit:	Travel party
+Model Form:	Nested Logit
+Alternatives:	Trip Mode (see Table 16)
+Since the data in the ground access survey is too aggregate to estimate a mode choice model, trip mode was asserted based upon estimation work from applications of the similar models in other regions (for example, for Port of Portland).
+Figure 14 shows the nesting structure of the mode choice model. 
+The model explicitly represents the options of parking versus pick-up/drop-off for private vehicle trips. All trips are assigned either curbside (for pick-up/drop-off, taxi, shuttle/van/courtesy vehicle, and transit) or parking lot (terminal, off-site SAN lot, or off-site private lot). The choice of transit access and line-haul mode is not shown but will be modeled explicitly, as will the path choice for HOV or pay options for auto trips.
+The explanatory variables included in the airport trip mode choice model are:
+* Household income
+* Resident status
+* Party size
+* Number of nights stayed in San Diego
+* Trip mode
+* Trip purpose
+* Trip departure time
+* Mode choice logsums
+* In-vehicle time (auto and transit)
+* Walk time
+* Auto operating cost
+* Auto toll value
+* Transit first wait time
+* Transit transfer time
+* Number of transit transfers
+* Transit walk access time
+* Transit walk egress time
+* Transit walk auxiliary time
+* Transit fare
+* Terminal parking walk time
+* Terminal parking cost per day
+* Terminal escorting cost per hour
+* Off-site in-vehicle time
+* Off-site walk time
+* Off-site wait time
+* Off-site parking cost per day
+* Time to rental car center
+* Walk time to rental car shuttle
+* Wait time to rental car shuttle
+* Rental car cost per day
+* Taxi cost per trip
+
+
+Figure 14: SANDAG Airport Ground Access Mode Choice Nesting Structure
+
+
+
+Visitor Model
+In 2011, the San Diego Association of Governments (SANDAG) conducted a survey of airport passengers and hotel guests in which data was collected on their travel while visiting San Diego. Based upon this data, a model of visitor travel was developed. The purpose of this model is to capture the demand of visitor travel on transport facilities in San Diego County. 
+The visitor model has the following features:
+* A disaggregate micro-simulation treatment of visitors by person type, with explicit representation of party attributes
+* Special consideration of unique visitor travel patterns, including rental car usage and visits to San Diego attractions like Sea World. 
+* The full set of modes within San Diego County, including auto trips by occupancy, transit trips, non-motorized trips, and toll\HOT\HOV lanes modes
+The model flow and inputs are shown in Figure 15, and described in detail in the following sections. 
+1.	Model Inputs
+The model system requires the following exogenously-specified inputs (note that three additional data sets are required in addition to the data currently input to the resident activity-based models):
+* Traveler characteristics distributions. There are a number of distributions of traveler characteristics that are assumed to be fixed but can be changed by the analyst to determine their effect on the results. These include the following:
+o Rates of visitor occupancy for hotels and separately for households
+o Shares of visitor parties by visitor segment for hotels and separately for households
+o The distribution of visitor parties by household income.
+o The distribution of business segment travel parties by number of tours by purpose
+o The distribution of personal segment travel parties by number of tours by purpose 
+o The distribution of visitor tours by tour purpose and party size
+o The distribution of visitor tours by tour purpose and auto availability
+o The distribution of visitor tours by outbound and return time-of-day and tour purpose 
+o The distribution of visitor tours by frequency of stops per tour by tour purpose, duration, and direction
+o The distribution of stops by stop purpose and tour purpose
+o The distribution of stops on outbound tour legs by half-hour offset period from tour departure period and time remaining on tour
+o The distribution of stops on inbound tour legs by half-hour offset period from tour arrival period and time remaining on tour
+* MGRA data. The population, employment (by type), and number of hotel rooms in each MGRA, parking cost and supply, etc. This data provides sensitivity to land-use forecasts in San Diego County. These are the same data sets as are used in the resident activity-based model. 
+* TAP skim data. Transit network level-of-service between each transit access point (transit stop). This provides sensitivity to transit network supply and cost. These are the same data sets as are used in the resident activity-based model.
+* TAZ skim data. Auto network level-of-services between each transportation analysis zone. This provides sensitivity to auto network supply and cost. These are the same data sets as are used in the resident activity-based model.
+2.	Model Description
+This section describes the model system briefly, followed by a more in-depth discussion of each model component.
+Figure 15: SANDAG Visitor Model Design
+
+1. Visitor Tour Enumeration: Visitor travel parties are created by visitor segment based upon input hotels and households. Travel parties are attributed with household income. Tours by purpose are generated for each party. Each tour is attributed with auto availability and party size. The tour origin MGRA is set to the MGRA where the tour was generated.
+2. Tour Level Models
+2.1. Tour Time of Day: Each tour is assigned a time of day, based on probability distribution. 
+2.2. Tour Destination choice: Each tour is assigned a primary destination, based on the coefficients estimated through a multinomial logit model. 
+2.3. Tour Mode Choice: Each tour selects a preferred primary tour mode, based on an asserted nested logit model (the resident tour mode choice model). 
+3. Stop Models
+3.1. Stop Frequency Choice: Each tour is attributed with a number of stops in the outbound direction and in the inbound direction, based upon sampling from a distribution.
+3.2. Stop Purpose: Each stop is attributed with a purpose, based upon sampling from a distribution.
+3.3. Stop Location Choice: Each stop is assigned a location based upon a multinomial logit model (asserted based upon resident stop location choice models)
+4. Trip Level Models
+4.1. Trip Departure Choice: Each trip is assigned a departure time period based upon sampling from distributions.
+4.2. Trip Mode Choice: Each trip within the tours selects a preferred trip mode, based on an asserted nested logit model. 
+4.3. Trip Assignment: Each trip is assigned to the network. 
+Visitor Travel Parties and Tour Generation
+This section describes the generation of visitor travel parties, the generation of tours, and the attribution of each.
+Visitor Travel Party Generation
+The number of visitors to San Diego in 2009, according to the San Diego Convention and Visitor Bureau, and are summarized by visitor segment in Table 17.
+Table 17: Number of Visitors
+CountFrequencyBusiness2.5M17%Personal11.8M83%Total14.3M100%
+
+
+Visitors are generated for two visitor segment types: 
+* Business: Self-identified as business traveler, or self-identified as 'Both Business and Personal' but took at least one 'business' purpose trip on travel day
+* Personal: Self-identified as personal traveler, or self-identified as 'Both Business and Personal' but took no business purpose trips on travel day. A few self-identified Personal travelers have reported Work tours. 
+The distributions of visitors by segment in the visitor survey are shown in Table 18. We assume that the share of business travelers in the San Diego Convention and Visitor Bureau data (17%) is more accurate than the visitor survey (25%) since the visitor survey was a place-based survey and likely did not capture a proportional share of visitors staying in households. Therefore the visitor data was re-weighted to the split of business versus personal travelers from the Convention and Visitor Bureau data. 
+Table 18: Survey Respondents by Visitor Segment
+SegmentVisitor Respondent Count% of TotalBusiness25925%Personal76975%Total1,028100%
+The model generates visitor parties by segment by applying separate occupancy rates to hotels and households, which were obtained from the San Diego Convention and Visitor Bureau. The occupancy rate for hotels is 70%, while the occupancy rate for households is 1.8% (a bit less than 2 out of every 100 households in San Diego County have visitors, on average). The model then applies separate distributions of visitor parties by segment to hotel visitor parties and household visitor parties separately. The frequencies used are shown in Table 19.
+According to the visitor survey, only 2% of overnight visitors stayed in a location that was not identified as a hotel or private residence. Of those, 54% stayed at a military base and 38% stayed at a vacation rental. For the purposes of this model, vacation rentals are included in the estimate of households. A small number of visitors could be allocated to the military base in the future, but this is not done currently in the model. 
+Table 19: Share of Visitor Parties by Segment and Overnight Accommodation
+SegmentHotelHouseholdBusiness30%4%Personal70%96%Total100%100%
+
+
+Visitor parties are attributed with household income based upon the distribution of parties by visitor segment and income, as shown in Table 20. Note that party size and auto availability are attributed on a tour-by-tour basis, since these attributes can change depending on which tour is undertaken and which day it is taken on.
+Table 20: Visitor Parties by Visitor Segment and Household Income
+IncomeBusinessPersonal< $30k7%34%$30-$60k29%34%$60-$100k34%20%$100-$150k16%7%$150k+14%5%Total100%100%
+Tour Generation
+Next, tours are generated by visitor parties and attributed with party size, auto availability, and income attributes. There are three tour purposes, which were coded based on the reported trip purpose in the survey, as follows:
+* Work: Business travel made by Business travelers 
+* Recreational: All other recreational purposes besides dining
+* Dining: Travel to eating establishments
+Tour purpose was coded according to a hierarchy of trip purposes, with work at the top and dining last. Tours by visitor segment are shown in Table 21.
+Table 21: Tour Purpose by Visitor Segment
+Person TypeBusiness% of TotalPersonal% of TotalWork15459%274%Recreational7830%69190%Dining2710%517%Total259100%769100%
+Each travel party can generate one or more tours of each purpose on any given day. The tour generation rates are shown in Table 22 (for the business segment) and Table 23 (for the personal segment).
+Table 22: Tour Distribution, Business Parties
+WorkRecreationalDiningTotal ToursFrequency100140%20021%010129%11025%02021%001111%101210%01123%
+Table 23: Tour Distribution, Personal Parties
+WorkRecreationalDiningTotal ToursFrequency10013%010182%11020%02025%00116%01124%02130%01230%
+The average size of the travel parties was obtained from both the San Diego Convention and Visitor Bureau numbers and the visitor survey. The visitor survey averages are slightly smaller. 
+Table 24: Average Party Size
+BusinessPersonalConvention and Visitor Bureau1.32.4Visitor Survey1.042.2
+Ultimately, the average party size observed in the survey is used in the model. The distribution of visitor tours by party size and tour purpose is shown in Table 25.
+Table 25: Tours by Party Size and Tour Purpose
+Party SizeWorkRecreateDining131%4%10%212%12%13%318%29%33%415%23%17%53%17%6%60%5%6%720%9%14%80%0%0%90%0%0%101%0%0%Total100%100%100%
+Most visitors in the visitor survey did not have access to an automobile. Table 26 shows the number and percentage of visitors who made complete tours by auto accessibility. If a person drove into San Diego, either in a personal or rental vehicle, they were assumed to have access to a car during their stay. If a person flew into San Diego and rented a car, they were also assumed to have access to a car. Persons who do not fit into either of those categories were assumed to have no vehicle. The model uses the distribution of tours by auto availability to attribute each tour with whether an auto is available, as shown in Table 27.
+Table 26: Auto Availability by Segment
+Business% of TotalPersonal% of TotalDrove into San Diego188%8212%Flew into SD, rented car6731%17325%No Vehicle19760%61764%Total215100%699100%
+
+
+Table 27: Auto Availability by Tour Purpose
+Auto AvailableWorkRecreateDiningYes38%58%53%No62%42%47%Total100%100%100%2.1	Visitor Time of Day
+Number of Models:	3 (Work, Recreational, Dining)
+Decision-Making Unit:	Tour
+Model Form:	Look up table
+Alternatives:	40 half-hour time-of-day periods by purpose
+This model selects an outbound and return half-hour period, based on a probability distribution created using the visitor survey observed tour arrival and departure data, by tour purpose. Model input is the observed percent of tours by purpose with each combination of departure and arrival time period. 
+2.2	Visitor Destination Choice
+Number of Models:	3 (Work, Recreational, Dining)
+Decision-Making Unit:	Tour
+Model Form:	Multinomial logit
+Alternatives: 	MGRAs
+The tour destination choice model predicts the ‘preferred’ destination for the tour at the level of the Master Geographic Reference Area (MGRA). There are two stages involved in the estimation and application of the model. In the first phase, a list of sampled MGRAs is created. In the second phase, a multinomial logit form is applied to each sampled alternative and a destination MGRA is selected. The two-stage procedure is necessary in order to minimize the computational burden associated with computing mode choice logsums for each tour to 21633 MGRAs.. In both estimation and application, 30 destination MGRAs were sampled.
+Mode choice logsums used in this model were based upon an asserted mode choice model that was derived from the resident discretionary tour mode choice model. 
+The visitor survey contains information about the trips for each visitor during one day in San Diego. A handful of MGRAs, containing popular attractions like the Convention Center, Sea World, and the San Diego Zoo attracted a large number of the visitor trips, although destinations did occur throughout the model area. 
+
+
+Table 28: Special Attractors
+LocationTripsPercent of TotalConvention Center1204%Sea World1204%San Diego Zoo923%Balboa Park753%Coronado Beach622%Legoland321%San Diego Zoo Safari Park161%Total trips in data frame2,914100%
+The visitor destination choice model explanatory variables are:
+* Mode choice logsum
+* Distance
+* Size of the sampled MGRA
+2.3	Visitor Tour Mode Choice
+Number of Models:	5 (Business-Work, Business-Recreational, Business-Dining, Personal-Recreational, Personal-Dining)
+Decision-Making Unit:	Tour
+Model Form:	Nested Logit
+Alternatives:	15 Tour Modes (all the residential tour modes plus taxi except bike, park and ride, kiss and ride, and school bus)
+This model chooses a tour mode based on a known trip origin and destination MGRAs, and travel party characteristics including purpose, party size, and income. Since the data in the visitor survey is too aggregate to estimate a mode choice model, the model was asserted based on the resident tour mode choice model. Figure 16 shows a nesting structure of the mode choice model. Note that the modes are the same as are used in the resident model, with the addition of the taxi mode, which utilizes the same coefficients as auto modes (in-vehicle time and cost), though cost is based on an initial fare (meter-drop) and a cost-per-mile. 
+The visitor tour model explanatory variables include:
+* Auto availability indicator
+* In-vehicle time (auto and transit)
+* Walk time
+* Auto operating cost
+* Auto parking cost
+* Auto terminal time
+* Auto toll value
+* Transit first wait time
+* Transit Transfer time
+* Number of transit transfers
+* Transit walk access time
+* Transit walk egress time
+* Transit walk auxiliary time
+* Transit Fare
+Table 29: Survey Respondents by Purpose and Trip Mode
+ModeToursTrips on ToursBusiness% of
+TotalPersonal% of TotalBusiness% of
+TotalPersonal% of TotalPersonal Vehicle4919%27936%7511%63334%Rental Car7529%23330%16024%52829%Taxi2911%18424%9314%45825%Walk/Bike10440%689%33049%20111%Bus10%41%51%181%Trolley10%00%51%20%Coaster00%00%10%40%Other Mode00%10%10%50%Total259100%769100%670100%1849100%
+
+
+Figure 16: SANDAG Nested Tour Mode Choice model structure
+
+3.1	Visitor Stop Frequency
+Number of Models:	1 
+Decision-Making Unit:	Tour
+Model Form:	Probability Distribution Lookup table
+Alternatives:	0-1 outbound stops by 0-3 inbound stops
+Number of stops per tour is determined by sampling from the observed distribution of number of stops per tour. The model input is the percentage of observed number of stops (both inbound and outbound) by purpose and tour duration. The input frequency table is too large for documentation, but the frequency of stops by tour purpose and segment is shown in Table 30. For simplicity’s sake, intermediate stops are not allowed on non-motorized or transit tours (which speeds up and simplifies the intermediate stop sampling procedure).
+Table 30: Frequency of Stops on Tour
+Number of StopsBusiness RespondentsPersonal RespondentsWorkShop\RecreateEat OutShop\RecreateEat Out031%47%100%52%94%141%44%0%42%6%228%9%0%6%0%Total100%100%100%100%100%
+
+
+3.2	Visitor Stop Purpose
+Number of Models:	1 
+Decision-Making Unit:	Stop
+Model Form:	Probability Distribution Lookup Table
+Alternatives:	Work, Other Recreational, Dining
+Purpose of stops is determined by the observed purpose of stops in the visitor survey. The model input is the percentage of observed stops by purpose, stop number, number of stops on tour, and stop direction (inbound or outbound). The actual table used is too large to include in documentation, but the frequency of stops by tour purpose and segment is shown in Table 31.
+Table 31: Stops by Purpose
+Stop PurposeBusiness RespondentPersonal RespondentWorkShop\RecreateEat OutShop\RecreateEat OutWork100%63%76%5%5%Shop\Recreate0%37%24%95%93%Eat Out0%0%0%0%2%3.3	Visitor Stop Location
+Number of Models:	1 
+Decision-Making Unit:	Stop
+Model Form:	Multinomial Logit
+Alternatives:	MGRAs
+The stop location model was asserted, based on the discretionary purpose of the resident stop location choice model. See Section 5.3. 
+4.1	Visitor Trip Time of Day
+Number of Models:	1
+Decision-Making Unit: 	Travel party
+Model Form:	Lookup table
+Alternatives:	Half-hour offsets
+The stop time of day is chosen based on a distribution of observed stop durations from the survey. Distributions were prepared for stop duration for outbound and inbound stops, by purpose, and overall tour duration. 
+4.2	Visitor Trip Mode Choice 
+Number of Models:	5 (Business-Work, Business-Recreational, Business-Dining, Personal-Recreational, Personal-Dining)
+Model Form:	Nested Logit
+Alternatives:	15 Tour Modes (all the residential tour modes plus taxi except bike, park and ride, kiss and ride, and school bus)
+As with tour mode choice, this model is asserted. It is based on the resident trip mode choice model, with the addition of a taxi mode. 
+The visitor trip mode selection is based on the following explanatory variables:
+* Auto availability indicator
+* In-vehicle time (auto and transit)
+* Walk time
+* Auto operating cost
+* Auto parking cost
+* Auto terminal time
+* Auto toll value
+* Transit first wait time
+* Transit transfer time
+* Number of transit transfers
+* Transit walk access time
+* Transit walk egress time
+* Transit walk auxiliary time
+* Transit fare
+
+
+Special Event Model
+A special event survey was conducted in San Diego in 2011, collecting information on trips to and from a number of sporting and cultural events throughout San Diego County. This data has been used to implement a special event model component for the San Diego region. The model shares similar features with the event model originally developed for Phoenix, including an origin choice and mode choice component. However, in keeping with the other model components developed as part of the activity-based model development project, the SANDAG special event model is a simulation-based framework. Travel parties to and from the special event are generated from input event attendance, and key characteristics (party size and income) are selected from observed distributions. Then each travel party chooses an explicit origin micro-zone (Master Geographic Reference Area) and an explicit mode. The model produces a list of trips to and from the event, with a number of records equal to twice the number of event attendees (one trip to the event and one trip from the event). 
+Survey Data
+Table 32 shows the special event data used to develop the model. There were six different events surveyed, including concerts, sporting events, the Gaslamp Mardi Gras festival, and the San Diego County Fair. 
+Table 32: Special Events Surveyed, Location, Samples and Annual Attendance
+Event NameType MGRANumber of SamplesAverage Attendance Per Event-DayGaslamp Mardi GrasOther235121940,000Viejas Arena (SDSU)Concert\Sporting955266 (186\80)12,000Petco Park (Baseball)Sporting243658623,000San Diego County Fair (Fairgrounds)Other1239536950,000Cricket Wireless Ampitheater (Chula Vista)Concert646824511,000Qualcomm Stadium (Football)Sporting585518365,000
+Characteristics of the respondents at each event were analyzed to determine appropriate groupings of events. Figure 17 shows survey respondents by age range. The chart shows that Gaslamp Mardi Gras attendees and attendees at Veijas Arena tend to be younger, while attendees at the County Fair tend to be older.
+Figure 17: Survey Respondents by Age Range and Event
+
+Figure 18: Respondents by Party Size and Event
+
+Figure 18 shows survey respondents by party size and event. Party sizes at Petco Park tend to be smaller than other events, while party sizes at the Fairgrounds tend to be larger. The fairgrounds may attract school classes, resulting in a larger average party size than other events. Events at the Cricket Wireless Amphitheater and at Viejas Arena tend to attract a greater share of two-person parties.
+Figure 19: Survey Respondents by Household Income Range and Event
+
+Figure 19 shows survey respondents by household income and event. The most noticeable difference among events is that Chula Vista appears to attract a larger proportion of attendees in the medium ($60k-99k) income range than other events, while events at Viejas Arena tend to attract relatively lower income attendees (as might be expected given that the venue is at a major university and is likely attended by a greater proportion of college students with limited income).
+Figure 20: Survey Respondents by Origin Place Type and Event
+
+Figure 20 shows survey respondents by origin place type and event. The chart shows that between 60% and 80% of attendees travel to the special event directly from home. Special events with a relatively lower share of attendees from home tend to have a higher share of attendees from hotel – including Gaslamp Mardi Gras and Petco Park. This is reasonable given that both of these venues are in the Gaslamp area, which has a high concentration of hotels. The special event survey also collected information on destination location after the event. As can be seen in Figure 21, between 80% and 90% of respondents return to the same location after the event. The special events with lower shares of respondents who return to the same location after the event correspond to events with lower shares of respondents whose origin is home, such as Gaslamp Mardi Gras and Petco Park. Again, given the high concentration of restaurants and bars around these venues, it is not surprising that a greater portion of attendees are not going directly home after these events.
+Figure 21: Respondents by Destination Location
+
+Figure 22: Respondents by Distance To Special Event
+
+
+
+Table 33: Average Distance by Special Event
+Special EventAverage DistanceGaslamp Mardi Gras8.8Viejas Arena (SDSU)12.0Petco Park (Baseball)12.1San Diego County Fair (Fairgrounds)19.1Cricket Wireless Amphitheater (Chula Vista)24.6Qualcomm Stadium (Football)10.7Total14.4
+Trip length frequency distributions to each event are shown in Figure 22, and average distance to event is shown in 
+
+Table 33. Trip length distributions are lumpy due to the relatively low number of observations at each event and the relatively high rate of non-geocodable observations (between 20% and 30% at each event). However, it is clear that certain events, such as the San Diego County Fair and the Cricket Wireless Amphitheater in Chula Vista, tend to draw from a much larger area than other, more centrally located events such as Gaslamp Mardi Gras and football games held at Qualcomm Stadium.
+Figure 23 shows survey respondents by mode to special events. Although carpool tends to be the dominant travel mode, there is considerable variation in mode usage across events. Qualcomm has the highest share of trips by transit, with the vast majority of transit trips on the trolley mode. Note that Qualcomm Stadium is well-served by a stop on the trolley Green Line, and MTS provides extra service on football game-days. Events at Petco Park, SDSU, and Gaslamp also have relatively higher shares of transit patronage than other events. In all cases in which transit shares are significant, trolley carries a much higher share of attendees than local bus.
+Figure 24 shows transit trips by mode of access and event. Transit trips to Gaslamp Mardi Gras, SDSU, and Petco Park tend to be more walk-access (45% to 55%), while transit trips to Qualcomm and the Fairgrounds tend to be more drive-access (50% to 55%). It appears that the transfer rate is low (only 5% to 10% of respondents report bus as their mode of access) as is kiss-and-ride (1% to 5% of transit trips). Note that there was only one observed transit trip to Cricket Wireless Amphitheater, which reported walk as the access mode, resulting in a 100% walk-transit share for that venue.
+Table 34 shows parking costs by venue, including the highest parking cost paid across all respondents, the average parking cost paid across all respondents and the average parking costs paid among respondents who paid for parking (not including respondents who walked, took transit, or were dropped off at the event). Not surprisingly, the events with higher parking costs also have relatively higher shares of transit use.
+Figure 23: Respondents by Mode to Event
+
+Figure 24: Transit Trips by Mode of Access to Transit
+
+
+
+Table 34: Parking Costs by Venue
+ Special EventAverage Parking PaidMaximum Parking CostAverage Parking Paid, of people who paidGaslamp Mardi Gras$4.07$36.00$15.29Viejas Arena (SDSU)$3.94$16.00$9.04Petco Park (Baseball)$6.26$32.00$12.62San Diego County Fair (Fairgrounds)$7.13$20.00$10.73Cricket Wireless Amphitheater (Chula Vista)$1.76$35.00$21.50Qualcomm Stadium (Football)$7.23$40.00$24.35Average$5.75$40.00$12.73
+Model Form
+The special event model is formulated as an origin and mode choice model, as shown in Figure 25. The model reads a special event input file (see Table 35) and generates special event travel parties based upon the input attendance at each special event. Given that there is a fairly low share of trips to special events that do not return to the same location, an origin is chosen for every Special Event person tour. Trips are generated to and from the event for each tour, and the mode of each trip is modeled independently. 
+The following section describes each model.
+Table 35: Example Special Event Input File
+EventNumberMGRAAttendanceEventTypeStartPeriodEndPeriodParkingCostParkingTime1243623,000Sporting283712625295512,000Sporting28379041031872112,000Cultural263590410Figure 25: Special Event Model Form
+
+Trip Enumeration
+Special event tours are generated based on total attendance. Tours are attributed with party size (number of participants) and household income based upon input distributions which vary by event type (see Table 35). The event types are flexibly defined in the input event table, but at a minimum, based upon observed data, we recommend Sporting and Cultural events as two distinct categories of events. Alternatively, one could input specific party size and income distributions for each event based upon the data shown in the above tables and charts. For purposes of calibration, we used data for Petco Park.
+Tour Model
+There is only one tour model, in which the origin is chosen.
+Tour Origin Choice
+Number of Models:	1 per event type (size terms estimated for each venue)
+Decision-Making Unit:	Person-tour
+Model Form:	Multinomial logit
+Alternatives:	21,633 MGRAs
+The tour origin choice model predicts the origin for the Special Event tour at the level of the Master Geographic Reference Area (MGRA). There are two stages used for destination choice. In the first stage, a TAZ is chosen based upon distance to the venue and size term. In the second stage, an MGRA within the chosen TAZ is selected based upon the relative size of the MGRA compared to the size of the TAZ. Note that mode choice logsums are not used in the origin choice model.
+Origin choice model size terms were estimated for each venue. They are shown in Table 36. 
+The size term variables are defined as follows:
+* Low income households: $0-$30k
+* Medium income households: $30k- $150k
+* High income households: $150k+
+* Retail employment: Retail activity
+* Service employment: Professional and Business Services, Personal Services Office-Based, and Personal Services Retail-Based
+* Hotel Employment: Hotels and Models
+* Restaurant Employment: Restaurants and Bars
+A distance term was not estimated. However, an asserted term (-0.05) was compared to observed data and found to match trip length very well for Petco Park (see below). The term may need to be adjusted somewhat for venues with longer trip lengths.
+Table 36: Estimated Size Terms (Exponentiated Coefficients)
+VariableAll VenuesGaslamp 
+Mardi GrasVeijas 
+ArenaPetco ParkFair-groundsCricket AmphitheaterQualcommLow Income HH1.001.001.001.001.001.001.00Med Income HH1.602.170.770.503.465.0543.82High Income HH 2.800.002.011.681.494.220.28Retail Employment0.270.050.010.080.130.630.00Service Employment0.720.670.893.420.904.5710.70Hotel Employment0.520.701.220.110.980.881.22Restaurant Employment0.860.340.130.340.441.164.81Trip Mode Choice
+Number of Models:	1 
+Decision-Making Unit: 	Person-trip
+Model Form:	Nested logit
+An asserted nested logit mode choice model is used to model trip mode choice for trips to and from special events. The model utilizes the same functional form as the resident mode choice models, though many of the person and household specific variables are not available in the special event model and are therefore not used. The asserted mode choice parameters are shown in Table 37.
+Table 37: Special Event Trip Mode Choice Model Asserted Parameters
+CoefficientValueRatio to IVT ($/hr)In-vehicle time coefficient-0.03001.0First wait time coefficient-0.04571.5Transfer wait time coefficient-0.04571.5Walk access time coefficient-0.04571.5Walk egress time coefficient-0.04571.5Walk auxilliary time coefficient-0.04571.5Transfer penalty (above one)-0.720024Walk mode time coefficient-0.05361.8Transfer penalty - PNRc_ivt*1524Cost coefficient for income < $30k-0.0075($2.40)Cost coefficient for income $30k-$60k-0.0033($5.45)Cost coefficient for income $60k - $100k-0.0021($8.57)Cost coefficient for income > $100k-0.0009($20.00)Express bus IVT factor0.90000.9000BRT IVT factor0.90000.9000LRT IVT factor0.85000.8500Commuter rail IVT factor0.75000.7500External Model
+The external travel models predict characteristics of all vehicle trips and selected transit trips crossing the San Diego County border.
+External Model Definition of Trip Type
+The external-external, external-internal, and internal-external trips in San Diego County were segmented into the following trip types:
+* US-US: external-external trips whose production and attraction are both in the United States, but not in San Diego County
+* US-MX: external-external trips with one trip end in the United States and the other in Mexico
+* US-SD: external-internal trips with a production elsewhere in the United States and an attraction in San Diego County
+* MX-SD: external-internal trips with a production in Mexico and an attraction in San Diego County (covered by the Mexican resident microsimulation model)
+* SD-US: internal-external trips with a production in San Diego and an attraction elsewhere in the United States
+* SD-MX: internal-external trips with a production in San Diego County and an attraction in Mexico
+External Model Estimation of Trip Counts by Type
+The total count of trips by production and attraction location was estimated in a series of steps:
+1. The number of trips made by Mexican residents to attractions in San Diego was previously determined during development of the Mexican resident travel microsimulation model.
+2. The trips in the resident travel survey were expanded to estimate the total number of trips made by San Diego residents to attractions in Mexico.
+3. The number of MX-SD (1) and SD-MX (2) trips was subtracted from the total number of border-crossings to derive an estimate of the number of US-MX trips. The distribution of US-MX trips among external stations on the US-side of San Diego County will be assumed to be proportional to the total volume at each external station, regardless of the point of entry at the Mexican border.
+4. The number of US-MX trips was then subtracted from the total number of trips in the SCAG cordon survey to arrive at an estimate of the combined total of US-US, US-SD, and SD-US trips with routes through San Diego County.
+5. Finally, the actual amounts of US-US, US-SD, and SD-US trips at each external station were estimated from the remaining trips (4) according to their proportions in the successfully geocoded responses in the SCAG cordon survey.
+External Model Design Overview
+The behavioral characteristics of the different types of external trip were derived from the various data sources available as follows:
+* US-US trips: a fixed external station OD trip matrix was estimated from the SCAG cordon survey
+* US-MX trips: a fixed external station OD trip matrix was estimated from the SCAG cordon survey, Customs and Border Protection vehicle counts, and Mexican resident border-crossing survey as described in the previous section.
+* US-SD trips: rates of vehicle trips per household for each external county were developed from the SCAG cordon survey, and the trips were distributed to locations in San Diego County. according to a destination choice model estimated from the interregional survey.
+* MX-SD trips: a microsimulation model of Mexican resident travel has been developed in a separate task.
+* SD-US trips: a binary logit model for a person’s making a trip as a function of accessibility to external stations and demographic characteristics was developed from the San Diego County resident survey, and the trips were distributed to external stations according to their market shares in the base year, which were estimated as described in the previous section.
+* SD-MX trips: a binary logit model simulating an individual’s decision to make a trip as a function of accessibility to external stations and demographic characteristics was developed from the San Diego County resident survey, and the trips were distributed to external stations according to their market shares in the base year, which were estimated as described in the previous section.
+External-External (EE) Trips
+Number of Models:	1
+Model Form:	Fixed Trip table
+The EE trip matrix (covering US-US and US-MX trips) is estimated as described in the previous sections appears in Table 38.
+Table 38: External-External Trip Matrix
+OriginDestinationSan YsidroOtay MesaTecateI-8CA-78CA-79Pala RoadI-15I-5TotalSan Ysidro ---1671725371,5631,5273,336Otay Mesa---42469396387844Tecate---13123124121264I-81674213-----22244CA-781741------22CA-792562------33Pala Road3793------49I-151,563396124-----1,0863,169I-51,52738712122---1,086-3,143Total3,3368442642442233493,1693,14311,104Figure 26: San Diego County Cordons
+
+
+
+US-SD External-Internal (EI) Trips
+The US-SD External-Internal trip model covers vehicle trips with destinations in San Diego made by persons residing in other areas of the United States. Intermediate stops and transit trips are not modeled in this segment due to the small contribution of these events to the total demand in the segment. 
+The US-SD model accepts as an input the total number of work and non-work vehicle trips from the SCAG cordon survey at each external station (Table 39).
+Table 39: US-SD Trips by Production Location
+ProductionTripsI-528,820I-1533,661Pala Rd813CA-79543I-83,413CA-78344Total67,593
+External-Internal Destination Choice Model
+Number of Models:	2 (Work, Non-work)
+Decision-Making Unit:	Tour
+Model Form:	Multinomial logit
+Alternatives:	MGRAs
+The external-internal destination choice model distributes the EI trips to destinations within San Diego County.
+The EI destination choice model explanatory variables are:
+* Distance
+* The size of each sampled MGRA
+Diurnal and vehicle occupancy factors (Table 40 and Table 41) are then applied to the total daily trip tables to distribute the trips among shared ride modes and different times of day. 
+Table 40: US-SD Vehicle Occupancy Factors
+Vehicle OccupancyPercentOne58%Two31%Three or more11%Total100%Table 41: US-SD Diurnal Factors
+Work PercentNon-Work PercentTime PeriodP to AA to PP to AA to PEarly AM26%8%25%12%AM Peak26%7%39%11%Midday41%41%30%37%PM Peak6%42%4%38%Evening2%2%2%2%Total100%100%100%100%
+External-Internal Toll Choice Model
+Number of Models:	2 (Work, Non-work)
+Decision-Making Unit:	Tour
+Model Form:	Multinomial logit
+Alternatives:	MGRAs
+The trips are then split among toll and non-toll paths according to a simplified toll choice model. The toll choice model included the following explanatory variables:
+* In-vehicle-time
+* Toll cost
+Internal-External (IE) Trips
+IE Trip Generation Model
+Number of Models:	2 (Work, Non-work)
+Decision-Making Unit: 	Person
+Model Form:	Binary logit
+Alternatives:	2 (Made a IE trip or not)
+The internal-external trip generation model covers the SD-US and SD-MX trips. 
+The IE trip generation model explanatory variables are:
+* Household income
+* Vehicle ownership
+* Age
+* Accessibility to external stations which is defined by:
+?Access?_h=?_(z )???IePct?_z×exp?(?-0.047×?Dist?_(h,z))
+where h is the home zone, z ranges over external zones, ?IePct?_z is the percent of base-year IE trips that used the external station at zone z, and ?Dist?_(h,z) is the distance between the home and the external zone in miles. 
+IE Destination Choice Model
+Number of Models:	1
+Decision-Making Unit:	Trip
+Model Form: 	Multinomial logit
+Alternatives:	MGRAs
+The IE trips are distributed to external stations with a destination choice model. The explanatory variables of the IE destination choice model are:
+* Distance
+* Size variable equal to the percent of IE trips using the external zone in the base year
+IE Mode Choice Model
+Number of Models:	1
+Decision-Making Unit:	Trip
+Model Form:	Multinomial logit
+Alternatives:	Trip Modes
+After choosing an external station, the IE trip-maker chooses a mode according to an asserted nested logit mode choice model. The explanatory variables in the trip mode choice model are:
+* Household income
+* Gender
+* In-vehicle time (auto and transit)
+* Walk time
+* Bike time
+* Auto operating cost
+* Auto Parking cost
+* Auto toll value
+* Transit first wait time
+* Transit transfer time
+* Number of transit transfers
+* Transit walk access time
+* Transit walk egress time
+* Transit walk auxiliary time
+* Transit fare
+* Drive access to transit in-vehicle time
+* Drive access to transit cost
+1 Note that although it is possible to include race/ethnicity as an explanatory variable in the model system, it has been decided to not include such variables in the San Diego implementation.
+2 Full-time employment is defined in the SANDAG 2006 household survey as at least 30 hours/week. 
+Part-time is less than 30 hours/week but works on a regular basis.
+3 Destination Lindbergh: The Ultimate Build-Out Aviation Activity Forecast, Jacobs Consultancy Team, February 2009, page 5-39 (Table 5.4-1).
+---------------
+
+------------------------------------------------------------
+
+---------------
+
+------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+- v -
+
+- 107 -
+
