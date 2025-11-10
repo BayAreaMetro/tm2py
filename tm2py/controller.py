@@ -32,7 +32,6 @@ from tm2py.components.demand.household import HouseholdModel
 from tm2py.components.demand.internal_external import InternalExternal
 from tm2py.components.network.active.active_modes import ActiveModesSkim
 from tm2py.components.network.create_tod_scenarios import CreateTODScenarios
-from tm2py.components.network.highway.drive_access_skims import DriveAccessSkims
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
 from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, SkimMAZCosts
 from tm2py.components.network.highway.highway_network import PrepareNetwork
@@ -59,7 +58,6 @@ component_cls_map = {
     "highway": HighwayAssignment,
     "highway_maz_assign": AssignMAZSPDemand,
     "highway_maz_skim": SkimMAZCosts,
-    "drive_access_skims": DriveAccessSkims,
     "prepare_network_transit": PrepareTransitNetwork,
     "transit_assign": TransitAssignment,
     "transit_skim": TransitSkim,
@@ -262,13 +260,14 @@ class RunController:
     @property
     def node_seq_id_xwalk(self) -> DataFrame[NodeIDCrosswalk]:
         if self._node_seq_id_xwalk is None:
-            model_to_emme_node_id_xwalk = self.get_abs_path(
-                self.config.scenario.model_to_emme_node_id_xwalk
+            model_to_emme_node_id_xwalk = (
+                self.run_dir 
+                / "emme_project/Database_highway/emme_drive_network_node_id_crosswalk.csv"
             )
             self._node_seq_id_xwalk = create_sequential_index(model_to_emme_node_id_xwalk)
             # write out the xwalk for ctramp
             self._node_seq_id_xwalk.to_csv(
-                model_to_emme_node_id_xwalk.parent/"mtc_final_network_zone_seq.csv", 
+                self.run_dir / "inputs/hwy/mtc_final_network_zone_seq.csv", 
                 index=False
             )
         return self._node_seq_id_xwalk
