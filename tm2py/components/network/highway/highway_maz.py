@@ -279,8 +279,10 @@ class AssignMAZSPDemand(Component):
         """
         emme_node_by_maz_id = {model_id_to_maz_id[int(maz_id)]: maz_id for maz_id in maz_ids if not isinstance(maz_id, dict)}
 
-        # TEMP -> WAITING ON BENTLY TO GET BACK TO US 
-        data = pd.read_csv(f"D:\\TEMP\\maz_trips{time}.csv")
+        maz_demand_file = str(self.controller.config.highway.maz_to_maz.demand_file).format(
+            period=time.upper(), iter=self.controller.iteration
+        )
+        data = pd.read_csv(maz_demand_file)
 
         origin_mazs, destination_mazs, demands = data["MAZ_x"], data["MAZ_y"], data["eq_cnt"]
 

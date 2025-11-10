@@ -529,7 +529,8 @@ class PrepareHighwayDemand(EmmeDemand):
             maz_trips = pd.concat([it_maz_df, jt_maz_df])
             # TODO: replace this with emmebank database
             grouped_maz_trips_df = maz_trips.groupby(["MAZ_x", "MAZ_y"])['eq_cnt'].sum().reset_index()
-            grouped_maz_trips_df.to_csv(f"D:\\TEMP\\maz_trips{time_period}.csv", index=False)
+            maz_demand_file = str(self.controller.config.highway.maz_to_maz.demand_file).format(period=time_period.upper(), iter=iteration)
+            grouped_maz_trips_df.to_csv(maz_demand_file, index=False)
 
             # 
             highway_out_file.open()
