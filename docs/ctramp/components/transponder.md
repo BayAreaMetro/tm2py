@@ -5,10 +5,10 @@
 
 ## Model Overview
 
-Number of Models: 1
-Decision-Making Unit: Household
-Model Form: Binomial Logit
-Alternatives: 2 (Yes or No)
+**Number of Models:** 1  
+**Decision-Making Unit:** Household  
+**Model Form:** Binomial Logit  
+**Alternatives:** 2 (Yes or No)
 
 ### Purpose and Role
 The Transponder Ownership Model predicts whether a household owns a transponder based on: 
