@@ -1,4 +1,4 @@
-# Auto Ownership Model
+# Transponder Ownership Model
 
 !!! info "Model Purpose"
     The Transponder Ownership Model determines whether a household owns a toll transponder. 
