@@ -799,7 +799,7 @@ class PostProcessor(Component):
 
         df[['auto_time', 'auto_dist', 'auto_cost', 'auto_bridge_toll', 'auto_value_toll', 
         'transit_ivt', 'transit_iwait', 'transit_xwait', 'transit_waux', 
-        'transit_wacc', 'transit_wegr', 'transit_dtime','transit_fare',
+        'transit_wacc', 'transit_wegr', 'transit_dtime','transit_fare', 'transit_dist'
         #'walk_time', 'walk_dist', 'walk_dist_ft','bike_time', 'bike_dist'
         ]] = None
         
