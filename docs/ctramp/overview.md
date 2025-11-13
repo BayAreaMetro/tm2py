@@ -30,62 +30,103 @@ CT-RAMP implements activity-based modeling through a comprehensive system of int
 ``` mermaid
 graph TB
     subgraph "Population & Context"
-        A[Synthetic Population]
-        B[Land Use Data]
-        C[Transportation Networks]
+        1a[Synthetic Population]
+        1b[Land Use Data]
+        1c[Transportation Networks]
     end
     
+    "Population & Context" --> "Long-term Choice"
     subgraph "Long-term Choices"
-        D[Auto Ownership]
+        2a[Auto Ownership]
+        2b[Work & School Location]
     end
-    
+
+    "Long-term Choices" --> "Mobility"
+    subgraph "Mobility"
+        3a[Auto Ownership]
+        3b[Transponder Choice]
+        3c[Free Parking]
+    end
+
+    "Mobility" --> "Daily Activity Planning"
     subgraph "Daily Activity Planning"
-        E[Coordinated Daily Activity Pattern]
-        F[Mandatory Tour Generation]
-        G[Joint Tour Generation]
-        H[Individual Tour Generation]
+        subgraph "Coordinated Daily Activity Pattern"
+            direction LR
+            4a1[CDAP]
+            4a2[Explicit Telecommute]
+            4a1 --> 4a2
+        end
+
+        4b[Mandatory]
+        4c[Non-Mandatory]
+        4d[Home]
+
+        subgraph "Individual Mandatory Tours"
+            4f1[Frequency]
+            4f2[Time of Day]
+            4f3[Tour Mode]
+            4f1 --> 4f2
+            4f2 --> 4f3
+        end
+        subgraph "Joint Non-Mandatory Tours
+            4g1[Frequency/Composition]
+            4g2[Participation]
+            4g3[Destination]
+            4g4[Time of Tour]
+            4g5[Tour Mode]
+            4g1 --> 4g2
+            4g2 --> 4g3
+            4g3 --> 4g4
+            4g4 --> 4g5
+        end
+        subgraph "Individual Non-Mandatory Tours
+            4h1[Frequency]
+            4h2[Destination]
+            4h3[Time of Day]
+            4h4[Tour Mode]
+            4h1 --> 4h2
+            4h2 --> 4h3
+            4h3 --> 4h4
+        end
+        subgraph "At-Work Subtours"
+            4i1[Frequency]
+            4i2[Destination]
+            4i3[Time of Day]
+            4i4[Tour Mode]
+            4i1 --> 4i2
+            4i2 --> 4i3
+            4i3 --> 4i4
+        end
+
+        "Coordinated Daily Activity Pattern" --> 4b
+        "Coordinated Daily Activity Pattern" --> 4c
+        "Coordinated Daily Activity Pattern" --> 4d
+        4b --> "Individual Mandatory Tours"
+        "Individual Mandatory Tours" --> "At-Work Subtours"
+        4c --> "Joint Non-Mandatory Tours"
+        4c --> "Individual Non-Mandatory Tours"
+
     end
     
-    subgraph "Tour-level Choices"
-        I[Tour Destination Choice]
-        J[Tour Mode Choice]
-        K[Tour Time-of-Day]
+    "Daily Activity Planning" --> "Stop-level Choices"
+    subgraph "Stop-level Choices"
+        direction LR
+        5a[Stop Frequency]
+        5b[Stop Location]
+        5a --> 5b
     end
     
+    "Stop-level Choices" --> "Trip-level Choices"
     subgraph "Trip-level Choices"
-        L[Stop Frequency]
-        M[Stop Location]
-        N[Trip Mode Choice]
+        direction LR
+        6a[Trip mode]
+        6b[Auto Parking]
+        6a --> 6b
     end
     
-    subgraph "Outputs"
-        O[Individual Travel Patterns]
-        P[Household Coordination]
-        Q[Network Loading]
-    end
+    classDef Household fill: #e8f5e8;
+    class 2a, 2b, 4a1, 4g1 Household;
     
-    A --> D
-    B --> D
-    C --> D
-    D --> E
-    E --> F
-    E --> G
-    F --> H
-    G --> H
-    H --> I
-    I --> J
-    J --> K
-    K --> L
-    L --> M
-    M --> N
-    N --> O
-    O --> P
-    P --> Q
-    
-    style A fill:#e3f2fd
-    style E fill:#f3e5f5
-    style I fill:#e8f5e8
-    style O fill:#fff3e0
 ```
 
 ## Model Hierarchy and Flow
