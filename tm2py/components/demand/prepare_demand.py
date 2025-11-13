@@ -669,11 +669,16 @@ class PrepareHighwayDemand(EmmeDemand):
                                 .round(2)
                             )
 
-                            # it is last iteration, we can safely write these mats
-                            if trip_mode == ModeChoice.TNC.value:
-                                highway_out_file.write_array(
-                                    numpy_array=highway_cache[out_mode], name=matrix_name.upper()
-                                )
+                # it is last iteration, we can safely write these mats, they are a combination of a couple mats above
+                for out_mode in defer_matrix_write:
+                    matrix_name = (
+                        f"{out_mode.upper()}_{suffix}_{time_period.upper()}"
+                        if suffix
+                        else f"{out_mode.upper()}_{time_period.upper()}"
+                    )
+                    highway_out_file.write_array(
+                        numpy_array=highway_cache[out_mode], name=matrix_name.upper()
+                    )
 
             highway_out_file.close()
             transit_out_file.close()
