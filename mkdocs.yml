@@ -144,10 +144,6 @@ plugins:
             show_docstring_functions: true
             show_docstring_classes: true
             show_docstring_modules: true
-          setup_commands:
-            - import sys
-            - sys.path.append("docs")
-            - import mock_deps
   - search
 
 extra_css:
