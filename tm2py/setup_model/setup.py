@@ -260,7 +260,7 @@ class SetupModel:
             raise FileNotFoundError(f"Directory {self.model_dir} does not exists.")
         
         # create RunModel.py
-        with open(self.model_dir / 'RunModel.py', 'w') as file:
+        with open(self.model_dir / 'RunModel.py', 'w', encoding='utf-8') as file:
             self.logger.info(f"Creating RunModel.py in directory {self.model_dir}")
             file.write(_RUN_MODEL_PY_CONTENT)
 
@@ -515,7 +515,7 @@ class SetupModel:
         self.logger.info(f"_replace_in_file: Updating {filepath} via {original_copy}")
 
         # read the contents
-        myfile = open(original_copy, 'r')
+        myfile = open(original_copy, 'r', encoding='utf-8')
         file_contents = myfile.read()
         myfile.close()
 
@@ -531,7 +531,7 @@ class SetupModel:
                 raise ValueError(error_str)
 
         # write the result
-        myfile = open(filepath, 'w')
+        myfile = open(filepath, 'w', encoding='utf-8')
         myfile.write(file_contents)
         myfile.close()
 

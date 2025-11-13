@@ -1,11 +1,23 @@
 name: pre-commit
 
-# Temporarily disabled - uncomment to re-enable
+# Temporarily disabled - workflow triggered only manually
+on:
+  workflow_dispatch:  # Manual trigger only - workflow effectively disabled
+
+# Placeholder job to satisfy GitHub Actions requirements
+jobs:
+  placeholder:
+    if: false  # This ensures the job never runs
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "This workflow is temporarily disabled"
+
+# Commented out original configuration:
 # on:
 #   pull_request:
 #   push:
 #     branches: [main, develop]
-
+#
 # jobs:
 #   pre-commit:
 #     runs-on: ubuntu-latest

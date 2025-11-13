@@ -3,12 +3,14 @@ mkdocs>=1.4.0
 mkdocs-material>=9.0.0
 mkdocs-mermaid2-plugin>=0.6.0
 
+# Re-enabled for API documentation generation:
+mkdocs-autorefs
+mkdocstrings
+mkdocstrings-python
+
 # Can likely add back safely now that watch directive is removed:
 # mkdocs-awesome-pages-plugin
 # markdown == 3.3.1  
 # mike
-# mkdocs-autorefs  
 # mkdocs-jupyter
 # mkdocs-macros-plugin
-# mkdocstrings
-# mkdocstrings-python

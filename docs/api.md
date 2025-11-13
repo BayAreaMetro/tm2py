@@ -79,6 +79,16 @@ To come.
 ::: tm2py.emme
 ::: tm2py.config.EmmeConfig
 
+## Data Models
+
+Data validation models for transportation planning inputs.
+
+### MAZ Data Model
+
+Micro-Analysis Zone land use data validation and management.
+
+::: tm2py.data_models.maz_data
+
 ## Errata
 
 ::: tm2py.logger

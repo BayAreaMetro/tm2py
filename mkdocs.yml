@@ -73,8 +73,7 @@ nav:
     - Volume Delay Functions: assignment/volume_delay_functions.md
   - Codebase:
     - Architecture: architecture.md
-    # Temporarily disabled due to GDAL dependency issues
-    # - API Documentation: api.md
+    - API Documentation: api.md
   - Input & Output:
     - Input: input/index.md
     - Network Data: input/network.md
@@ -103,47 +102,49 @@ nav:
 
 plugins:
   # Basic plugins that should work without GDAL dependencies:
-  # - autorefs
+  - autorefs
   # - awesome-pages
   - mermaid2
-  # Temporarily disable mkdocstrings to avoid GDAL dependency issues
-  # - mkdocstrings:
-  #     default_handler: python
-  #     enable_inventory: true
-  #     handlers:
-  #       python:
-  #         paths: [".","tm2py"]
-  #         setup_commands:
-  #          - import sys
-  #          - from unittest.mock import MagicMock as mock
-  #          - sys.path.append('../')
-  #          - sys.modules["inro"] = mock()
-  #          - sys.modules["inro.emme"] = mock()
-  #          - sys.modules["inro.emme.database"] = mock()
-  #          - sys.modules["inro.emme.database.emmebank"] = mock()
-  #          - sys.modules["inro.emme.database.scenario"] = mock()
-  #          - sys.modules["inro.emme.database.matrix"] = mock()
-  #          - sys.modules["inro.emme.network"] = mock()
-  #          - sys.modules["inro.emme.network.node"] = mock()
-  #          - sys.modules["inro.emme.desktop"] = mock()
-  #          - sys.modules["inro.emme.desktop.app"] = mock()
-  #          - sys.modules["inro.modeller"] = mock()
-  #          - sys.modules["osgeo"] = mock()
-  #          - sys.modules["osgeo.gdal"] = mock()
-  #          - sys.modules["osgeo.ogr"] = mock()
-  #          - sys.modules["osgeo.osr"] = mock()
-  #          - sys.modules["gdal"] = mock()
-  #         selection:
-  #           new_path_syntax: true
-  #         rendering:
-  #           show_root_heading: true
-  #           show_source: true
-  #           heading_level: 3
-  #         options:
-  #           fallback_to_import: true
-      # custom_templates: templates
+  # Re-enabled mkdocstrings with proper mocking for GDAL dependencies
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [".", "tm2py"]
+          options:
+            # General formatting options
+            show_root_heading: true
+            show_source: true
+            heading_level: 3
+            docstring_style: google
+            members_order: source
+            
+            # Enhanced visibility options
+            show_bases: true
+            show_signature_annotations: true
+            show_category_heading: true
+            group_by_category: true
+            
+            # Class and function display
+            merge_init_into_class: true
+            show_if_no_docstring: false
+            show_signature: true
+            separate_signature: true
+            
+            # Filter and organization
+            filters: ["!^_"]
+            
+            # Enhanced attribute display
+            show_object_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            
+            # Improved docstring rendering
+            docstring_section_style: "table"
+            show_docstring_attributes: true
+            show_docstring_functions: true
+            show_docstring_classes: true
+            show_docstring_modules: true
   - search
-  - mermaid2
 
 extra_css:
   - https://use.fontawesome.com/releases/v5.13.0/css/all.css
