@@ -112,32 +112,14 @@ plugins:
       handlers:
         python:
           paths: [".","tm2py"]
-          setup_commands:
-           - import sys
-           - from unittest.mock import MagicMock as mock
-           - sys.path.append('../')
-           - sys.modules["inro"] = mock()
-           - sys.modules["inro.emme"] = mock()
-           - sys.modules["inro.emme.database"] = mock()
-           - sys.modules["inro.emme.database.emmebank"] = mock()
-           - sys.modules["inro.emme.database.scenario"] = mock()
-           - sys.modules["inro.emme.database.matrix"] = mock()
-           - sys.modules["inro.emme.network"] = mock()
-           - sys.modules["inro.emme.network.node"] = mock()
-           - sys.modules["inro.emme.desktop"] = mock()
-           - sys.modules["inro.emme.desktop.app"] = mock()
-           - sys.modules["inro.modeller"] = mock()
-           - sys.modules["osgeo"] = mock()
-           - sys.modules["osgeo.gdal"] = mock()
-           - sys.modules["osgeo.ogr"] = mock()
-           - sys.modules["osgeo.osr"] = mock()
-           - sys.modules["gdal"] = mock()
-          selection:
-            new_path_syntax: true
-          rendering:
+          options:
             show_root_heading: true
             show_source: true
             heading_level: 3
+            docstring_style: google
+            members_order: source
+            filters: ["!^_"]
+            merge_init_into_class: true
           options:
             fallback_to_import: true
       # custom_templates: templates
