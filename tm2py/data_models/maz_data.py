@@ -147,156 +147,324 @@ class MAZData(pa.DataFrameModel):
     
     Attributes
     ----------
+    
+    Geographic Identifiers
+    ~~~~~~~~~~~~~~~~~~~~~~
     MAZ : int
-        Sequential MAZ identifier (1-based indexing)
+        **Sequential MAZ identifier** (1-based indexing). Primary key for micro-analysis zones
+        used throughout the transportation model. Range: 1 to total number of MAZs.
+        
     TAZ : int  
-        Sequential TAZ identifier containing this MAZ
+        **Sequential TAZ identifier** containing this MAZ. Groups multiple MAZs into larger
+        traffic analysis zones for trip distribution modeling. Range: 1 to total number of TAZs.
+        
     MAZ_ORIGINAL : int
-        Original MAZ node ID from network model
+        **Original MAZ node ID** from network model build. Preserves the original numbering
+        system from the base network data before sequential renumbering for modeling.
+        
     TAZ_ORIGINAL : int
-        Original TAZ node ID from network model  
+        **Original TAZ node ID** from network model build. Original TAZ identifier before
+        sequential renumbering to ensure contiguous numbering for matrix operations.
+        
     DistID : int
-        District identifier for regional grouping
+        **District identifier** for regional grouping. Groups zones into larger administrative
+        or planning districts for summary reporting and policy analysis.
+        
     DistName : str
-        District name (e.g., San Francisco, Oakland)
+        **District name** (e.g., "San Francisco", "Oakland"). Human-readable district labels
+        for reporting and visualization purposes.
+        
     CountyID : int
-        County identifier (FIPS code)
+        **County identifier** using FIPS county codes. Standard federal geographic identifier
+        for county-level aggregation and cross-referencing with other datasets.
+        
     CountyName : str
-        County name (e.g., Alameda, San Francisco)
+        **County name** (e.g., "Alameda", "San Francisco"). Full county names for reporting
+        and validation against external demographic/economic datasets.
+
+    Land Use & Demographics  
+    ~~~~~~~~~~~~~~~~~~~~~~~
     ACRES : float
-        Zone area in acres
+        **Zone area in acres**. Total land area of the MAZ used for calculating density measures
+        and land use intensity. Must be positive value.
+        
     HH : int
-        Number of households residing in zone
+        **Number of households** residing in zone. Count of household units for trip generation
+        calculations. Includes all occupied housing units regardless of structure type.
+        
     POP : int  
-        Total population in zone
+        **Total population** in zone. Resident population count used for per-capita calculations
+        and demographic analysis. Includes all age groups and housing situations.
+
+    Employment by Economic Sector
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ag : int
-        Agriculture sector employment
+        **Agriculture sector employment**. Jobs in farming, forestry, fishing, and hunting.
+        Includes crop production, animal production, and agricultural support services.
+        
     art_rec : int
-        Arts & recreational services employment
+        **Arts & recreational services employment**. Jobs in entertainment, recreation,
+        museums, sports, and performing arts. Includes both indoor and outdoor facilities.
+        
     constr : int
-        Construction sector employment  
+        **Construction sector employment**. Jobs in building construction, heavy and civil
+        engineering, and specialty trade contractors. Includes residential and commercial.
+        
     eat : int
-        Food service and eating establishments employment
+        **Food service and eating establishments employment**. Restaurants, cafeterias,
+        food trucks, catering, and drinking establishments. Major trip attractor category.
+        
     ed_high : int
-        Higher education (colleges/universities) employment
+        **Higher education employment** (colleges/universities). Faculty, staff, and
+        administrative positions at post-secondary institutions. Excludes student enrollment.
+        
     ed_k12 : int
-        K-12 education (elementary/secondary schools) employment
+        **K-12 education employment** (elementary/secondary schools). Teachers, administrators,
+        and support staff at primary and secondary schools. Excludes student enrollment.
+        
     ed_oth : int
-        Other education services employment
+        **Other education services employment**. Tutoring, test prep, vocational training,
+        and educational support services not classified as K-12 or higher education.
+        
     fire : int
-        Finance, insurance, and real estate employment
+        **Finance, insurance, and real estate employment**. Banking, securities, insurance
+        carriers, real estate services, and rental/leasing operations.
+        
     gov : int
-        Government employment (all levels)
+        **Government employment** (all levels). Federal, state, and local government workers
+        including military, public administration, and public safety personnel.
+        
     health : int
-        Healthcare and social assistance employment
+        **Healthcare and social assistance employment**. Hospitals, clinics, nursing homes,
+        medical offices, and social services. Major employment and trip generation category.
+        
     hotel : int
-        Accommodation services employment
+        **Accommodation services employment**. Hotels, motels, bed & breakfasts, RV parks,
+        and other lodging facilities. Includes both temporary and extended-stay facilities.
+        
     info : int
-        Information sector employment (media, telecom)
+        **Information sector employment** (media, telecom). Publishing, broadcasting,
+        telecommunications, data processing, and information services.
+        
     lease : int
-        Leasing services employment
+        **Leasing services employment**. Equipment rental, vehicle leasing, and other
+        rental/leasing services. Excludes real estate leasing (classified under FIRE).
+        
     logis : int
-        Logistics and warehousing employment
+        **Logistics and warehousing employment**. Freight transportation, warehousing,
+        distribution centers, and logistics coordination. Critical for goods movement.
+        
     man_bio : int
-        Biological and pharmaceutical manufacturing employment
+        **Biological and pharmaceutical manufacturing employment**. Biotechnology,
+        pharmaceuticals, medical devices, and related high-tech manufacturing.
+        
     man_lgt : int  
-        Light manufacturing employment
+        **Light manufacturing employment**. Small-scale manufacturing of consumer goods,
+        electronics, textiles, and other products with minimal environmental impact.
+        
     man_hvy : int
-        Heavy manufacturing employment
+        **Heavy manufacturing employment**. Large-scale industrial production including
+        metals, machinery, chemicals, and other heavy industrial processes.
+        
     man_tech : int
-        Technology manufacturing employment
+        **Technology manufacturing employment**. Computer hardware, semiconductors,
+        telecommunications equipment, and high-tech manufacturing.
+        
     natres : int
-        Natural resources extraction employment
+        **Natural resources extraction employment**. Mining, quarrying, oil/gas extraction,
+        and other resource extraction industries. Often located in specific geographic areas.
+        
     prof : int
-        Professional and technical services employment
+        **Professional and technical services employment**. Legal services, accounting,
+        architectural/engineering, consulting, and other professional services.
+        
     ret_loc : int
-        Local-serving retail employment
+        **Local-serving retail employment**. Neighborhood retail serving local residents
+        including grocery stores, pharmacies, and convenience stores.
+        
     ret_reg : int
-        Regional-serving retail employment  
+        **Regional-serving retail employment**. Shopping centers, department stores, and
+        specialty retail drawing customers from multiple zones.
+        
     serv_bus : int
-        Business services employment
+        **Business services employment**. Administrative support, facilities management,
+        employment services, and other business-to-business services.
+        
     serv_pers : int
-        Personal services employment
+        **Personal services employment**. Hair salons, dry cleaning, repair services,
+        and other consumer-oriented personal services.
+        
     serv_soc : int
-        Social services employment
+        **Social services employment**. Community services, social assistance, child care,
+        and other social support services.
+        
     transp : int
-        Transportation and utilities employment
+        **Transportation and utilities employment**. Transit operators, freight companies,
+        and transportation support services. Excludes utility workers (see util).
+        
     util : int
-        Utilities sector employment
+        **Utilities sector employment**. Electric power, natural gas, water/sewer, and
+        waste management services. Essential infrastructure employment.
+        
     emp_total : int
-        Total employment across all sectors
+        **Total employment across all sectors**. Sum of all employment categories used
+        for validation and aggregate analysis. Should equal sum of individual sectors.
+
+    School Enrollment Data
+    ~~~~~~~~~~~~~~~~~~~~~~
     publicEnrollGradeKto8 : int
-        Public school enrollment grades K-8
+        **Public school enrollment grades K-8**. Students in public elementary and middle
+        schools. Used for school trip generation and capacity analysis.
+        
     privateEnrollGradeKto8 : int  
-        Private school enrollment grades K-8
+        **Private school enrollment grades K-8**. Students in private elementary and middle
+        schools including religious and secular institutions.
+        
     publicEnrollGrade9to12 : int
-        Public school enrollment grades 9-12
+        **Public school enrollment grades 9-12**. Students in public high schools.
+        Important for peak-period trip generation patterns.
+        
     privateEnrollGrade9to12 : int
-        Private school enrollment grades 9-12
+        **Private school enrollment grades 9-12**. Students in private high schools
+        including preparatory and religious institutions.
+        
     comm_coll_enroll : int
-        Community college enrollment
+        **Community college enrollment**. Students at two-year colleges and vocational
+        institutions. Often commuter-based with different travel patterns.
+        
     EnrollGradeKto8 : int
-        Total enrollment grades K-8 (public + private)
+        **Total enrollment grades K-8** (public + private). Combined elementary/middle
+        school enrollment for aggregate trip generation calculations.
+        
     EnrollGrade9to12 : float
-        Total enrollment grades 9-12 (public + private) 
+        **Total enrollment grades 9-12** (public + private). Combined high school
+        enrollment affecting peak-period travel demand.
+        
     collegeEnroll : float
-        Major college/university enrollment
+        **Major college/university enrollment**. Students at four-year institutions.
+        Creates significant travel demand with unique temporal patterns.
+        
     otherCollegeEnroll : float
-        Other college enrollment
+        **Other college enrollment**. Students at specialized institutions not classified
+        as major universities or community colleges.
+        
     AdultSchEnrl : int
-        Adult education enrollment
+        **Adult education enrollment**. Students in continuing education, professional
+        development, and adult learning programs.
+
+    Parking Supply & Costs
+    ~~~~~~~~~~~~~~~~~~~~~~
     hstallsoth : float
-        Hourly parking stalls for trips to other MAZs
+        **Hourly parking stalls for trips to other MAZs**. Short-term parking spaces
+        available for visitors from other zones. Affects destination choice modeling.
+        
     hstallssam : float
-        Hourly parking stalls for trips within same MAZ
+        **Hourly parking stalls for trips within same MAZ**. Short-term parking for
+        local activities and errands. Lower cost than cross-zone parking.
+        
     dstallsoth : float  
-        Daily parking stalls for trips to other MAZs
+        **Daily parking stalls for trips to other MAZs**. All-day parking for commuters
+        and long-duration visits from other zones. Critical for employment centers.
+        
     dstallssam : float
-        Daily parking stalls for trips within same MAZ
+        **Daily parking stalls for trips within same MAZ**. All-day parking for local
+        residents and businesses. Often residential or employee parking.
+        
     mstallsoth : float
-        Monthly parking stalls for trips to other MAZs
+        **Monthly parking stalls for trips to other MAZs**. Long-term contract parking
+        for regular commuters. Typically downtown and major employment centers.
+        
     mstallssam : float
-        Monthly parking stalls for trips within same MAZ
+        **Monthly parking stalls for trips within same MAZ**. Resident and local worker
+        monthly parking. Often apartment/condo buildings and local businesses.
+        
     park_area : float
-        Total park area in square meters
+        **Total park area in square meters**. Green space and recreational areas.
+        Affects quality of life and non-motorized trip attraction.
+        
     hparkcost : float
-        Average hourly parking cost in dollars
+        **Average hourly parking cost in dollars**. Market rate for short-term parking.
+        Key factor in mode choice for discretionary trips.
+        
     numfreehrs : float
-        Hours of free parking before charges begin
+        **Hours of free parking before charges begin**. Grace period before parking
+        fees apply. Common in retail areas to encourage short visits.
+        
     dparkcost : float
-        Average daily parking cost in dollars
+        **Average daily parking cost in dollars**. All-day parking rate affecting
+        commute mode choice and destination accessibility.
+        
     mparkcost : float  
-        Average monthly parking cost (amortized over 22 workdays)
+        **Average monthly parking cost** (amortized over 22 workdays). Long-term parking
+        economics impacting employment location and commute patterns.
+
+    School Districts & Facilities
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ech_dist : int
-        Elementary school district identifier
+        **Elementary school district identifier**. Administrative district for K-8
+        education used for school assignment and trip routing.
+        
     hch_dist : int
-        High school district identifier
+        **High school district identifier**. Administrative district for grades 9-12
+        affecting school choice and transportation patterns.
+        
     parkarea : int
-        Parking area category (1-4 scale)
+        **Parking area category** (1-4 scale). Qualitative assessment of parking
+        availability: 1=Very Limited, 2=Limited, 3=Adequate, 4=Abundant.
+
+    Transportation Infrastructure  
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     TERMINAL : float
-        Terminal/transit facility indicator
+        **Terminal/transit facility indicator**. Presence of major transit terminals
+        or transportation hubs (1=Yes, 0=No). Affects regional accessibility.
+        
     MAZ_X : float
-        MAZ centroid X coordinate (projected)
+        **MAZ centroid X coordinate** (projected coordinate system). Geographic center
+        of zone used for distance calculations and spatial analysis.
+        
     MAZ_Y : float
-        MAZ centroid Y coordinate (projected)
+        **MAZ centroid Y coordinate** (projected coordinate system). Geographic center
+        of zone used for distance calculations and spatial analysis.
+
+    Density & Accessibility Measures
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
     TotInt : float
-        Total intersections within 1/2 mile radius
+        **Total intersections within 1/2 mile radius**. Walkability indicator measuring
+        street network connectivity. Higher values indicate more pedestrian-friendly areas.
+        
     EmpDen : float
-        Employment density per acre within 1/2 mile
+        **Employment density per acre within 1/2 mile**. Job accessibility measure
+        calculated as total employment divided by developable land area in buffer.
+        
     RetEmpDen : float  
-        Retail employment density per acre within 1/2 mile
+        **Retail employment density per acre within 1/2 mile**. Shopping accessibility
+        measure focusing on retail and service employment within walking/cycling distance.
+        
     DUDen : float
-        Household density per acre within 1/2 mile
+        **Household density per acre within 1/2 mile**. Residential density measure
+        indicating neighborhood character and supporting transit/walking viability.
+        
     PopDen : float
-        Population density per acre within 1/2 mile
+        **Population density per acre within 1/2 mile**. Overall activity density
+        combining residents across all age groups within the accessibility buffer.
+        
+    Density Classification Bins
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IntDenBin : int
-        Intersection density bin (1=low, 2=medium, 3=high)
+        **Intersection density bin** (1=Low, 2=Medium, 3=High). Categorical classification
+        of walkability based on street network connectivity. Used in mode choice models.
+        
     EmpDenBin : int
-        Employment density bin (1=low, 2=medium, 3=high)
+        **Employment density bin** (1=Low, 2=Medium, 3=High). Job density classification
+        affecting trip generation rates and destination choice probabilities.
+        
     DUDenBin : int  
-        Household density bin (1=low, 2=medium, 3=high)
+        **Household density bin** (1=Low, 2=Medium, 3=High). Residential density category
+        indicating neighborhood type: 1=Suburban, 2=Urban, 3=Dense Urban.
+        
     PopEmpDenPerMi : float
-        Combined population and employment density per mile
+        **Combined population and employment density per mile**. Comprehensive activity
+        density measure combining residents and workers within the accessibility buffer.
         
     Example
     -------
@@ -311,6 +479,10 @@ class MAZData(pa.DataFrameModel):
     # Access employment totals
     total_jobs = validated_data['emp_total'].sum()
     retail_jobs = validated_data['ret_loc'].sum() + validated_data['ret_reg'].sum()
+    
+    # Analyze density patterns
+    high_density_mazs = validated_data[validated_data['EmpDenBin'] == 3]
+    walkable_areas = validated_data[validated_data['IntDenBin'] >= 2]
     ```
     """
     MAZ: Series[int] = Field(nullable=False, unique=True)
