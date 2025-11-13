@@ -1,3 +1,57 @@
+"""MAZ Data Model for TM2.0 Transportation Modeling
+
+This module provides data validation and management for Micro-Analysis Zone (MAZ) data,
+which forms the foundation of land use inputs for the TM2.0 transportation model.
+
+Overview
+--------
+MAZ (Micro-Analysis Zone) data represents fine-grained geographic units that contain
+detailed land use, demographic, and employment information. This data is crucial for:
+
+- Trip generation modeling based on land use characteristics
+- Accessibility calculations for transportation modes
+- Economic and demographic analysis at a granular geographic level
+- Integration with larger Traffic Analysis Zones (TAZ) for model hierarchy
+
+Key Components
+--------------
+MAZData : pandera.model.DataFrameModel
+    Primary data validation class containing 60+ attributes for land use characteristics
+    including employment by sector, demographic data, parking supply, and density measures.
+    
+NodeIDCrosswalk : pandera.model.DataFrameModel
+    Manages the mapping between model node IDs and sequential IDs for MAZ, TAZ, 
+    and external zones to ensure consistent geographic referencing.
+
+Data Structure
+--------------
+The MAZ data follows a hierarchical structure where:
+- Multiple MAZs can belong to a single TAZ (Traffic Analysis Zone)
+- Each MAZ has unique identifiers (original and sequential)
+- Land use data is categorized by employment sectors, housing types, and amenities
+- Validation ensures data consistency and completeness for modeling
+
+Usage
+-----
+This module is typically used during the data preparation phase of transportation
+modeling to validate and standardize land use inputs before they are consumed by
+trip generation and other demand modeling components.
+
+Example
+-------
+```python
+from pathlib import Path
+from tm2py.data_models.maz_data import load_maz_data, create_sequential_index
+
+# Create node ID crosswalk from Lasso network build output
+xwalk_file = Path('model_to_emme_node_id.csv')
+crosswalk = create_sequential_index(xwalk_file)
+
+# Load and validate MAZ data
+maz_file = Path('maz_land_use_data.csv')
+maz_data = load_maz_data(maz_file, crosswalk)
+```
+"""
 import pathlib
 
 import pandas as pd
@@ -35,86 +89,229 @@ disconnected_maz_N_list = [10186, 16084, 111432, 111433, 411178]
 
 
 class MAZData(pa.DataFrameModel):
-    """
-    TODO: add docstring
-    Datamodel used to validate if maz landuse input is in correct format and types
-
-    Attributes:
-        MAZ (int): MAZ sequential index
-        TAZ (int): TAZ sequential index
-        MAZ_ORIGINAL (int): MAZ node ID
-        TAZ_ORIGINAL (int): TAZ node ID
-        DistID (int): district ID
-        DistName (str): district name
-        CountyID (int): county ID
-        CountyName (str): county name
-        ACRES (float): zone area in acres
-        HH (int): number of households
-        POP (int): number of population
-        ag (int): Agriculture employment
-        art_rec (int): Arts & recreational employment
-        constr (int): Construction employment
-        eat (int): Eating out employment
-        ed_high (int): Higher education employment
-        ed_k12 (int): K-12 education employment
-        ed_oth (int): Other education employment
-        fire (int): Financial, Insurance, real estate employment
-        gov (int): Government employment
-        health (int): Health employment
-        hotel (int): Hotel employment
-        info (int): Information employment
-        lease (int): Leasing employment
-        logis (int): Logistics employment
-        man_bio (int): Biological manufacturing employment
-        man_lgt (int): Heavy manufacturing employment
-        man_hvy (int): Light manufacturing employment
-        man_tech (int): Technology manufacturing employment
-        natres (int): Natural resources employment
-        prof (int): Professional employment
-        ret_loc (int): Local retail employment
-        ret_reg (int): Regional retail employment
-        serv_bus (int): Business services employment
-        serv_pers (int): Personal services employment
-        serv_soc (int): Social services employment
-        transp (int): Transportation employment
-        util (int): Utilities employment
-        emp_total (int); Total employment
-        publicEnrollGradeKto8 (int): Public enrollment grades k-8
-        privateEnrollGradeKto8 (int): Private enrollment grades k-8
-        publicEnrollGrade9to12 (int): Public enrollment grades 9-12
-        privateEnrollGrade9to12 (int): Private enrollment grades 9-12
-        comm_coll_enroll (int): Community college enrollment
-        EnrollGradeKto8 (int): Total enrollment grades k-8
-        EnrollGrade9to12 (float): Total enrollment grades 9-12
-        collegeEnroll (float): Major College enrollment
-        otherCollegeEnroll (float): Other College enrollment
-        AdultSchEnrl (int): Adult School enrollment 
-        hstallsoth (float): Number of stalls allowing hourly parking for trips with destinations in other MAZs
-        hstallssam (float): Number of stalls allowing hourly parking for trips with destinations in the same MAZ
-        dstallsoth (float): Stalls allowing daily parking for trips with destinations in other MAZs
-        dstallssam (float): Stalls allowing daily parking for trips with destinations in the same MAZ
-        mstallsoth (float): Stalls allowing monthly parking for trips with destinations in other MAZs
-        mstallssam (float): Stalls allowing monthly parking for trips with destinations in the same MAZ
-        park_area (float): Area of parks in sq. meters
-        hparkcost (float): Average cost of parking for one hour in hourly stalls in this MAZ, dollars
-        numfreehrs (float): Number of hours of free parking allowed before parking charges begin in hourly stalls
-        dparkcost (float): Average cost of parking for one day in daily stalls, dollars
-        mparkcost (float): Average cost of parking for one day in monthly stalls, amortized over 22 workdays, dollars
-        ech_dist (int): Elementary school district
-        hch_dist (int): High school district
-        parkarea (int): parking area (1 through 4)
-        TERMINAL (float):
-        MAZ_X (float):
-        MAZ_Y (float):
-        TotInt (float): Total intersections within 1/2 mile of MAZ
-        EmpDen (float): Employment per acre within 1/2 mile of MAZ
-        RetEmpDen (float): Retail employment per acre within 1/2 mile of MAZ
-        DUDen (float): Households per acre within 1/2 mile of MAZ
-        PopDen (float): Population per acre within 1/2 mile of MAZ
-        IntDenBin (int): Intersection density bin (1 through 3 where 3 is the highest)
-        EmpDenBin (int): Employment density bin (1 through 3 where 3 is the highest)
-        DUDenBin (int): Houseold density bin (1 through 3 where 3 is the highest)
-        PopEmpDenPerMi (float):
+    """Micro-Analysis Zone (MAZ) Land Use Data Validation Model.
+    
+    This class validates MAZ-level land use data used in TM2.0 transportation modeling.
+    MAZs represent the finest geographic resolution for land use data, containing detailed
+    information about employment by sector, demographics, parking supply, and accessibility
+    measures. This data drives trip generation and other demand modeling components.
+    
+    The validation ensures data consistency, proper data types, and logical constraints
+    across all land use attributes before they are consumed by the transportation model.
+    
+    Geographic Hierarchy
+    --------------------
+    - MAZ (Micro-Analysis Zone): Finest geographic unit
+    - TAZ (Traffic Analysis Zone): Aggregates multiple MAZs 
+    - District/County: Higher-level geographic groupings
+    
+    Data Categories
+    ---------------
+    1. **Geographic Identifiers**: MAZ/TAZ IDs, coordinates, district/county information
+    2. **Demographics**: Households, population, school enrollment by type
+    3. **Employment by Sector**: 21 detailed employment categories (retail, manufacturing, services, etc.)
+    4. **Parking Supply**: Hourly, daily, and monthly parking by destination type
+    5. **Density Measures**: Employment, population, and household densities within 1/2 mile
+    6. **Accessibility**: Intersection counts and density classifications
+    
+    Employment Categories
+    ---------------------
+    The model includes detailed employment data across major sectors:
+    - **Primary**: Agriculture (ag), Natural Resources (natres)
+    - **Manufacturing**: Bio (man_bio), Light (man_lgt), Heavy (man_hvy), Tech (man_tech)  
+    - **Services**: Professional (prof), Business (serv_bus), Personal (serv_pers), Social (serv_soc)
+    - **Retail**: Local (ret_loc), Regional (ret_reg)
+    - **Education**: K-12 (ed_k12), Higher Ed (ed_high), Other (ed_oth)
+    - **Other**: Government (gov), Health, Construction (constr), Transportation (transp), etc.
+    
+    Parking Data Structure
+    ----------------------
+    Parking supply is categorized by:
+    - **Duration**: Hourly (h), Daily (d), Monthly (m) 
+    - **Destination**: Same MAZ (sam) vs Other MAZs (oth)
+    - **Costs**: Average hourly, daily, and monthly parking costs
+    
+    Density Classifications
+    -----------------------
+    Several attributes use binned density measures (1-3 scale):
+    - IntDenBin: Intersection density (walkability proxy)
+    - EmpDenBin: Employment density (job accessibility)
+    - DUDenBin: Household density (residential intensity)
+    
+    Validation Rules
+    ----------------
+    - All geographic IDs must be unique and non-null
+    - Employment and demographic counts must be non-negative integers
+    - Parking costs and areas must be non-negative floats
+    - Density measures include both raw values and binned classifications
+    
+    Attributes
+    ----------
+    MAZ : int
+        Sequential MAZ identifier (1-based indexing)
+    TAZ : int  
+        Sequential TAZ identifier containing this MAZ
+    MAZ_ORIGINAL : int
+        Original MAZ node ID from network model
+    TAZ_ORIGINAL : int
+        Original TAZ node ID from network model  
+    DistID : int
+        District identifier for regional grouping
+    DistName : str
+        District name (e.g., San Francisco, Oakland)
+    CountyID : int
+        County identifier (FIPS code)
+    CountyName : str
+        County name (e.g., Alameda, San Francisco)
+    ACRES : float
+        Zone area in acres
+    HH : int
+        Number of households residing in zone
+    POP : int  
+        Total population in zone
+    ag : int
+        Agriculture sector employment
+    art_rec : int
+        Arts & recreational services employment
+    constr : int
+        Construction sector employment  
+    eat : int
+        Food service and eating establishments employment
+    ed_high : int
+        Higher education (colleges/universities) employment
+    ed_k12 : int
+        K-12 education (elementary/secondary schools) employment
+    ed_oth : int
+        Other education services employment
+    fire : int
+        Finance, insurance, and real estate employment
+    gov : int
+        Government employment (all levels)
+    health : int
+        Healthcare and social assistance employment
+    hotel : int
+        Accommodation services employment
+    info : int
+        Information sector employment (media, telecom)
+    lease : int
+        Leasing services employment
+    logis : int
+        Logistics and warehousing employment
+    man_bio : int
+        Biological and pharmaceutical manufacturing employment
+    man_lgt : int  
+        Light manufacturing employment
+    man_hvy : int
+        Heavy manufacturing employment
+    man_tech : int
+        Technology manufacturing employment
+    natres : int
+        Natural resources extraction employment
+    prof : int
+        Professional and technical services employment
+    ret_loc : int
+        Local-serving retail employment
+    ret_reg : int
+        Regional-serving retail employment  
+    serv_bus : int
+        Business services employment
+    serv_pers : int
+        Personal services employment
+    serv_soc : int
+        Social services employment
+    transp : int
+        Transportation and utilities employment
+    util : int
+        Utilities sector employment
+    emp_total : int
+        Total employment across all sectors
+    publicEnrollGradeKto8 : int
+        Public school enrollment grades K-8
+    privateEnrollGradeKto8 : int  
+        Private school enrollment grades K-8
+    publicEnrollGrade9to12 : int
+        Public school enrollment grades 9-12
+    privateEnrollGrade9to12 : int
+        Private school enrollment grades 9-12
+    comm_coll_enroll : int
+        Community college enrollment
+    EnrollGradeKto8 : int
+        Total enrollment grades K-8 (public + private)
+    EnrollGrade9to12 : float
+        Total enrollment grades 9-12 (public + private) 
+    collegeEnroll : float
+        Major college/university enrollment
+    otherCollegeEnroll : float
+        Other college enrollment
+    AdultSchEnrl : int
+        Adult education enrollment
+    hstallsoth : float
+        Hourly parking stalls for trips to other MAZs
+    hstallssam : float
+        Hourly parking stalls for trips within same MAZ
+    dstallsoth : float  
+        Daily parking stalls for trips to other MAZs
+    dstallssam : float
+        Daily parking stalls for trips within same MAZ
+    mstallsoth : float
+        Monthly parking stalls for trips to other MAZs
+    mstallssam : float
+        Monthly parking stalls for trips within same MAZ
+    park_area : float
+        Total park area in square meters
+    hparkcost : float
+        Average hourly parking cost in dollars
+    numfreehrs : float
+        Hours of free parking before charges begin
+    dparkcost : float
+        Average daily parking cost in dollars
+    mparkcost : float  
+        Average monthly parking cost (amortized over 22 workdays)
+    ech_dist : int
+        Elementary school district identifier
+    hch_dist : int
+        High school district identifier
+    parkarea : int
+        Parking area category (1-4 scale)
+    TERMINAL : float
+        Terminal/transit facility indicator
+    MAZ_X : float
+        MAZ centroid X coordinate (projected)
+    MAZ_Y : float
+        MAZ centroid Y coordinate (projected)
+    TotInt : float
+        Total intersections within 1/2 mile radius
+    EmpDen : float
+        Employment density per acre within 1/2 mile
+    RetEmpDen : float  
+        Retail employment density per acre within 1/2 mile
+    DUDen : float
+        Household density per acre within 1/2 mile
+    PopDen : float
+        Population density per acre within 1/2 mile
+    IntDenBin : int
+        Intersection density bin (1=low, 2=medium, 3=high)
+    EmpDenBin : int
+        Employment density bin (1=low, 2=medium, 3=high)
+    DUDenBin : int  
+        Household density bin (1=low, 2=medium, 3=high)
+    PopEmpDenPerMi : float
+        Combined population and employment density per mile
+        
+    Example
+    -------
+    ```python
+    import pandas as pd
+    from tm2py.data_models.maz_data import MAZData
+    
+    # Validate MAZ data
+    maz_df = pd.read_csv('maz_land_use.csv')
+    validated_data = MAZData.validate(maz_df)
+    
+    # Access employment totals
+    total_jobs = validated_data['emp_total'].sum()
+    retail_jobs = validated_data['ret_loc'].sum() + validated_data['ret_reg'].sum()
+    ```
     """
     MAZ: Series[int] = Field(nullable=False, unique=True)
     TAZ: Series[int] = Field(nullable=False)
@@ -198,14 +395,82 @@ class MAZData(pa.DataFrameModel):
         unique_column_names = True
 
 class NodeIDCrosswalk(pa.DataFrameModel):
-    """
-    Datamodel used to validate node ID crosswalk
-
-    Attributes:
-        model_node_id (int): model node ID
-        MAZSEQ (int): MAZ sequential index
-        TAZSEQ (int): TAZ sequential index
-        EXTSEQ (int): External sequential index
+    """Node ID to Sequential ID Mapping for Transportation Model Geography.
+    
+    This class validates the crosswalk table that maps original model node IDs 
+    to sequential zone identifiers used throughout the TM2.0 transportation model.
+    It ensures consistent geographic referencing across MAZ, TAZ, and external zones.
+    
+    Purpose
+    -------
+    The transportation model requires sequential zone IDs (starting from 1) for 
+    efficient matrix operations and memory management, while the underlying network
+    model uses arbitrary node IDs. This crosswalk maintains the mapping between
+    these two ID systems.
+    
+    Geographic Types
+    ----------------
+    - **MAZ (Micro-Analysis Zone)**: Finest resolution zones for land use data
+    - **TAZ (Traffic Analysis Zone)**: Aggregated zones for trip matrices  
+    - **EXT (External Zone)**: Special zones for external traffic flows
+    
+    ID System Design
+    ----------------
+    - Original model_node_id: Arbitrary integers from network model (can have gaps)
+    - Sequential IDs: Continuous 1-based indexing for each zone type
+    - Zero values: Indicate the node doesn't belong to that zone type
+    
+    Usage in Model
+    --------------
+    This crosswalk is used to:
+    1. Convert between original and sequential IDs during data loading
+    2. Validate that MAZ/TAZ relationships are consistent
+    3. Ensure all required zones have proper sequential numbering
+    4. Support matrix operations that require continuous indexing
+    
+    Data Validation
+    ---------------
+    - All model_node_id values must be unique and non-null
+    - Sequential IDs must be non-negative integers  
+    - Zero values allowed to indicate non-membership in zone type
+    - Total count of non-zero sequential IDs should match expected zone counts
+    
+    Attributes
+    ----------
+    model_node_id : int
+        Original node identifier from the transportation network model.
+        Must be unique across all geographic zone types.
+    MAZSEQ : int  
+        Sequential MAZ identifier (1-based). Zero if node is not a MAZ.
+        Used for MAZ-level land use data indexing and trip generation.
+    TAZSEQ : int
+        Sequential TAZ identifier (1-based). Zero if node is not a TAZ.
+        Used for trip matrix indexing and zone-to-zone travel calculations.
+    EXTSEQ : int
+        Sequential external zone identifier (1-based). Zero if node is not external.
+        Used for modeling trips entering/exiting the model region.
+        
+    Example
+    -------
+    ```python
+    import pandas as pd
+    from tm2py.data_models.maz_data import NodeIDCrosswalk, create_sequential_index
+    
+    # Create crosswalk from node lists
+    crosswalk = create_sequential_index(
+        node_id_df=network_nodes,
+        maz_N_list=[101, 102, 103],  
+        taz_N_list=[201, 202],
+        ext_N_list=[301, 302]
+    )
+    
+    # Validate the crosswalk
+    validated = NodeIDCrosswalk.validate(crosswalk)
+    
+    # Use for ID conversion
+    maz_sequential = validated.set_index('model_node_id')['MAZSEQ']
+    original_to_seq = dict(zip(validated['model_node_id'], validated['MAZSEQ']))
+    ```
     """
     model_node_id: Series[int] = Field(nullable=False, unique=True)
     MAZSEQ: Series[int] = Field(nullable=False)
@@ -220,16 +485,73 @@ class NodeIDCrosswalk(pa.DataFrameModel):
 def create_sequential_index(
     model_to_emme_node_id_xwalk: pathlib.Path
 ) -> DataFrame[NodeIDCrosswalk]:
-    """
-    Create stable sequential IDs for MAZ and TAZ nodes.
-
-    Args:
-        model_to_emme_node_id_xwalk: model ID to Emme node ID crosswalk 
-        written out by Lasso in the network build process
-
-    Returns:
-        crosswalk file of model ID to TAZ, MAZ, and external TAZ sequential ID.
-        Will be further used to validate the TAZ, MAZ columns in maz data input.   
+    """Create stable sequential IDs for MAZ, TAZ, and external zones.
+    
+    This function generates a crosswalk table that maps original model node IDs 
+    to sequential zone identifiers (1-based indexing) for efficient matrix operations
+    in the transportation model. It uses predefined node lists to categorize zones
+    into MAZ, TAZ, and external types.
+    
+    The function handles:
+    - TAZ nodes: Traffic Analysis Zones for trip matrix operations
+    - MAZ nodes: Micro-Analysis Zones including disconnected zones
+    - External nodes: Boundary zones for external trips
+    
+    Sequential ID Assignment
+    ------------------------
+    - TAZ: Sequential numbering based on sort order of node IDs
+    - MAZ: Includes both connected network nodes and disconnected zones
+    - EXT: External zones for trips entering/exiting the model region
+    - Zero values indicate the node doesn't belong to that zone type
+    
+    Node List Sources
+    -----------------
+    The function uses module-level constants:
+    - taz_N_list: Predefined TAZ node ID ranges
+    - maz_N_list: Predefined MAZ node ID ranges  
+    - external_N_list: External zone node ID range (900001-999999)
+    - disconnected_maz_N_list: Special disconnected MAZ nodes
+    
+    Parameters
+    ----------
+    model_to_emme_node_id_xwalk : pathlib.Path
+        Path to CSV file containing the crosswalk between model node IDs
+        and Emme node IDs, created during the network build process.
+        Must contain columns: 'emme_node_id', 'model_node_id'
+    
+    Returns
+    -------
+    DataFrame[NodeIDCrosswalk]
+        Validated crosswalk with columns:
+        - model_node_id: Original network node identifier
+        - MAZSEQ: Sequential MAZ ID (0 if not a MAZ)
+        - TAZSEQ: Sequential TAZ ID (0 if not a TAZ) 
+        - EXTSEQ: Sequential external zone ID (0 if not external)
+    
+    Raises
+    ------
+    ValueError
+        If required columns are missing from the input crosswalk file
+    
+    Example
+    -------
+    ```python
+    from tm2py.data_models.maz_data import create_sequential_index
+    from pathlib import Path
+    
+    # Create crosswalk from Lasso network build output
+    xwalk_file = Path('model_to_emme_node_id.csv')
+    crosswalk = create_sequential_index(xwalk_file)
+    
+    # Use crosswalk for ID conversion
+    maz_lookup = crosswalk.set_index('model_node_id')['MAZSEQ']
+    sequential_maz_id = maz_lookup[original_node_id]
+    ```
+    
+    See Also
+    --------
+    NodeIDCrosswalk : The validation schema for the output crosswalk
+    validate_sequential_id : Function to validate MAZ data against this crosswalk
     """
     node_id_df = pd.read_csv(model_to_emme_node_id_xwalk)
     required_cols = ["emme_node_id", "model_node_id"]
@@ -279,16 +601,76 @@ def validate_sequential_id(
     maz_data_df: pd.DataFrame,
     node_seq_id_xwalk: DataFrame[NodeIDCrosswalk]
 ) -> None:
-    """
-    Validate the TAZ, MAZ columns in maz data input
-
-    Args:
-        maz_data_df: maz landuse input
-        node_seq_id_xwalk: validated node ID to sequential ID crosswalk
-
-    Return:
-        None
-        Fail if any node ID mismatch
+    """Validate consistency between MAZ data and node ID crosswalk.
+    
+    This function ensures that the sequential MAZ and TAZ IDs in the land use
+    data file match the expected values from the node ID crosswalk. This validation
+    is critical for maintaining geographic consistency across model components.
+    
+    The validation checks that:
+    - Each MAZ_ORIGINAL in the data maps to the correct MAZ sequential ID
+    - Each TAZ_ORIGINAL in the data maps to the correct TAZ sequential ID  
+    - No mismatches exist that would cause geographic referencing errors
+    
+    Validation Process
+    ------------------
+    1. Create lookup from original node IDs to sequential IDs
+    2. Map MAZ_ORIGINAL and TAZ_ORIGINAL to expected sequential values
+    3. Compare with actual MAZ and TAZ columns in the data
+    4. Report any mismatches that indicate data inconsistency
+    
+    Use Case
+    --------
+    This function is essential when loading MAZ data from external sources
+    to ensure the geographic identifiers are properly aligned with the 
+    transportation model's internal numbering system.
+    
+    Parameters
+    ----------
+    maz_data_df : pd.DataFrame
+        MAZ land use data containing columns:
+        - MAZ: Sequential MAZ identifier  
+        - TAZ: Sequential TAZ identifier
+        - MAZ_ORIGINAL: Original MAZ node ID
+        - TAZ_ORIGINAL: Original TAZ node ID
+    node_seq_id_xwalk : DataFrame[NodeIDCrosswalk]
+        Validated crosswalk mapping original node IDs to sequential IDs.
+        Created by create_sequential_index function.
+    
+    Returns
+    -------
+    None
+        Function validates in-place and raises exception on failure
+    
+    Raises  
+    ------
+    ValueError
+        If any MAZ or TAZ sequential IDs don't match the crosswalk expectations.
+        Error message includes count of mismatched zones for debugging.
+    
+    Example
+    -------
+    ```python
+    import pandas as pd
+    from tm2py.data_models.maz_data import validate_sequential_id
+    
+    # Load data and crosswalk
+    maz_df = pd.read_csv('maz_land_use.csv')
+    crosswalk = create_sequential_index(node_xwalk_file)
+    
+    # Validate consistency  
+    try:
+        validate_sequential_id(maz_df, crosswalk)
+        print("MAZ data geographic IDs validated successfully")
+    except ValueError as e:
+        print(f"Geographic ID mismatch: {e}")
+    ```
+    
+    See Also
+    --------
+    create_sequential_index : Creates the required crosswalk 
+    load_maz_data : Higher-level function that includes this validation
+    NodeIDCrosswalk : Schema for the crosswalk data
     """
     xwalk = node_seq_id_xwalk.set_index("model_node_id")
     maz = maz_data_df["MAZ_ORIGINAL"].map(xwalk["MAZSEQ"])
@@ -306,16 +688,89 @@ def load_maz_data(
     maz_data_file: pathlib.Path, 
     node_seq_id_xwalk: DataFrame[NodeIDCrosswalk]
 ) -> DataFrame[MAZData]:
-    """
-    load MAZ landuse data, validate the TAZ and MAZ IDs,
-    validate against the MAZData schema.
-
-    Args:
-        maz_data_file: path to maz landuse data
-        node_seq_id_xwalk: validated node ID to sequential ID crosswalk
-
-    Returns:
-        Validated maz data.
+    """Load and validate MAZ land use data for transportation modeling.
+    
+    This is the main function for loading MAZ (Micro-Analysis Zone) land use data
+    into the TM2.0 transportation model. It performs comprehensive validation to
+    ensure data quality and geographic consistency before the data is used in
+    trip generation and other modeling components.
+    
+    The function performs two levels of validation:
+    1. Geographic ID validation against the node crosswalk
+    2. Schema validation against the MAZData model specification
+    
+    Validation Steps
+    ----------------
+    1. Load CSV data from the specified file path
+    2. Validate MAZ/TAZ sequential IDs match the crosswalk expectations
+    3. Validate all data fields against MAZData schema constraints
+    4. Return validated DataFrame ready for modeling use
+    
+    Data Requirements
+    -----------------
+    The input CSV must contain all required MAZData columns including:
+    - Geographic identifiers (MAZ, TAZ, original node IDs)  
+    - Employment by sector (21 detailed categories)
+    - Demographics (households, population, school enrollment)
+    - Parking supply (hourly, daily, monthly by destination type)
+    - Density measures and accessibility indicators
+    
+    Error Handling
+    --------------
+    The function will raise descriptive errors for common data issues:
+    - Missing or malformed CSV files
+    - Geographic ID mismatches with the crosswalk
+    - Schema violations (wrong data types, negative values, etc.)
+    - Missing required columns or invalid data ranges
+    
+    Parameters
+    ----------
+    maz_data_file : pathlib.Path
+        Path to CSV file containing MAZ land use data.
+        Must include all required columns as defined in MAZData schema.
+    node_seq_id_xwalk : DataFrame[NodeIDCrosswalk]  
+        Validated crosswalk mapping original node IDs to sequential zone IDs.
+        Created by create_sequential_index function.
+    
+    Returns
+    -------
+    DataFrame[MAZData]
+        Validated MAZ land use data conforming to the MAZData schema.
+        All geographic IDs verified against crosswalk and data types validated.
+        Ready for use in trip generation and accessibility calculations.
+    
+    Raises
+    ------
+    FileNotFoundError
+        If the specified maz_data_file does not exist
+    ValueError
+        If geographic IDs don't match the crosswalk or schema validation fails
+    pd.errors.ParserError
+        If the CSV file is malformed or unreadable
+    
+    Example
+    -------
+    ```python
+    from pathlib import Path
+    from tm2py.data_models.maz_data import create_sequential_index, load_maz_data
+    
+    # Create crosswalk and load data
+    xwalk_file = Path('model_to_emme_node_id.csv')
+    maz_file = Path('maz_land_use_data.csv')
+    
+    crosswalk = create_sequential_index(xwalk_file) 
+    maz_data = load_maz_data(maz_file, crosswalk)
+    
+    # Use validated data
+    total_population = maz_data['POP'].sum()
+    employment_by_maz = maz_data['emp_total']
+    ```
+    
+    See Also
+    --------
+    MAZData : The validation schema applied to the loaded data
+    create_sequential_index : Function to create the required crosswalk
+    validate_sequential_id : Geographic ID validation performed internally
     """
     
     maz_data_df = pd.read_csv(maz_data_file)
