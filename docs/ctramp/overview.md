@@ -29,28 +29,36 @@ CT-RAMP implements activity-based modeling through a comprehensive system of int
 
 ``` mermaid
 graph TB
-    subgraph "Population & Context"
+    subgraph 1["Population & Context"]
+        direction LR
         1a[Synthetic Population]
         1b[Land Use Data]
         1c[Transportation Networks]
+        1a ~~~ 1b ~~~ 1c
     end
     
-    "Population & Context" --> "Long-term Choice"
-    subgraph "Long-term Choices"
+   1 --> 2
+    subgraph 2["Long-term Choices"]
+        direction LR
         2a[Auto Ownership]
         2b[Work & School Location]
+        2a ~~~ 2b
     end
 
-    "Long-term Choices" --> "Mobility"
-    subgraph "Mobility"
+    2 --> 3
+    subgraph 3["Mobility"]
+        direction LR
         3a[Auto Ownership]
         3b[Transponder Choice]
         3c[Free Parking]
+        3a ~~~ 3b ~~~ 3c
     end
 
-    "Mobility" --> "Daily Activity Planning"
-    subgraph "Daily Activity Planning"
-        subgraph "Coordinated Daily Activity Pattern"
+    3 --> 4
+    subgraph 4["Daily Activity Planning"]
+
+        direction TB
+        subgraph 4a["Coordinated Daily Activity Pattern"]
             direction LR
             4a1[CDAP]
             4a2[Explicit Telecommute]
@@ -61,14 +69,16 @@ graph TB
         4c[Non-Mandatory]
         4d[Home]
 
-        subgraph "Individual Mandatory Tours"
+        subgraph 4f["Individual Mandatory Tours"]
+            direction TB
             4f1[Frequency]
             4f2[Time of Day]
             4f3[Tour Mode]
             4f1 --> 4f2
             4f2 --> 4f3
         end
-        subgraph "Joint Non-Mandatory Tours
+        subgraph 4g["Joint Non-Mandatory Tours"]
+            direction TB
             4g1[Frequency/Composition]
             4g2[Participation]
             4g3[Destination]
@@ -79,7 +89,8 @@ graph TB
             4g3 --> 4g4
             4g4 --> 4g5
         end
-        subgraph "Individual Non-Mandatory Tours
+        subgraph 4h["Individual Non-Mandatory Tours"]
+            direction TB
             4h1[Frequency]
             4h2[Destination]
             4h3[Time of Day]
@@ -88,7 +99,8 @@ graph TB
             4h2 --> 4h3
             4h3 --> 4h4
         end
-        subgraph "At-Work Subtours"
+        subgraph 4i["At-Work Subtours"]
+            direction TB
             4i1[Frequency]
             4i2[Destination]
             4i3[Time of Day]
@@ -98,34 +110,36 @@ graph TB
             4i3 --> 4i4
         end
 
-        "Coordinated Daily Activity Pattern" --> 4b
-        "Coordinated Daily Activity Pattern" --> 4c
-        "Coordinated Daily Activity Pattern" --> 4d
-        4b --> "Individual Mandatory Tours"
-        "Individual Mandatory Tours" --> "At-Work Subtours"
-        4c --> "Joint Non-Mandatory Tours"
-        4c --> "Individual Non-Mandatory Tours"
+        4a --> 4b
+        4a --> 4c
+        4a --> 4d
+        4b --> 4f
+        4f --> 4i
+        4c --> 4g
+        4c --> 4h
 
     end
     
-    "Daily Activity Planning" --> "Stop-level Choices"
-    subgraph "Stop-level Choices"
+    4 --> 5
+    subgraph 5["Stop-level Choices"]
         direction LR
         5a[Stop Frequency]
         5b[Stop Location]
         5a --> 5b
     end
     
-    "Stop-level Choices" --> "Trip-level Choices"
-    subgraph "Trip-level Choices"
+    5 --> 6
+    subgraph 6["Trip-level Choices"]
         direction LR
         6a[Trip mode]
         6b[Auto Parking]
         6a --> 6b
     end
     
-    classDef Household fill: #e8f5e8;
-    class 2a, 2b, 4a1, 4g1 Household;
+
+    classDef Household fill:#e8f5e8
+    class 2a,2b,4a1,4g1 Household
+    
     
 ```
 
