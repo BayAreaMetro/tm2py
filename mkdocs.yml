@@ -40,6 +40,8 @@ nav:
     - Model Components:
       - Components Overview: ctramp/components/index.md
       - Auto Ownership: ctramp/components/auto-ownership.md
+      - Transponder Ownership: ctramp/components/transponder.md
+      - Parking Provision: ctramp/components/parking-provision.md
       - Daily Activity Pattern: ctramp/components/cdap.md
       - Mandatory Tours: ctramp/components/mandatory-tours.md
       - Joint Tours: ctramp/components/joint-tours.md
