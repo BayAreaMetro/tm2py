@@ -49,8 +49,7 @@ class ScenarioConfig(ConfigItem):
         year: model year, must be at least 2005
         landuse_file: TAZ file
     """
-
-    zone_seq_file: pathlib.Path
+    
     landuse_file: pathlib.Path
     landuse_index_column: str
     name: str
@@ -951,6 +950,8 @@ class HighwayConfig(ConfigItem):
             to the free-flow speed, capacity, and critical speed values
         interchange_nodes_file: relative path to the interchange nodes file, this is
             used for calculating highway reliability
+        model_to_emme_node_id_xwalk: model ID to Emme node ID crosswalk written out in network build process
+        output_node_sequential_id_xwalk: crosswalk file of model ID to TAZ, MAZ, and external TAZ sequential ID
         apply_msa_demand: average highway demand with previous iterations'. Default to True.
         reliability: bool to skim highway reliability. Default to true. If true, assignment
             will be run twice in global iterations 0 (warmstart) and 1, to calculate reliability,
@@ -974,6 +975,8 @@ class HighwayConfig(ConfigItem):
     classes: Tuple[HighwayClassConfig, ...] = Field()
     capclass_lookup: Tuple[HighwayCapClassConfig, ...] = Field()
     interchange_nodes_file: str = Field()
+    model_to_emme_node_id_xwalk: str = Field()
+    output_node_sequential_id_xwalk: str = Field()
     apply_msa_demand: bool = True
     reliability: bool = Field(default=True)
 

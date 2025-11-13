@@ -18,8 +18,10 @@ dependencies = [
     "pydantic",
     "requests",
     "scipy",
+    "pandas>2.1.1",
     "geopandas",
     "openmatrix",
+    "pandera",
     # these would be in an EMME environment
     "pyproj",
     "shapely"
