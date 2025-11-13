@@ -1941,18 +1941,13 @@ class NetworkSummary(Component):
         try:
             self.logger.info("LANDUSE: Reading landuse data for regional summaries...")
             
-            # Get landuse file path from config (same way other components do)
-            landuse_file = self.controller.get_abs_path(
-                self.controller.config.scenario.landuse_file
-            )
+            # Get landuse file (same way other components do)
+            landuse_df = self.controller.maz_data
             
-            self.logger.info(f"LANDUSE: Loading data from {landuse_file}")
+            self.logger.info(f"LANDUSE: Loading data")
             
             # Read only the columns we need for performance
-            landuse_df = pd.read_csv(
-                landuse_file, 
-                usecols=['MAZ', 'HH', 'POP', 'emp_total']
-            )
+            landuse_df = landuse_df[['MAZ', 'HH', 'POP', 'emp_total']]
             
             # Calculate regional totals
             total_households = landuse_df['HH'].sum()
