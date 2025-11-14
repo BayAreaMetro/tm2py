@@ -118,13 +118,11 @@ class AssignMAZSPDemand(Component):
         # model config replace / scenario config
 
         # TEMPORARY - WAITING ON YUE to confirm source of truth 
-        MAZSEQ_TO_N_DF = pd.read_csv(r"Z:\MTC\US0024934.9168\TM2.2.1.3_testing_maz_changes2\inputs\landuse\mtc_final_network_zone_seq.csv")
-        N_TO_EMME_NODE_DF = pd.read_csv(r"Z:\MTC\US0024934.9168\TM2.2.1.3_testing_maz_changes2\emme_project\Database_highway\emme_drive_network_node_id_crosswalk.csv")
-        full_crosswalk_df = MAZSEQ_TO_N_DF[["MAZSEQ", "N"]].merge(N_TO_EMME_NODE_DF[["emme_node_id", "model_node_id"]], left_on="N", right_on="model_node_id", how="left", validate="1:1")
-        model_id_to_maz = {
-            emme_node_id: maz_id for emme_node_id, maz_id in 
-            zip(full_crosswalk_df["emme_node_id"], full_crosswalk_df["MAZSEQ"])
-        }
+        emme_node_id_to_maz_seq_id = pd.read_csv(
+            self.controller.config.highway.model_to_emme_node_id_xwalk
+        ).merge(
+            self.controller.node_seq_id_xwalk, how="inner", on="model_node_id", validate="1:1"
+        ).set_index("emme_node_id")["MAZSEQ"].to_dict()
         # END Temporary
         
 
@@ -142,7 +140,7 @@ class AssignMAZSPDemand(Component):
                             f"warning: no mazs for counties {', '.join(names)}"
                         )
                         continue
-                    self._process_demand(time, i, maz_ids, model_id_to_maz)
+                    self._process_demand(time, i, maz_ids, emme_node_id_to_maz_seq_id)
                 demand_bins = self._group_demand()
                 for i, demand_group in enumerate(demand_bins):
                     self._find_roots_and_leaves(demand_group["demand"])
@@ -533,7 +531,7 @@ class AssignMAZSPDemand(Component):
         )
 
         self.controller.emme_manager.copy_attribute_values(
-            self._network, self._scenario, {"LINK": ["temp_flow"]}, {"LINK": ["data1"]}
+            self._network, self._scenario, {"LINK": ["temp_flow"]}, {"LINK": ["@maz_flow"]}
         )
 
     def _load_text_format_paths(
