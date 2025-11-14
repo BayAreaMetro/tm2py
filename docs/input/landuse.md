@@ -44,6 +44,84 @@ The following fields are required in the `mazData.csv` file. All field names are
       show_symbol_type_heading: true
       show_symbol_type_toc: true
       filters: ["!^_", "!^Config"]
+      extra:
+        show_attributes: true
+      members:
+        - MAZ
+        - TAZ
+        - MAZ_ORIGINAL
+        - TAZ_ORIGINAL
+        - DistID
+        - DistName
+        - CountyID
+        - CountyName
+        - ACRES
+        - HH
+        - POP
+        - ag
+        - art_rec
+        - constr
+        - eat
+        - ed_high
+        - ed_k12
+        - ed_oth
+        - fire
+        - gov
+        - health
+        - hotel
+        - info
+        - lease
+        - logis
+        - man_bio
+        - man_lgt
+        - man_hvy
+        - man_tech
+        - natres
+        - prof
+        - ret_loc
+        - ret_reg
+        - serv_bus
+        - serv_pers
+        - serv_soc
+        - transp
+        - util
+        - emp_total
+        - publicEnrollGradeKto8
+        - privateEnrollGradeKto8
+        - publicEnrollGrade9to12
+        - privateEnrollGrade9to12
+        - comm_coll_enroll
+        - EnrollGradeKto8
+        - EnrollGrade9to12
+        - collegeEnroll
+        - otherCollegeEnroll
+        - AdultSchEnrl
+        - hstallsoth
+        - hstallssam
+        - dstallsoth
+        - dstallssam
+        - mstallsoth
+        - mstallssam
+        - park_area
+        - hparkcost
+        - numfreehrs
+        - dparkcost
+        - mparkcost
+        - ech_dist
+        - hch_dist
+        - parkarea
+        - TERMINAL
+        - MAZ_X
+        - MAZ_Y
+        - TotInt
+        - EmpDen
+        - RetEmpDen
+        - DUDen
+        - PopDen
+        - IntDenBin
+        - EmpDenBin
+        - DuDenBin
+        - PopEmpDenPerMi
 
 ## Traffic Analysis Zones (TAZ Data)
 
