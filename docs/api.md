@@ -5,6 +5,9 @@ Welcome to the TM2PY API reference. This documentation provides comprehensive de
 !!! tip "Getting Started"
     New to tm2py? Start with the [User Guide](guide.md) and [Installation Instructions](install.md) before diving into the API details.
 
+!!! info "Output Data Formats"
+    For detailed specifications of model output file formats, field definitions, and data structures, see the **[CTRAMP Output File Specifications](ctramp-outputs/index.md)**.
+
 ---
 
 ## 🚀 Model Setup & Execution

@@ -51,6 +51,12 @@ While still in the activated virtual environment:
 
 (tm2py_env) E:\TM2\2023_TM2_test_20250606>python RunModel.py
 ```
+
+!!! info "Understanding Model Outputs"
+    After running the model, comprehensive outputs will be generated. For detailed documentation on output files and data formats, see:
+    
+    - **[Output Overview](outputs.md)** - Complete guide to all model outputs
+    - **[CTRAMP Output File Specifications](ctramp-outputs/index.md)** - Detailed field-level documentation for household travel behavior results
    
 # User Configuration 🛠️
 

@@ -65,3 +65,9 @@ For detailed information about each category, please see the individual pages li
 For guidance on how to create and prepare many of these input files for the base year, see:
 
 📋 **[Creating Base Year Inputs](../create-base-year-inputs.md)** - Step-by-step guide for generating base year input files, including synthetic population, land use data, and network preparation.
+
+## Understanding Model Outputs
+
+After processing these input files, the model generates comprehensive outputs. For detailed documentation on output file formats and field specifications that result from these inputs, see:
+
+🎯 **[CTRAMP Output File Specifications](../ctramp-outputs/index.md)** - Complete field-level documentation including data dictionaries, validation rules, and guidance for integrating survey data with model outputs.

@@ -76,3 +76,6 @@ For more detailed information on specific aspects of base year input preparation
 - **[How to Make Base Year Networks](network-base-year.md)** - Comprehensive guide to preparing highway, walk, bike, and transit networks for the base year
 - **[How the MAZ Layer Was Updated](maz-updates.md)** - Documentation of the micro-zone layer update process and methodology
 
+!!! tip "Understanding Model Outputs"
+    After running the model with these base year inputs, detailed output files are generated. For comprehensive field-level documentation including data dictionaries and validation rules, see the **[CTRAMP Output File Specifications](ctramp-outputs/index.md)**.
+
