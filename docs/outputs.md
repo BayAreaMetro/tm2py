@@ -27,6 +27,17 @@ Detailed microsimulation results from the household travel behavior model.
 
 [→ View detailed CTRAMP output documentation](output/ctramp.md)
 
+!!! tip "Comprehensive Field Specifications"
+    For detailed field-level documentation with data dictionaries, validation rules, and survey integration guidance, see the **[CTRAMP Output File Specifications](ctramp-outputs/index.md)**. These comprehensive specifications include:
+    
+    - [Household Data](ctramp-outputs/household.md) - Complete household demographics and choice results
+    - [Person Data](ctramp-outputs/person.md) - Individual demographics, employment, and activity patterns
+    - [Workplace & School Locations](ctramp-outputs/workplace-school-location.md) - Work and school location choice results
+    - [Individual Tours](ctramp-outputs/individual-tours.md) - Person-level tour purposes, modes, and timing
+    - [Individual Trips](ctramp-outputs/individual-trips.md) - Detailed trip segments and intermediate stops
+    - [Joint Tours](ctramp-outputs/joint-tours.md) - Household coordination and multi-person travel
+    - [Joint Trips](ctramp-outputs/joint-trips.md) - Coordinated household trip segments
+
 ### [Assignment Outputs](output/assignment.md)
 Network loading results showing traffic and transit flows on infrastructure.
 

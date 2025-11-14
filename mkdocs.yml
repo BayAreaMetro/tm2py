@@ -10,21 +10,42 @@ theme:
   name: material
   features:
     - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.tabs.link
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
       primary: blue
-      accent: grey
+      accent: light blue
       toggle:
         icon: material/toggle-switch-off-outline
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: blue
-      accent: grey
+      accent: light blue
       toggle:
         icon: material/toggle-switch
         name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - tables
+  - attr_list
+  - md_in_html
 
 nav:
   - Home: index.md
@@ -85,6 +106,16 @@ nav:
     - Output: outputs.md
     - Skim Outputs: output/skims.md
     - CTRAMP Outputs: output/ctramp.md
+    - CTRAMP File Specifications:
+      - Overview: ctramp-outputs/index.md
+      - Household Data: ctramp-outputs/household.md
+      - Person Data: ctramp-outputs/person.md
+      - Workplace & School Locations: ctramp-outputs/workplace-school-location.md
+      - Individual Tours: ctramp-outputs/individual-tours.md
+      - Individual Trips: ctramp-outputs/individual-trips.md
+      - Joint Tours: ctramp-outputs/joint-tours.md
+      - Joint Trips: ctramp-outputs/joint-trips.md
+      - Data Dictionaries: ctramp-outputs/data-dictionaries.md
     - Assignment Outputs: output/assignment.md
     - Commercial Vehicle Outputs: output/commercial.md
     - Summary Reports: output/summaries.md
