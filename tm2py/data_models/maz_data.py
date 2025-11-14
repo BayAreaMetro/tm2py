@@ -248,7 +248,7 @@ class MAZData(pa.DataFrameModel):
         
     lease : int
         **Leasing services employment**. Equipment rental, vehicle leasing, and other
-        rental/leasing services. Excludes real estate leasing (classified under FIRE).
+        rental/leasing services. Excludes real estate leasing (classified under fire).
         
     logis : int
         **Logistics and warehousing employment**. Freight transportation, warehousing,
