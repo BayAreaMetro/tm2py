@@ -36,10 +36,23 @@ The following fields are required in the `mazData.csv` file. All field names are
       show_bases: false
       show_source: false
       members_order: source
-      group_by_category: true
+      group_by_category: false
       show_signature_annotations: true
       separate_signature: true
       docstring_section_style: table
+      show_docstring_attributes: false
+      show_docstring_functions: false
+      show_docstring_classes: false
+      show_docstring_modules: false
+      show_docstring_description: false
+      show_docstring_examples: false
+      show_docstring_other_parameters: false
+      show_docstring_parameters: false
+      show_docstring_raises: false
+      show_docstring_receives: false
+      show_docstring_returns: false
+      show_docstring_warns: false
+      show_docstring_yields: false
 
 ## Traffic Analysis Zones (TAZ Data)
 
