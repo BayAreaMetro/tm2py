@@ -29,8 +29,15 @@ The Auto Ownership Model predicts household vehicle ownership levels based on:
 
 ## Model Structure
 
+### SANDAG CT-RAMP Design Foundation
+The Auto Ownership Model follows the original SANDAG CT-RAMP design specifications:
+
+**Model Formulation**: Nested logit choice model with five discrete alternatives
+**Decision Unit**: Household level
+**Timing**: Two model instances - preliminary (pre-location choice) and final (post-location choice)
+
 ### Choice Alternatives
-The model typically includes these ownership levels:
+The model includes exactly five ownership levels as specified in the original CT-RAMP design:
 
 | Alternative | Description | Typical Households |
 |-------------|-------------|-------------------|
@@ -39,6 +46,21 @@ The model typically includes these ownership levels:
 | **2 vehicles** | Two household vehicles | Multi-worker households, suburban |
 | **3 vehicles** | Three household vehicles | Large households, low transit access |
 | **4+ vehicles** | Four or more vehicles | Large, high-income, rural households |
+
+### Two-Stage Implementation
+The SANDAG design implements auto ownership in two stages:
+
+**Stage 1: Pre-Mandatory Auto Ownership (Model 2.1)**
+- Used to select preliminary auto ownership level
+- Based on household demographics and general accessibility
+- Provides vehicle availability for workplace/school location choice
+- Excludes work/school-specific accessibilities
+
+**Stage 2: Final Auto Ownership (Model 3.2)** 
+- Re-run after work/school location choice
+- Incorporates actual work and school locations
+- Uses same variables as Stage 1 plus location-specific accessibilities
+- Alternative-specific constants may differ from Stage 1
 
 ### Utility Function Structure
 
@@ -74,10 +96,12 @@ The model often uses segmentation by:
 ## Technical Implementation
 
 ### Model Type
-**Multinomial Logit Model** with household-level choice among discrete alternatives
+**Nested Logit Choice Model** with five discrete alternatives and household-level choice
 
-### Utility Specification
-Typical utility function components:
+The original SANDAG CT-RAMP design specifies a nested logit formulation rather than multinomial logit, allowing for correlation among certain alternatives and more flexible substitution patterns.
+
+### Variable Categories
+Based on the SANDAG design document, the model includes:
 
 **Demographic Variables**
 - Household size (positive for higher ownership)

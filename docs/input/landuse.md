@@ -18,140 +18,110 @@ Land use data consists of two main files located in the `landuse\` directory:
 
 The `mazData.csv` file contains detailed land use characteristics at the micro-zone level, providing the fine-grained spatial detail needed for accessibility calculations and local travel modeling.
 
-### Geographic and Administrative Fields
+!!! tip "Data Model Validation"
+    The MAZ data file structure is validated using Pandera data models to ensure data quality and consistency. See the [complete field specifications and validation rules](#maz-data-model-specification) below.
 
-| Column Name | Description | Used by | Source |
-|-------------|-------------|---------|--------|
-| `MAZ_ORIGINAL` | Original micro zone number (renumbered during model run) | [MgraDataManager] | Zone system definition |
-| `TAZ_ORIGINAL` | Original TAZ number (renumbered during model run) | [MgraDataManager] | Zone system definition |
-| `CountyID` | County ID number | [MgraDataManager] | Administrative boundaries |
-| `CountyName` | County name string | | Administrative boundaries |
-| `DistID` | District ID number | [TourModeChoice.xls] | District system definition |
-| `DistName` | District name | | District system definition |
-| `ACRES` | MAZ area in acres | [createMazDensityFile.py] | Calculated from shapefile |
+!!! info "Cross Reference"
+    For detailed API documentation and programmatic access to MAZ data validation, see [MAZ Data Model API Reference](../api.md#tm2py.data_models.maz_data.MAZData) 📖
 
-### Population and Household Data
+### MAZ Data Model Specification
 
-| Column Name | Description | Used by | Source |
-|-------------|-------------|---------|--------|
-| `HH` | Total number of households | [MgraDataManager] | PopulationSim allocation |
-| `POP` | Total population | [MgraDataManager] | PopulationSim allocation |
+The following fields are required in the `mazData.csv` file. All field names are **case-sensitive** and must match exactly:
 
-### Employment by Industry Category
-
-The model uses detailed employment data by industry sector based on [NAICS] codes:
-
-#### Core Industries
-
-| Column Name | Description | NAICS Codes | Used by |
-|-------------|-------------|-------------|---------|
-| `ag` | Agriculture, forestry, fishing | 11 | [Accessibilities] |
-| `const` | Construction | 23 | [Accessibilities] |
-| `natres` | Mining and resource extraction | 21 | [Accessibilities] |
-| `util` | Utilities | 22 | [Accessibilities] |
-
-#### Manufacturing
-
-| Column Name | Description | NAICS Codes | Used by |
-|-------------|-------------|-------------|---------|
-| `man_lgt` | Light manufacturing | 31-33 subset | [Accessibilities] |
-| `man_hvy` | Heavy manufacturing | 31-33 subset | [Accessibilities] |
-| `man_tech` | High-tech manufacturing | 334 | [Accessibilities] |
-| `man_bio` | Biological/drug manufacturing | 325411, 325412, 325313, 325414 | [Accessibilities] |
-
-#### Trade, Transportation, and Utilities
-
-| Column Name | Description | NAICS Codes | Used by |
-|-------------|-------------|-------------|---------|
-| `ret_loc` | Local-serving retail | 444130, 444190, 444210, 444220, 445110, 445120, 445210, 445220, 445230, 445291, 445292, 445299, 445310, 446110, 446120, 446130, 446191, 446199, 447110, 447190, 448110, 448120, 448130, 448140, 448150, 448190, 448210, 448310, 448320, 451110, 451120, 451130, 451140, 451211, 451212, 452910, 452990, 453110, 453220, 453310, 453910, 453920, 453930, 453991, 453998, 454111, 454112, 454113 | [Accessibilities] |
-| `ret_reg` | Regional retail | 441110, 441120, 441210, 441222, 441228, 441310, 441320, 442110, 442210, 442291, 442299, 443141, 443142, 444110, 444120, 452111, 452112, 453210, 454210, 454310, 454390 | [Accessibilities] |
-| `transp` | Transportation | 48 (most), 49 (excluding logistics) | [Accessibilities] |
-| `logis` | Logistics/warehousing and distribution | 42, 493 | [Accessibilities] |
-
-#### Information and Professional Services
-
-| Column Name | Description | NAICS Codes | Used by |
-|-------------|-------------|-------------|---------|
-| `info` | Information-based services | 51 | [Accessibilities] |
-| `fire` | Finance, insurance, real estate | 52, 53 (excluding leasing) | [Accessibilities] |
-| `lease` | Leasing | 532 | [Accessibilities] |
-| `prof` | Professional and technical services | 54 | [Accessibilities] |
-
-#### Education and Health Services
-
-| Column Name | Description | NAICS Codes | Used by |
-|-------------|-------------|-------------|---------|
-| `ed_k12` | K-12 schools | 6111 | [Accessibilities] |
-| `ed_high` | Junior colleges, colleges, universities | 6112, 6113, 6114, 6115 | [Accessibilities] |
-| `ed_oth` | Other schools, libraries, educational services | 6116, 6117 | [Accessibilities] |
-| `health` | Health care | 62 (excluding social services) | [Accessibilities] |
-
-#### Leisure, Hospitality, and Other Services
-
-| Column Name | Description | NAICS Codes | Used by |
-|-------------|-------------|-------------|---------|
-| `art_rec` | Arts, entertainment, recreation | 71 | [Accessibilities] |
-| `hotel` | Hotels and other accommodations | 721 | [Accessibilities] |
-| `eat` | Food services and drinking places | 722 | [Accessibilities] |
-| `serv_pers` | Personal and other services | 53, 81 | [Accessibilities] |
-| `serv_bus` | Managerial, administrative, business services | 55, 56 | [Accessibilities] |
-| `serv_soc` | Social services and childcare | 624 | [Accessibilities] |
-
-#### Government and Other
-
-| Column Name | Description | NAICS Codes | Used by |
-|-------------|-------------|-------------|---------|
-| `gov` | Government | 92 | [Accessibilities] |
-| `unclass` | Employment not classified | N/A | |
-| `emp_total` | Total employment | Sum of all categories | [Accessibilities] |
-
-### School Enrollment Data
-
-| Column Name | Description | Used by | Source |
-|-------------|-------------|---------|--------|
-| `EnrollGradeKto8` | Elementary school (K-8) enrollment | [MgraDataManager] | School district data |
-| `EnrollGrade9to12` | High school (9-12) enrollment | [MgraDataManager] | School district data |
-| `collegeEnroll` | Major college enrollment | [MgraDataManager] | Higher education institutions |
-| `otherCollegeEnroll` | Other college enrollment | [MgraDataManager] | Community colleges, trade schools |
-| `AdultSchEnrl` | Adult school enrollment | [MgraDataManager] | Continuing education programs |
-| `ech_dist` | Elementary school district | [MgraDataManager] | School district boundaries |
-| `hch_dist` | High school district | [MgraDataManager] | School district boundaries |
-
-### Parking Data
-
-Detailed parking supply and cost information for mode choice modeling:
-
-| Column Name | Description | Used by | Source |
-|-------------|-------------|---------|--------|
-| `parkarea` | Parking area type (see codes below) | [MgraDataManager] | Parking inventory |
-| `hstallsoth` | Hourly stalls for trips to other MAZs | [MgraDataManager] | Parking inventory |
-| `hstallssam` | Hourly stalls for trips within same MAZ | [MgraDataManager] | Parking inventory |
-| `hparkcost` | Average hourly parking cost (dollars) | [MgraDataManager] | Parking fee data |
-| `numfreehrs` | Hours of free parking before charges begin | [MgraDataManager] | Parking regulations |
-| `dstallsoth` | Daily stalls for trips to other MAZs | [MgraDataManager] | Parking inventory |
-| `dstallssam` | Daily stalls for trips within same MAZ | [MgraDataManager] | Parking inventory |
-| `dparkcost` | Average daily parking cost (dollars) | [MgraDataManager] | Parking fee data |
-| `mstallsoth` | Monthly stalls for trips to other MAZs | [MgraDataManager] | Parking inventory |
-| `mstallssam` | Monthly stalls for trips within same MAZ | [MgraDataManager] | Parking inventory |
-| `mparkcost` | Monthly parking cost amortized over 22 workdays | [MgraDataManager] | Parking fee data |
-
-#### Parking Area Type Codes (`parkarea`)
-
-| Code | Description |
-|------|-------------|
-| 1 | Downtown: trips may park in different MAZ, charges apply |
-| 2 | Downtown buffer: quarter-mile buffer, charges might apply |
-| 3 | Outside downtown paid: only destination trips park here, charges apply |
-| 4 | Outside downtown free: only destination trips park here, no charges |
-
-### Built Environment and Density Measures
-
-| Column Name | Description | Used by | Source |
-|-------------|-------------|---------|--------|
-| `TotInt` | Total intersections | [MgraDataManager], [AutoOwnership] | [createMazDensityFile.py] |
-| `DUDen` | Dwelling unit density | [MgraDataManager] | [createMazDensityFile.py] |
-| `EmpDen` | Employment density | [MgraDataManager] | [createMazDensityFile.py] |
-| `PopDen` | Population density | | [createMazDensityFile.py] |
+::: tm2py.data_models.maz_data.MAZData
+    options:
+      show_root_heading: true
+      show_root_toc_entry: false
+      heading_level: 4
+      show_bases: false
+      show_source: true
+      members_order: source
+      group_by_category: true
+      show_signature_annotations: true
+      separate_signature: true
+      docstring_section_style: table
+      show_object_full_path: false
+      show_symbol_type_heading: true
+      show_symbol_type_toc: true
+      filters: ["!^_", "!^Config"]
+      extra:
+        show_attributes: true
+      members:
+        - MAZ
+        - TAZ
+        - MAZ_ORIGINAL
+        - TAZ_ORIGINAL
+        - DistID
+        - DistName
+        - CountyID
+        - CountyName
+        - ACRES
+        - HH
+        - POP
+        - ag
+        - art_rec
+        - constr
+        - eat
+        - ed_high
+        - ed_k12
+        - ed_oth
+        - fire
+        - gov
+        - health
+        - hotel
+        - info
+        - lease
+        - logis
+        - man_bio
+        - man_lgt
+        - man_hvy
+        - man_tech
+        - natres
+        - prof
+        - ret_loc
+        - ret_reg
+        - serv_bus
+        - serv_pers
+        - serv_soc
+        - transp
+        - util
+        - emp_total
+        - publicEnrollGradeKto8
+        - privateEnrollGradeKto8
+        - publicEnrollGrade9to12
+        - privateEnrollGrade9to12
+        - comm_coll_enroll
+        - EnrollGradeKto8
+        - EnrollGrade9to12
+        - collegeEnroll
+        - otherCollegeEnroll
+        - AdultSchEnrl
+        - hstallsoth
+        - hstallssam
+        - dstallsoth
+        - dstallssam
+        - mstallsoth
+        - mstallssam
+        - park_area
+        - hparkcost
+        - numfreehrs
+        - dparkcost
+        - mparkcost
+        - ech_dist
+        - hch_dist
+        - parkarea
+        - TERMINAL
+        - MAZ_X
+        - MAZ_Y
+        - TotInt
+        - EmpDen
+        - RetEmpDen
+        - DUDen
+        - PopDen
+        - IntDenBin
+        - EmpDenBin
+        - DuDenBin
+        - PopEmpDenPerMi
 
 ## Traffic Analysis Zones (TAZ Data)
 
@@ -184,7 +154,7 @@ The `tazData.csv` file contains zone-level data used for specific model componen
 
 ### Density Calculations
 
-Density measures calculated using [createMazDensityFile.py]:
+Density measures calculated using [TBD](https://github.com/BayAreaMetro/tm2py/pull/216):
 
 - **Dwelling Unit Density**: Households per acre
 - **Employment Density**: Jobs per acre  
@@ -243,10 +213,9 @@ Land use data drives accessibility calculations used throughout the model:
 
 This comprehensive land use data structure supports detailed spatial analysis and realistic travel behavior modeling in the CT-RAMP framework.
 
-[Accessibilities]: https://github.com/BayAreaMetro/travel-model-two/blob/master/model-files/model/Accessibilities.xls
-[AutoOwnership]: https://github.com/BayAreaMetro/travel-model-two/blob/master/model-files/model/AutoOwnership.xls
-[createMazDensityFile.py]: https://github.com/BayAreaMetro/travel-model-two/blob/master/model-files/scripts/preprocess/createMazDensityFile.py
-[MgraDataManager]: https://github.com/BayAreaMetro/travel-model-two/blob/master/core/src/java/com/pb/mtctm2/abm/ctramp/MgraDataManager.java#L47
+[Accessibilities]: https://github.com/BayAreaMetro/travel-model-two/blob/master/uec/Accessibilities.xls
+[AutoOwnership]: https://github.com/BayAreaMetro/travel-model-two/blob/master/uec/AutoOwnership.xls
+[MgraDataManager]: https://github.com/BayAreaMetro/travel-model-two/blob/master/src/java/com/pb/mtctm2/abm/ctramp/MgraDataManager.java#L47
 [NAICS]: https://www.census.gov/eos/www/naics/
-[TazDataManager]: https://github.com/BayAreaMetro/travel-model-two/blob/master/core/src/java/com/pb/mtctm2/abm/ctramp/TazDataManager.java#L37
-[TourModeChoice.xls]: https://github.com/BayAreaMetro/travel-model-two/blob/master/model-files/model/TourModeChoice.xls
+[TazDataManager]: https://github.com/BayAreaMetro/travel-model-two/blob/master/src/java/com/pb/mtctm2/abm/ctramp/TazDataManager.java#L37
+[TourModeChoice.xls]: https://github.com/BayAreaMetro/travel-model-two/blob/master/uec/TourModeChoice.xls

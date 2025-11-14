@@ -22,6 +22,7 @@ import re
 from collections import deque
 from pathlib import Path
 from typing import Collection, List, Tuple, Union
+from pandera.typing import DataFrame
 
 from datetime import datetime
 from tm2py.components.component import Component
@@ -31,7 +32,6 @@ from tm2py.components.demand.household import HouseholdModel
 from tm2py.components.demand.internal_external import InternalExternal
 from tm2py.components.network.active.active_modes import ActiveModesSkim
 from tm2py.components.network.create_tod_scenarios import CreateTODScenarios
-from tm2py.components.network.highway.drive_access_skims import DriveAccessSkims
 from tm2py.components.network.highway.highway_assign import HighwayAssignment
 from tm2py.components.network.highway.highway_maz import AssignMAZSPDemand, SkimMAZCosts
 from tm2py.components.network.highway.highway_network import PrepareNetwork
@@ -46,6 +46,7 @@ from tm2py.logger import Logger
 from tm2py.tools import emme_context
 from tm2py.tools import initialize_log
 from tm2py.tools import add_run_log
+from tm2py.data_models.maz_data import MAZData, NodeIDCrosswalk, load_maz_data, create_sequential_index
 
 
 # mapping from names referenced in config.run to imported classes
@@ -57,7 +58,6 @@ component_cls_map = {
     "highway": HighwayAssignment,
     "highway_maz_assign": AssignMAZSPDemand,
     "highway_maz_skim": SkimMAZCosts,
-    "drive_access_skims": DriveAccessSkims,
     "prepare_network_transit": PrepareTransitNetwork,
     "transit_assign": TransitAssignment,
     "transit_skim": TransitSkim,
@@ -131,6 +131,9 @@ class RunController:
         self._component = None
         self._component_name = None
         self._queued_components = deque()
+
+        self._maz_data = None
+        self._node_seq_id_xwalk = None
 
         # create logger before creating components so we can log if issues arise in the component creation
         self.logger = Logger(self)
@@ -253,6 +256,31 @@ class RunController:
     @property
     def runtime_log_col_width(self):
         return [8, 30, 25, 25, 10]
+
+    @property
+    def node_seq_id_xwalk(self) -> DataFrame[NodeIDCrosswalk]:
+        if self._node_seq_id_xwalk is None:
+            model_to_emme_node_id_xwalk = self.get_abs_path(
+                self.config.highway.model_to_emme_node_id_xwalk
+            )
+            self._node_seq_id_xwalk = create_sequential_index(model_to_emme_node_id_xwalk)
+            # write out the xwalk for ctramp
+            self._node_seq_id_xwalk.to_csv(
+                self.get_abs_path(
+                    self.config.highway.output_node_sequential_id_xwalk
+                ),
+                index=False
+            )
+        return self._node_seq_id_xwalk
+
+    @property
+    def maz_data(self) -> DataFrame[MAZData]:
+        if self._maz_data is None:
+            maz_data_file = self.get_abs_path(
+                self.config.scenario.landuse_file
+            )
+            self._maz_data = load_maz_data(maz_data_file, self.node_seq_id_xwalk)
+        return self._maz_data
 
     def run(self):
         """Main interface to run model.

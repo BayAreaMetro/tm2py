@@ -27,51 +27,19 @@ CT-RAMP recognizes that **travel is derived from activities**, not trips. This f
 ### Comprehensive Model System
 CT-RAMP includes 15 integrated model components covering:
 
-``` mermaid
-graph TD
-    A[Population Synthesis] --> B[Auto Ownership]
-    B --> C[Daily Activity Pattern]
-    C --> D[Mandatory Tours]
-    C --> E[Joint Tours]
-    D --> F[Individual Tours]
-    E --> F
-    F --> G[Tour Destination]
-    G --> H[Tour Mode Choice]
-    H --> I[Tour Time-of-Day]
-    I --> J[Stop Frequency]
-    J --> K[Stop Location]
-    K --> L[Trip Mode Choice]
-    D --> M[At-Work Subtours]
+![CT-RAMP Model Flow](../images/ctramp-flow.png)
+*Figure: Detailed CT-RAMP model flow diagram showing component interactions and data dependencies*
 
-    subgraph "Long-term Choices"
-        B
-    end
+## Design Origins
 
-    subgraph "Daily Planning"
-        C
-        D
-        E
-        F
-    end
+TM2's design comes from the San Diego CT-RAMP design developed by SANDAG (San Diego Association of Governments). The foundational documentation from this pioneering implementation provides comprehensive technical details about the activity-based modeling approach and estimation procedures.
 
-    subgraph "Tour Characteristics"
-        G
-        H
-        I
-    end
+### Original Design Documentation
 
-    subgraph "Trip Details"
-        J
-        K
-        L
-        M
-    end
+- **[SANDAG ABM Model Design](SANDAG_ABM_Model_Design.docx)** - Comprehensive design documentation from the original San Diego CT-RAMP implementation
+- **[SANDAG ABM Model Estimation](SANDAG_ABM_Model_Estimation.docx)** - Detailed estimation procedures and calibration methodology
 
-    style A fill:#e1f5fe
-    style C fill:#f3e5f5
-    style G fill:#e8f5e8
-    style L fill:#fff3e0
-```
+These documents provide the theoretical foundation and practical implementation details that informed TM2's development, offering valuable insights into the behavioral modeling framework and technical specifications.
 
 ## Technical Framework
 
@@ -84,6 +52,14 @@ CT-RAMP's mathematical foundation for all choice modeling:
 - **Flexible Specification**: Mathematical expressions for choice utilities through Excel control files
 - **Model Integration**: Seamless interface with Java choice model implementations
 - **Performance Optimization**: Efficient calculation for large-scale microsimulation
+
+#### Value of Time Assignment System
+Income-stratified time value framework for mode choice modeling:
+
+- **[Value of Time Analysis](VALUE_OF_TIME_ANALYSIS.md)** - Complete specification of heterogeneous time value assignment system
+- **Income Stratification**: Four income categories with distinct lognormal value of time distributions
+- **Tour Type Logic**: Conditional value of time selection for individual vs. joint tours
+- **Mode Choice Integration**: Seamless integration with tour and trip mode choice utility calculations
 
 ## Model Components by Category
 

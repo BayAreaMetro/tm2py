@@ -4,6 +4,12 @@
 
 The Tour Mode Choice Model is one of the most critical components in CT-RAMP, determining the primary transportation mode for each tour. This model directly influences network loading, environmental impacts, and policy sensitivity of the travel demand system.
 
+## Related Documentation
+
+- **[UEC Framework](uec-framework.md)** - Mathematical framework underlying mode choice calculations
+- **[Trip Mode Choice](trip_mode_choice_documentation.md)** - Trip-level mode choice decisions within tours
+- **[Value of Time Analysis](VALUE_OF_TIME_ANALYSIS.md)** - Income-stratified time value assignments used in mode choice utilities
+
 ## Model Purpose
 
 **Primary Function**: Select the transportation mode for each generated tour based on level-of-service, demographic characteristics, built environment, and policy variables.
@@ -112,6 +118,9 @@ Transit_Fare = base_fare + distance_fare + transfer_penalties
 TNC_Cost = base_fare + time_rate * total_time + 
            distance_rate * distance + surge_pricing
 ```
+
+!!! note "Value of Time Calculations"
+    Cost components in tour mode choice are evaluated using income-stratified value of time calculations. The system differentiates between individual and joint tours when applying time values. See [Value of Time Analysis](VALUE_OF_TIME_ANALYSIS.md) for detailed specifications of the heterogeneous time value assignment system.
 
 **Reliability and Comfort**:
 
