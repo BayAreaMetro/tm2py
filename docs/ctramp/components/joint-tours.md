@@ -1,5 +1,12 @@
 # Joint Tours Model
 
+!!! success "Output Data Available"
+    **For analyzing joint tour results from model runs:**
+    
+    **➡️ [Joint Tours Output File Specification](../../ctramp-outputs/joint-tours.md)**
+    
+    Complete field-level documentation with 51 verified fields, plus joint trip analysis with 18 fields in the [Joint Trips file](../../ctramp-outputs/joint-trips.md).
+
 !!! warning "Documentation Update Required"
     This component documentation needs to be updated based on the SANDAG ABM Model Design document to ensure accuracy. The current content may contain inaccuracies compared to the original CT-RAMP specifications.
 

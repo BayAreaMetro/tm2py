@@ -78,6 +78,9 @@ nav:
     - Technical Framework:
       - UEC Framework: ctramp/uec-framework.md
       - Value of Time Analysis: ctramp/VALUE_OF_TIME_ANALYSIS.md
+    - Output Files:
+      - "→ CTRAMP Output Specifications": ctramp-outputs/index.md
+      - "→ Data Dictionaries": ctramp-outputs/data-dictionaries.md
     - Model Documentation:
       - Tour Mode Choice: ctramp/tour_mode_choice_documentation.md
       - Trip Mode Choice: ctramp/trip_mode_choice_documentation.md

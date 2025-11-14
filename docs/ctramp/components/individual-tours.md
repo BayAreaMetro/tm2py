@@ -1,5 +1,12 @@
 # Individual Tours Model
 
+!!! success "Output Data Available"
+    **For analyzing individual tour results from model runs:**
+    
+    **➡️ [Individual Tours Output File Specification](../../ctramp-outputs/individual-tours.md)**
+    
+    Complete field-level documentation with 57 verified fields, data dictionaries, and analysis examples.
+
 !!! warning "Documentation Update Required"
     This component documentation needs to be updated based on the SANDAG ABM Model Design document to ensure accuracy. The current content may contain inaccuracies compared to the original CT-RAMP specifications.
 

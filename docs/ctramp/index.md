@@ -99,6 +99,63 @@ These models add detail about intermediate stops and trip characteristics:
 | [**Trip Mode Choice**](components/trip-mode-choice.md) | Trip-level mode decisions | Individual trip modes |
 | [**At-Work Subtours**](components/at-work-subtours.md) | Tours during work hours | Subtour characteristics |
 
+## 📊 Output Files & Data Analysis
+
+!!! success "Comprehensive Output Documentation"
+    **Complete field-level specifications and data dictionaries:**
+    
+    **➡️ [CTRAMP Output File Specifications](../ctramp-outputs/index.md)**
+
+### 🔄 Model-to-Data Flow
+
+Understanding how CT-RAMP **model components** produce **output data files**:
+
+=== "🏠 Demographics & Choices"
+    
+    | Model Component | Output File | Documentation |
+    |-----------------|-------------|---------------|
+    | Population Synthesis | `householdData_[iter].csv` | [📄 Household Data](../ctramp-outputs/household.md) |
+    | Person Classification | `personData_[iter].csv` | [📄 Person Data](../ctramp-outputs/person.md) |
+    | Workplace/School Location | `wsLocResults_[iter].csv` | [📄 Location Results](../ctramp-outputs/workplace-school-location.md) |
+
+=== "🚗 Tour Generation"
+    
+    | Model Component | Output File | Documentation |
+    |-----------------|-------------|---------------|
+    | [Mandatory Tours](components/mandatory-tours.md) | `indivTourData_[iter].csv` | [📄 Individual Tours](../ctramp-outputs/individual-tours.md) |
+    | [Individual Tours](components/individual-tours.md) | ↪️ Same file | Work, School, University, Discretionary tours |
+    | [Joint Tours](components/joint-tours.md) | `jointTourData_[iter].csv` | [📄 Joint Tours](../ctramp-outputs/joint-tours.md) |
+
+=== "✈️ Trip Generation"
+    
+    | Model Component | Output File | Documentation |
+    |-----------------|-------------|---------------|
+    | [Stop Frequency](components/stop-frequency.md) | `indivTripData_[iter].csv` | [📄 Individual Trips](../ctramp-outputs/individual-trips.md) |
+    | [Trip Mode Choice](components/trip-mode-choice.md) | ↪️ Same file | Trip-level mode decisions |
+    | Joint Trip Processing | `jointTripData_[iter].csv` | [📄 Joint Trips](../ctramp-outputs/joint-trips.md) |
+
+### 📈 Data Analysis Integration
+
+!!! tip "From Models to Analysis"
+    
+    === "🔍 Understanding Behavior"
+        **Model Components** → Learn how decisions are made
+        
+    === "📊 Analyzing Results"  
+        **Output Files** → Examine what decisions were made
+        
+    === "✅ Validation & QC"
+        **Data Dictionaries** → Verify data integrity and meaning
+
+### 🎯 Quick Navigation
+
+| I want to... | Go to... |
+|--------------|----------|
+| **Understand** how tours are generated | [Model Components](#model-components-by-category) |
+| **Analyze** tour data from model runs | [Output File Specifications](../ctramp-outputs/index.md) |
+| **Validate** field definitions and codes | [Data Dictionaries](../ctramp-outputs/data-dictionaries.md) |
+| **Map** survey data to CTRAMP format | [Individual Tours](../ctramp-outputs/individual-tours.md) or [Joint Tours](../ctramp-outputs/joint-tours.md) |
+
 ### Execution and Coordination
 The [**Execution System**](execution/index.md) manages:
 
@@ -123,6 +180,9 @@ Comprehensive input data enables realistic microsimulation:
 - **[Input Data](../input/index.md)**: Population, land use, networks, accessibility
 - **[Output Data](../output/ctramp.md)**: Individual travel patterns, household coordination
 - **[Validation Data](data/validation.md)**: Observed behavior for calibration
+
+!!! tip "Comprehensive Output Documentation"
+    For detailed field-level specifications of all CTRAMP output files including data dictionaries, validation rules, and survey integration guidance, see the **[CTRAMP Output File Specifications](../ctramp-outputs/index.md)**. Essential for data analysis and survey data mapping.
 
 ## Integration with Travel Model Two
 
