@@ -144,6 +144,10 @@ plugins:
             show_docstring_functions: true
             show_docstring_classes: true
             show_docstring_modules: true
+            
+            # Additional options moved to extra
+            extra:
+              show_attributes: true
   - search
 
 extra_css:
