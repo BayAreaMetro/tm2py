@@ -43,6 +43,7 @@ nav:
       - Transponder Ownership: ctramp/components/transponder.md
       - Parking Provision: ctramp/components/parking-provision.md
       - Daily Activity Pattern: ctramp/components/cdap.md
+      - Explicit Telecommute: ctramp/components/telecommute.md
       - Mandatory Tours: ctramp/components/mandatory-tours.md
       - Joint Tours: ctramp/components/joint-tours.md
       - Individual Tours: ctramp/components/individual-tours.md
