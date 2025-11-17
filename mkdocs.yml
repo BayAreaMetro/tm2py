@@ -63,6 +63,7 @@ nav:
       - Auto Ownership: ctramp/components/auto-ownership.md
       - Transponder Ownership: ctramp/components/transponder.md
       - Parking Provision: ctramp/components/parking-provision.md
+      - Transit Subsidy and Pass: ctramp/components/transit-subsidy-pass.md
       - Daily Activity Pattern: ctramp/components/cdap.md
       - Explicit Telecommute: ctramp/components/telecommute.md
       - Mandatory Tours: ctramp/components/mandatory-tours.md
