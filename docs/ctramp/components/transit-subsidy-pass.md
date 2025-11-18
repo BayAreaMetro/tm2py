@@ -1,19 +1,17 @@
 # Transit Subsidy and Transit Pass Model
 
-!! Model Purpose
+!!! info "Model Purpose"
     The Transit Subsidy and Tranist Pass Model determines whether a person receives a transit subsidy and/or transit pass
 
 
 ## Model Overview
 
-**Number of Models:** 2 (Transit Subsidy, Transit Pass)
+**Number of Models:** 2 (Transit Subsidy, Transit Pass)  
 **Decision-Making Unit:** Person  
 **Model Form:** Binomial Logit  
 **Alternatives:** 2 (Yes or No)
 
-### Purpose and Role
-The transit subsidy and pass model predicts whether a person receives a transit subsidy and/or transit pass. 
-
+### Purpose and Role  
 The model will first run the transit subsidy choice model to see if the person receives a transit subsidy and the percentage of transit subsidy. The transit subsidy model is based on the following variables:
 
 - Person Type 
