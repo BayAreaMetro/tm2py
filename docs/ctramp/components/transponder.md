@@ -21,5 +21,3 @@ The Transponder Ownership Model predicts whether a household owns a transponder 
 - Percent increase in time to downtown avoiding transponder segments entirely
 - Average transit accessibility to non-mandatory MAZs in TAZ
 
-
-*Last updated: November 10, 2025*

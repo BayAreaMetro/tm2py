@@ -23,6 +23,3 @@ The model predict the parking provisions based on a multinomial logit discrete c
 
 **Important Note**: Free onsite parking is not the same as full reimbursement. Those with free onsite parking will always park at their destination location. Those with reimbursement will determine their parking location based on the parking location choice model.
 
-
-
-*Last updated: November 12, 2025*

@@ -19,7 +19,3 @@ The model predicts whether a person telecommutes based on the following variable
 - Share of Employment
 - Household Income
 - Type of Worker (Part Time vs Full Time)
-
-
-
-*Last updated: November 13, 2025*
