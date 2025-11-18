@@ -139,6 +139,7 @@ nav:
 plugins:
   # Basic plugins that should work without GDAL dependencies:
   - autorefs
+  - git-revision-date-localized
   # - awesome-pages
   - mermaid2
   # Re-enabled mkdocstrings with proper mocking for GDAL dependencies
