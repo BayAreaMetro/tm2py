@@ -305,7 +305,9 @@ class PrepareHighwayDemand(EmmeDemand):
         # --------------------------------------------------------------------------
         # 2) Convert Person Trips into Vehicle trips
 
-        # half if 2 person vehicle, 1/3 if 3 person 0.35???
+        # Following ct-ramp logic for converting person trips to vehicle trips
+        # use 0.5 for HOV2, https://github.com/BayAreaMetro/travel-model-two/blob/b0048b3cd3a942f9188fb35eea80755871210ce9/core/src/java/com/pb/mtctm2/abm/application/MTCTM2TripTables.java#L389-L399
+        # use 1/3.33 for HOV3+, https://github.com/BayAreaMetro/travel-model-two/blob/e941242fc43fce60beea24be6263f1cd1aae231b/runtime/mtcpcrm.properties#L159-L168
         it_full["eq_cnt"] = 1 / it_full.sampleRate
         it_full["eq_cnt"] = np.where(
             it_full["trip_mode"].isin(
@@ -368,7 +370,8 @@ class PrepareHighwayDemand(EmmeDemand):
             return combined_sum.reindex(OD_full_index, fill_value=0).unstack().values
 
         
-        # expand zero passenger trips by a factor
+        # In AV scenarios, we can account for deadheading / zero passenger trips
+        # TODO: confirm which modes to apply ZPV, is the list of modes correct?
         def create_zero_passenger_trips(
             trips, deadheading_factor, trip_modes=[
                 ModeChoice.DRIVEALONEFREE.value, 
@@ -377,9 +380,13 @@ class PrepareHighwayDemand(EmmeDemand):
             ]
         ):
             """
-            For taxis ect, if there is nobody in the car, it will still be driving around.
-            we can model this by multiplying existing trips by a constant increasing the
-            number of trips to account for total vehicles.
+            Create zero passenger trips for specified trip modes with deadheading factor.
+            Args:
+                trips (pd.DataFrame): DataFrame containing trip data.
+                deadheading_factor (float): Factor to multiply zero passenger trips.
+                trip_modes (list): List of trip modes to consider for zero passenger trips.
+            Returns:
+                pd.DataFrame: DataFrame with zero passenger trips.
             """
             zpv_trips = trips.loc[
                 (trips["avAvailable"] == 1) & (trips["trip_mode"].isin(trip_modes))
@@ -392,6 +399,7 @@ class PrepareHighwayDemand(EmmeDemand):
 
         # create zero passenger trips for auto modes
         if it_full["avAvailable"].sum() > 0:
+            # TODO: confirm which modes to apply ZPV, is the list of modes correct?
             it_zpav_trp = create_zero_passenger_trips(
                 it_full, zp_cav, trip_modes=[
                 ModeChoice.DRIVEALONEFREE.value, 
@@ -399,6 +407,7 @@ class PrepareHighwayDemand(EmmeDemand):
                 ModeChoice.SHARED2GP.value
             ]
             )
+            # TODO: why is walk mode used for TNC zero passenger trips? Is this a bug?
             it_zptnc_trp = create_zero_passenger_trips(it_full, zp_tnc, trip_modes=[
                 ModeChoice.WALK.value
                 ]
@@ -409,6 +418,7 @@ class PrepareHighwayDemand(EmmeDemand):
             ).reset_index(drop=True)
 
         if jt_full["avAvailable"].sum() > 0:
+            # TODO: confirm which modes to apply ZPV, is the list of modes correct?
             jt_zpav_trp = create_zero_passenger_trips(
                 jt_full, zp_cav, trip_modes=[
                 ModeChoice.DRIVEALONEFREE.value, 
@@ -416,6 +426,7 @@ class PrepareHighwayDemand(EmmeDemand):
                 ModeChoice.SHARED2GP.value
             ]
             )
+            # TODO: why is walk mode used for TNC zero passenger trips? Is this a bug?
             jt_zptnc_trp = create_zero_passenger_trips(jt_full, zp_tnc, trip_modes=[ModeChoice.WALK.value])
             # Combining zero passenger trips to trip files
             jt_full = pd.concat(
@@ -534,11 +545,6 @@ class PrepareHighwayDemand(EmmeDemand):
             
             # 4) Export Remaining TAZ Trips into demand matrices
             for trip_mode in mode_name_dict:
-                #                if trip_mode in [9,10]: < 9/10 is bike and walk, they dont need tp be assigned?
-                #                    matrix_name =  mode_name_dict[trip_mode]
-                #                    self.logger.debug(f"Writing out mode {mode_name_dict[trip_mode]}")
-                #                    active_out_file.write_array(numpy_array=combine_trip_lists(it,jt, trip_mode), name = matrix_name)
-
                 # Deal With Non-Drive Modes for transit_out_file
                 if trip_mode == ModeChoice.WALK_SET.value:
                     matrix_name = "WLK_TRN_WLK"

@@ -115,17 +115,13 @@ class AssignMAZSPDemand(Component):
     @LogStartEnd()
     def run(self):
         """Run MAZ-to-MAZ shortest path assignment."""
-        # model config replace / scenario config
-
-        # TEMPORARY - WAITING ON YUE to confirm source of truth 
+        
         emme_node_id_to_maz_seq_id = pd.read_csv(
             self.controller.config.highway.model_to_emme_node_id_xwalk
         ).merge(
             self.controller.node_seq_id_xwalk, how="inner", on="model_node_id", validate="1:1"
         ).set_index("emme_node_id")["MAZSEQ"].to_dict()
-        # END Temporary
         
-
         county_groups = {}
         for group in self.config.demand_county_groups:
             county_groups[group.number] = group.counties
