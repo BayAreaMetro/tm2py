@@ -519,15 +519,42 @@ class PrepareHighwayDemand(EmmeDemand):
             
             # IT = individual trips
             # JT = joint trips
+            # TODO: distance saved in ct ramp appears to be inaccurate, this should be investigated to ensure ct-ramp 
+            # is assigning distance correctly. If that is fixed, the below code can be uncommented
+
+            omx_path = self.controller.config.highway.output_skim_path / str(
+                self.controller.config.highway.output_skim_filename_tmpl
+            ).format(
+                time_period=time_period,
+            )
+
+            with OMXManager(omx_path, "r") as omx_file:
+                taz_da_matrix_np = omx_file.read(f"{time_period}_da_dist")
+
+            taz_distance = pd.DataFrame(taz_da_matrix_np).stack().reset_index()
+            taz_distance["level_0"] += 1 # taz is 1 indeed, numpy is zero indexed
+            taz_distance["level_1"] += 1
+            taz_distance = taz_distance.rename(columns = {
+                    "level_0": "orig_taz", "level_1": "dest_taz", 0: "taz_mat_da_distance"
+                }
+            )
+
+            individual_trip_both_taz_and_maz_df = individual_trip_both_taz_and_maz_df.merge(
+                taz_distance, on=["orig_taz", "dest_taz"], how="left", validate="m:1"
+            )
             it_is_maz_trip = (
-                (individual_trip_both_taz_and_maz_df["trip_dist"] < self.controller.config.highway.maz_drive_distance_threshold) &
+                (individual_trip_both_taz_and_maz_df["taz_mat_da_distance"] < self.controller.config.highway.maz_drive_distance_threshold) &
                 individual_trip_both_taz_and_maz_df["trip_mode"].isin(DRIVE_MODES)
             )
             it_maz_df = individual_trip_both_taz_and_maz_df[it_is_maz_trip]
             it = individual_trip_both_taz_and_maz_df[~it_is_maz_trip]
 
+
+            joint_trip_both_taz_and_maz_df = joint_trip_both_taz_and_maz_df.merge(
+                taz_distance, on=["orig_taz", "dest_taz"], how="left", validate="m:1"
+            )
             jt_is_maz_trip = (
-                (joint_trip_both_taz_and_maz_df["trip_dist"] < self.controller.config.highway.maz_drive_distance_threshold) &
+                (joint_trip_both_taz_and_maz_df["taz_mat_da_distance"] < self.controller.config.highway.maz_drive_distance_threshold) &
                 joint_trip_both_taz_and_maz_df["trip_mode"].isin(DRIVE_MODES)
             )
             jt_maz_df = joint_trip_both_taz_and_maz_df[jt_is_maz_trip]
@@ -626,8 +653,8 @@ class PrepareHighwayDemand(EmmeDemand):
                         ModeChoice.SHARED3PAY.value,
                         ModeChoice.WALK.value,
                         ModeChoice.BIKE.value,
-                        ModeChoice.TAXI.value,
-                        ModeChoice.TNC.value,
+                        ModeChoice.TAXI.value, # Ideally this is deleted, need to see why it is used in assignment
+                        ModeChoice.TNC.value, # delete this to
                         ModeChoice.SCHLBUS.value,
                     ]:
                         highway_cache[mode_name_dict[trip_mode]] = combine_trip_lists(
