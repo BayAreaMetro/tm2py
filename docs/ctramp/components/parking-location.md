@@ -18,3 +18,8 @@ The model predict the parking location based on a multinomial logit discrete cho
 - Number of stalls available to the driver
 - Parking Cost
 - Walk distance to destination
+
+**Important Notes**
+The ParkLocationAlt.csv file in the UEC folder is used to determine the destination MAZ park area. If MAZ inputs are updated, this file will also need to be updated to reflect the MAZ input files. 
+
+Parking inputs include both [hourly, daily, monthly] stalls in same MAZ and in different MAZs. While these variables are both used in the UEC and choice model, it serves more as way to note if the MAZ considered as an alternative is the same MAZ as the destination MAZ. The values for number of stalls in same MAZ and in different MAZ are the same in the MAZ input files. 
