@@ -44,15 +44,47 @@ class PostProcessor(Component):
             for tp in self.controller.config.time_periods
         }
 
+    def _find_highest_iteration(self, base_filename: str, directory: str = 'ctramp_output', max_iter: int = 4) -> str:
+        """Find the highest available iteration of a file.
+        
+        Args:
+            base_filename: Base name of the file (e.g., 'indivTripData')
+            directory: Directory to search in (default: 'ctramp_output')
+            max_iter: Maximum iteration number to check (default: 4)
+            
+        Returns:
+            str: Path to the file with the highest available iteration
+            
+        Raises:
+            FileNotFoundError: If no iteration of the file is found
+        """
+        for iteration in range(max_iter, 0, -1):
+            file_path = f'{directory}/{base_filename}_{iteration}.csv'
+            full_path = self.get_abs_path(file_path)
+            if os.path.exists(full_path):
+                self.logger.log(f"Found {base_filename} at iteration {iteration}")
+                return file_path
+        
+        # If no file found, raise an error with helpful message
+        raise FileNotFoundError(
+            f"No {base_filename} file found in {directory}. "
+            f"Checked iterations 1-{max_iter}. "
+            f"Files expected: {base_filename}_1.csv through {base_filename}_{max_iter}.csv"
+        )
+
     @LogStartEnd("Exporting model networks")
     def run(self):
         """Export model networks."""
 
         print("Reading trip and tour data")
-        indiv_trip_file = 'ctramp_output/indivTripData_3.csv'
-        joint_trip_file = 'ctramp_output/jointTripData_3.csv'
-        indiv_tour_file = 'ctramp_output/indivTourData_3.csv'
-        joint_tour_file = 'ctramp_output/jointTourData_3.csv'
+        # Find the highest available iteration for each file
+        indiv_trip_file = self._find_highest_iteration('indivTripData')
+        joint_trip_file = self._find_highest_iteration('jointTripData')
+        indiv_tour_file = self._find_highest_iteration('indivTourData')
+        joint_tour_file = self._find_highest_iteration('jointTourData')
+        
+        # Extract iteration number from the file name (e.g., 'indivTripData_3.csv' -> '3')
+        iteration_num = indiv_trip_file.split('_')[-1].split('.')[0]
 
         self.logger.log(f"Reading indiv and joint trip files from {indiv_trip_file} and {joint_trip_file}")
 
@@ -98,23 +130,29 @@ class PostProcessor(Component):
                 joint_tour = self._attach_transit_skims_to_tour(transit_scenario, period, joint_tour)
 
 
-                # self._export_transit_network_as_shapefile(transit_scenario, period)
-                # self._export_highway_network_as_shapefile(highway_scenario, period)
-                # if period.upper() == "AM":
-                #     self._export_boardings_by_segment(transit_scenario, period)
-                #     self._export_boardings_by_segment_geofile(transit_scenario, period)
+                if self.config.export_transit_network_shapefile:
+                    self._export_transit_network_as_shapefile(transit_scenario, period)
+                
+                if self.config.export_highway_network_shapefile:
+                    self._export_highway_network_as_shapefile(highway_scenario, period)
+                
+                if period.upper() == "AM":
+                    if self.config.export_boardings_by_segment:
+                        self._export_boardings_by_segment(transit_scenario, period)
+                    if self.config.export_boardings_by_segment_geofile:
+                        self._export_boardings_by_segment_geofile(transit_scenario, period)
 
-        #indiv_trip.to_csv(self.get_abs_path("updated_output/indivTripData_3.csv"))
+        #indiv_trip.to_csv(self.get_abs_path(f"updated_output/indivTripData_{iteration_num}.csv"))
         indiv_trip = self._sum_time_dist_cost(indiv_trip, 'trip')
         joint_trip = self._sum_time_dist_cost(joint_trip, 'trip')
         indiv_tour = self._sum_time_dist_cost(indiv_tour, 'tour')
         joint_tour = self._sum_time_dist_cost(joint_tour, 'tour')
 
-        indiv_trip.to_parquet(self.get_abs_path("updated_output/indivTripData_3.parquet"))
-        joint_trip.to_parquet(self.get_abs_path("updated_output/jointTripData_3.parquet"))
+        indiv_trip.to_parquet(self.get_abs_path(f"updated_output/indivTripData_{iteration_num}.parquet"))
+        joint_trip.to_parquet(self.get_abs_path(f"updated_output/jointTripData_{iteration_num}.parquet"))
 
-        indiv_tour.to_parquet(self.get_abs_path("updated_output/indivTourData_3.parquet"))
-        joint_tour.to_parquet(self.get_abs_path("updated_output/jointTourData_3.parquet"))
+        indiv_tour.to_parquet(self.get_abs_path(f"updated_output/indivTourData_{iteration_num}.parquet"))
+        joint_tour.to_parquet(self.get_abs_path(f"updated_output/jointTourData_{iteration_num}.parquet"))
 
     def validate_inputs(self):
         """Validate the inputs."""

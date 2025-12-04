@@ -1432,6 +1432,22 @@ class PostProcessorConfig(ConfigItem):
     network_shapefile_path: str = Field(default=None)
     boardings_by_segment_file_path: str = Field(default=None)
     boardings_by_segment_geofile_path: str = Field(default=None)
+    export_transit_network_shapefile: bool = Field(
+        default=False,
+        description="Export transit network as shapefile for each time period"
+    )
+    export_highway_network_shapefile: bool = Field(
+        default=False,
+        description="Export highway network as shapefile for each time period"
+    )
+    export_boardings_by_segment: bool = Field(
+        default=False,
+        description="Export transit boardings by segment (CSV) for AM period"
+    )
+    export_boardings_by_segment_geofile: bool = Field(
+        default=False,
+        description="Export transit boardings by segment (GeoJSON) for AM period"
+    )
 
 
 @dataclass(frozen=True)
