@@ -75,6 +75,7 @@ nav:
       - Stop Frequency: ctramp/components/stop-frequency.md
       - Stop Location: ctramp/components/stop-location.md
       - Trip Mode Choice: ctramp/components/trip-mode-choice.md
+      - Parking Location: ctramp/components/parking-location.md
       - At-Work Subtours: ctramp/components/at-work-subtours.md
     - Technical Framework:
       - UEC Framework: ctramp/uec-framework.md
