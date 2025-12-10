@@ -226,14 +226,14 @@ class PostProcessor(Component):
         tours = self._prepare_tours_data(households, landuse)
         trips = self._prepare_trips_data(persons, households)
         commute_tours = tours[tours['tour_purpose'] == 'Work']
-        work_locations = self._prepare_work_locations_data(tours, landuse)
+        work_school_locations = self._prepare_work_school_locations_data(tours, landuse)
 
         self.logger.info("Saving prepared output data to updated_output folder")
         households.to_parquet('updated_output/households.parquet')
         persons.to_parquet('updated_output/persons.parquet')
         trips.to_parquet('updated_output/trips.parquet')
         tours.to_parquet('updated_output/tours.parquet')
-        work_locations.to_parquet('updated_output/work_locations.parquet')
+        work_school_locations.to_parquet('updated_output/work_school_locations.parquet')
         commute_tours.to_parquet('updated_output/commute_tours.parquet')
 
     def _export_transit_network_as_shapefile(self, scenario: EmmeScenario, time_period: str):
@@ -1199,7 +1199,7 @@ class PostProcessor(Component):
 
         return joint_persons_trips 
 
-    def _prepare_work_locations_data(self, tours: pd.DataFrame, landuse: pd.DataFrame) -> pd.DataFrame:
+    def _prepare_work_school_locations_data(self, tours: pd.DataFrame, landuse: pd.DataFrame) -> pd.DataFrame:
         """Read and prepare the work location
 
         Args:
@@ -1207,54 +1207,55 @@ class PostProcessor(Component):
             tours: Prepared tours dataframe
         """
         wsLoc_file = f'ctramp_output/wsLocResults_{self._iteration_num}.csv'
-        wsLoc = pd.read_csv(self.get_abs_path(wsLoc_file))
-        self.logger.info(f"Reading work-school location data from {wsLoc_file}")
+        ws_location = pd.read_csv(self.get_abs_path(wsLoc_file))
+        self.logger.info(f"Reading work-school location data from {wsLoc_file}; hoave {len(ws_location):,} rows")
 
-        # Filter out non-work travel
-        work_location = wsLoc[wsLoc['WorkLocation'] != 0]
-        self.logger.info(f"Filtered work-school location data to work locations only; have {len(work_location):,} rows")
-
-       
-        
-
-        work_location.rename(columns={'HHID': 'hh_id', 'HomeMGRA': 'HOME_MAZ_SEQ'}, inplace=True)
+        ws_location.rename(columns={'HHID': 'hh_id', 'HomeMGRA': 'HOME_MAZ_SEQ'}, inplace=True)
         # Add home county
-        self.logger.info("Adding home county to work location data")
-        work_location = work_location.merge(landuse.rename(columns = {'MAZ_SEQ':'HOME_MAZ_SEQ', 'MAZ_NODE': 'HOME_MAZ_NODE',
+        self.logger.info("Adding home county to work school location data")
+        ws_location = ws_location.merge(landuse.rename(columns = {'MAZ_SEQ':'HOME_MAZ_SEQ', 'MAZ_NODE': 'HOME_MAZ_NODE',
                                                                     'TAZ_NODE': 'HOME_TAZ_NODE','DistID':'HOME_DistID','CountyID': 'HOME_CountyID'})
                                                                     [['HOME_MAZ_SEQ', 'HOME_MAZ_NODE', 'HOME_TAZ_NODE','HOME_DistID', 'HOME_CountyID']], 
                                                                     on = 'HOME_MAZ_SEQ', how = 'left', validate = 'm:1')
-        self.logger.debug(work_location.head())
+        self.logger.debug(ws_location.head())
 
         # Add work county
         ## WFH tours do not have a work county 
-        self.logger.info("Adding work county to work location data")
-        work_location = work_location.merge(landuse.rename(columns = {'MAZ_SEQ':'WORK_MAZ_SEQ', 'MAZ_NODE': 'WORK_MAZ_NODE',
+        self.logger.info("Adding work county to work school location data")
+        ws_location = ws_location.merge(landuse.rename(columns = {'MAZ_SEQ':'WORK_MAZ_SEQ', 'MAZ_NODE': 'WORK_MAZ_NODE',
                                                                     'TAZ_NODE': 'WORK_TAZ_NODE','DistID':'WORK_DistID','CountyID': 'WORK_CountyID'})
                                                                     [['WORK_MAZ_SEQ', 'WORK_MAZ_NODE', 'WORK_TAZ_NODE', 'WORK_DistID', 'WORK_CountyID']],
                                                                       left_on = 'WorkLocation', right_on = 'WORK_MAZ_SEQ',  how = 'left', validate = 'm:1')
-        self.logger.debug(work_location.head())
+        self.logger.debug(ws_location.head())
+        
+        # Add school county
+        self.logger.info("Adding school county to work school location data")
+        ws_location = ws_location.merge(landuse.rename(columns = {'MAZ_SEQ':'SCH_MAZ_SEQ', 'MAZ_NODE': 'SCH_MAZ_NODE',
+                                                                    'TAZ_NODE': 'SCH_TAZ_NODE','DistID':'SCH_DistID','CountyID': 'SCH_CountyID'})
+                                                                    [['SCH_MAZ_SEQ', 'SCH_MAZ_NODE', 'SCH_TAZ_NODE', 'SCH_DistID', 'SCH_CountyID']],
+                                                                      left_on = 'SchoolLocation', right_on = 'SCH_MAZ_SEQ',  how = 'left', validate = 'm:1')
+        self.logger.debug(ws_location.head())
         
         # Adding WFH variable - these will not have a work county or taz
-        self.logger.info("Adding WFH variable to work location data")
-        work_location['WFH'] = np.where(work_location['WorkSegment'] == 99999, 1, 0)
+        self.logger.info("Adding WFH variable to work school location data")
+        ws_location['WFH'] = np.where(ws_location['WorkSegment'] == 99999, 1, 0)
 
-        # Filtering tours to only tours with commutes
-        # TODO: Determine which id to merge on
-        self.logger.info("Filtering tours to only tours with commutes")
-        commute_tours = tours[tours['tour_purpose']== 'Work']
+        # Filtering tours to only mandatory tours 
+        self.logger.info("Filtering tours to mandatory tours (work and school)")
+        commute_tours = tours[tours['tour_purpose'].isin(['Work', 'School'])]
         commute_tours = commute_tours[['hh_id', 'tour_participants', 'person_id','tour_purpose','tour_mode']]
         commute_tours['person_num'] = commute_tours['tour_participants'].astype(int)
         self.logger.debug(f"Commute tours: \n{commute_tours.head()}")
 
         #Merging tour mode from commute tour 
-        self.logger.info("Adding tour mode to work location data")
-        work_location = work_location.merge(right = commute_tours[['person_num', 'person_id', 'tour_mode']], how = 'left',
+        self.logger.info("Adding tour mode to work school location data")
+        ws_location = ws_location.merge(right = commute_tours[['person_num', 'person_id', 'tour_mode']], how = 'left',
                                             left_on = 'PersonID', right_on = 'person_id', validate= 'one_to_many')
-        self.logger.debug(work_location.head())
+        self.logger.debug(ws_location.head())
         
+        self.logger.warn(f"There are {ws_location[ws_location['WorkLocation'] != 0 | ws_location['SchoolLocation'] != 0]['tour_mode'].isnull().sum()} persons with a work or school location but no associated tour mode")
         # Fill in missing values for all merges 
-        work_location.fillna(0, inplace = True)
+        ws_location.fillna(0, inplace = True)
 
-        return work_location
+        return ws_location
         
