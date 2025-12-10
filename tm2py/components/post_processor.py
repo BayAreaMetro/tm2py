@@ -1253,7 +1253,7 @@ class PostProcessor(Component):
                                             left_on = 'PersonID', right_on = 'person_id', validate= 'one_to_many')
         self.logger.debug(ws_location.head())
         
-        self.logger.warn(f"There are {ws_location[ws_location['WorkLocation'] != 0 | ws_location['SchoolLocation'] != 0]['tour_mode'].isnull().sum()} persons with a work or school location but no associated tour mode")
+        self.logger.warn(f"There are {ws_location[(ws_location['WorkLocation'] != 0 )| (ws_location['SchoolLocation'] != 0)]['tour_mode'].isnull().sum()} persons with a work or school location but no associated tour mode")
         # Fill in missing values for all merges 
         ws_location.fillna(0, inplace = True)
 
