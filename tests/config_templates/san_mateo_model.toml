@@ -1,0 +1,196 @@
+# San Mateo County Highway Test - Model Configuration
+# This contains the highway assignment parameters and class definitions
+
+[highway]
+# Highway assignment convergence parameters
+relative_gap = 0.0001
+max_iterations = 100
+normalize_gap = 2
+
+# Best relative gap - assignment stops if this is reached
+best_relative_gap = 0.00001
+
+# Skim parameters
+skim_period = "MD"  # Which period to use as base for skimming
+
+# Value of reliability (cents per minute)
+value_of_reliability = 1.5
+
+# Operating cost (dollars per mile)
+operating_cost_per_mile = 0.20
+
+# Toll modes
+[[highway.toll_mode]]
+name = "toll"
+excluded_links = []
+
+# Highway vehicle classes
+# Note: These are simplified for testing. Adjust based on your demand data.
+
+[[highway.classes]]
+name = "DA"
+description = "Drive alone - free"
+mode = "d"
+value_of_time = 18.93
+operating_cost_per_mile = 0.20
+toll_mode = ""
+pce = 1.0
+excluded_links = ["is_toll_da"]
+
+[[highway.classes]]
+name = "DATOLL"
+description = "Drive alone - toll"
+mode = "e"
+value_of_time = 18.93
+operating_cost_per_mile = 0.20
+toll_mode = "toll"
+pce = 1.0
+excluded_links = []
+
+[[highway.classes]]
+name = "SR2"
+description = "Shared ride 2 - free"
+mode = "f"
+value_of_time = 18.93
+operating_cost_per_mile = 0.20
+occupancy = 2.0
+toll_mode = ""
+pce = 1.0
+excluded_links = ["is_toll_sr2"]
+
+[[highway.classes]]
+name = "SR2TOLL"
+description = "Shared ride 2 - toll"
+mode = "g"
+value_of_time = 18.93
+operating_cost_per_mile = 0.20
+occupancy = 2.0
+toll_mode = "toll"
+pce = 1.0
+excluded_links = []
+
+[[highway.classes]]
+name = "SR3"
+description = "Shared ride 3+ - free"
+mode = "h"
+value_of_time = 18.93
+operating_cost_per_mile = 0.20
+occupancy = 3.5
+toll_mode = ""
+pce = 1.0
+excluded_links = ["is_toll_sr3"]
+
+[[highway.classes]]
+name = "SR3TOLL"
+description = "Shared ride 3+ - toll"
+mode = "i"
+value_of_time = 18.93
+operating_cost_per_mile = 0.20
+occupancy = 3.5
+toll_mode = "toll"
+pce = 1.0
+excluded_links = []
+
+[[highway.classes]]
+name = "VSTRUCK"
+description = "Very small trucks"
+mode = "j"
+value_of_time = 36.00
+operating_cost_per_mile = 0.50
+pce = 1.5
+excluded_links = []
+
+[[highway.classes]]
+name = "STRUCK"
+description = "Small trucks"
+mode = "k"
+value_of_time = 36.00
+operating_cost_per_mile = 0.80
+pce = 1.5
+excluded_links = []
+
+[[highway.classes]]
+name = "MTRUCK"
+description = "Medium trucks"
+mode = "l"
+value_of_time = 40.00
+operating_cost_per_mile = 1.00
+pce = 2.0
+excluded_links = []
+
+[[highway.classes]]
+name = "CTRUCK"
+description = "Combination trucks"
+mode = "m"
+value_of_time = 50.00
+operating_cost_per_mile = 1.30
+pce = 2.5
+excluded_links = []
+
+# Link type definitions for different facility types
+[[highway.link_types]]
+name = "freeway"
+lanes = 4
+free_flow_speed = 65.0
+capacity_per_lane = 2000
+
+[[highway.link_types]]
+name = "expressway"
+lanes = 2
+free_flow_speed = 55.0
+capacity_per_lane = 1800
+
+[[highway.link_types]]
+name = "collector"
+lanes = 2
+free_flow_speed = 35.0
+capacity_per_lane = 1000
+
+[[highway.link_types]]
+name = "arterial"
+lanes = 2
+free_flow_speed = 35.0
+capacity_per_lane = 900
+
+[[highway.link_types]]
+name = "local"
+lanes = 1
+free_flow_speed = 25.0
+capacity_per_lane = 600
+
+# Demand aggregation - maps demand classes to assignment classes
+# This would be used if you're aggregating multiple demand types
+[[highway.demand_aggregation]]
+name = "DA"
+class_names = ["DA", "DATOLL"]
+
+[[highway.demand_aggregation]]
+name = "SR2"
+class_names = ["SR2", "SR2TOLL"]
+
+[[highway.demand_aggregation]]
+name = "SR3"
+class_names = ["SR3", "SR3TOLL"]
+
+[highway.maz_to_maz]
+# MAZ-to-MAZ shortest path parameters
+max_skim_cost = 999999.0
+output_skim_path = "skim_matrices/highway"
+
+# Time period mapping for MAZ skims
+time_period = "MD"
+
+[paths]
+# Additional path specifications if needed
+# These are relative to the run directory
+
+[logging]
+# Logging can be customized per component if needed
+# These override the scenario-level logging settings for highway component
+# display_level = "DEBUG"  # Uncomment for more verbose output
+
+[output]
+# Output specifications
+write_network_csv = true
+write_network_shape = false  # Set to true if you want shapefiles
+write_link_flows = true
