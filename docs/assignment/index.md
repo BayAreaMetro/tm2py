@@ -8,7 +8,11 @@ The Travel Model Two (TM2) assignment system converts travel demand into traffic
 
 ```mermaid
 graph TD
-    A[Travel Demand<br/>From CT-RAMP] --> B{Assignment Type}
+    START[Base Network] --> TOD[Create TOD Scenarios]
+    TOD --> READY[Period-Specific Networks<br/>EA, AM, MD, PM, EV]
+    READY --> A[Travel Demand<br/>From CT-RAMP]
+    
+    A --> B{Assignment Type}
     B -->|Auto Trips| C[Highway Assignment]
     B -->|Transit Trips| D[Transit Assignment]
     
@@ -27,6 +31,125 @@ graph TD
     K --> M[Level-of-Service Feedback<br/>to CT-RAMP]
     L --> M
 ```
+
+## Network Preparation
+
+### Create Time-of-Day Scenarios
+
+**Component**: `create_tod_scenarios` (runs first in iteration 0)
+
+The `create_tod_scenarios` component creates time-of-day specific network scenarios in Emme from a single all-day base scenario. This component must run before any assignment can occur, as it establishes the fundamental network infrastructure for all time periods.
+
+#### Time Periods
+
+The model operates with five distinct time periods:
+
+| Period | Name | Description | Typical Hours | Scenario ID |
+|--------|------|-------------|---------------|-------------|
+| EA | Early AM | Early morning off-peak | 3:00 AM - 6:00 AM | 1 |
+| AM | AM Peak | Morning peak period | 6:00 AM - 10:00 AM | 2 |
+| MD | Midday | Midday off-peak | 10:00 AM - 3:00 PM | 3 |
+| PM | PM Peak | Evening peak period | 3:00 PM - 7:00 PM | 4 |
+| EV | Evening | Evening/night off-peak | 7:00 PM - 3:00 AM | 5 |
+
+#### Highway TOD Scenario Creation
+
+**Volume Delay Functions (VDFs)**: The component sets up congestion functions that relate traffic volume to travel time:
+
+**Freeway VDFs** (fd1, fd2):
+```
+BPR Formula: time = free_flow_time × (1 + 0.20 × ((volume/capacity)/0.75)^6)
+Plus reliability factors based on Level of Service thresholds
+```
+
+**Arterial/Road VDFs** (fd3-fd7, fd9-fd14, fd99):
+```
+Akcelik Formula: time = free_flow_time + 60 × (0.25 × (v/c - 1 + sqrt((v/c - 1)^2 + ja × v/c)))
+Plus reliability factors
+```
+
+**Fixed Time** (fd8): No congestion effects
+
+**Link Attributes Created**:
+
+- **@area_type**: Density-based area classification (0-5)
+  - 0: Regional core (density ≥ 300)
+  - 1: CBD (100 ≤ density < 300)
+  - 2: Urban business (55 ≤ density < 100)
+  - 3: Urban (30 ≤ density < 55)
+  - 4: Suburban (6 ≤ density < 30)
+  - 5: Rural (density < 6)
+  - *Density = (1 × population + 2.5 × employment) / acres within 1-mile buffer*
+
+- **@capclass**: Capacity class = 10 × area_type + facility_type
+- **@free_flow_speed**: Speed from capclass lookup table (mph)
+- **@free_flow_time**: 60 × link_length / free_flow_speed (minutes)
+
+**Reliability Parameters**: Congestion-based travel time reliability factors
+
+| Facility Type | LOS Threshold | Volume/Capacity | Reliability Factor |
+|---------------|---------------|-----------------|-------------------|
+| Freeway LOS C | 0.7 | Moderate congestion | 0.2429 |
+| Freeway LOS D | 0.8 | Heavy congestion | 0.1705 |
+| Freeway LOS E | 0.9 | Near capacity | -0.2278 |
+| Freeway LOS F-Low | 1.0 | At capacity | -0.1983 |
+| Freeway LOS F-High | 1.2 | Over capacity | 1.022 |
+| Arterial LOS C | 0.7 | Moderate congestion | 0.1561 |
+| Arterial LOS F-Low | 1.0 | At capacity | -0.449 |
+
+#### Transit TOD Scenario Creation
+
+**Transit Modes**: Configured from model settings with attributes:
+- In-vehicle perception factor (default: 1.0)
+- Initial boarding penalty (default: 10 min)
+- Transfer boarding penalty (default: 10 min)
+- Headway fraction for wait time (default: 0.5)
+- Transfer wait perception factor (default: 1.0)
+
+**Transit Link Times**:
+
+Fixed guideway (calculated from link length and mode speed):
+
+| Mode | Speed | Application |
+|------|-------|-------------|
+| CRAIL | 45 mph | Commuter rail |
+| HRAIL | 40 mph | Heavy rail (BART) |
+| LRAIL | 30 mph | Light rail |
+| FERRY | 15 mph | Ferry service |
+
+Bus on streets: `time = 60 × length/speed + boarding_time`
+
+**Transit Line Attributes**:
+- `@invehicle_factor`: Mode-specific in-vehicle time perception
+- `@iboard_penalty`: Initial boarding time penalty
+- `@xboard_penalty`: Transfer boarding penalty
+- `@orig_hdw`: Original headway from schedule
+
+**Period Filtering**: Transit lines only operate in their designated time periods. Lines with `#time_period` not matching the scenario period are removed.
+
+#### Period-Specific Attribute Copying
+
+The component automatically handles time-of-day specific attributes:
+
+1. **Identifies TOD attributes**: Finds all attributes ending with period names (e.g., `@volume_EA`, `@volume_AM`)
+2. **Creates period scenarios**: Copies base scenario for each time period
+3. **Copies period values**: Transfers period-specific values to non-suffixed attributes
+4. **Removes other periods**: Deletes attributes for other periods to save memory
+
+**Example**: For AM period scenario:
+- `@volume_EA`, `@volume_MD`, `@volume_PM`, `@volume_EV` → deleted
+- `@volume_AM` → copied to `@volume` → `@volume_AM` deleted
+
+#### Coordinate Projection
+
+Networks are projected to **NAD83(HARN) California State Plane Zone 6 (feet)** if not already in this coordinate system. This ensures consistent spatial calculations for area type classification.
+
+#### Runtime
+
+Typical execution time: **20-27 minutes** (based on full regional model)
+- Highway scenarios: ~5-10 minutes
+- Transit scenarios: ~10-15 minutes  
+- Attribute processing: ~2-5 minutes
 
 ## Highway Assignment
 
