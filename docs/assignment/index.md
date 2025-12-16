@@ -34,6 +34,66 @@ graph TD
 
 ## Network Preparation
 
+### Base Network Requirements
+
+Before running TM2PY assignment, you must have a base Emme network scenario with specific required attributes. The assignment system expects two separate networks:
+
+#### Highway Network Requirements
+
+**Required Base Scenario Attributes:**
+
+The all-day base scenario (typically scenario ID 0) must have these link attributes already defined:
+
+| Attribute | Type | Description | Required By | Typical Source |
+|-----------|------|-------------|-------------|----------------|
+| `@ft` | int | Facility type (1-8, 99) | create_tod_scenarios | Network creation |
+| `@free_flow_speed` | float | Free flow speed (mph) | create_tod_scenarios, VDFs | Network creation |
+| `@drive_link` | int | Drive access flag (0/1) | create_tod_scenarios | Network creation |
+| `@walk_link` | int | Walk access flag (0/1) | create_tod_scenarios | Network creation |
+| `@bus_only` | int | Bus-only flag (0/1) | create_tod_scenarios | Network creation |
+| `@rail_link` | int | Rail link flag (0/1) | create_tod_scenarios | Network creation |
+| `length` | float | Link length (miles) | All components | EMME standard |
+| `modes` | set | Available modes | All components | EMME standard |
+| `num_lanes` | float | Number of lanes | create_tod_scenarios | Network creation |
+
+**Attributes Created by create_tod_scenarios:**
+
+The create_tod_scenarios component will create these attributes (they should NOT be in your base network):
+
+- `@area_type` - Area type classification (0-5), calculated from MAZ density
+- `@capclass` - Capacity class, derived from @ft and @area_type
+- `@free_flow_time` - Free flow time, calculated from length and speed
+- `@capacity` - Link capacity, set by facility type and area type
+- `@trantime` - Transit travel time
+- Plus many assignment result attributes (@flow_*, @cost_*, etc.)
+
+**What You Need to Provide:**
+
+Your base network must come from a network creation process (e.g., OpenStreetMap, cube network conversion) that establishes:
+1. **Topology** - Nodes and links with proper connectivity
+2. **Facility classification** - `@ft` values matching TM2 standards (1=freeway, 2=expressway, 3=ramp, 4=arterial, 5=collector, 6=local, 7=connector, 8=managed lane, 99=special)
+3. **Operating characteristics** - `@free_flow_speed`, `num_lanes`  
+4. **Access restrictions** - `@drive_link`, `@walk_link`, `@bus_only`, `@rail_link`
+
+#### Transit Network Requirements
+
+**Required Base Scenario Attributes:**
+
+Transit networks should be created in their own Emme database, separate from highway. Required:
+
+| Component | Required Elements | Notes |
+|-----------|-------------------|-------|
+| **Transit Lines** | Routes with stops | Define all transit services |
+| **Modes** | Transit mode definitions | Bus, rail, ferry, etc. |
+| **Segments** | Stop-to-stop links | Connect transit lines to road network |
+| **Headways** | Service frequency | Time between vehicles |
+
+The transit network references the highway network through shared links. The `prepare_transit_network` component copies auto travel times from highway assignment results to update transit segment times.
+
+**What create_tod_scenarios Does:**
+
+For transit, create_tod_scenarios copies the base transit network to time-period-specific scenarios and sets up attributes like `@schedule_time`, `@trantime_seg`, but does NOT calculate transit times - that happens in `prepare_transit_network` using highway assignment results.
+
 ### Create Time-of-Day Scenarios
 
 **Component**: `create_tod_scenarios` (runs first in iteration 0)

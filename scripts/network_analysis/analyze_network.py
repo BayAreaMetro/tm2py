@@ -56,9 +56,11 @@ class NetworkAnalyzer:
     
     def _open_network(self):
         """Open the Emme network."""
+        # Direct emmebank file
+        if self.network_path.name == 'emmebank' and self.network_path.is_file():
+            self.emmebank = _eb.Emmebank(str(self.network_path))
         # Check for Database directories (Emme's actual database format)
-        db_dirs = list(self.network_path.glob('Database*'))
-        if db_dirs:
+        elif (db_dirs := list(self.network_path.glob('Database*'))):
             # Use the first database directory found
             self.emmebank = _eb.Emmebank(str(db_dirs[0] / 'emmebank'))
         elif self.network_path.suffix == '.emp':
@@ -90,12 +92,12 @@ class NetworkAnalyzer:
                 'title': scenario.title,
                 'has_traffic_results': scenario.has_traffic_results,
                 'has_transit_results': scenario.has_transit_results,
-                'num_nodes': len(list(scenario.get_partial_network(['NODE']).nodes())),
-                'num_links': len(list(scenario.get_partial_network(['LINK']).links())),
+                'num_nodes': len(list(scenario.get_partial_network(['NODE'], include_attributes=False).nodes())),
+                'num_links': len(list(scenario.get_partial_network(['LINK'], include_attributes=False).links())),
             }
             
             # Get transit info if applicable
-            network = scenario.get_partial_network(['TRANSIT_LINE'])
+            network = scenario.get_partial_network(['TRANSIT_LINE'], include_attributes=False)
             if network:
                 info['num_transit_lines'] = len(list(network.transit_lines()))
             
@@ -377,8 +379,8 @@ class NetworkAnalyzer:
         if 'comparison' in analyses:
             lines.extend(self._format_comparison_section(analyses['comparison']))
         
-        # Write to file
-        output_path.write_text('\n'.join(lines))
+        # Write to file with UTF-8 encoding
+        output_path.write_text('\n'.join(lines), encoding='utf-8')
         print(f"Report written to: {output_path}")
     
     def _format_scenarios_section(self, scenarios: Dict[str, Any]) -> List[str]:
