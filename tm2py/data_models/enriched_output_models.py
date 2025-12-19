@@ -2,10 +2,12 @@
 
 """
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationError
 from typing import Optional
 from enum import Enum
 import pandas as pd
+from tm2py.logger import Logger
+import logging
 
 class AutoSufficiency(int, Enum):
     ZERO = 0
@@ -19,11 +21,13 @@ class TimeOfDay(str, Enum):
     PM = "PM"
     EV = "EV"  # Evening
 
+
+
 class PopSimHouseholdModel(BaseModel):
     """Validated population sim input household data"""
     HHID: int
-    TAZ: int
-    MAZ: int
+    TAZ_NODE: int
+    MAZ_NODE: int
     MTCCountyID: int
     HHINCADJ: int
     NWRKRS_ESR: int
@@ -34,7 +38,7 @@ class PopSimHouseholdModel(BaseModel):
     TYPE:  int
 
 class CTRAMPHouseholdModel(BaseModel):
-    """Validatede CTRAMP output household data"""
+    """Validated CTRAMP output household data"""
     hh_id: int
     HOME_MAZ_SEQ: int
     income: int
@@ -49,6 +53,7 @@ class CTRAMPHouseholdModel(BaseModel):
 
 class HouseholdModel(PopSimHouseholdModel, CTRAMPHouseholdModel):
     """Validated household data"""
+    HHID: Optional[int]
     incQ: str
     autoSuff: AutoSufficiency
     autoSuff_label: str
@@ -68,7 +73,7 @@ class PopSimPersonModel(BaseModel):
     SCHL: int
     OCCP: int
     WKHP: int
-    WKWL: int
+    WKW: int
     EMPLOYED: int
     ESR: int
     SCHG: int
@@ -84,7 +89,7 @@ class CTRAMPPersonModel(BaseModel):
     age: int
     gender: str
     type: str
-    vale_of_time: int
+    value_of_time: int
     transitSubsidy_choice: int
     transitSubsidy_percent: int = Field(..., ge=0, le=1)
     naicsCode: int
@@ -99,8 +104,13 @@ class CTRAMPPersonModel(BaseModel):
     workDCLogsum: int
     schoolDCLogsum: int
 
+    class Config:
+        use_enum_values = True
+
 class PersonModel(PopSimPersonModel, CTRAMPPersonModel):
     """Validated person data"""
+    HHID: Optional[int]
+    PERID: Optional[int]
     incQ: str
     size: int = Field(..., ge=1, le=20)
     autos: int = Field(..., ge=0)
@@ -115,7 +125,7 @@ class PersonModel(PopSimPersonModel, CTRAMPPersonModel):
 class TripModel(BaseModel):
     """Validated trip data"""
     hh_id: int = Field(..., gt=0)
-    person_id: int = Field(..., gt=0)
+    person_id: int = Field(..., ge=0)
     trip_mode: int = Field(..., ge=1, le=17, description="Mode 1-17")
     trip_mode_label: str
     origin_TAZ_SEQ: int = Field(..., gt=0)
@@ -133,7 +143,7 @@ class TripModel(BaseModel):
 class TourModel(BaseModel):
     """Validated tour data"""
     hh_id: int = Field(..., gt=0)
-    person_id: int = Field(..., gt=0)
+    person_id: int = Field(..., ge=0)
     tour_mode: int = Field(..., ge=1, le=17)
     tour_mode_label: str
     tour_purpose: str = Field(..., description="Work, School, Shopping, etc")
@@ -145,27 +155,69 @@ class TourModel(BaseModel):
     class Config:
         use_enum_values = True
 
-def _validate_dataframe(self, df: pd.DataFrame, model_class) -> pd.DataFrame:
+class WorkSchoolLocation(BaseModel):
+    """Validate work school location data"""
+    hh_id: int
+    HOME_MAZ_SEQ: int
+    HOME_MAZ_NODE: int
+    HOME_TAZ_NODE: int
+    HOME_DistID: int
+    HOME_CountyID: int
+    Income: int
+    PersonNum: int
+    PersonType: int
+    PersonAge: int
+    EmploymentCategory: int
+    StudentCategory: int
+    WorkSegment: int
+    SchoolSegment: int
+    WorkLocation: int
+    WORK_MAZ_SEQ: int
+    WORK_MAZ_NODE: int
+    WORK_TAZ_NODE: int
+    WORK_DistID: int
+    WORK_CountyID: int
+    WorkLocationDistance: int
+    WorkLocationLogsum: int
+    SchoolLocation: int
+    SCHOOL_MAZ_SEQ: int
+    SCHOOL_MAZ_NODE: int
+    SCHOOL_TAZ_NODE: int
+    SCHOOL_DistID: int
+    SCHOOL_CountyID: int
+    SchoolLocationDistance: int
+    SchoolLocationLogsum: int
+
+
+def validate_dataframe(df: pd.DataFrame, model_class) -> pd.DataFrame:
     """
     Validate DataFrame rows against Pydantic model.
     Returns the original DataFrame if all rows valid, otherwise raises error with details.
+
+    Args:
+        df: DataFrame to validate the Pydantic model
+        model_class: Model Class
+
     """
     errors = []
-    
-    for idx, row in df.iterrows():
+        
+    rows = df.to_dict(orient='records')
+
+    for idx, row in enumerate(rows):
         try:
             # Convert row to dict and validate
-            model_class(**row.to_dict())
-        except Exception as e:
-            errors.append(f"Row {idx}: {str(e)}")
+            model_class(**row)
+        except ValidationError as exc:
+            errors.append(f"Row {idx}: {str(exc)}")
             if len(errors) >= 10:  # Stop after 10 errors to avoid spam
                 errors.append(f"... and {len(df) - 10} more errors")
                 break
     
     if errors:
         error_msg = "\n".join(errors)
-        self.logger.error(f"Validation failed:\n{error_msg}")
+        
+        logging.error(f"Validation failed:\n{error_msg}")
         raise ValueError(f"Data validation failed for {model_class.__name__}")
     
-    self.logger.info(f"✓ Validated {len(df):,} {model_class.__name__} rows")
+    logging.info(f"Validated {len(df):,} {model_class.__name__} rows")
     return df

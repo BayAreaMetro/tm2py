@@ -5,4 +5,5 @@ transportation planning datasets used in the TM2.0 model system.
 
 Modules:
     maz_data: Micro-Analysis Zone land use data validation
+    enriched_output: Enriched Output data validation
 """

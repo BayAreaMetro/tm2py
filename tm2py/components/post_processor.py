@@ -13,6 +13,7 @@ import numpy as np
 from tm2py.components.component import Component, FileFormatError
 from tm2py.emme.manager import EmmeNetwork, EmmeScenario, EmmeMatrix
 from tm2py.logger import LogStartEnd, Logger
+from tm2py.data_models import enriched_output_models
 #from tm2py.config import LoggingConfig
 
 if TYPE_CHECKING:
@@ -221,19 +222,29 @@ class PostProcessor(Component):
     def prepare_output_data(self):
         landuse = self._prepare_landuse_data()
         households = self._prepare_households_data(landuse)
+
         persons = self._prepare_persons_data(households)
+        validated_persons = enriched_output_models.validate_dataframe(persons, enriched_output_models.PersonModel)
+
         households = self._add_kids_no_driver(persons, households)
+        validated_households = enriched_output_models.validate_dataframe(households, enriched_output_models.HouseholdModel)
+
         tours = self._prepare_tours_data(households, landuse)
+        validated_tours = enriched_output_models.validate_dataframe(tours, enriched_output_models.TourModel)
+
         trips = self._prepare_trips_data(persons, households)
+        validated_trips = enriched_output_models.validate_dataframe(trips, enriched_output_models.TripModel)
+
         commute_tours = tours[tours['tour_purpose'] == 'Work']
         work_school_locations = self._prepare_work_school_locations_data(tours, landuse)
+        validated_work_school_locations = enriched_output_models.validate_dataframe(work_school_locations, enriched_output_models.WorkSchoolLocation)
 
         self.logger.info("Saving prepared output data to updated_output folder")
-        households.to_parquet('updated_output/households.parquet')
-        persons.to_parquet('updated_output/persons.parquet')
-        trips.to_parquet('updated_output/trips.parquet')
-        tours.to_parquet('updated_output/tours.parquet')
-        work_school_locations.to_parquet('updated_output/work_school_locations.parquet')
+        validated_households.to_parquet('updated_output/households.parquet')
+        validated_persons.to_parquet('updated_output/persons.parquet')
+        validated_trips.to_parquet('updated_output/trips.parquet')
+        validated_tours.to_parquet('updated_output/tours.parquet')
+        validated_work_school_locations.to_parquet('updated_output/work_school_locations.parquet')
         commute_tours.to_parquet('updated_output/commute_tours.parquet')
 
     def _export_transit_network_as_shapefile(self, scenario: EmmeScenario, time_period: str):
@@ -983,7 +994,7 @@ class PostProcessor(Component):
                                      'MAZ_ORIGINAL': 'MAZ_NODE', 'TAZ_ORIGINAL': 'TAZ_NODE'}, inplace=True)
 
         output_ctramp_hh = pd.read_csv(self.get_abs_path(ctramp_hh_file))
-        output_ctramp_hh.rename(columns = {'home_mgra': 'HOME_MAZ_SEQ'})
+        output_ctramp_hh.rename(columns = {'home_mgra': 'HOME_MAZ_SEQ'}, inplace = True)
         self.logger.debug(f"Read {len(input_pop_hh):,} rows from popsyn households and {len(output_ctramp_hh):,} rows from ct households")
 
         households = input_pop_hh.merge(output_ctramp_hh, on = 'hh_id', how = 'inner', validate = '1:1')
