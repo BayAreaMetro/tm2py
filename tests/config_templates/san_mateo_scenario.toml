@@ -29,8 +29,12 @@ final_components = [
 
 [emme]
 # IMPORTANT: Update these paths for your test setup
-project_path = "M:/Development/Travel Model Two/Supply/Network Creation 2025/from_OSM/SanMateo/7_scenario/emme"
-highway_database_path = "M:/Development/Travel Model Two/Supply/Network Creation 2025/from_OSM/SanMateo/7_scenario/emme/Database_highway"
+# These paths are relative to the test directory (e.g., test_county/)
+project_path = "emme_project"
+highway_database_path = "emme_project/Database_highway"
+
+# All-day base scenario ID (must exist in EMME database with network already loaded)
+all_day_scenario_id = 100
 
 # Single processor for testing
 num_processors = 1
@@ -45,36 +49,37 @@ num_processors = 1
 # num_processors = 2
 
 # Time periods - simplified for testing
-# Adjust based on your needs
-[[time_periods]]
-name = "EA"  # Early AM
-emme_scenario_id = 1
-length_hours = 3.0
-highway_capacity_factor = 1.0
-
+# Using single time period for faster testing
 [[time_periods]]
 name = "AM"  # AM Peak
-emme_scenario_id = 2
+emme_scenario_id = 1
 length_hours = 3.5
 highway_capacity_factor = 1.0
 
-[[time_periods]]
-name = "MD"  # Midday
-emme_scenario_id = 3
-length_hours = 6.5
-highway_capacity_factor = 1.0
-
-[[time_periods]]
-name = "PM"  # PM Peak
-emme_scenario_id = 4
-length_hours = 4.0
-highway_capacity_factor = 1.0
-
-[[time_periods]]
-name = "EV"  # Evening
-emme_scenario_id = 5
-length_hours = 7.0
-highway_capacity_factor = 1.0
+# Additional time periods (commented out for single period testing)
+# [[time_periods]]
+# name = "EA"  # Early AM
+# emme_scenario_id = 2
+# length_hours = 3.0
+# highway_capacity_factor = 1.0
+#
+# [[time_periods]]
+# name = "MD"  # Midday
+# emme_scenario_id = 3
+# length_hours = 6.5
+# highway_capacity_factor = 1.0
+#
+# [[time_periods]]
+# name = "PM"  # PM Peak
+# emme_scenario_id = 4
+# length_hours = 4.0
+# highway_capacity_factor = 1.0
+#
+# [[time_periods]]
+# name = "EV"  # Evening
+# emme_scenario_id = 5
+# length_hours = 7.0
+# highway_capacity_factor = 1.0
 
 [warmstart]
 # No warmstart for initial test

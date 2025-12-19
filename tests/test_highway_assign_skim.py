@@ -31,6 +31,7 @@ from tm2py.controller import RunController
 
 
 # Path to TAZ/MAZ/County crosswalk file
+# NOTE: Using newer crosswalk - may need to find old crosswalk file from E:\2015_TM2_20250619 dataset
 CROSSWALK_FILE = Path(r"C:\GitHub\tm2py-utils\tm2py_utils\inputs\maz_taz\mazs_tazs_county_tract_PUMA_2.5.csv")
 
 # Default zone ranges (override these based on your zone system)

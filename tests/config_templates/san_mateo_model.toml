@@ -11,7 +11,7 @@ normalize_gap = 2
 best_relative_gap = 0.00001
 
 # Skim parameters
-skim_period = "MD"  # Which period to use as base for skimming
+skim_period = "AM"  # Which period to use as base for skimming (changed to AM for single-period testing)
 
 # Value of reliability (cents per minute)
 value_of_reliability = 1.5

@@ -69,9 +69,10 @@ def example_2_with_data_filtering():
     )
     
     # Set up paths
-    source_dir = Path("path/to/full/model/inputs")  # UPDATE THIS
+    source_dir = Path(r"E:\2015_TM2_20250619")
     test_dir = Path(f"test_{COUNTY_NAME.lower().replace(' ', '_')}")
     
+    # Note: Highway network files are in EMME project, not inputs/hwy
     # Filter data to county
     if source_dir.exists():
         print(f"\nFiltering data from {source_dir}...")
@@ -139,8 +140,8 @@ def example_4_filter_specific_files():
     )
     
     # Filter a specific trip table (OMX format)
-    input_trips = Path("full_model/demand/trips_AM.omx")
-    output_trips = Path(f"test_{COUNTY_NAME.lower().replace(' ', '_')}/inputs/demand/trips_AM_county.omx")
+    input_trips = Path(r"E:\2015_TM2_20250619\demand_matrices\highway\household\TAZ_Demand_AM.omx")
+    output_trips = Path(f"test_{COUNTY_NAME.lower().replace(' ', '_')}/inputs/demand/TAZ_Demand_AM.omx")
     
     if input_trips.exists():
         print(f"Filtering {input_trips}...")
@@ -150,7 +151,7 @@ def example_4_filter_specific_files():
         print(f"✗ Input file not found: {input_trips}")
     
     # Filter MAZ data
-    input_maz = Path("full_model/landuse/maz_data.csv")
+    input_maz = Path(r"E:\2015_TM2_20250619\inputs\landuse\maz_data.csv")
     output_maz = Path(f"test_{COUNTY_NAME.lower().replace(' ', '_')}/inputs/landuse/maz_data.csv")
     
     if input_maz.exists():
