@@ -180,11 +180,11 @@ class WorkSchoolLocation(BaseModel):
     WorkLocationDistance: int
     WorkLocationLogsum: int
     SchoolLocation: int
-    SCHOOL_MAZ_SEQ: int
-    SCHOOL_MAZ_NODE: int
-    SCHOOL_TAZ_NODE: int
-    SCHOOL_DistID: int
-    SCHOOL_CountyID: int
+    SCH_MAZ_SEQ: int
+    SCH_MAZ_NODE: int
+    SCH_TAZ_NODE: int
+    SCH_DistID: int
+    SCH_CountyID: int
     SchoolLocationDistance: int
     SchoolLocationLogsum: int
 
@@ -201,22 +201,25 @@ def validate_dataframe(df: pd.DataFrame, model_class) -> pd.DataFrame:
     """
     errors = []
         
-    rows = df.to_dict(orient='records')
+    total_rows = len(df)
+    chunk_size = 10000
 
-    for idx, row in enumerate(rows):
-        try:
-            # Convert row to dict and validate
-            model_class(**row)
-        except ValidationError as exc:
-            errors.append(f"Row {idx}: {str(exc)}")
-            if len(errors) >= 10:  # Stop after 10 errors to avoid spam
-                errors.append(f"... and {len(df) - 10} more errors")
-                break
-    
+    for start in range(0, total_rows, chunk_size):
+        chunk = df.iloc[start:start+chunk_size]
+        rows = chunk.to_dict(orient = 'records')
+        for idx, row in enumerate(rows, start = start):
+            try:
+                model_class(**row)
+            except ValidationError as exc:
+                errors.append(f"Row {idx}: {str(exc)}")
+                if len(errors) >= 10:
+                    errors.append(f"... and {len(df) - 10} more errors")
+                    break
+        if errors:
+            break   
     if errors:
         error_msg = "\n".join(errors)
-        
-        logging.error(f"Validation failed:\n{error_msg}")
+        logging.error(f"Validation failed: \n {error_msg}")
         raise ValueError(f"Data validation failed for {model_class.__name__}")
     
     logging.info(f"Validated {len(df):,} {model_class.__name__} rows")
