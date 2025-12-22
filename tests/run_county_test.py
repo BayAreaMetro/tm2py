@@ -13,7 +13,14 @@ Usage:
 import argparse
 import shutil
 import sys
+import toml
 from pathlib import Path
+import io
+
+# Force UTF-8 encoding for console output on Windows
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -32,21 +39,21 @@ def check_prerequisites(county_name):
     if not source_dir.exists():
         issues.append(f"Source dataset not found: {source_dir}")
     else:
-        print(f"✓ Source dataset found: {source_dir}")
+        print(f"[OK] Source dataset found: {source_dir}")
     
     # Check EMME project
     emme_project = source_dir / "emme_project"
     if not emme_project.exists():
         issues.append(f"EMME project not found: {emme_project}")
     else:
-        print(f"✓ EMME project found: {emme_project}")
+        print(f"[OK] EMME project found: {emme_project}")
     
     # Check EMME database
     emme_db = emme_project / "Database_highway" / "emmebank"
     if not emme_db.exists():
         issues.append(f"EMME database not found: {emme_db}")
     else:
-        print(f"✓ EMME database found: {emme_db}")
+        print(f"[OK] EMME database found: {emme_db}")
     
     # Check for required input files
     required_files = {
@@ -59,14 +66,14 @@ def check_prerequisites(county_name):
         if not path.exists():
             warnings.append(f"{name} file not found: {path}")
         else:
-            print(f"✓ {name} found: {path}")
+            print(f"[OK] {name} found: {path}")
     
     # Check config templates
     config_dir = Path(__file__).parent / "config_templates"
     if not config_dir.exists():
         issues.append(f"Config templates not found: {config_dir}")
     else:
-        print(f"✓ Config templates found: {config_dir}")
+        print(f"[OK] Config templates found: {config_dir}")
     
     print()
     if issues:
@@ -81,11 +88,11 @@ def check_prerequisites(county_name):
             print(f"   - {warning}")
         print()
     
-    print("✓ All prerequisites met!")
+    print("[OK] All prerequisites met!")
     return True
 
 
-def setup_test_directory(county_name, output_dir):
+def setup_test_directory(county_name, output_dir, skip_emme_copy=False, thin_network=None):
     """Create test directory structure."""
     print("\n" + "="*70)
     print("SETTING UP TEST DIRECTORY")
@@ -113,27 +120,56 @@ def setup_test_directory(county_name, output_dir):
     
     for directory in directories:
         directory.mkdir(parents=True, exist_ok=True)
-        print(f"  ✓ Created {directory}")
+        print(f"  [OK] Created {directory}")
     
-    # Copy config templates
+    # Copy config templates (using fixed complete config files)
     config_templates = Path(__file__).parent / "config_templates"
     shutil.copy(
-        config_templates / "san_mateo_scenario.toml",
+        config_templates / "fixed_san_mateo_scenario.toml",
         test_dir / "config" / "scenario.toml"
     )
     shutil.copy(
-        config_templates / "san_mateo_model.toml",
+        config_templates / "fixed_san_mateo_model.toml",
         test_dir / "config" / "model.toml"
     )
-    print(f"  ✓ Copied config files")
+    print(f"  [OK] Copied config files")
+    
+    # Apply thin_network setting if provided
+    if thin_network is not None:
+        scenario_config = toml.load(test_dir / "config" / "scenario.toml")
+        if "emme" not in scenario_config:
+            scenario_config["emme"] = {}
+        scenario_config["emme"]["thin_network_ft_threshold"] = thin_network
+        with open(test_dir / "config" / "scenario.toml", "wb") as f:
+            content = toml.dumps(scenario_config).encode('utf-8')
+            if content.startswith(b'\xef\xbb\xbf'):
+                content = content[3:]
+            f.write(content)
+        print(f"  [OK] Network thinning enabled: @ft <= {thin_network}")
     
     # Copy EMME project
     source_emme = Path(r"E:\2015_TM2_20250619\emme_project")
     dest_emme = test_dir / "emme_project"
     
-    print(f"  Copying EMME project (this may take a few minutes)...")
-    shutil.copytree(source_emme, dest_emme)
-    print(f"  ✓ Copied EMME project to {dest_emme}")
+    if skip_emme_copy:
+        print(f"  ⊘ Skipping EMME project copy (--skip-emme-copy flag set)")
+        if not dest_emme.exists():
+            print(f"  ⚠ WARNING: EMME project not found at {dest_emme}")
+            print(f"  You must manually copy it from {source_emme}")
+    elif dest_emme.exists():
+        print(f"  ⚠ EMME project already exists at {dest_emme}")
+        response = input("  Do you want to skip copying (reuse existing)? (y/n): ")
+        if response.lower() == 'y':
+            print(f"  [OK] Using existing EMME project")
+        else:
+            print(f"  Replacing EMME project (this may take a few minutes)...")
+            shutil.rmtree(dest_emme)
+            shutil.copytree(source_emme, dest_emme)
+            print(f"  [OK] Copied EMME project to {dest_emme}")
+    else:
+        print(f"  Copying EMME project (this may take a few minutes)...")
+        shutil.copytree(source_emme, dest_emme)
+        print(f"  ✓ Copied EMME project to {dest_emme}")
     
     # Copy essential input files
     source_dir = Path(r"E:\2015_TM2_20250619")
@@ -143,16 +179,87 @@ def setup_test_directory(county_name, output_dir):
         source_dir / "inputs" / "hwy" / "tolls.csv",
         test_dir / "inputs" / "hwy" / "tolls.csv"
     )
-    print(f"  ✓ Copied tolls.csv")
+    print(f"  [OK] Copied tolls.csv")
     
     # Copy MAZ data
     shutil.copy(
         source_dir / "inputs" / "landuse" / "maz_data.csv",
         test_dir / "inputs" / "landuse" / "maz_data.csv"
     )
-    print(f"  ✓ Copied maz_data.csv")
+    print(f"  [OK] Copied maz_data.csv")
     
-    print(f"\n✓ Test directory setup complete!")
+    # Check if demand filtering is enabled
+    scenario_config = toml.load(test_dir / "config" / "scenario.toml")
+    filter_demand = scenario_config.get("scenario", {}).get("filter_demand", False)
+    
+    if filter_demand:
+        print(f"\n{'='*70}")
+        print("FILTERING DEMAND TO INTRA-COUNTY TRIPS")
+        print(f"{'='*70}")
+        
+        from tests.test_highway_assign_skim import CountyDataFilter, get_county_zones
+        
+        # Get zone ranges for the county
+        zone_info = get_county_zones(county_name)
+        taz_range = zone_info['taz_range']
+        maz_range = zone_info['maz_range']
+        
+        print(f"\nCounty zone ranges:")
+        print(f"  TAZ: {taz_range[0]} - {taz_range[1]}")
+        print(f"  MAZ: {maz_range[0]} - {maz_range[1]}")
+        
+        filter_helper = CountyDataFilter(
+            taz_range=taz_range,
+            maz_range=maz_range,
+            county_name=county_name
+        )
+        
+        # Get time periods from scenario config to filter only those demand files
+        time_periods = []
+        if 'emme' in scenario_config and 'time_period' in scenario_config['emme']:
+            for tp in scenario_config['emme']['time_period']:
+                time_periods.append(tp['name'])
+        
+        print(f"\nTime periods to filter: {', '.join(time_periods)}")
+        
+        # Filter demand files for configured time periods only
+        demand_dir = source_dir / "demand_matrices" / "highway" / "household"
+        
+        print(f"\nFiltering demand files...")
+        for period in time_periods:
+            demand_file = demand_dir / f"TAZ_Demand_{period}.omx"
+            if demand_file.exists():
+                output_file = test_dir / "inputs" / "demand" / demand_file.name
+                print(f"\n  {demand_file.name}:")
+                filter_helper.filter_trip_table(demand_file, output_file)
+            else:
+                print(f"\n  ⚠ Warning: {demand_file.name} not found, skipping")
+        
+        print(f"\n[OK] Demand filtering complete!")
+    else:
+        print(f"\nCopying demand files (filtering disabled)...")
+        
+        # Get time periods from scenario config to copy only those demand files
+        time_periods = []
+        if 'emme' in scenario_config and 'time_period' in scenario_config['emme']:
+            for tp in scenario_config['emme']['time_period']:
+                time_periods.append(tp['name'])
+        
+        print(f"Time periods to copy: {', '.join(time_periods)}")
+        
+        # Copy demand files for configured time periods only
+        demand_dir = source_dir / "demand_matrices" / "highway" / "household"
+        
+        for period in time_periods:
+            demand_file = demand_dir / f"TAZ_Demand_{period}.omx"
+            if demand_file.exists():
+                output_file = test_dir / "inputs" / "demand" / demand_file.name
+                shutil.copy(demand_file, output_file)
+                print(f"  [OK] Copied {demand_file.name}")
+            else:
+                print(f"  ⚠ Warning: {demand_file.name} not found, skipping")
+    
+    print(f"\n[OK] Test directory setup complete!")
     return test_dir
 
 
@@ -185,13 +292,13 @@ def run_test(test_dir, county_name):
         controller.run_highway_only()
         
         print("\n" + "="*70)
-        print("✓ TEST COMPLETED SUCCESSFULLY!")
+        print("[OK] TEST COMPLETED SUCCESSFULLY!")
         print("="*70)
         
         # Validate results
         success = controller.validate_results()
         if success:
-            print("\n✓ Results validation passed!")
+            print("\n[OK] Results validation passed!")
         else:
             print("\n⚠ Results validation had warnings - check logs")
         
@@ -204,6 +311,11 @@ def run_test(test_dir, county_name):
         print(f"\nError: {e}")
         import traceback
         traceback.print_exc()
+        # Also write to file
+        with open(test_dir / "logs" / "error_traceback.txt", "w") as f:
+            f.write(f"Error: {e}\n\n")
+            traceback.print_exc(file=f)
+        print(f"\nFull traceback saved to: {test_dir / 'logs' / 'error_traceback.txt'}")
         return False
 
 
@@ -224,6 +336,22 @@ def main():
         action="store_true",
         help="Skip test directory setup (use existing)"
     )
+    parser.add_argument(
+        "--skip-emme-copy",
+        action="store_true",
+        help="Skip copying EMME project (use existing or copy manually)"
+    )
+    parser.add_argument(
+        "--yes", "-y",
+        action="store_true",
+        help="Skip confirmation prompt and run immediately"
+    )
+    parser.add_argument(
+        "--thin-network",
+        type=int,
+        metavar="THRESHOLD",
+        help="Thin network by functional class: keep links with @ft <= THRESHOLD (e.g., 4=arterials+, 6=collectors+)"
+    )
     
     args = parser.parse_args()
     
@@ -238,7 +366,12 @@ def main():
     
     # Setup test directory
     if not args.skip_setup:
-        test_dir = setup_test_directory(args.county, args.output_dir)
+        test_dir = setup_test_directory(
+            args.county, 
+            args.output_dir, 
+            args.skip_emme_copy,
+            args.thin_network
+        )
     else:
         test_dir = Path(args.output_dir)
         print(f"\nUsing existing test directory: {test_dir}")
@@ -247,11 +380,15 @@ def main():
             return 1
     
     # Prompt before running
-    print("\n" + "="*70)
-    response = input("\nReady to run test? This will take several minutes. (y/n): ")
-    if response.lower() != 'y':
-        print("\nTest cancelled.")
-        return 0
+    if not args.yes:
+        print("\n" + "="*70)
+        response = input("\nReady to run test? This will take several minutes. (y/n): ")
+        if response.lower() != 'y':
+            print("\nTest cancelled.")
+            return 0
+    else:
+        print("\n" + "="*70)
+        print("\nStarting test (--yes flag provided)...")
     
     # Run test
     success = run_test(test_dir, args.county)

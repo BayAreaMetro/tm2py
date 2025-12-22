@@ -6,6 +6,9 @@ year = 2035
 title = "San Mateo County Highway Test"
 description = "Test run for highway network creation, skimming, and assignment using San Mateo County zones only"
 
+# Filter demand to intra-county trips only (origin AND destination in county)
+filter_demand = true
+
 [run]
 # Single iteration test run
 start_iteration = 1
@@ -33,11 +36,17 @@ final_components = [
 project_path = "emme_project"
 highway_database_path = "emme_project/Database_highway"
 
+# Required but not used in highway-only test
+active_north_database_path = "emme_project/Database_active_north"
+active_south_database_path = "emme_project/Database_active_south"
+transit_database_path = "emme_project/Database_transit"
+
 # All-day base scenario ID (must exist in EMME database with network already loaded)
 all_day_scenario_id = 100
 
 # Single processor for testing
 num_processors = 1
+num_processors_transit_skim = 1
 
 # Can optionally set up multi-processing distribution for larger tests
 # [[emme.highway_distribution]]

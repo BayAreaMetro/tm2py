@@ -143,7 +143,7 @@ class ProxyEmmebank:
         Args:
             time_period: valid time period abbreviation
         """
-        _scenario_id = self.scenario_dict[time_period.lower()]
+        _scenario_id = self.scenario_dict[time_period]
         return self.emmebank.scenario(_scenario_id)
 
     def create_matrix(
