@@ -1,0 +1,75 @@
+# San Mateo County Highway Test - Complete Scenario Configuration
+# All required fields from ScenarioConfig, TimePeriodConfig, EmmeConfig, RunConfig, WarmStartConfig, LoggingConfig
+
+[scenario]
+# ScenarioConfig - ALL required fields
+name = "San Mateo Highway Test"
+year = 2035
+landuse_file = "inputs/landuse/landuse.csv"
+landuse_index_column = "TAZ"
+verify = false
+
+# Filter demand to intra-county trips only (origin AND destination in county)
+filter_demand = true
+
+[run]
+# RunConfig - ALL required fields
+start_iteration = 0
+end_iteration = 1
+start_component = ""
+
+# Component lists (tuples)
+initial_components = [
+    "prepare_network_highway",
+]
+
+global_iteration_components = [
+    "highway",
+]
+
+final_components = []
+
+[warmstart]
+# WarmStartConfig - ALL required fields
+warmstart = false
+use_warmstart_skim = false
+use_warmstart_demand = false
+warmstart_check = false
+household_highway_demand_file = ""
+household_transit_demand_file = ""
+air_passenger_highway_demand_file = ""
+internal_external_highway_demand_file = ""
+truck_highway_demand_file = ""
+
+[emme]
+# EmmeConfig - ALL required fields including database paths and num_processors
+project_path = "emme_project"
+highway_database_path = "emme_project/Database_highway"
+active_north_database_path = "emme_project/Database_active_north"
+active_south_database_path = "emme_project/Database_active_south"
+transit_database_path = "emme_project/Database_transit"
+all_day_scenario_id = 1
+num_processors = "1"
+num_processors_transit_skim = "1"
+
+# TimePeriodConfig - ALL required fields including start_period
+# Using single AM period for faster testing
+# create_tod_scenarios will copy scenario 1 → scenario 11 and create @useclass from @useclass_am
+[[time_periods]]
+name = "AM"
+start_period = 5.5
+length_hours = 3.5
+highway_capacity_factor = 1.0
+emme_scenario_id = 11
+description = "AM Peak"
+
+[logging]
+# LoggingConfig - ALL required fields
+display_level = "STATUS"
+run_file_path = "logs/tm2py_run.log"
+run_file_level = "INFO"
+log_file_path = "logs/tm2py_detail.log"
+log_file_level = "DEBUG"
+log_on_error_file_path = "logs/tm2py_error.log"
+notify_slack = false
+use_emme_logbook = true

@@ -25,7 +25,12 @@ from typing import List, Tuple, Optional, Dict
 import numpy as np
 import openmatrix as omx
 import pandas as pd
-import pytest
+
+# Pytest only needed for test functions, not for utility classes
+try:
+    import pytest
+except ImportError:
+    pytest = None
 
 from tm2py.controller import RunController
 
@@ -309,64 +314,67 @@ def setup_county_test_data(
     return test_dir
 
 
-@pytest.fixture
-def county_test_dir(tmp_path):
-    """Pytest fixture to create temporary test directory for county test."""
-    return tmp_path / "county_test"
+# Pytest fixtures and test functions (only defined if pytest is available)
+if pytest is not None:
+    @pytest.fixture
+    def county_test_dir(tmp_path):
+        """Pytest fixture to create temporary test directory for county test."""
+        return tmp_path / "county_test"
 
 
-@pytest.fixture
-def county_filter():
-    """Pytest fixture to create data filter for county."""
-    return CountyDataFilter(DEFAULT_TAZ_RANGE, DEFAULT_MAZ_RANGE, "Test County")
+    @pytest.fixture
+    def county_filter():
+        """Pytest fixture to create data filter for county."""
+        return CountyDataFilter(DEFAULT_TAZ_RANGE, DEFAULT_MAZ_RANGE, "Test County")
 
 
-@pytest.mark.skipci
-def test_county_highway_subset(county_test_dir, county_filter):
-    """Test highway network creation, skimming, and assignment for a specific county.
+    @pytest.mark.skipci
+    def test_county_highway_subset(county_test_dir, county_filter):
+        """Test highway network creation, skimming, and assignment for a specific county.
 
-    This test:
-    1. Sets up filtered data for specified county only
-    2. Creates a minimal configuration to run highway components
-    3. Runs prepare_network_highway, highway, and highway_maz components
-    4. Validates outputs
-    """
-    # Set up test data (you'll need to point to your source data)
-    # source_dir = Path("path/to/your/full/model/data")
-    # test_dir = setup_county_test_data(source_dir, county_test_dir, county_filter)
+        This test:
+        1. Sets up filtered data for specified county only
+        2. Creates a minimal configuration to run highway components
+        3. Runs prepare_network_highway, highway, and highway_maz components
+        4. Validates outputs
+        """
+        # Set up test data (you'll need to point to your source data)
+        # source_dir = Path("path/to/your/full/model/data")
+        # test_dir = setup_county_test_data(source_dir, county_test_dir, county_filter)
 
-    # For now, create config files
-    config_dir = county_test_dir / "config"
-    config_dir.mkdir(parents=True, exist_ok=True)
+        # For now, create config files
+        config_dir = county_test_dir / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create minimal configuration (you'll need to customize this)
-    scenario_config = config_dir / "county_scenario.toml"
-    model_config = config_dir / "county_model.toml"
+        # Create minimal configuration (you'll need to customize this)
+        scenario_config = config_dir / "county_scenario.toml"
+        model_config = config_dir / "county_model.toml"
 
-    # These would need to be created with actual content
-    # See the helper function below for config templates
+        # These would need to be created with actual content
+        # See the helper function below for config templates
 
-    # Run controller with only highway components
-    controller = RunController(
-        [str(scenario_config), str(model_config)],
-        run_dir=county_test_dir,
-        run_components=[
-            "prepare_network_highway",
-            "highway",
-            "highway_maz_skim",
-            "highway_maz_assign"
-        ]
-    )
-    
-    controller.run()
+        # Run controller with only highway components
+        controller = RunController(
+            [str(scenario_config), str(model_config)],
+            run_dir=county_test_dir,
+            run_components=[
+                "prepare_network_highway",
+                "highway",
+                "highway_maz_skim",
+                "highway_maz_assign"
+            ]
+        )
+        
+        controller.run()
 
-    # Validate outputs exist
-    assert (county_test_dir / "skim_matrices" / "highway").exists()
-    
-    # Add more specific validation as needed
-    print(f"County highway test completed successfully")
+        # Validate outputs exist
+        assert (county_test_dir / "skim_matrices" / "highway").exists()
+        
+        # Add more specific validation as needed
+        print(f"County highway test completed successfully")
 
 
+# Helper functions (always available, don't require pytest)
 def create_county_config_files(config_dir: Path, test_dir: Path, county_name: str = "County"):
     """Create minimal configuration files for county-specific highway test.
 

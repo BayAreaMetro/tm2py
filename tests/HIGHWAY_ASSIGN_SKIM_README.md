@@ -1,25 +1,55 @@
-# Highway Assignment & Skimming Test Framework
+# Highway Assignment & Skimming County Test Framework
 
-This framework provides tools for testing highway network creation, skimming, and assignment using county-specific subsets with fixed trips.
+## Overview
+
+This framework provides tools for testing highway network creation, skimming, and assignment using **county-specific subsets** of the full regional model. It enables rapid iteration and debugging by:
+
+1. **Automatically detecting** TAZ/MAZ zone ranges from crosswalk files
+2. **Filtering demand** to intra-county trips only (configurable)
+3. **Using existing EMME projects** with loaded base networks
+4. **Running single time periods** for speed (default: AM only)
+5. **Testing on county-scale data** instead of full region
 
 ## Purpose
 
 This test framework is designed for:
-- **Rapid testing** of highway assignment changes without running the full model
+- **Rapid testing** of highway assignment changes without running the full model (minutes vs hours)
 - **Debugging** highway network or assignment issues for a specific county
 - **Validation** of network modifications in a subset of the region
 - **Performance testing** with a smaller geographic scope
-- **Development** of new highway-related features
-- **Multi-county comparison** testing
+- **Development** of new highway-related features without full model overhead
+- **Multi-county comparison** testing (run same test for different counties)
+
+## What Gets Filtered vs. What Doesn't
+
+| Component | Filtered? | Why? |
+|-----------|-----------|------|
+| **Demand (trip tables)** | ✓ Yes (configurable) | Extract intra-county trips for focused testing |
+| **Network** | ✗ No | Full network needed for path-finding (county trips may use regional links) |
+| **Skims** | ✗ No | Generated for all network zones (only county O-D pairs used in assignment) |
+| **MAZ land use** | ✗ Not yet | Could be filtered for memory savings (TODO) |
+| **Tolls** | ✗ No | Full toll file used (could be filtered for speed) |
+
+**Key Insight**: Even for intra-county trips, the assignment may use links outside the county, so you need the full regional network.
 
 ## Components
 
-The framework consists of four main files:
+The framework consists of several key files:
 
-1. **`test_highway_assign_skim.py`** - Pytest-based test suite with data filtering and auto-detection utilities
-2. **`highway_assign_skim_controller.py`** - Standalone controller script for running highway components
-3. **`config_templates/san_mateo_scenario.toml`** - Template scenario configuration
-4. **`config_templates/san_mateo_model.toml`** - Template model configuration
+### Main Files
+1. **`run_county_test.py`** - **[NEW]** Automated test script with prerequisite checking and demand filtering
+2. **`test_highway_assign_skim.py`** - Pytest-based test suite with data filtering utilities and auto-detection
+3. **`highway_assign_skim_controller.py`** - Controller for running highway components programmatically
+4. **`examples_highway_assign_skim.py`** - Example code showing filtering and auto-detection usage
+
+### Configuration Templates  
+5. **`config_templates/san_mateo_scenario.toml`** - Template scenario configuration (single AM period, demand filtering enabled)
+6. **`config_templates/san_mateo_model.toml`** - Template model configuration (AM skim period)
+
+### Documentation
+7. **`TESTING_INSTRUCTIONS.md`** - Quick start guide for running automated tests
+8. **`COUNTY_TEST_SETUP_CHECKLIST.md`** - Detailed setup checklist
+9. **`HIGHWAY_ASSIGN_SKIM_QUICK_REFERENCE.md`** - Command reference
 
 ## Test Network Location
 
@@ -31,6 +61,33 @@ M:\Development\Travel Model Two\Supply\Network Creation 2025\from_OSM\SanMateo\7
 This network can be used for testing highway assignment and skimming with the county-specific test framework.
 
 ## Quick Start
+
+### Automated Testing (Easiest)
+
+**Best for**: First-time users, quick validation, testing multiple counties
+
+```powershell
+# 1. Activate EMME Python environment
+C:\GitHub\tm2pyenv\Scripts\Activate.ps1
+
+# 2. Run automated test (filters demand automatically)
+python tests/run_county_test.py --county "San Mateo" --output-dir "C:/MyTests/san_mateo_test"
+```
+
+The script will:
+- ✓ Check prerequisites (EMME, source data, crosswalk file)
+- ✓ Create test directory structure
+- ✓ Copy EMME project with base network
+- ✓ Auto-detect county zone ranges from crosswalk
+- ✓ Filter demand to intra-county trips (configurable)
+- ✓ Run highway components (create TOD scenarios, prepare network, assign/skim)
+- ✓ Validate results
+
+See [TESTING_INSTRUCTIONS.md](TESTING_INSTRUCTIONS.md) for details.
+
+### Manual Setup (Advanced)
+
+**Best for**: Custom configurations, advanced debugging, programmatic usage
 
 ### Step 1: Auto-Detect County Zones
 

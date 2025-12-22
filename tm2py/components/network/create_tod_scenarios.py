@@ -546,12 +546,46 @@ class CreateTODScenarios(Component):
                     tod_attr_groups[attr.type][attr.name[: -len(period.name)]].append(
                         attr.name
                     )
+        
+        # Get network thinning threshold (if configured)
+        thin_network_ft_threshold = getattr(
+            self.controller.config.emme, 'thin_network_ft_threshold', None
+        )
+        
         for period in self.controller.config.time_periods:
             scenario = emmebank.scenario(period.emme_scenario_id)
             if scenario:
                 emmebank.delete_scenario(scenario)
             scenario = emmebank.copy_scenario(ref_scenario, period.emme_scenario_id)
             scenario.title = f"{period.name} {ref_scenario.title}"[:60]
+            
+            # Apply network thinning if configured
+            if thin_network_ft_threshold is not None:
+                network = scenario.get_network()
+                links_removed = 0
+                links_to_remove = []
+                
+                for link in network.links():
+                    # Always keep: centroid connectors, ramps (8), special (99)
+                    if link.i_node.is_centroid or link.j_node.is_centroid:
+                        continue
+                    if link.get("@ft", 99) in [8, 99]:
+                        continue
+                    
+                    # Remove if functional class is below threshold
+                    if link.get("@ft", 99) > thin_network_ft_threshold:
+                        links_to_remove.append((link.i_node, link.j_node))
+                
+                for i_node, j_node in links_to_remove:
+                    network.delete_link(i_node, j_node)
+                    links_removed += 1
+                
+                scenario.publish_network(network)
+                self.controller.logger.log(
+                    f"Network thinning for {period.name}: removed {links_removed:,} links "
+                    f"with @ft > {thin_network_ft_threshold}"
+                )
+            
             # in per-period scenario create attributes without period suffix, copy values
             # for this period and delete all other period attributes
             for domain, all_attrs in tod_attr_groups.items():

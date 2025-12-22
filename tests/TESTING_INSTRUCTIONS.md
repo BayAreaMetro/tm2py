@@ -1,10 +1,36 @@
 # County Highway Test - Quick Start Instructions
 
+## What This Test System Does
+
+This framework allows you to test highway assignment and skimming for a **single county** using a subset of the full regional model. It's designed for:
+
+- **Fast iteration** - Test changes in minutes instead of hours
+- **Debugging** - Isolate issues to a specific county
+- **Development** - Validate new features on a manageable subset
+- **Quality control** - Check network changes county-by-county
+
+### Key Features
+
+1. **Automatic Zone Detection** - Reads crosswalk file to find TAZ/MAZ ranges for any county
+2. **Demand Filtering** - Extracts only intra-county trips (origin AND destination in county) from full trip tables
+3. **Network Isolation** - Uses EMME project with all-day base network, creates time-of-day scenarios
+4. **Single Time Period** - Runs only AM period for speed (configurable)
+5. **No Code Changes** - Uses same tm2py components as full model
+6. **User-Specified Output** - All test outputs go to your chosen directory (not in tm2py source)
+
+### What Gets Filtered
+
+- **Demand (OMX files)**: Filtered to intra-county trips only (configurable via `filter_demand = true` in scenario.toml)
+- **MAZ land use data**: Could be filtered to county MAZs (not currently implemented)
+- **Network**: Uses full regional network (not filtered - necessary for path-finding)
+- **Skims**: Generated for all zones in network (filtered demand means only county O-D pairs used)
+
 ## Prerequisites
 
 1. **EMME Environment**: You must run this from an EMME Python environment
-2. **Source Data**: Verify dataset exists at `E:\2015_TM2_20250619`
+2. **Source Data**: Verify dataset exists at `E:\2015_TM2_20250619` with EMME project containing loaded base network
 3. **Disk Space**: Ensure ~10GB free space for test directory (includes EMME project copy)
+4. **Crosswalk File**: Zone mapping file at `C:\GitHub\tm2py-utils\tm2py_utils\inputs\maz_taz\mazs_tazs_county_tract_PUMA_2.5.csv`
 
 ## Quick Test (Automated)
 
@@ -41,11 +67,15 @@ python tests/run_county_test.py --county "San Mateo" --output-dir "E:/Tests/high
 
 The script will:
 1. ✓ Check all prerequisites
-2. ✓ Create test directory structure
-3. ✓ Copy EMME project from source dataset
-4. ✓ Copy required input files
-5. ✓ Run highway network preparation and assignment
-6. ✓ Validate results
+2. ✓ Create test directory structure  
+3. ✓ Copy EMME project from source dataset (must have loaded base network)
+4. ✓ Copy required input files (tolls, land use)
+5. ✓ **Filter demand to intra-county trips** (if `filter_demand = true` in config)
+6. ✓ Run highway components:
+   - `create_tod_scenarios` - Create time-of-day scenarios from base
+   - `prepare_network_highway` - Set network attributes
+   - `highway` - Assignment and skimming for AM period
+7. ✓ Validate results
 
 ### Script Options
 
@@ -165,17 +195,58 @@ Output files created:
 - See note in [test_highway_assign_skim.py](test_highway_assign_skim.py#L33-L34)
 
 ### Test runs but assignment doesn't converge
-- Check demand mat<your-output-dir>d are properly formatted
-- Review logs in `test_san_mateo/logs/`
+- Check demand matrices are properly formatted
+- Review logs in `<your-output-dir>/logs/`
 - Verify network has proper capacity and speed attributes
+
+### Want to see ALL trips (not just intra-county)?
+- Edit `<your-output-dir>/config/scenario.toml`
+- Change `filter_demand = true` to `filter_demand = false`
+- Re-run setup: `python tests/run_county_test.py --county "San Mateo" --output-dir "<your-output-dir>"`
+
+## Configuration Options
+
+### Demand Filtering (scenario.toml)
+
+```toml
+[scenario]
+# Set to true to filter demand to intra-county trips only
+# Set to false to use all trips (slower but tests inter-county flows)
+filter_demand = true
+```
+
+**With filtering enabled:**
+- Only trips where BOTH origin AND destination are in the county
+- Smaller trip tables = faster assignment
+- Tests true intra-county travel patterns
+
+**With filtering disabled:**
+- All trips involving any zone in the network
+- Slower assignment but tests full connectivity
+- Useful for debugging regional routing issues
+
+### Time Periods (scenario.toml)
+
+Currently configured for AM period only. To test multiple periods, edit:
+```toml
+[[emme.time_period]]
+name = "AM"
+emme_scenario_id = 1
+
+# Uncomment to add more periods
+# [[emme.time_period]]
+# name = "MD"
+# emme_scenario_id = 2
+```
 
 ## Next Steps
 
 Once basic test works:
-1. Enable MAZ components: Set `include_maz_components=True`
-2. Enable network summary: Set `include_network_summary=True`
-3. Test with filtered data for your specific county
-4. Run multiple time periods (update scenario.toml)
+1. **Try different counties**: Change `--county` parameter
+2. **Test filtering off**: Set `filter_demand = false` in config
+3. **Enable MAZ components**: Set `include_maz_components=True` in controller
+4. **Enable network summary**: Set `include_network_summary=True`
+5. **Test multiple time periods**: Add more periods in scenario.toml
 
 ## Need Help?
 

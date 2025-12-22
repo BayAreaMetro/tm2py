@@ -19,6 +19,33 @@ value_of_reliability = 1.5
 # Operating cost (dollars per mile)
 operating_cost_per_mile = 0.20
 
+# Required fields
+generic_highway_mode_code = "a"
+network_acceleration = false
+area_type_buffer_dist_miles = 2.0
+output_skim_path = "skim_matrices/highway"
+reliability = false
+apply_msa_demand = true
+interchange_nodes_file = "inputs/hwy/interchange_nodes.csv"  # Not used in test
+model_to_emme_node_id_xwalk = "inputs/hwy/node_xwalk.csv"  # Not used in test  
+output_node_sequential_id_xwalk = "inputs/hwy/node_seq_xwalk.csv"  # Not used in test
+
+# Relative gap settings per iteration
+[[highway.relative_gaps]]
+iteration = 0
+relative_gap = 0.0001
+
+[[highway.relative_gaps]]
+iteration = 1
+relative_gap = 0.0001
+
+# Capacity class lookup (stub - not used in test)
+[[highway.capclass_lookup]]
+capclass = 1
+free_flow_speed = 65.0
+capacity = 2000.0
+critical_speed = 50.0
+
 # Toll modes
 [[highway.toll_mode]]
 name = "toll"
@@ -30,102 +57,162 @@ excluded_links = []
 [[highway.classes]]
 name = "DA"
 description = "Drive alone - free"
-mode = "d"
+veh_group_name = "da"
+mode_code = "d"
 value_of_time = 18.93
 operating_cost_per_mile = 0.20
-toll_mode = ""
 pce = 1.0
 excluded_links = ["is_toll_da"]
+skims = ["time", "dist", "freeflowtime"]
+toll = []
+
+[[highway.classes.demand]]
+source = "household"
+name = "SOV_GP_AM"
 
 [[highway.classes]]
 name = "DATOLL"
 description = "Drive alone - toll"
-mode = "e"
+veh_group_name = "da"
+mode_code = "e"
 value_of_time = 18.93
 operating_cost_per_mile = 0.20
-toll_mode = "toll"
 pce = 1.0
 excluded_links = []
+skims = ["time", "dist"]
+toll = []
+
+[[highway.classes.demand]]
+source = "household"
+name = "SOV_GP_AM"
 
 [[highway.classes]]
 name = "SR2"
 description = "Shared ride 2 - free"
-mode = "f"
+veh_group_name = "sr2"
+mode_code = "f"
 value_of_time = 18.93
 operating_cost_per_mile = 0.20
-occupancy = 2.0
-toll_mode = ""
 pce = 1.0
 excluded_links = ["is_toll_sr2"]
+skims = ["time", "dist"]
+toll = []
+
+[[highway.classes.demand]]
+source = "household"
+name = "SOV_GP_AM"
 
 [[highway.classes]]
 name = "SR2TOLL"
 description = "Shared ride 2 - toll"
-mode = "g"
+veh_group_name = "sr2"
+mode_code = "g"
 value_of_time = 18.93
 operating_cost_per_mile = 0.20
-occupancy = 2.0
-toll_mode = "toll"
 pce = 1.0
 excluded_links = []
+skims = ["time", "dist"]
+toll = []
+
+[[highway.classes.demand]]
+source = "household"
+name = "SOV_GP_AM"
 
 [[highway.classes]]
 name = "SR3"
 description = "Shared ride 3+ - free"
-mode = "h"
+veh_group_name = "sr3"
+mode_code = "h"
 value_of_time = 18.93
 operating_cost_per_mile = 0.20
-occupancy = 3.5
-toll_mode = ""
 pce = 1.0
 excluded_links = ["is_toll_sr3"]
+skims = ["time", "dist"]
+toll = []
+
+[[highway.classes.demand]]
+source = "household"
+name = "SOV_GP_AM"
 
 [[highway.classes]]
 name = "SR3TOLL"
 description = "Shared ride 3+ - toll"
-mode = "i"
+veh_group_name = "sr3"
+mode_code = "i"
 value_of_time = 18.93
 operating_cost_per_mile = 0.20
-occupancy = 3.5
-toll_mode = "toll"
 pce = 1.0
 excluded_links = []
+skims = ["time", "dist"]
+toll = []
+
+[[highway.classes.demand]]
+source = "household"
+name = "SOV_GP_AM"
 
 [[highway.classes]]
 name = "VSTRUCK"
 description = "Very small trucks"
-mode = "j"
+veh_group_name = "vsm"
+mode_code = "j"
 value_of_time = 36.00
 operating_cost_per_mile = 0.50
 pce = 1.5
 excluded_links = []
+skims = ["time", "dist"]
+toll = []
+
+[[highway.classes.demand]]
+source = "truck"
+name = "vstruck"
 
 [[highway.classes]]
 name = "STRUCK"
 description = "Small trucks"
-mode = "k"
+veh_group_name = "sml"
+mode_code = "k"
 value_of_time = 36.00
 operating_cost_per_mile = 0.80
 pce = 1.5
 excluded_links = []
+skims = ["time", "dist"]
+toll = []
+
+[[highway.classes.demand]]
+source = "truck"
+name = "struck"
 
 [[highway.classes]]
 name = "MTRUCK"
 description = "Medium trucks"
-mode = "l"
+veh_group_name = "med"
+mode_code = "l"
 value_of_time = 40.00
 operating_cost_per_mile = 1.00
 pce = 2.0
 excluded_links = []
+skims = ["time", "dist"]
+toll = []
+
+[[highway.classes.demand]]
+source = "truck"
+name = "mtruck"
 
 [[highway.classes]]
 name = "CTRUCK"
 description = "Combination trucks"
-mode = "m"
+veh_group_name = "lrg"
+mode_code = "m"
 value_of_time = 50.00
 operating_cost_per_mile = 1.30
 pce = 2.5
 excluded_links = []
+skims = ["time", "dist"]
+toll = []
+
+[[highway.classes.demand]]
+source = "truck"
+name = "ctruck"
 
 # Link type definitions for different facility types
 [[highway.link_types]]
@@ -174,8 +261,10 @@ class_names = ["SR3", "SR3TOLL"]
 
 [highway.maz_to_maz]
 # MAZ-to-MAZ shortest path parameters
+mode_code = "z"
 max_skim_cost = 999999.0
 output_skim_path = "skim_matrices/highway"
+output_skim_file = "maz_to_maz.omx"
 
 # Time period mapping for MAZ skims
 time_period = "MD"
@@ -194,3 +283,216 @@ time_period = "MD"
 write_network_csv = true
 write_network_shape = false  # Set to true if you want shapefiles
 write_link_flows = true
+
+# Required empty sections for non-highway components (highway test only)
+[household]
+highway_demand_file = "output/household_highway.omx"
+transit_demand_file = "output/household_transit.omx"
+active_demand_file = "output/household_active.omx"
+highway_maz_ctramp_output_file = "output/household_maz.omx"
+OwnedAV_ZPV_factor = 0.0
+TNC_ZPV_factor = 0.0
+ctramp_indiv_trip_file = "stub.csv"
+ctramp_joint_trip_file = "stub.csv"
+ctramp_run_dir = "stub_dir"
+ctramp_hh_file = "stub.csv"
+sample_rate_by_iteration = [0.0]
+
+[household.rideshare_mode_split]
+stub = 0.0
+
+[household.taxi_split]
+stub = 0.0
+
+[household.single_tnc_split]
+stub = 0.0
+
+[household.shared_tnc_split]
+stub = 0.0
+
+[household.ctramp_mode_names]
+1.0 = "stub"
+
+[household.income_segment]
+stub = 0.0
+
+[air_passenger]
+output_trip_table_directory = "output"
+outfile_trip_table_tmp = "stub.csv"
+input_demand_folder = "stub_dir"
+input_demand_filename_tmpl = "{year}_{direction}{airport}.csv"
+highway_demand_file = "output/air_passenger_highway.omx"
+reference_start_year = "2015"
+reference_end_year = "2050"
+airport_names = ["STUB"]
+
+[[air_passenger.demand_aggregation]]
+name = "stub"
+mode = "stub"
+access_modes = ["stub"]
+
+[internal_external]
+output_trip_table_directory = "output"
+outfile_trip_table_tmp = "stub.csv"
+highway_demand_file = "output/internal_external_highway.omx"
+modes = ["stub"]
+
+[internal_external.demand]
+base_year = 2015
+base_demand_file = "stub.omx"
+
+[[internal_external.time_of_day.classes]]
+name = "stub"
+time_period_split = {EA = 1.0}
+
+[[internal_external.toll_choice.classes]]
+name = "stub"
+value_of_time = 1.0
+
+[truck]
+output_trip_table_directory = "output"
+outfile_trip_table_tmp = "stub.csv"
+highway_demand_file = "output/truck_highway.omx"
+
+[[truck.classes]]
+name = "stub"
+
+[[truck.impedances]]
+name = "stub"
+skim_mode = "stub"
+
+[truck.impedances.time_blend]
+EA = 1.0
+
+[[truck.trip_gen.classes]]
+name = "stub"
+
+[truck.trip_dist]
+max_balance_iterations = 1
+max_balance_relative_error = 0.01
+friction_factors_file = "stub.csv"
+
+[[truck.trip_dist.classes]]
+name = "stub"
+impedance = "stub"
+use_k_factors = false
+
+[[truck.time_of_day.classes]]
+name = "stub"
+time_period_split = {EA = 1.0}
+
+[[truck.toll_choice.classes]]
+name = "stub"
+value_of_time = 1.0
+
+[active_modes]
+emme_scenario_id = 1
+
+[[active_modes.shortest_path_skims]]
+mode = "stub"
+roots = "stub"
+leaves = "stub"
+output = "stub"
+
+[transit]
+value_of_time = 1.0
+walk_speed = 3.0
+transit_speed = 20.0
+effective_headway_source = "stub"
+initial_wait_perception_factor = 1.0
+transfer_wait_perception_factor = 1.0
+walk_perception_factor = 1.0
+walk_perception_factor_cbd = 1.0
+drive_perception_factor = 1.0
+max_transfers = 5
+use_fares = false
+fare_2015_to_2000_deflator = 1.0
+fares_path = "stub.csv"
+fare_matrix_path = "stub.omx"
+fare_max_transfer_distance_miles = 1.0
+override_connector_times = false
+use_ccr = false
+apply_msa_demand = false
+congested_transit_assignment = false
+output_skim_path = "output"
+output_skim_filename_tmpl = "stub_{period}.omx"
+output_skim_matrixname_tmpl = "stub_{period}"
+timed_transfer_nodes = []
+
+[transit.output_transfer_at_station_node_ids]
+stub = 1
+
+[[transit.modes]]
+type = "WALK"
+mode_id = "w"
+name = "Walk"
+assign_type = "AUX_TRANSIT"
+
+[[transit.classes]]
+name = "stub"
+mode_code = "w"
+skim_set_id = 1
+description = "stub class"
+mode_types = ["WALK"]
+
+[[transit.classes.demand]]
+source = "household"
+name = "stub"
+
+[transit.journey_levels]
+output_directory = "output"
+output_demand_file = "stub.csv"
+output_skim_file = "stub.omx"
+skim_start_time = "03:00"
+skim_end_time = "35:00"
+use_algorithm = true
+specify_manually = false
+
+[transit.ccr_stop_criteria]
+max_iterations = 1
+relative_gap = 0.01
+best_relative_gap = 0.01
+normalized_gap = 0.01
+relative_difference = 0.01
+percent_segments_over_capacity = 100.0
+
+[transit.ccr_weights]
+ivt = 1.0
+walk = 1.0
+wait = 1.0
+num_boards = 1.0
+fare = 1.0
+
+[transit.eawt_weights]
+ivt = 1.0
+walk = 1.0
+wait = 1.0
+xfers = 1.0
+fare = 1.0
+
+[transit.congested]
+demand_gap_rmse = 0.01
+
+[[transit.congested.stop_criteria]]
+global_iteration = 0
+
+[[transit.congested.stop_criteria.max_iterations]]
+time_period = "AM"
+max_iterations = 1
+
+[[transit.congested.stop_criteria]]
+global_iteration = 1
+
+[[transit.congested.stop_criteria.max_iterations]]
+time_period = "AM"
+max_iterations = 1
+
+[transit.congested_weights]
+ivt = 1.0
+walk = 1.0
+wait = 1.0
+num_boards = 1.0
+fare = 1.0
+
+[post_processor]
+# All fields have defaults

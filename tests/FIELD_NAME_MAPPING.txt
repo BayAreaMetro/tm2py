@@ -1,0 +1,23 @@
+﻿FIELD NAME MAPPING ANALYSIS
+============================
+
+TOLLS FILE COLUMNS (E:\2015_TM2_20250619\inputs\hwy\tolls.csv):
+- tollam_da, tollam_s2, tollam_s3, tollam_vsm, tollam_sml, tollam_med, tollam_lrg
+
+VEHICLE GROUP NAMES:
+- Source (tolls CSV): da, s2, s3, vsm, sml, med, lrg
+- Destination (network): da, s2, s3, vsm, sml, med, lrg
+
+EXPECTED FIELD NAMES IN CONFIG:
+- veh_group_name: Must match dst_vehicle_group_names → "da", "s2", "s3", "vsm", "sml", "med", "lrg"
+- excluded_links: "is_toll_{vehicle}" → "is_toll_da", "is_toll_s2", "is_toll_s3", "is_toll_vsm", "is_toll_sml", "is_toll_med", "is_toll_lrg"
+- toll: "@bridgetoll_{vehicle}" or "@valuetoll_{vehicle}" → "@bridgetoll_da", "@bridgetoll_s2", "@bridgetoll_s3", etc.
+
+CURRENT ERRORS IN OUR CONFIG:
+✗ Using "sr2" and "sr3" instead of "s2" and "s3"
+✗ Using "is_toll_sr2" and "is_toll_sr3" instead of "is_toll_s2" and "is_toll_s3"  
+✗ Using "@bridgetoll_sr2" and "@bridgetoll_sr3" instead of "@bridgetoll_s2" and "@bridgetoll_s3"
+
+FIXES NEEDED:
+ALL occurrences of sr2 → s2
+ALL occurrences of sr3 → s3

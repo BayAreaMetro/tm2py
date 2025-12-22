@@ -50,8 +50,11 @@ class CountyHighwayController:
     """
     
     # Components needed for highway network creation, skimming, and assignment
+    # create_tod_scenarios: Creates time-of-day scenarios from all-day base scenario
+    # and copies period-specific attributes (@useclass_am → @useclass)
     HIGHWAY_COMPONENTS = [
-        "prepare_network_highway",  # Network creation
+        "create_tod_scenarios",      # Create TOD scenarios from all-day base
+        "prepare_network_highway",   # Network creation
         "highway",                   # Assignment and skimming
         "highway_maz_skim",          # MAZ-level skims (optional)
         "highway_maz_assign",        # MAZ-level assignment (optional)
@@ -85,7 +88,7 @@ class CountyHighwayController:
         self.county_name = county_name or "County"
         
         # Determine which components to run
-        components_to_run = ["prepare_network_highway", "highway"]
+        components_to_run = ["create_tod_scenarios", "prepare_network_highway", "highway"]
         if include_maz_components:
             components_to_run.extend(["highway_maz_skim", "highway_maz_assign"])
         if include_network_summary:
