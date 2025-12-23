@@ -43,11 +43,12 @@ truck_highway_demand_file = ""
 
 [emme]
 # EmmeConfig - ALL required fields including database paths and num_processors
-project_path = "emme_project"
-highway_database_path = "emme_project/Database_highway"
-active_north_database_path = "emme_project/Database_active_north"
-active_south_database_path = "emme_project/Database_active_south"
-transit_database_path = "emme_project/Database_transit"
+# Use absolute paths to avoid resolution issues
+project_path = "E:/Tests/san_mateo_test/emme_project/mtc_emme.emp"
+highway_database_path = "E:/Tests/san_mateo_test/emme_project/Database_highway/emmebank"
+active_north_database_path = "E:/Tests/san_mateo_test/emme_project/Database_active_north/emmebank"
+active_south_database_path = "E:/Tests/san_mateo_test/emme_project/Database_active_south/emmebank"
+transit_database_path = "E:/Tests/san_mateo_test/emme_project/Database_transit/emmebank"
 all_day_scenario_id = 1
 num_processors = "1"
 num_processors_transit_skim = "1"
