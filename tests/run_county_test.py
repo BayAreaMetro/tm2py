@@ -107,7 +107,21 @@ def setup_test_directory(county_name, output_dir, skip_emme_copy=False, thin_net
         if response.lower() != 'y':
             print("Cancelled.")
             sys.exit(0)
-        shutil.rmtree(test_dir)
+        
+        # Try to remove the directory, with better error handling
+        try:
+            shutil.rmtree(test_dir)
+        except (OSError, PermissionError) as e:
+            print(f"\n❌ Cannot delete directory: {e}")
+            print(f"\nPossible causes:")
+            print(f"  - EMME Desktop has files open from this directory")
+            print(f"  - Another process is using files in this directory")
+            print(f"\nSolutions:")
+            print(f"  1. Close EMME Desktop and try again")
+            print(f"  2. Use --skip-setup to reuse existing directory")
+            print(f"  3. Choose a different --output-dir")
+            print(f"  4. Manually delete the directory and try again")
+            sys.exit(1)
     
     # Create directory structure
     directories = [
@@ -377,6 +391,22 @@ def main():
         print(f"\nUsing existing test directory: {test_dir}")
         if not test_dir.exists():
             print(f"❌ Test directory does not exist: {test_dir}")
+            return 1
+        
+        # Verify required files exist
+        required_files = [
+            test_dir / "config" / "scenario.toml",
+            test_dir / "config" / "model.toml",
+        ]
+        missing_files = [f for f in required_files if not f.exists()]
+        if missing_files:
+            print(f"\n❌ Required files missing from test directory:")
+            for f in missing_files:
+                print(f"   - {f}")
+            print(f"\nTo fix:")
+            print(f"  1. Close EMME Desktop if it's open")
+            print(f"  2. Delete the directory: rmdir /s E:\\Tests\\san_mateo_test")
+            print(f"  3. Run without --skip-setup to create fresh directory")
             return 1
     
     # Prompt before running
