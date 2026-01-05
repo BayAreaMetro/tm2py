@@ -195,6 +195,13 @@ def setup_test_directory(county_name, output_dir, skip_emme_copy=False, thin_net
     )
     print(f"  [OK] Copied tolls.csv")
     
+    # Copy interchange nodes (needed for highway reliability calculations)
+    shutil.copy(
+        source_dir / "inputs" / "hwy" / "interchange_nodes.csv",
+        test_dir / "inputs" / "hwy" / "interchange_nodes.csv"
+    )
+    print(f"  [OK] Copied interchange_nodes.csv")
+    
     # Copy MAZ data
     shutil.copy(
         source_dir / "inputs" / "landuse" / "maz_data.csv",
