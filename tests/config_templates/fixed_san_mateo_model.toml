@@ -374,7 +374,7 @@ toll = ["@bridgetoll_da"]
 
 [[highway.classes.demand]]
 source = "household"
-name = "SOV_TOLL_AM"
+name = "SOV_PAY_AM"
 
 [[highway.classes]]
 name = "s2"
@@ -390,7 +390,7 @@ toll = []
 
 [[highway.classes.demand]]
 source = "household"
-name = "s2_GP_AM"
+name = "SR2_GP_AM"
 
 [[highway.classes]]
 name = "s2TOLL"
@@ -406,7 +406,7 @@ toll = ["@bridgetoll_s2"]
 
 [[highway.classes.demand]]
 source = "household"
-name = "s2_TOLL_AM"
+name = "SR2_PAY_AM"
 
 [[highway.classes]]
 name = "s3"
@@ -422,7 +422,7 @@ toll = []
 
 [[highway.classes.demand]]
 source = "household"
-name = "s3_GP_AM"
+name = "SR3_GP_AM"
 
 [[highway.classes]]
 name = "s3TOLL"
@@ -438,7 +438,7 @@ toll = ["@bridgetoll_s3"]
 
 [[highway.classes.demand]]
 source = "household"
-name = "s3_TOLL_AM"
+name = "SR3_PAY_AM"
 
 [[highway.classes]]
 name = "VSTRUCK"
@@ -611,10 +611,13 @@ skim_mode = "datoll"
 veh_group_name = "da"
 
 # TruckConfig - ALL required fields with fixed time_period_split (list) and TollChoiceConfig
+# *** IMPORTANT: TRUCK DEMAND IS DISABLED FOR COUNTY TESTS! ***
+# County tests focus on household highway assignment/skimming only.
+# Trucks are not needed and would add significant runtime.
 [truck]
 output_trip_table_directory = "output"
 outfile_trip_table_tmp = "stub.csv"
-highway_demand_file = "output/truck_highway.omx"
+highway_demand_file = ""  # EMPTY = NO TRUCK DEMAND LOADED!
 
 [[truck.classes]]
 name = "vstruck"

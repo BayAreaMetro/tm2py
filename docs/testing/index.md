@@ -6,6 +6,8 @@ Tests are run with [pyTest](https://pytest.org).
 
 For rapid testing of highway assignment/skimming on a single county:
 
+**→ [Quick Start Guide](quick-start.md)** - All paths you need to change when input data changes
+
 1. Edit `tests/county_test_config.toml` with your paths and settings
 2. Run: `python tests\run_county_test.py`
 
@@ -18,7 +20,9 @@ For rapid testing of highway assignment/skimming on a single county:
 
 ### Documentation
 
+- **[Quick Start](quick-start.md)** - ⚡ All paths to update when input data changes
 - **[County Test Guide](county-test-guide.md)** - Complete usage guide, architecture, and troubleshooting
+- **[Configuration Reference](configuration.md)** - Complete configuration file documentation
 - **[Data Flow](data-flow.md)** - Input files, transformations, and output files explained
 - **[Setup & Configuration](setup.md)** - Pre-flight checklist and detailed setup instructions
 - **[Quick Reference](quick-reference.md)** - Command reference and examples

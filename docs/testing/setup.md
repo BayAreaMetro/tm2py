@@ -1,5 +1,7 @@
 # County Test Setup Checklist
 
+**📖 For a complete list of paths to update, see the [Quick Start Guide](quick-start.md).**
+
 ## Before Running County Tests
 
 ### ✅ Configuration Updates Complete

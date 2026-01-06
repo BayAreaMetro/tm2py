@@ -16,6 +16,8 @@ This test framework is designed for:
 
 ## Quick Start
 
+**📖 See [Quick Start Guide](quick-start.md) for all paths you need to change when input data changes.**
+
 ### Run a Test
 
 1. **Edit configuration file:**
@@ -23,7 +25,7 @@ This test framework is designed for:
    notepad tests\county_test_config.toml
    ```
 
-2. **Update paths and settings** (see file for documentation)
+2. **Update paths and settings** (see [Quick Start](quick-start.md) or [Configuration Reference](configuration.md))
 
 3. **Run the test:**
    ```powershell

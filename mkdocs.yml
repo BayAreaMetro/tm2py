@@ -142,7 +142,9 @@ nav:
     - Papers: papers.md
   - Testing:
     - Overview: testing/index.md
+    - Quick Start: testing/quick-start.md
     - County Test Guide: testing/county-test-guide.md
+    - Configuration Reference: testing/configuration.md
     - Data Flow: testing/data-flow.md
     - Setup & Configuration: testing/setup.md
     - Quick Reference: testing/quick-reference.md
