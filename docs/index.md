@@ -57,4 +57,4 @@ Important travel behavior enhancements in Travel Model Two include:
 
 ## Contributing 🎂
 
-How do you create and update these pages? See [Contributing/Documentation](contributing/documentation/)
+How do you create and update these pages? See [Contributing/Documentation](contributing/documentation.md)

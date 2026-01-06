@@ -68,7 +68,7 @@ Aggregated performance metrics and validation summaries.
 
 [→ View detailed summary report documentation](output/summaries.md)
 
-### [Network Summary Component](../network_summary.md)
+### [Network Summary Component](network_summary.md)
 Comprehensive network analysis component and standalone script for highway and transit performance.
 
 - **Component Integration**: Run as part of TM2PY workflow or standalone script
@@ -77,7 +77,7 @@ Comprehensive network analysis component and standalone script for highway and t
 - **Landuse Integration**: Population, household, and employment totals
 - **Validation**: Built-in data quality checks and troubleshooting guide
 
-[→ View Network Summary component documentation](../network_summary.md)
+[→ View Network Summary component documentation](network_summary.md)
 
 ### [Network Analysis Reference](output/network-analysis.md)
 Technical reference documentation for TM2PY network analysis capabilities.
