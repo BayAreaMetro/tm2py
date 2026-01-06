@@ -215,12 +215,20 @@ def setup_test_directory(config, logger):
         test_dir / "config" / "model.toml"
     )
     
-    # Update model config to point demand files to inputs/demand instead of output
+    # Update model config - the household section is not used for highway-only tests
+    # Demand is loaded from time-period-specific files in inputs/demand/
     model_config = toml.load(test_dir / "config" / "model.toml")
-    # The demand files are in inputs/demand/ not output/ for our county test
     if 'household' in model_config:
-        model_config['household']['highway_demand_file'] = "inputs/demand"
-    logger.debug("Updated household demand path in model config")
+        # Point to the AM demand file as placeholder (actual loading is per time period)
+        model_config['household']['highway_demand_file'] = "inputs/demand/TAZ_Demand_AM.omx"
+    
+    # Update air_passenger and internal_external paths to use stub files (not used in county test)
+    if 'air_passenger' in model_config:
+        model_config['air_passenger']['highway_demand_file'] = "inputs/demand/TAZ_Demand_AM.omx"
+    if 'internal_external' in model_config:
+        model_config['internal_external']['highway_demand_file'] = "inputs/demand/TAZ_Demand_AM.omx"
+    
+    logger.debug("Updated demand paths in model config")
     
     # Write back the updated config
     with open(test_dir / "config" / "model.toml", "wb") as f:
@@ -326,11 +334,12 @@ def setup_test_directory(config, logger):
         
         # Get time periods from scenario config to filter only those demand files
         time_periods = []
-        if 'emme' in scenario_config and 'time_period' in scenario_config['emme']:
-            for tp in scenario_config['emme']['time_period']:
+        if 'time_periods' in scenario_config:
+            for tp in scenario_config['time_periods']:
                 time_periods.append(tp['name'])
         
         logger.info(f"Time periods to filter: {', '.join(time_periods)}")
+        logger.debug(f"Found {len(time_periods)} time periods in config")
         
         # Filter demand files for configured time periods only
         demand_dir = source_dir / "demand_matrices" / "highway" / "household"
@@ -342,8 +351,22 @@ def setup_test_directory(config, logger):
             if demand_file.exists():
                 output_file = test_dir / "inputs" / "demand" / demand_file.name
                 logger.info(f"  Processing {demand_file.name}...")
+                logger.debug(f"    Source: {demand_file}")
+                logger.debug(f"    Output: {output_file}")
                 filter_helper.filter_trip_table(demand_file, output_file)
-                logger.debug(f"    Filtered to: {output_file}")
+                
+                # Verify the output file was created and list its matrices
+                if output_file.exists():
+                    logger.debug(f"    Output file created successfully")
+                    try:
+                        import openmatrix as omx
+                        with omx.open_file(str(output_file), 'r') as omx_file:
+                            matrices = omx_file.list_matrices()
+                            logger.info(f"    Created {len(matrices)} matrices: {', '.join(matrices[:5])}{'...' if len(matrices) > 5 else ''}")
+                    except Exception as e:
+                        logger.warning(f"    Could not verify matrices: {e}")
+                else:
+                    logger.error(f"    Output file was not created!")
             else:
                 logger.warning(f"  {demand_file.name} not found, skipping")
         
@@ -353,11 +376,12 @@ def setup_test_directory(config, logger):
         
         # Get time periods from scenario config to copy only those demand files
         time_periods = []
-        if 'emme' in scenario_config and 'time_period' in scenario_config['emme']:
-            for tp in scenario_config['emme']['time_period']:
+        if 'time_periods' in scenario_config:
+            for tp in scenario_config['time_periods']:
                 time_periods.append(tp['name'])
         
         logger.info(f"Time periods to copy: {', '.join(time_periods)}")
+        logger.debug(f"Found {len(time_periods)} time periods in config")
         
         # Copy demand files for configured time periods only
         demand_dir = source_dir / "demand_matrices" / "highway" / "household"
@@ -370,8 +394,32 @@ def setup_test_directory(config, logger):
                 shutil.copy(demand_file, output_file)
                 logger.info(f"  Copied {demand_file.name}")
                 logger.debug(f"    Size: {demand_file.stat().st_size / 1024 / 1024:.1f} MB")
+                
+                # Verify the output file and list its matrices
+                try:
+                    import openmatrix as omx
+                    with omx.open_file(str(output_file), 'r') as omx_file:
+                        matrices = omx_file.list_matrices()
+                        logger.debug(f"    Contains {len(matrices)} matrices: {', '.join(matrices[:5])}{'...' if len(matrices) > 5 else ''}")
+                except Exception as e:
+                    logger.warning(f"    Could not verify matrices: {e}")
             else:
                 logger.warning(f"  {demand_file.name} not found, skipping")
+    
+    # Copy truck demand files
+    logger.info("Copying truck demand files...")
+    truck_dir = source_dir / "demand_matrices" / "highway" / "commercial"
+    logger.debug(f"Truck demand directory: {truck_dir}")
+    
+    for period in time_periods:
+        truck_file = truck_dir / f"tripstrk{period}.omx"
+        if truck_file.exists():
+            output_file = test_dir / "inputs" / "demand" / truck_file.name
+            shutil.copy(truck_file, output_file)
+            logger.info(f"  Copied {truck_file.name}")
+            logger.debug(f"    Size: {truck_file.stat().st_size / 1024 / 1024:.1f} MB")
+        else:
+            logger.warning(f"  {truck_file.name} not found, skipping")
     
     logger.info("Test directory setup complete!")
     return test_dir

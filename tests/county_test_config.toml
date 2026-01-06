@@ -37,6 +37,7 @@ county_name = "San Mateo"
 # Filter demand to only intra-county trips (both origin and destination in county)
 # true = faster testing with fewer trips
 # false = test with all regional trips (tests connectivity)
+# NOTE: Truck demand is NOT included in county tests!
 filter_demand = true
 
 # Skip copying EMME project if it already exists in output directory

@@ -92,6 +92,9 @@ crosswalk_file = "C:/GitHub/tm2py-utils/tm2py_utils/inputs/maz_taz/mazs_tazs_cou
 **Used By**: `prepare_network_highway` component
 
 #### 4. Demand Matrices (OMX files)
+
+**⚠️ IMPORTANT: County tests use HOUSEHOLD demand ONLY. Truck demand is NOT included!**
+
 **Location**: `E:\2015_TM2_20250619\demand_matrices\highway\household\`
 
 **Files** (one per time period):
