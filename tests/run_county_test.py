@@ -214,6 +214,21 @@ def setup_test_directory(config, logger):
         config_templates / "fixed_san_mateo_model.toml",
         test_dir / "config" / "model.toml"
     )
+    
+    # Update model config to point demand files to inputs/demand instead of output
+    model_config = toml.load(test_dir / "config" / "model.toml")
+    # The demand files are in inputs/demand/ not output/ for our county test
+    if 'household' in model_config:
+        model_config['household']['highway_demand_file'] = "inputs/demand"
+    logger.debug("Updated household demand path in model config")
+    
+    # Write back the updated config
+    with open(test_dir / "config" / "model.toml", "wb") as f:
+        content = toml.dumps(model_config).encode('utf-8')
+        if content.startswith(b'\xef\xbb\xbf'):
+            content = content[3:]
+        f.write(content)
+    
     logger.info("✓ Configuration files copied")
     
     # Apply thin_network setting if provided
@@ -395,8 +410,22 @@ def run_test(config, logger):
         logger.info("  2. highway - Assignment and skimming")
         
         logger.info("Executing controller.run_highway_only()...")
+        logger.info("This may take 5-15 minutes depending on network size...")
+        logger.info("The following steps will occur:")
+        logger.info("  - Loading network from EMME")
+        logger.info("  - Setting network attributes (@useclass, tolls, etc.)")
+        logger.info("  - Loading demand matrices")
+        logger.info("  - Running highway assignment (iterative convergence)")
+        logger.info("  - Computing skims")
+        logger.info("  - Exporting loaded network")
+        logger.info("")
+        logger.info("Watch the EMME Modeller window for detailed progress...")
+        logger.info("")
+        
         controller.run_highway_only()
         
+        logger.info("")
+        logger.info("Controller execution completed!")
         logger.info("="*70)
         logger.info("TEST COMPLETED SUCCESSFULLY!")
         logger.info("="*70)
