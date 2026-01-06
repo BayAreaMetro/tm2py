@@ -98,6 +98,7 @@ nav:
     - Overview: assignment/index.md
     - Highway Value of Time: assignment/highway_value_of_time.md
     - Volume Delay Functions: assignment/volume_delay_functions.md
+    - Field Name Mapping: assignment/field-name-mapping.md
   - Codebase:
     - Architecture: architecture.md
     - API Documentation: api.md
@@ -133,6 +134,15 @@ nav:
     - Geographies: geographies.md
     - Network QA: network_qa.md
     - Papers: papers.md
+  - Testing:
+    - Overview: testing/index.md
+    - County Test Guide: testing/county-test-guide.md
+    - Setup & Configuration: testing/setup.md
+    - Quick Reference: testing/quick-reference.md
+    - Advanced Topics:
+      - Trip Filtering: testing/filtering-trips.md
+      - Network Thinning: testing/network-thinning.md
+      - EMME Manager Flow: testing/emme-manager-flow.md
   - Contributing:
     - Development: contributing/development.md
     - Documentation: contributing/documentation.md
