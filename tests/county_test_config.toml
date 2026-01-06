@@ -53,8 +53,8 @@ skip_setup = false
 #   2 = Keep only freeways/expressways
 #   4 = Keep freeways + arterials (recommended for faster testing)
 #   6 = Keep all except local streets
-#   null = No thinning (use full network)
-thin_network = null
+# Comment out or omit this line to use the full network (no thinning)
+# thin_network = 4
 
 # Skip confirmation prompt and run immediately
 # true = run without asking for confirmation
