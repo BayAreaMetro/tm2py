@@ -1,0 +1,94 @@
+# County Test Configuration
+# 
+# This file controls paths and settings for the county highway test framework.
+# Edit the values below to match your environment.
+
+[paths]
+# Source dataset directory (must contain emme_project, inputs, demand_matrices)
+# Expected structure within this directory:
+#   emme_project/
+#     mtc_emme.emp
+#     Database_highway/emmebank
+#   inputs/
+#     hwy/tolls.csv
+#     landuse/maz_data.csv
+#   demand_matrices/
+#     highway/household/
+#       TAZ_Demand_EA.omx
+#       TAZ_Demand_AM.omx
+#       TAZ_Demand_MD.omx
+#       TAZ_Demand_PM.omx
+#       TAZ_Demand_EV.omx
+source_dataset = "E:/2015_TM2_20250619"
+
+# Output/test directory where test results will be written
+# This will be created if it doesn't exist
+output_dir = "E:/Tests/san_mateo_test"
+
+# Crosswalk file for zone detection (maps TAZ/MAZ to counties)
+# Used to automatically detect zone ranges for the specified county
+crosswalk_file = "C:/GitHub/tm2py-utils/tm2py_utils/inputs/maz_taz/mazs_tazs_county_tract_PUMA_2.5.csv"
+
+[test]
+# County name to test (must match county_name in crosswalk file)
+# Examples: "San Mateo", "Alameda", "Santa Clara", "Contra Costa"
+county_name = "San Mateo"
+
+# Filter demand to only intra-county trips (both origin and destination in county)
+# true = faster testing with fewer trips
+# false = test with all regional trips (tests connectivity)
+filter_demand = true
+
+# Skip copying EMME project if it already exists in output directory
+# Set to true to speed up repeated test runs
+skip_emme_copy = false
+
+# Skip test directory setup if it already exists
+# Set to true to rerun components without recreating directory structure
+skip_setup = false
+
+# Network thinning threshold (optional)
+# Remove links with @ft (functional type) greater than this value
+# Examples:
+#   2 = Keep only freeways/expressways
+#   4 = Keep freeways + arterials (recommended for faster testing)
+#   6 = Keep all except local streets
+#   null = No thinning (use full network)
+thin_network = null
+
+# Skip confirmation prompt and run immediately
+# true = run without asking for confirmation
+# false = prompt user before running
+auto_confirm = false
+
+[emme]
+# EMME scenario ID for the all-day base network in the source dataset
+# This scenario should have a fully loaded highway network
+all_day_scenario_id = 100
+
+# Time periods to test
+# Comment out periods you don't need for faster testing
+# Default: Only AM period for quick testing
+time_periods = ["AM"]
+# time_periods = ["EA", "AM", "MD", "PM", "EV"]  # Uncomment for all periods
+
+[components]
+# Components to run (in order)
+# Uncomment components you want to include in the test
+run_components = [
+    "create_tod_scenarios",      # REQUIRED: Creates time-of-day scenarios
+    "prepare_network_highway",   # REQUIRED: Sets up network attributes
+    "highway",                   # REQUIRED: Highway assignment and skimming
+    # "highway_maz_skim",        # OPTIONAL: MAZ-to-MAZ shortest paths
+    # "highway_maz_assign",      # OPTIONAL: MAZ assignment
+    # "network_summary",         # OPTIONAL: Network performance reports
+]
+
+[logging]
+# Log level for console output
+# Options: DEBUG, INFO, WARNING, ERROR
+console_log_level = "INFO"
+
+# Log level for file output
+# Options: DEBUG, INFO, WARNING, ERROR  
+file_log_level = "DEBUG"

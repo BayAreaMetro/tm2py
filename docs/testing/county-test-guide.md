@@ -18,15 +18,27 @@ This test framework is designed for:
 
 ### Run a Test
 
-```powershell
-C:\GitHub\tm2pyenv\Scripts\python.exe tests\run_county_test.py --output-dir "E:\Tests\san_mateo_test" --county "San Mateo"
-```
+1. **Edit configuration file:**
+   ```powershell
+   notepad tests\county_test_config.toml
+   ```
 
-### Skip Setup (Reuse Existing)
+2. **Update paths and settings** (see file for documentation)
+
+3. **Run the test:**
+   ```powershell
+   C:\GitHub\tm2pyenv\Scripts\python.exe tests\run_county_test.py
+   ```
+
+### Use a Custom Config
 
 ```powershell
-# Skip EMME copy and directory setup
-python tests\run_county_test.py --output-dir "E:\Tests\san_mateo_test" --county "San Mateo" --skip-emme-copy --skip-setup --yes
+# Copy and customize the config
+copy tests\county_test_config.toml tests\my_test.toml
+notepad tests\my_test.toml
+
+# Run with custom config
+python tests\run_county_test.py --config tests\my_test.toml
 ```
 
 ## What Gets Filtered vs. What Doesn't
