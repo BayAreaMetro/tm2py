@@ -7,7 +7,12 @@ This script helps you test the county highway assignment framework by:
 
 Usage:
     From EMME Python environment:
-    python tests/run_county_test.py --county "San Mateo" --output-dir "C:/MyTests/san_mateo_test"
+    
+    # Edit tests/county_test_config.toml with your paths and settings, then run:
+    python tests/run_county_test.py
+    
+    # Or specify a different config file:
+    python tests/run_county_test.py --config tests/my_custom_config.toml
 """
 
 import argparse
@@ -25,7 +30,7 @@ if sys.platform == 'win32':
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-def check_prerequisites(county_name):
+def check_prerequisites(config):
     """Check if all required files and directories exist."""
     print("="*70)
     print("CHECKING PREREQUISITES")
@@ -34,8 +39,10 @@ def check_prerequisites(county_name):
     issues = []
     warnings = []
     
+    county_name = config['test']['county_name']
+    
     # Check source dataset
-    source_dir = Path(r"E:\2015_TM2_20250619")
+    source_dir = Path(config['paths']['source_dataset'])
     if not source_dir.exists():
         issues.append(f"Source dataset not found: {source_dir}")
     else:
@@ -90,11 +97,17 @@ def check_prerequisites(county_name):
     
     print("[OK] All prerequisites met!")
     return True
-
-
-def setup_test_directory(county_name, output_dir, skip_emme_copy=False, thin_network=None):
+nfig):
     """Create test directory structure."""
     print("\n" + "="*70)
+    print("SETTING UP TEST DIRECTORY")
+    print("="*70)
+    
+    county_name = config['test']['county_name']
+    output_dir = Path(config['paths']['output_dir'])
+    skip_emme_copy = config['test']['skip_emme_copy']
+    thin_network = config['test'].get('thin_network')
+    source_dir = Path(config['paths']['source_dataset'] "="*70)
     print("SETTING UP TEST DIRECTORY")
     print("="*70)
     
@@ -162,7 +175,7 @@ def setup_test_directory(county_name, output_dir, skip_emme_copy=False, thin_net
         print(f"  [OK] Network thinning enabled: @ft <= {thin_network}")
     
     # Copy EMME project
-    source_emme = Path(r"E:\2015_TM2_20250619\emme_project")
+    source_emme = source_dir / "emme_project"
     dest_emme = test_dir / "emme_project"
     
     if skip_emme_copy:
@@ -186,7 +199,6 @@ def setup_test_directory(county_name, output_dir, skip_emme_copy=False, thin_net
         print(f"  ✓ Copied EMME project to {dest_emme}")
     
     # Copy essential input files
-    source_dir = Path(r"E:\2015_TM2_20250619")
     
     # Copy tolls
     shutil.copy(
@@ -204,7 +216,7 @@ def setup_test_directory(county_name, output_dir, skip_emme_copy=False, thin_net
     
     # Check if demand filtering is enabled
     scenario_config = toml.load(test_dir / "config" / "scenario.toml")
-    filter_demand = scenario_config.get("scenario", {}).get("filter_demand", False)
+    filter_demand = config['test'].get('filter_demand', False)
     
     if filter_demand:
         print(f"\n{'='*70}")
@@ -277,11 +289,14 @@ def setup_test_directory(county_name, output_dir, skip_emme_copy=False, thin_net
     return test_dir
 
 
-def run_test(test_dir, county_name):
+def run_test(config):
     """Run the highway test."""
     print("\n" + "="*70)
     print("RUNNING HIGHWAY TEST")
     print("="*70)
+    
+    county_name = config['test']['county_name']
+    test_dir = Path(config['paths']['output_dir'])
     
     try:
         from tests.highway_assign_skim_controller import CountyHighwayController
@@ -334,60 +349,52 @@ def run_test(test_dir, county_name):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run county highway test")
-    parser.add_argument(
-        "--county",
-        default="San Mateo",
-        help="County name (default: San Mateo)"
+    parser = argparse.ArgumentParser(
+        description="Run county highway test using configuration file"
     )
     parser.add_argument(
-        "--output-dir",
-        required=True,
-        help="Output directory for test results (e.g., C:/MyTests/san_mateo_test)"
-    )
-    parser.add_argument(
-        "--skip-setup",
-        action="store_true",
-        help="Skip test directory setup (use existing)"
-    )
-    parser.add_argument(
-        "--skip-emme-copy",
-        action="store_true",
-        help="Skip copying EMME project (use existing or copy manually)"
-    )
-    parser.add_argument(
-        "--yes", "-y",
-        action="store_true",
-        help="Skip confirmation prompt and run immediately"
-    )
-    parser.add_argument(
-        "--thin-network",
-        type=int,
-        metavar="THRESHOLD",
-        help="Thin network by functional class: keep links with @ft <= THRESHOLD (e.g., 4=arterials+, 6=collectors+)"
+        "--config",
+        default="tests/county_test_config.toml",
+        help="Path to configuration file (default: tests/county_test_config.toml)"
     )
     
     args = parser.parse_args()
     
+    # Load configuration
+    config_path = Path(args.config)
+    if not config_path.exists():
+        print(f"❌ Configuration file not found: {config_path}")
+        print(f"\nPlease create a configuration file or specify an existing one with --config")
+        print(f"Example: python tests/run_county_test.py --config my_config.toml")
+        sys.exit(1)
+    
+    print(f"Loading configuration from: {config_path}")
+    config = toml.load(config_path)
+    
+    # Display configuration summary
+    print("\n" + "="*70)
+    print("CONFIGURATION SUMMARY")
     print("="*70)
-    print(f"COUNTY HIGHWAY TEST - {args.county}")
+    print(f"County: {config['test']['county_name']}")
+    print(f"Source dataset: {config['paths']['source_dataset']}")
+    print(f"Output directory: {config['paths']['output_dir']}")
+    print(f"Filter demand: {config['test'].get('filter_demand', False)}")
+    print(f"Skip EMME copy: {config['test'].get('skip_emme_copy', False)}")
+    print(f"Skip setup: {config['test'].get('skip_setup', False)}")
+    if config['test'].get('thin_network'):
+        print(f"Network thinning: @ft <= {config['test']['thin_network']}")
     print("="*70)
     
     # Check prerequisites
-    if not check_prerequisites(args.county):
+    if not check_prerequisites(config):
         print("\n❌ Prerequisites not met. Please resolve issues and try again.")
         return 1
     
     # Setup test directory
-    if not args.skip_setup:
-        test_dir = setup_test_directory(
-            args.county, 
-            args.output_dir, 
-            args.skip_emme_copy,
-            args.thin_network
-        )
+    if not config['test'].get('skip_setup', False):
+        test_dir = setup_test_directory(config)
     else:
-        test_dir = Path(args.output_dir)
+        test_dir = Path(config['paths']['output_dir'])
         print(f"\nUsing existing test directory: {test_dir}")
         if not test_dir.exists():
             print(f"❌ Test directory does not exist: {test_dir}")
@@ -405,12 +412,12 @@ def main():
                 print(f"   - {f}")
             print(f"\nTo fix:")
             print(f"  1. Close EMME Desktop if it's open")
-            print(f"  2. Delete the directory: rmdir /s E:\\Tests\\san_mateo_test")
-            print(f"  3. Run without --skip-setup to create fresh directory")
+            print(f"  2. Delete the directory manually")
+            print(f"  3. Run without skip_setup=true to create fresh directory")
             return 1
     
     # Prompt before running
-    if not args.yes:
+    if not config['test'].get('auto_confirm', False):
         print("\n" + "="*70)
         response = input("\nReady to run test? This will take several minutes. (y/n): ")
         if response.lower() != 'y':
@@ -418,18 +425,20 @@ def main():
             return 0
     else:
         print("\n" + "="*70)
-        print("\nStarting test (--yes flag provided)...")
+        print("\nStarting test (auto_confirm enabled)...")
     
     # Run test
-    success = run_test(test_dir, args.county)
+    success = run_test(config)
     
     if success:
+        test_dir = Path(config['paths']['output_dir'])
         print(f"\nTest artifacts are in: {test_dir.absolute()}")
         print(f"  - Logs: {test_dir / 'logs'}")
         print(f"  - Loaded network: {test_dir / 'loaded_highway'}")
         print(f"  - Skims: {test_dir / 'skim_matrices' / 'highway'}")
         return 0
     else:
+        test_dir = Path(config['paths']['output_dir'])
         print(f"\nCheck logs in: {test_dir / 'logs'}")
         return 1
 

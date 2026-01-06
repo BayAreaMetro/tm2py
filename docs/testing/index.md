@@ -6,9 +6,8 @@ Tests are run with [pyTest](https://pytest.org).
 
 For rapid testing of highway assignment/skimming on a single county:
 
-```powershell
-python tests\run_county_test.py --output-dir "E:\Tests\san_mateo_test" --county "San Mateo"
-```
+1. Edit `tests/county_test_config.toml` with your paths and settings
+2. Run: `python tests\run_county_test.py`
 
 **Key Features**:
 - Demand filtering (intra-county trips only)
@@ -20,6 +19,7 @@ python tests\run_county_test.py --output-dir "E:\Tests\san_mateo_test" --county 
 ### Documentation
 
 - **[County Test Guide](county-test-guide.md)** - Complete usage guide, architecture, and troubleshooting
+- **[Data Flow](data-flow.md)** - Input files, transformations, and output files explained
 - **[Setup & Configuration](setup.md)** - Pre-flight checklist and detailed setup instructions
 - **[Quick Reference](quick-reference.md)** - Command reference and examples
 - **[Trip Filtering](filtering-trips.md)** - How to filter CTRAMP output trip files
