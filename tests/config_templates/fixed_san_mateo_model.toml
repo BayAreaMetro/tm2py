@@ -4,7 +4,7 @@
 [highway]
 # HighwayConfig - ALL required fields (matched to source E:\2015_TM2_20250619\model_config.toml)
 generic_highway_mode_code = "c"
-max_iterations = 100
+max_iterations = 10
 network_acceleration = false
 area_type_buffer_dist_miles = 0.5
 output_skim_path = "skim_matrices/highway"
@@ -28,9 +28,10 @@ relative_gap = 0.0001
 # Tolls configuration (required)
 [highway.tolls]
 file_path = "inputs/hwy/tolls.csv"
-valuetoll_start_tollbooth_code = 1000000
 src_vehicle_group_names = ["da", "s2", "s3", "vsm", "sml", "med", "lrg"]
-dst_vehicle_group_names = ["da", "s2", "s3", "vsm", "sml", "med", "lrg"]
+dst_vehicle_group_names = ["da", "sr2", "sr3", "vsm", "sml", "med", "lrg"]
+valuetoll_start_tollbooth_code = 11
+relative_gap = 0.05
 
 # MAZ to MAZ configuration (ALL required fields)
 [highway.maz_to_maz]
@@ -345,122 +346,112 @@ critical_speed = 47.087
 
 # Highway classes (ALL required fields: veh_group_name, mode_code, skims, toll, demand)
 [[highway.classes]]
-name = "DA"
-description = "Drive alone - free"
+name = "da"
+description = "drive alone"
 veh_group_name = "da"
 mode_code = "d"
 value_of_time = 18.93
-operating_cost_per_mile = 0.20
-pce = 1.0
-excluded_links = ["is_toll_da"]
-skims = ["time", "dist", "freeflowtime"]
-toll = []
+operating_cost_per_mile = 17.23
+excluded_links = ["is_toll_da", "is_sr"]
+skims = ["time", "dist", "freeflowtime", "bridgetoll_da", "rlbty", "autotime"]
+toll = ["@bridgetoll_da"]
 
 [[highway.classes.demand]]
 source = "household"
 name = "SOV_GP_AM"
 
 [[highway.classes]]
-name = "DATOLL"
-description = "Drive alone - toll"
+name = "datoll"
+description = "drive alone toll"
 veh_group_name = "da"
-mode_code = "e"
+mode_code = "D"
 value_of_time = 18.93
-operating_cost_per_mile = 0.20
-pce = 1.0
-excluded_links = []
-skims = ["time", "dist"]
-toll = ["@bridgetoll_da"]
+operating_cost_per_mile = 17.23
+excluded_links = ["is_sr"]
+skims = ["time", "dist", "freeflowtime", "bridgetoll_da", "valuetoll_da", "tolldist", "rlbty", "autotime"]
+toll = ["@valuetoll_da", "@bridgetoll_da"]
 
 [[highway.classes.demand]]
 source = "household"
 name = "SOV_PAY_AM"
 
 [[highway.classes]]
-name = "s2"
-description = "Shared ride 2 - free"
-veh_group_name = "s2"
-mode_code = "f"
+name = "sr2"
+description = "shared ride 2"
+veh_group_name = "sr2"
+mode_code = "e"
 value_of_time = 18.93
-operating_cost_per_mile = 0.20
-pce = 1.0
-excluded_links = ["is_toll_s2"]
-skims = ["time", "dist"]
-toll = []
+operating_cost_per_mile = 17.23
+excluded_links = ["is_toll_sr2", "is_sr3"]
+skims = ["time", "dist", "freeflowtime", "bridgetoll_sr2", "hovdist", "rlbty", "autotime"]
+toll = ["@bridgetoll_sr2"]
+toll_factor = 0.5714285714285714
 
 [[highway.classes.demand]]
 source = "household"
 name = "SR2_GP_AM"
 
+[[highway.classes.demand]]
+source = "household"
+name = "SR2_HOV_AM"
+
 [[highway.classes]]
-name = "s2TOLL"
-description = "Shared ride 2 - toll"
-veh_group_name = "s2"
-mode_code = "g"
+name = "sr2toll"
+description = "shared ride 2 toll"
+veh_group_name = "sr2"
+mode_code = "E"
 value_of_time = 18.93
-operating_cost_per_mile = 0.20
-pce = 1.0
-excluded_links = []
-skims = ["time", "dist"]
-toll = ["@bridgetoll_s2"]
+operating_cost_per_mile = 17.23
+excluded_links = ["is_sr3"]
+skims = ["time", "dist", "freeflowtime", "bridgetoll_sr2", "valuetoll_sr2", "hovdist", "tolldist", "rlbty", "autotime"]
+toll = ["@valuetoll_sr2", "@bridgetoll_sr2"]
+toll_factor = 0.5714285714285714
 
 [[highway.classes.demand]]
 source = "household"
 name = "SR2_PAY_AM"
 
 [[highway.classes]]
-name = "s3"
-description = "Shared ride 3+ - free"
-veh_group_name = "s3"
-mode_code = "h"
+name = "sr3"
+description = "shared ride 3+"
+veh_group_name = "sr3"
+mode_code = "f"
 value_of_time = 18.93
-operating_cost_per_mile = 0.20
-pce = 1.0
-excluded_links = ["is_toll_s3"]
-skims = ["time", "dist"]
-toll = []
+operating_cost_per_mile = 17.23
+excluded_links = ["is_toll_sr3"]
+skims = ["time", "dist", "freeflowtime", "bridgetoll_sr3", "hovdist", "rlbty", "autotime"]
+toll = ["@bridgetoll_sr3"]
+toll_factor = 0.4
 
 [[highway.classes.demand]]
 source = "household"
 name = "SR3_GP_AM"
 
+[[highway.classes.demand]]
+source = "household"
+name = "SR3_HOV_AM"
+
 [[highway.classes]]
-name = "s3TOLL"
-description = "Shared ride 3+ - toll"
-veh_group_name = "s3"
-mode_code = "i"
+name = "sr3toll"
+description = "shared ride 3+ toll"
+veh_group_name = "sr3"
+mode_code = "F"
 value_of_time = 18.93
-operating_cost_per_mile = 0.20
-pce = 1.0
+operating_cost_per_mile = 17.23
 excluded_links = []
-skims = ["time", "dist"]
-toll = ["@bridgetoll_s3"]
+skims = ["time", "dist", "freeflowtime", "bridgetoll_sr3", "valuetoll_sr3", "hovdist", "tolldist", "rlbty", "autotime"]
+toll = ["@valuetoll_sr3", "@bridgetoll_sr3"]
+toll_factor = 0.4
 
 [[highway.classes.demand]]
 source = "household"
 name = "SR3_PAY_AM"
 
 [[highway.classes]]
-name = "VSTRUCK"
-description = "Very small trucks"
-veh_group_name = "vsm"
-mode_code = "j"
-value_of_time = 36.00
-operating_cost_per_mile = 0.50
-pce = 1.5
-excluded_links = []
-skims = ["time", "dist"]
-toll = []
-
-[[highway.classes.demand]]
-source = "truck"
-name = "vstruck"
-
-[[highway.classes]]
-name = "STRUCK"
-description = "Small trucks"
-veh_group_name = "sml"
-mode_code = "k"
+name = "trk"
+description = "Truck (vsm, sml, med)"
+veh_group_name = "trk"
+mode_code = "t"
 value_of_time = 36.00
 operating_cost_per_mile = 0.80
 pce = 1.5
@@ -470,29 +461,21 @@ toll = []
 
 [[highway.classes.demand]]
 source = "truck"
-name = "struck"
-
-[[highway.classes]]
-name = "MTRUCK"
-description = "Medium trucks"
-veh_group_name = "med"
-mode_code = "l"
-value_of_time = 40.00
-operating_cost_per_mile = 1.00
-pce = 2.0
-excluded_links = []
-skims = ["time", "dist"]
-toll = []
+name = "vsmtrk"
 
 [[highway.classes.demand]]
 source = "truck"
-name = "mtruck"
+name = "smltrk"
+
+[[highway.classes.demand]]
+source = "truck"
+name = "medtrk"
 
 [[highway.classes]]
-name = "CTRUCK"
-description = "Combination trucks"
-veh_group_name = "lrg"
-mode_code = "m"
+name = "lrgtrk"
+description = "Large truck"
+veh_group_name = "lrgtrk"
+mode_code = "l"
 value_of_time = 50.00
 operating_cost_per_mile = 1.30
 pce = 2.5
@@ -502,7 +485,7 @@ toll = []
 
 [[highway.classes.demand]]
 source = "truck"
-name = "ctruck"
+name = "lrgtrk"
 
 # HouseholdConfig - ALL required fields with fixed ctramp_mode_names (string keys)
 [household]
@@ -620,19 +603,19 @@ outfile_trip_table_tmp = "stub.csv"
 highway_demand_file = ""  # EMPTY = NO TRUCK DEMAND LOADED!
 
 [[truck.classes]]
-name = "vstruck"
+name = "vsmtrk"
 description = "Very small trucks"
 
 [[truck.classes]]
-name = "struck"
+name = "smltrk"
 description = "Small trucks"
 
 [[truck.classes]]
-name = "mtruck"
+name = "medtrk"
 description = "Medium trucks"
 
 [[truck.classes]]
-name = "ctruck"
+name = "lrgtrk"
 description = "Combination trucks"
 
 # Impedances configuration
@@ -649,7 +632,7 @@ EV = 0.2
 
 # Trip generation configuration
 [[truck.trip_gen.classes]]
-name = "vstruck"
+name = "vsmtrk"
 
 [[truck.trip_gen.classes.production_formula.land_use_rates]]
 property = "TOTEMP"
@@ -660,7 +643,7 @@ property = "TOTEMP"
 coeff = 0.001
 
 [[truck.trip_gen.classes]]
-name = "struck"
+name = "smltrk"
 
 [[truck.trip_gen.classes.production_formula.land_use_rates]]
 property = "TOTEMP"
@@ -671,7 +654,7 @@ property = "TOTEMP"
 coeff = 0.001
 
 [[truck.trip_gen.classes]]
-name = "mtruck"
+name = "medtrk"
 
 [[truck.trip_gen.classes.production_formula.land_use_rates]]
 property = "TOTEMP"
@@ -682,7 +665,7 @@ property = "TOTEMP"
 coeff = 0.001
 
 [[truck.trip_gen.classes]]
-name = "ctruck"
+name = "lrgtrk"
 
 [[truck.trip_gen.classes.production_formula.land_use_rates]]
 property = "TOTEMP"
@@ -699,28 +682,28 @@ max_balance_relative_error = 0.01
 friction_factors_file = "inputs/truck/friction_factors.csv"
 
 [[truck.trip_dist.classes]]
-name = "vstruck"
+name = "vsmtrk"
 impedance = "gen_cost"
 use_k_factors = false
 
 [[truck.trip_dist.classes]]
-name = "struck"
+name = "smltrk"
 impedance = "gen_cost"
 use_k_factors = false
 
 [[truck.trip_dist.classes]]
-name = "mtruck"
+name = "medtrk"
 impedance = "gen_cost"
 use_k_factors = false
 
 [[truck.trip_dist.classes]]
-name = "ctruck"
+name = "lrgtrk"
 impedance = "gen_cost"
 use_k_factors = false
 
 # Time of day configuration
 [[truck.time_of_day.classes]]
-name = "vstruck"
+name = "vsmtrk"
 
 [[truck.time_of_day.classes.time_period_split]]
 time_period = "EA"
@@ -743,7 +726,7 @@ time_period = "EV"
 od = 0.2
 
 [[truck.time_of_day.classes]]
-name = "struck"
+name = "smltrk"
 
 [[truck.time_of_day.classes.time_period_split]]
 time_period = "EA"
@@ -766,7 +749,7 @@ time_period = "EV"
 od = 0.2
 
 [[truck.time_of_day.classes]]
-name = "mtruck"
+name = "medtrk"
 
 [[truck.time_of_day.classes.time_period_split]]
 time_period = "EA"
@@ -789,7 +772,7 @@ time_period = "EV"
 od = 0.2
 
 [[truck.time_of_day.classes]]
-name = "ctruck"
+name = "lrgtrk"
 
 [[truck.time_of_day.classes.time_period_split]]
 time_period = "EA"
@@ -818,12 +801,12 @@ operating_cost_per_mile = 0.80
 
 [[truck.toll_choice.classes]]
 name = "truck_free"
-skim_mode = "vstruck"
+skim_mode = "vsmtrk"
 veh_group_name = "vsm"
 
 [[truck.toll_choice.classes]]
 name = "truck_toll"
-skim_mode = "vstruck"
+skim_mode = "vsmtrk"
 veh_group_name = "vsm"
 
 # ActiveModesConfig - ALL required fields

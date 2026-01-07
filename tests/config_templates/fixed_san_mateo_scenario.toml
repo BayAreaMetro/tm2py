@@ -27,7 +27,7 @@ global_iteration_components = [
     "highway",
 ]
 
-final_components = []
+final_components = ["network_summary"]
 
 [warmstart]
 # WarmStartConfig - ALL required fields

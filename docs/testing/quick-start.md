@@ -1,19 +1,66 @@
 # Quick Start: County Test Setup
 
-This guide lists **all paths you need to change** when setting up or updating county tests with new input data.
+This guide explains the complete process for setting up county tests with new input data.
 
-## TL;DR - Files to Edit
+## Understanding the Configuration Files
 
-When input data changes, you must update paths in **TWO configuration files**:
+### Where They Live (Before Test Runs)
 
-1. **`tests/county_test_config.toml`** - Main test configuration (paths, county, options)
-2. **`tests/config_templates/fixed_san_mateo_model.toml`** - Model configuration (automatically copied to test directory)
+```
+tests/
+├── county_test_config.toml              ← YOU EDIT THIS (main test settings)
+└── config_templates/
+    ├── fixed_san_mateo_model.toml       ← OPTIONAL EDIT (model settings)
+    └── fixed_san_mateo_scenario.toml    ← DON'T EDIT (auto-generated)
+```
 
-⚠️ **The scenario config is automatically generated** - you don't need to edit `fixed_san_mateo_scenario.toml` manually.
+### Where They Go (During Test Execution)
+
+When you run the test, the script:
+
+1. **Creates test directory** at your `output_dir` location
+2. **Copies templates** to the test directory:
+   ```
+   E:/Tests/san_mateo_test/
+   └── config/
+       ├── model.toml        ← Copy of fixed_san_mateo_model.toml (auto-updated)
+       └── scenario.toml     ← Copy of fixed_san_mateo_scenario.toml (fully rewritten)
+   ```
+3. **Automatically updates paths** in the copies to point to correct locations
+4. **Runs the test** using the updated configs
+
+## What You Need To Edit
+
+### For New Input Data Location: ONLY Edit One File
+
+**When you have a new dataset at a different path:**
+
+1. **Edit:** `tests/county_test_config.toml`
+   ```toml
+   [paths]
+   source_dataset = "E:/NEW_LOCATION/2015_TM2_20250619"  # ← Change this
+   output_dir = "E:/Tests/my_test"                       # ← And this
+   ```
+
+2. **Run the test:**
+   ```powershell
+   C:\GitHub\tm2pyenv\Scripts\python.exe tests\run_county_test.py
+   ```
+
+3. **Done!** The script handles everything else.
+
+### When To Edit Template TOMLs
+
+**Only edit `tests/config_templates/fixed_san_mateo_model.toml` if:**
+- Your dataset has different matrix names (not SOV_GP_AM, SR2_GP_AM, etc.)
+- Your file structure differs (not demand_matrices/highway/household/)
+- You want to change model settings (VOT, capacity factors, etc.)
+
+**Never edit `fixed_san_mateo_scenario.toml`** - it's completely rewritten by the script.
 
 ---
 
-## File 1: tests/county_test_config.toml
+## File 1: tests/county_test_config.toml (Main Test Settings)
 
 ### Paths You Must Change
 
@@ -49,114 +96,102 @@ time_periods = ["AM"]     # Quick test, or ["EA", "AM", "MD", "PM", "EV"] for fu
 
 ---
 
-## File 2: tests/config_templates/fixed_san_mateo_model.toml
+## File 2: tests/config_templates/fixed_san_mateo_model.toml (Model Settings)
 
-This file contains relative paths that point to files **inside the test directory**. Most paths are correct by default, but check these sections:
+**Location:** Stays in `tests/config_templates/` as a template
 
-### Section A: Highway Network Files
+**Copied to:** `{output_dir}/config/model.toml` during test setup
 
-**These paths are relative to the test output directory and should work as-is:**
+**Auto-updated:** Yes - demand file paths are rewritten by script
+
+This file contains **relative paths** that point to files inside the test directory. Most paths work as-is because they're relative.
+
+### Paths That Work As-Is (Relative Paths)
 
 ```toml
 [highway]
-interchange_nodes_file = "inputs/hwy/interchange_nodes.csv"  # ✓ Auto-copied
-model_to_emme_node_id_xwalk = "inputs/hwy/node_xwalk.csv"   # ✓ Auto-generated
-output_node_sequential_id_xwalk = "inputs/hwy/node_seq_xwalk.csv"  # ✓ Auto-generated
+interchange_nodes_file = "inputs/hwy/interchange_nodes.csv"  # ✓ Relative path
+model_to_emme_node_id_xwalk = "inputs/hwy/node_xwalk.csv"   # ✓ Created during network build
+output_node_sequential_id_xwalk = "inputs/hwy/node_seq_xwalk.csv"  # ✓ Created at runtime
 
 [highway.tolls]
-file_path = "inputs/hwy/tolls.csv"  # ✓ Auto-copied
+file_path = "inputs/hwy/tolls.csv"  # ✓ Relative path
 
 [highway.maz_to_maz]
 demand_file = "inputs/demand/maz_demand.omx"  # ✓ Placeholder (not used in basic test)
 ```
 
-### Section B: Demand Files (Most Important!)
+### Paths Auto-Updated By Script
 
-**These are automatically updated by the setup script** to point to filtered demand files:
-
+**In the template (`fixed_san_mateo_model.toml`):**
 ```toml
 [household]
-# *** UPDATED AUTOMATICALLY by run_county_test.py setup ***
-# After setup, these will point to inputs/demand/TAZ_Demand_{period}.omx
-highway_demand_file = "output/household_highway.omx"  # Gets updated to filtered demand
-transit_demand_file = "output/household_transit.omx"  # Gets updated to filtered demand
-active_demand_file = "output/household_active.omx"    # Gets updated to filtered demand
+highway_demand_file = "output/household_highway.omx"  # Placeholder
+transit_demand_file = "output/household_transit.omx"  # Placeholder
+active_demand_file = "output/household_active.omx"    # Placeholder
 ```
 
-**Setup script updates these to:**
+**After script copies to test directory (`{output_dir}/config/model.toml`):**
 ```toml
-highway_demand_file = "inputs/demand/TAZ_Demand_AM.omx"  # Filtered intra-county trips
-# (Same for EA, MD, PM, EV if testing multiple periods)
+[household]
+highway_demand_file = "inputs/demand/TAZ_Demand_AM.omx"  # ← Script updates
+transit_demand_file = "inputs/demand/TAZ_Demand_AM.omx"  # ← Script updates
+active_demand_file = "inputs/demand/TAZ_Demand_AM.omx"   # ← Script updates
 ```
 
-### Section C: Truck Demand (DISABLED)
+**You don't need to edit these** - the script automatically:
+1. Copies the template to `{output_dir}/config/model.toml`
+2. Updates all household demand paths to point to filtered demand files
+3. Updates air_passenger and internal_external paths too
+
+### Truck Demand (Always Disabled)
 
 ```toml
 [truck]
 # *** IMPORTANT: TRUCK DEMAND IS DISABLED FOR COUNTY TESTS! ***
-# County tests focus on household demand only for faster testing
 highway_demand_file = ""  # Empty = disabled
 ```
 
-### Section D: Air Passenger Demand
-
-```toml
-[air_passenger]
-# *** UPDATED AUTOMATICALLY by run_county_test.py setup ***
-highway_demand_file = "output/air_passenger_highway.omx"  # Gets updated
-```
-
-### Section E: Internal-External Demand
-
-```toml
-[internal_external]
-# *** UPDATED AUTOMATICALLY by run_county_test.py setup ***
-highway_demand_file = "output/internal_external_highway.omx"  # Gets updated
-```
-
----
-
-## What Gets Updated Automatically?
-
-The `run_county_test.py` script automatically updates these paths in the model config:
-
-| Original Path | Updated To | Reason |
-|---------------|------------|--------|
-| `household.highway_demand_file` | `inputs/demand/TAZ_Demand_{period}.omx` | Points to filtered county demand |
-| `household.transit_demand_file` | `inputs/demand/TAZ_Demand_{period}.omx` | Same file (multi-matrix OMX) |
-| `household.active_demand_file` | `inputs/demand/TAZ_Demand_{period}.omx` | Same file (multi-matrix OMX) |
-| `air_passenger.highway_demand_file` | `inputs/demand/TAZ_Demand_{period}.omx` | Placeholder for county test |
-| `internal_external.highway_demand_file` | `inputs/demand/TAZ_Demand_{period}.omx` | Placeholder for county test |
+⚠️ **County tests use HOUSEHOLD demand ONLY**. Truck demand is not included.
 
 ---
 
 ## File 3: tests/config_templates/fixed_san_mateo_scenario.toml
 
-**This file is automatically updated** by the setup script. You don't need to edit it manually.
+**Location:** Stays in `tests/config_templates/` as a template
 
-The script updates these paths:
-```toml
-[emme]
-project_path = "{output_dir}/emme_project/mtc_emme.emp"
-highway_database_path = "{output_dir}/emme_project/Database_highway/emmebank"
-# etc.
-```
+**Copied to:** `{output_dir}/config/scenario.toml` during test setup  
+
+**Auto-updated:** Yes - COMPLETELY REWRITTEN by script
+
+**You NEVER need to edit this file.** The script:
+1. Copies it to `{output_dir}/config/scenario.toml`
+2. Rewrites ALL EMME paths to absolute paths pointing to your test directory:
+   ```toml
+   [emme]
+   project_path = "E:/Tests/san_mateo_test/emme_project/mtc_emme.emp"
+   highway_database_path = "E:/Tests/san_mateo_test/emme_project/Database_highway/emmebank"
+   # etc.
+   ```
 
 ---
 
-## Complete Workflow
+## Complete Workflow Example
 
-### 1. Update Source Data Location
+### Step 1: Edit Main Config
 
-Edit `tests/county_test_config.toml`:
-
-```toml
-[paths]
-source_dataset = "E:/NEW_DATA_LOCATION/2015_TM2_20250619"
-output_dir = "E:/Tests/my_test"
+```powershell
+notepad tests\county_test_config.toml
 ```
 
-### 2. Verify Source Dataset Structure
+Update these lines:
+```toml
+[paths]
+source_dataset = "E:/NEW_DATA/2015_TM2_20250619"  # Your new input location
+output_dir = "E:/Tests/my_test"                    # Where test will run
+```
+
+### Step 2: Verify Source Dataset Structure
 
 Your source dataset **must** have this structure:
 
@@ -183,29 +218,33 @@ source_dataset/
             └── TAZ_Demand_EV.omx
 ```
 
-### 3. Check Model Config (Optional)
-
-Open `tests/config_templates/fixed_san_mateo_model.toml` and verify:
-
-- All relative paths use forward slashes: `inputs/hwy/tolls.csv`
-- Demand files will be updated automatically by setup script
-- Truck demand is disabled: `highway_demand_file = ""`
-
-### 4. Run the Test
+### Step 3: Run the Test
 
 ```powershell
-cd tests
-C:\GitHub\tm2pyenv\Scripts\python.exe run_county_test.py
+C:\GitHub\tm2pyenv\Scripts\python.exe tests\run_county_test.py
 ```
 
-The script will:
-1. ✓ Validate all source files exist
-2. ✓ Create test directory structure
-3. ✓ Copy EMME project and input files
-4. ✓ Filter demand to intra-county trips
-5. ✓ Update model config with correct demand paths
-6. ✓ Update scenario config with test directory paths
-7. ✓ Run highway assignment and skimming
+**What the script does automatically:**
+
+1. ✓ **Validates** source files exist
+2. ✓ **Creates** `E:/Tests/my_test/` directory structure:
+   ```
+   E:/Tests/my_test/
+   ├── config/
+   │   ├── model.toml      ← Copy of fixed_san_mateo_model.toml (paths updated)
+   │   └── scenario.toml   ← Copy of fixed_san_mateo_scenario.toml (fully rewritten)
+   ├── inputs/
+   │   ├── hwy/            ← Copied from source_dataset/inputs/hwy/
+   │   ├── landuse/        ← Copied from source_dataset/inputs/landuse/
+   │   └── demand/         ← Filtered demand files created here
+   ├── emme_project/       ← Full copy of source EMME project
+   └── logs/               ← Test logs written here
+   ```
+3. ✓ **Copies** EMME project and input files
+4. ✓ **Filters** demand to intra-county trips
+5. ✓ **Updates** `config/model.toml` with correct demand file paths
+6. ✓ **Updates** `config/scenario.toml` with absolute paths to test directory
+7. ✓ **Runs** highway assignment and skimming
 
 ---
 
