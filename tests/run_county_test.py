@@ -157,6 +157,7 @@ def setup_test_directory(config, logger):
     skip_emme_copy = config['test']['skip_emme_copy']
     thin_network = config['test'].get('thin_network')
     source_dir = Path(config['paths']['source_dataset'])
+    auto_confirm = config['test'].get('auto_confirm', True)
     
     test_dir = Path(output_dir)
     logger.info(f"Test directory: {test_dir.absolute()}")
@@ -219,14 +220,20 @@ def setup_test_directory(config, logger):
     # Demand is loaded from time-period-specific files in inputs/demand/
     model_config = toml.load(test_dir / "config" / "model.toml")
     if 'household' in model_config:
-        # Point to the AM demand file as placeholder (actual loading is per time period)
+        # Point ALL household demand files to the AM demand file as placeholder (actual loading is per time period)
         model_config['household']['highway_demand_file'] = "inputs/demand/TAZ_Demand_AM.omx"
+        model_config['household']['transit_demand_file'] = "inputs/demand/TAZ_Demand_AM.omx"
+        model_config['household']['active_demand_file'] = "inputs/demand/TAZ_Demand_AM.omx"
     
     # Update air_passenger and internal_external paths to use stub files (not used in county test)
     if 'air_passenger' in model_config:
         model_config['air_passenger']['highway_demand_file'] = "inputs/demand/TAZ_Demand_AM.omx"
     if 'internal_external' in model_config:
         model_config['internal_external']['highway_demand_file'] = "inputs/demand/TAZ_Demand_AM.omx"
+    
+    # Point truck demand to the copied truck file
+    if 'truck' in model_config:
+        model_config['truck']['highway_demand_file'] = "inputs/demand/tripstrkAM.omx"
     
     logger.debug("Updated demand paths in model config")
     
@@ -263,14 +270,17 @@ def setup_test_directory(config, logger):
             logger.warning(f"You must manually copy it from {source_emme}")
     elif dest_emme.exists():
         logger.warning(f"EMME project already exists at {dest_emme}")
-        response = input("  Do you want to skip copying (reuse existing)? (y/n): ")
-        if response.lower() == 'y':
-            logger.info("Using existing EMME project")
+        if auto_confirm:
+            logger.info("Auto-confirm enabled, using existing EMME project")
         else:
-            logger.info("Replacing EMME project (this may take a few minutes)...")
-            shutil.rmtree(dest_emme)
-            shutil.copytree(source_emme, dest_emme)
-            logger.info(f"Copied EMME project to {dest_emme}")
+            response = input("  Do you want to skip copying (reuse existing)? (y/n): ")
+            if response.lower() == 'y':
+                logger.info("Using existing EMME project")
+            else:
+                logger.info("Replacing EMME project (this may take a few minutes)...")
+                shutil.rmtree(dest_emme)
+                shutil.copytree(source_emme, dest_emme)
+                logger.info(f"Copied EMME project to {dest_emme}")
     else:
         logger.info("Copying EMME project (this may take a few minutes)...")
         logger.debug(f"Source: {source_emme}")
@@ -555,7 +565,7 @@ def main():
         return 1
     
     # Confirm before running
-    if not config['test'].get('auto_confirm', False):
+    if not config['test'].get('auto_confirm', True):
         print("\nReady to run test? This will take several minutes. (y/n): ", end='')
         response = input()
         if response.lower() != 'y':
