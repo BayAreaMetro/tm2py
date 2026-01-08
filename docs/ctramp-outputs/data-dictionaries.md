@@ -50,21 +50,26 @@ The **CT-RAMP** (Coordinated Travel-Regional Activity Modeling Platform) generat
     | 7 | `SR3_HOV` | Shared Ride 3+ - HOV lanes | 3+ HOV access |
     | 8 | `SR3_PAY` | Shared Ride 3+ - Express/Toll | Premium 3+ person |
 
+=== "🚶 Active Modes"
+    
+    | ID | Mode | Description | 💡 Use Case |
+    |----|------|-------------|-------------|
+    | 9 | `WLK_LOC` | Walk | Local pedestrian trips |
+    | 10 | `BIKE_LOC` | Bicycle | Local bike trips |
+
 === "🚌 Transit Modes"
     
     | ID | Mode | Description | 💡 Access Type |
     |----|------|-------------|----------------|
-    | 9 | `WLK_TRN` | Walk to Transit | Pedestrian access |
-    | 10 | `PNR_TRN` | Park-and-Ride to Transit | Drive + park |
-    | 11 | `KNRPRV_TRN` | Kiss-and-Ride Private | Drop-off by private vehicle |
-    | 12 | `KNRTNC_TRN` | Kiss-and-Ride TNC | Drop-off by rideshare |
+    | 11 | `WLK_TRN` | Walk to Transit | Pedestrian access |
+    | 12 | `PNR_TRN` | Park-and-Ride to Transit | Drive + park |
+    | 13 | `KNRPRV_TRN` | Kiss-and-Ride Private | Drop-off by private vehicle |
+    | 14 | `KNRTNC_TRN` | Kiss-and-Ride TNC | Drop-off by rideshare |
 
-=== "🚶 Active & Other"
+=== "🚕 Other Modes"
     
     | ID | Mode | Description | 💡 Use Case |
     |----|------|-------------|-------------|
-    | 13 | `WLK_LOC` | Walk | Local pedestrian trips |
-    | 14 | `BIKE_LOC` | Bicycle | Local bike trips |
     | 15 | `TAXI` | Taxi | Traditional taxi service |
     | 16 | `TNC` | Transportation Network Company | Uber, Lyft, etc. |
     | 17 | `SCHLBUS` | School Bus | K-12 student transport |
