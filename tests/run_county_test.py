@@ -487,6 +487,12 @@ def run_test(config, logger):
         
         logger.info("")
         logger.info("Controller execution completed!")
+        
+        # Print network statistics
+        logger.info("")
+        controller.print_network_statistics(logger)
+        
+        logger.info("")
         logger.info("="*70)
         logger.info("TEST COMPLETED SUCCESSFULLY!")
         logger.info("="*70)

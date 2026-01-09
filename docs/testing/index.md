@@ -14,6 +14,9 @@ For rapid testing of highway assignment/skimming on a single county:
 **Key Features**:
 - Demand filtering (intra-county trips only)
 - Automatic zone detection from crosswalk files
+- Configurable logging (console + detailed file logs)
+- Auto-confirm mode for unattended/automated runs
+- **Automatic network statistics** (volumes, links, traffic validation)
 - ~5,000 TAZs vs ~30,000 (83% reduction)
 - 2-5 minute runtime vs 15-30 minutes
 - Components: create_tod_scenarios → prepare_network_highway → highway

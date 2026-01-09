@@ -159,6 +159,131 @@ class CountyHighwayController:
         if loaded_dir.exists():
             print(f"\nLoaded highway network written to: {loaded_dir}")
     
+    def print_network_statistics(self, logger=None) -> None:
+        """Print network statistics from EMME assignment results.
+        
+        Shows:
+        - Total links in network
+        - Links with traffic volumes
+        - Volume statistics (min, max, average, total)
+        - Class-specific volumes
+        - Top high-volume links
+        """
+        try:
+            import inro.emme.database.emmebank as _eb
+            
+            # Use first time period (typically AM)
+            time_periods = self.controller.config.time_periods
+            if not time_periods:
+                print("No time periods configured, skipping network statistics")
+                return
+            
+            first_period = time_periods[0]
+            scenario_id = first_period.emme_scenario_id
+            
+            emmebank_path = self.run_dir / "emme_project" / "Database_highway" / "emmebank"
+            
+            if logger:
+                logger.info("="*70)
+                logger.info("NETWORK ASSIGNMENT STATISTICS")
+                logger.info("="*70)
+                logger.info(f"Opening EMME database: {emmebank_path}")
+                logger.info(f"Scenario: {scenario_id} ({first_period.name})")
+            else:
+                print("\n" + "="*70)
+                print("NETWORK ASSIGNMENT STATISTICS")
+                print("="*70)
+            
+            eb = _eb.Emmebank(str(emmebank_path))
+            scen = eb.scenario(scenario_id)
+            net = scen.get_network()
+            
+            # Get all links
+            links = list(net.links())
+            
+            # Check volumes
+            volumes = [l.auto_volume for l in links]
+            links_with_volume = [v for v in volumes if v > 0]
+            
+            msg = f"Total links: {len(links):,}"
+            if logger:
+                logger.info(msg)
+            else:
+                print(msg)
+            
+            msg = f"Links with traffic (volume > 0): {len(links_with_volume):,}"
+            if logger:
+                logger.info(msg)
+            else:
+                print(msg)
+            
+            msg = f"Links with no traffic: {len(volumes) - len(links_with_volume):,}"
+            if logger:
+                logger.info(msg)
+            else:
+                print(msg)
+            
+            if links_with_volume:
+                if logger:
+                    logger.info("")
+                    logger.info("Volume Statistics:")
+                    logger.info(f"  Min volume: {min(links_with_volume):,.1f}")
+                    logger.info(f"  Max volume: {max(links_with_volume):,.1f}")
+                    logger.info(f"  Average volume: {sum(links_with_volume)/len(links_with_volume):,.1f}")
+                    logger.info(f"  Total volume: {sum(links_with_volume):,.0f}")
+                else:
+                    print("\nVolume Statistics:")
+                    print(f"  Min volume: {min(links_with_volume):,.1f}")
+                    print(f"  Max volume: {max(links_with_volume):,.1f}")
+                    print(f"  Average volume: {sum(links_with_volume)/len(links_with_volume):,.1f}")
+                    print(f"  Total volume: {sum(links_with_volume):,.0f}")
+                
+                # Check specific class volumes
+                if logger:
+                    logger.info("")
+                    logger.info("Class-specific volumes:")
+                else:
+                    print("\nClass-specific volumes:")
+                
+                for attr_name in ['@flow_da', '@flow_datoll', '@flow_sr2', '@flow_sr2toll', '@flow_sr3', '@flow_sr3toll']:
+                    try:
+                        class_vols = [getattr(l, attr_name) for l in links if hasattr(l, attr_name) and getattr(l, attr_name) > 0]
+                        if class_vols:
+                            msg = f"  {attr_name}: {len(class_vols):,} links, total = {sum(class_vols):,.0f}"
+                            if logger:
+                                logger.info(msg)
+                            else:
+                                print(msg)
+                    except:
+                        pass
+                
+                # Sample some high-volume links
+                if logger:
+                    logger.info("")
+                    logger.info("Top 10 highest volume links:")
+                else:
+                    print("\nTop 10 highest volume links:")
+                
+                sorted_links = sorted(links, key=lambda l: l.auto_volume, reverse=True)[:10]
+                for i, link in enumerate(sorted_links, 1):
+                    msg = f"  {i}. Link {link.i_node}-{link.j_node}: {link.auto_volume:,.0f} vehicles"
+                    if logger:
+                        logger.info(msg)
+                    else:
+                        print(msg)
+            
+            if logger:
+                logger.info("="*70)
+            else:
+                print("="*70)
+            
+        except Exception as e:
+            msg = f"Could not retrieve network statistics: {e}"
+            if logger:
+                logger.warning(msg)
+            else:
+                print(f"Warning: {msg}")
+    
     def validate_results(self) -> bool:
         """Validate that expected outputs were created.
         
