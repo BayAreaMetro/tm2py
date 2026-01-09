@@ -4,7 +4,7 @@
 [highway]
 # HighwayConfig - ALL required fields (matched to source E:\2015_TM2_20250619\model_config.toml)
 generic_highway_mode_code = "c"
-max_iterations = 10
+max_iterations = 3
 network_acceleration = false
 area_type_buffer_dist_miles = 0.5
 output_skim_path = "skim_matrices/highway"
@@ -19,11 +19,11 @@ reliability = false
 # Relative gap settings per global_iteration (required)
 [[highway.relative_gaps]]
 global_iteration = 0
-relative_gap = 0.0001
+relative_gap = 0.01
 
 [[highway.relative_gaps]]
 global_iteration = 1
-relative_gap = 0.0001
+relative_gap = 0.01
 
 # Tolls configuration (required)
 [highway.tolls]
@@ -395,97 +395,102 @@ name = "SR2_GP_AM"
 source = "household"
 name = "SR2_HOV_AM"
 
-[[highway.classes]]
-name = "sr2toll"
-description = "shared ride 2 toll"
-veh_group_name = "sr2"
-mode_code = "E"
-value_of_time = 18.93
-operating_cost_per_mile = 17.23
-excluded_links = ["is_sr3"]
-skims = ["time", "dist", "freeflowtime", "bridgetoll_sr2", "valuetoll_sr2", "hovdist", "tolldist", "rlbty", "autotime"]
-toll = ["@valuetoll_sr2", "@bridgetoll_sr2"]
-toll_factor = 0.5714285714285714
+# COMMENTED OUT FOR FASTER TESTING
+# [[highway.classes]]
+# name = "sr2toll"
+# description = "shared ride 2 toll"
+# veh_group_name = "sr2"
+# mode_code = "E"
+# value_of_time = 18.93
+# operating_cost_per_mile = 17.23
+# excluded_links = ["is_sr3"]
+# skims = ["time", "dist", "freeflowtime", "bridgetoll_sr2", "valuetoll_sr2", "hovdist", "tolldist", "rlbty", "autotime"]
+# toll = ["@valuetoll_sr2", "@bridgetoll_sr2"]
+# toll_factor = 0.5714285714285714
 
-[[highway.classes.demand]]
-source = "household"
-name = "SR2_PAY_AM"
+# [[highway.classes.demand]]
+# source = "household"
+# name = "SR2_PAY_AM"
 
-[[highway.classes]]
-name = "sr3"
-description = "shared ride 3+"
-veh_group_name = "sr3"
-mode_code = "f"
-value_of_time = 18.93
-operating_cost_per_mile = 17.23
-excluded_links = ["is_toll_sr3"]
-skims = ["time", "dist", "freeflowtime", "bridgetoll_sr3", "hovdist", "rlbty", "autotime"]
-toll = ["@bridgetoll_sr3"]
-toll_factor = 0.4
+# COMMENTED OUT FOR FASTER TESTING
+# [[highway.classes]]
+# name = "sr3"
+# description = "shared ride 3+"
+# veh_group_name = "sr3"
+# mode_code = "f"
+# value_of_time = 18.93
+# operating_cost_per_mile = 17.23
+# excluded_links = ["is_toll_sr3"]
+# skims = ["time", "dist", "freeflowtime", "bridgetoll_sr3", "hovdist", "rlbty", "autotime"]
+# toll = ["@bridgetoll_sr3"]
+# toll_factor = 0.4
 
-[[highway.classes.demand]]
-source = "household"
-name = "SR3_GP_AM"
+# [[highway.classes.demand]]
+# source = "household"
+# name = "SR3_GP_AM"
 
-[[highway.classes.demand]]
-source = "household"
-name = "SR3_HOV_AM"
+# [[highway.classes.demand]]
+# source = "household"
+# name = "SR3_HOV_AM"
 
-[[highway.classes]]
-name = "sr3toll"
-description = "shared ride 3+ toll"
-veh_group_name = "sr3"
-mode_code = "F"
-value_of_time = 18.93
-operating_cost_per_mile = 17.23
-excluded_links = []
-skims = ["time", "dist", "freeflowtime", "bridgetoll_sr3", "valuetoll_sr3", "hovdist", "tolldist", "rlbty", "autotime"]
-toll = ["@valuetoll_sr3", "@bridgetoll_sr3"]
-toll_factor = 0.4
+# COMMENTED OUT FOR FASTER TESTING
+# [[highway.classes]]
+# name = "sr3toll"
+# description = "shared ride 3+ toll"
+# veh_group_name = "sr3"
+# mode_code = "F"
+# value_of_time = 18.93
+# operating_cost_per_mile = 17.23
+# excluded_links = []
+# skims = ["time", "dist", "freeflowtime", "bridgetoll_sr3", "valuetoll_sr3", "hovdist", "tolldist", "rlbty", "autotime"]
+# toll = ["@valuetoll_sr3", "@bridgetoll_sr3"]
+# toll_factor = 0.4
 
-[[highway.classes.demand]]
-source = "household"
-name = "SR3_PAY_AM"
+# [[highway.classes.demand]]
+# source = "household"
+# name = "SR3_PAY_AM"
 
-[[highway.classes]]
-name = "trk"
-description = "Truck (vsm, sml, med)"
-veh_group_name = "trk"
-mode_code = "t"
-value_of_time = 36.00
-operating_cost_per_mile = 0.80
-pce = 1.5
-excluded_links = []
-skims = ["time", "dist"]
-toll = []
+# COMMENTED OUT FOR FASTER TESTING
+# [[highway.classes]]
+# name = "trk"
+# description = "Truck (vsm, sml, med)"
+# veh_group_name = "trk"
+# mode_code = "t"
+# value_of_time = 36.00
+# operating_cost_per_mile = 0.80
+# pce = 1.5
+# excluded_links = []
+# skims = ["time", "dist"]
+# toll = []
 
-[[highway.classes.demand]]
-source = "truck"
-name = "vsmtrk"
+# [[highway.classes.demand]]
+# source = "truck"
+# name = "vsmtrk"
 
-[[highway.classes.demand]]
-source = "truck"
-name = "smltrk"
+# [[highway.classes.demand]]
+# source = "truck"
+# name = "smltrk"
 
-[[highway.classes.demand]]
-source = "truck"
-name = "medtrk"
+# [[highway.classes.demand]]
+# source = "truck"
+# name = "medtrk"
 
-[[highway.classes]]
-name = "lrgtrk"
-description = "Large truck"
-veh_group_name = "lrgtrk"
-mode_code = "l"
-value_of_time = 50.00
-operating_cost_per_mile = 1.30
-pce = 2.5
-excluded_links = []
-skims = ["time", "dist"]
-toll = []
+# COMMENTED OUT FOR FASTER TESTING
+# [[highway.classes]]
+# name = "lrgtrk"
+# description = "Large truck"
+# veh_group_name = "lrgtrk"
+# mode_code = "l"
+# value_of_time = 50.00
+# operating_cost_per_mile = 1.30
+# pce = 2.5
+# excluded_links = []
+# skims = ["time", "dist"]
+# toll = []
 
-[[highway.classes.demand]]
-source = "truck"
-name = "lrgtrk"
+# [[highway.classes.demand]]
+# source = "truck"
+# name = "lrgtrk"
 
 # HouseholdConfig - ALL required fields with fixed ctramp_mode_names (string keys)
 [household]

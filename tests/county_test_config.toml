@@ -48,6 +48,10 @@ skip_emme_copy = false
 # Set to true to rerun components without recreating directory structure
 skip_setup = false
 
+# Auto-confirm all prompts (skip y/n questions)
+# Set to true for unattended/automated runs
+auto_confirm = true
+
 # Network thinning threshold (optional)
 # Remove links with @ft (functional type) greater than this value
 # Examples:
@@ -56,11 +60,6 @@ skip_setup = false
 #   6 = Keep all except local streets
 # Comment out or omit this line to use the full network (no thinning)
 # thin_network = 4
-
-# Skip confirmation prompt and run immediately
-# true = run without asking for confirmation
-# false = prompt user before running
-auto_confirm = false
 
 [emme]
 # EMME scenario ID for the all-day base network in the source dataset

@@ -50,8 +50,8 @@ active_north_database_path = "E:/Tests/san_mateo_test/emme_project/Database_acti
 active_south_database_path = "E:/Tests/san_mateo_test/emme_project/Database_active_south/emmebank"
 transit_database_path = "E:/Tests/san_mateo_test/emme_project/Database_transit/emmebank"
 all_day_scenario_id = 1
-num_processors = "1"
-num_processors_transit_skim = "1"
+num_processors = "MAX"
+num_processors_transit_skim = "MAX"
 
 # TimePeriodConfig - ALL required fields including start_period
 # Using single AM period for faster testing

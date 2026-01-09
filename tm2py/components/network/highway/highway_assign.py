@@ -42,6 +42,8 @@ from __future__ import annotations
 import argparse
 import json as _json
 import os
+import psutil
+import threading
 import time as _time
 from contextlib import contextmanager as _context
 from copy import deepcopy as _copy
@@ -65,6 +67,79 @@ from tm2py.logger import LogStartEnd, ProcessLogger
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
+
+
+@_context
+def monitor_resources(logger, interval_seconds=60, label="Assignment"):
+    """Monitor CPU and memory usage during long-running operations.
+    
+    Writes to both console (via print) and a separate monitoring file that can be 
+    watched independently of EMME.
+    
+    Args:
+        logger: Logger instance (used to get run_dir for file location)
+        interval_seconds: How often to log resource usage (default: 60 seconds)
+        label: Label for the operation being monitored
+    """
+    stop_event = threading.Event()
+    process = psutil.Process()
+    start_time = _time.time()
+    
+    # Create a separate monitoring file
+    import pathlib
+    log_dir = pathlib.Path(logger.run_dir) / "logs" if hasattr(logger, 'run_dir') else pathlib.Path(".")
+    monitor_file = log_dir / "resource_monitor.log"
+    
+    def monitor_loop():
+        iteration_count = 0
+        while not stop_event.is_set():
+            try:
+                cpu_percent = process.cpu_percent(interval=1)
+                memory_mb = process.memory_info().rss / (1024 * 1024)
+                elapsed_mins = (_time.time() - start_time) / 60
+                iteration_count += 1
+                
+                timestamp = _time.strftime("%Y-%m-%d %H:%M:%S")
+                message = (
+                    f"[{timestamp}] {label} - Check #{iteration_count} "
+                    f"(elapsed: {elapsed_mins:.1f} min): "
+                    f"CPU: {cpu_percent:.1f}%, Memory: {memory_mb:.1f} MB"
+                )
+                
+                # Write to console
+                print(message, flush=True)
+                
+                # Write to separate monitoring file (append mode, flush immediately)
+                try:
+                    with open(monitor_file, 'a') as f:
+                        f.write(message + "\n")
+                        f.flush()
+                except Exception as e:
+                    print(f"Failed to write to monitor file: {e}", flush=True)
+                        
+            except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+                print(f"[{_time.strftime('%Y-%m-%d %H:%M:%S')}] Monitoring stopped: {e}", flush=True)
+                break
+            except Exception as e:
+                print(f"[{_time.strftime('%Y-%m-%d %H:%M:%S')}] Monitor error: {e}", flush=True)
+            
+            # Sleep in small chunks so we can respond to stop_event quickly
+            for _ in range(interval_seconds):
+                if stop_event.is_set():
+                    break
+                _time.sleep(1)
+    
+    # Log the monitoring file location using print instead of logger
+    print(f"Resource monitoring active. Watch: {monitor_file}", flush=True)
+    
+    monitor_thread = threading.Thread(target=monitor_loop, daemon=True)
+    monitor_thread.start()
+    
+    try:
+        yield
+    finally:
+        stop_event.set()
+        monitor_thread.join(timeout=2)
 
 
 class HighwayAssignment(Component):
@@ -342,15 +417,23 @@ class AssignmentRunner:
             self._create_skim_matrices()
             with self.logger._skip_emme_logging():
                 self.logger.log_dict(self.assign_spec, level="DEBUG")
+            
+            # Log that assignment is starting with resource monitoring
+            self.logger.log(
+                f"Starting SOLA assignment - monitoring resources every 5 minutes",
+                level="INFO"
+            )
+            
             with self.logger.log_start_end(
                 "Run SOLA assignment (no path analyses)", level="INFO"
             ):
                 assign = self.emme_manager.tool(
                     "inro.emme.traffic_assignment.sola_traffic_assignment"
                 )
-                assign(
-                    self.assign_spec_no_analysis, self.scenario, chart_log_interval=1
-                )
+                with monitor_resources(self.logger, interval_seconds=300, label="SOLA assignment (no analysis)"):
+                    assign(
+                        self.assign_spec_no_analysis, self.scenario, chart_log_interval=1
+                    )
 
             with self.logger.log_start_end(
                 "Calculates link level LOS based reliability", level="DETAIL"
@@ -386,7 +469,8 @@ class AssignmentRunner:
                 "Run SOLA assignment with path analyses and highway reliability",
                 level="INFO",
             ):
-                assign(self.assign_spec, self.scenario, chart_log_interval=1)
+                with monitor_resources(self.logger, interval_seconds=300, label="SOLA assignment (with analysis)"):
+                    assign(self.assign_spec, self.scenario, chart_log_interval=1)
 
             # Subtract non-time costs from gen cost to get the raw travel time
             self._calc_time_skims()
