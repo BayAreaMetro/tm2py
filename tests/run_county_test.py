@@ -80,17 +80,8 @@ def check_prerequisites(config, logger):
     county_name = config['test']['county_name']
     logger.info(f"County: {county_name}")
     
-    # Check source dataset
-    source_dir = Path(config['paths']['source_dataset'])
-    logger.debug(f"Checking source dataset: {source_dir}")
-    if not source_dir.exists():
-        issues.append(f"Source dataset not found: {source_dir}")
-        logger.error(f"Source dataset not found: {source_dir}")
-    else:
-        logger.info(f"✓ Source dataset found: {source_dir}")
-    
-    # Check EMME project
-    emme_project = source_dir / "emme_project"
+    # Check EMME project source
+    emme_project = Path(config['paths']['emme_project_source'])
     logger.debug(f"Checking EMME project: {emme_project}")
     if not emme_project.exists():
         issues.append(f"EMME project not found: {emme_project}")
@@ -107,11 +98,20 @@ def check_prerequisites(config, logger):
     else:
         logger.info(f"✓ EMME database found: {emme_db}")
     
+    # Check inputs source directory
+    inputs_dir = Path(config['paths']['inputs_source'])
+    logger.debug(f"Checking inputs source: {inputs_dir}")
+    if not inputs_dir.exists():
+        issues.append(f"Inputs source not found: {inputs_dir}")
+        logger.error(f"Inputs source not found: {inputs_dir}")
+    else:
+        logger.info(f"✓ Inputs source found: {inputs_dir}")
+    
     # Check for required input files
     required_files = {
-        "MAZ data": source_dir / "inputs" / "landuse" / "maz_data.csv",
-        "Tolls": source_dir / "inputs" / "hwy" / "tolls.csv",
-        "AM Demand": source_dir / "demand_matrices" / "highway" / "household" / "TAZ_Demand_AM.omx",
+        "MAZ data": inputs_dir / "inputs" / "landuse" / "maz_data.csv",
+        "Tolls": inputs_dir / "inputs" / "hwy" / "tolls.csv",
+        "AM Demand": inputs_dir / "demand_matrices" / "highway" / "household" / "TAZ_Demand_AM.omx",
     }
     
     for name, path in required_files.items():
@@ -156,7 +156,8 @@ def setup_test_directory(config, logger):
     output_dir = Path(config['paths']['output_dir'])
     skip_emme_copy = config['test']['skip_emme_copy']
     thin_network = config['test'].get('thin_network')
-    source_dir = Path(config['paths']['source_dataset'])
+    emme_project_source = Path(config['paths']['emme_project_source'])
+    inputs_source = Path(config['paths']['inputs_source'])
     auto_confirm = config['test'].get('auto_confirm', True)
     
     test_dir = Path(output_dir)
@@ -263,7 +264,7 @@ def setup_test_directory(config, logger):
         logger.info(f"Network thinning enabled: @ft <= {thin_network}")
     
     # Copy EMME project
-    source_emme = source_dir / "emme_project"
+    source_emme = emme_project_source
     dest_emme = test_dir / "emme_project"
     
     if skip_emme_copy:
@@ -291,12 +292,12 @@ def setup_test_directory(config, logger):
         shutil.copytree(source_emme, dest_emme)
         logger.info(f"Copied EMME project to {dest_emme}")
     
-    # Copy essential input files
+    # Copy essential input files from inputs_source
     
     # Copy tolls
     logger.debug("Copying tolls.csv...")
     shutil.copy(
-        source_dir / "inputs" / "hwy" / "tolls.csv",
+        inputs_source / "inputs" / "hwy" / "tolls.csv",
         test_dir / "inputs" / "hwy" / "tolls.csv"
     )
     logger.debug("Copied tolls.csv")
@@ -304,7 +305,7 @@ def setup_test_directory(config, logger):
     # Copy interchange_nodes
     logger.debug("Copying interchange_nodes.csv...")
     shutil.copy(
-        source_dir / "inputs" / "hwy" / "interchange_nodes.csv",
+        inputs_source / "inputs" / "hwy" / "interchange_nodes.csv",
         test_dir / "inputs" / "hwy" / "interchange_nodes.csv"
     )
     logger.debug("Copied interchange_nodes.csv")
@@ -312,7 +313,7 @@ def setup_test_directory(config, logger):
     # Copy MAZ data
     logger.debug("Copying MAZ data...")
     shutil.copy(
-        source_dir / "inputs" / "landuse" / "maz_data.csv",
+        inputs_source / "inputs" / "landuse" / "maz_data.csv",
         test_dir / "inputs" / "landuse" / "maz_data.csv"
     )
     logger.debug("Copied maz_data.csv")
@@ -355,7 +356,7 @@ def setup_test_directory(config, logger):
         logger.debug(f"Found {len(time_periods)} time periods in config")
         
         # Filter demand files for configured time periods only
-        demand_dir = source_dir / "demand_matrices" / "highway" / "household"
+        demand_dir = inputs_source / "demand_matrices" / "highway" / "household"
         logger.debug(f"Source demand directory: {demand_dir}")
         
         logger.info("Filtering demand files...")
@@ -397,7 +398,7 @@ def setup_test_directory(config, logger):
         logger.debug(f"Found {len(time_periods)} time periods in config")
         
         # Copy demand files for configured time periods only
-        demand_dir = source_dir / "demand_matrices" / "highway" / "household"
+        demand_dir = inputs_source / "demand_matrices" / "highway" / "household"
         logger.debug(f"Source demand directory: {demand_dir}")
         
         for period in time_periods:
@@ -421,7 +422,7 @@ def setup_test_directory(config, logger):
     
     # Copy truck demand files
     logger.info("Copying truck demand files...")
-    truck_dir = source_dir / "demand_matrices" / "highway" / "commercial"
+    truck_dir = inputs_source / "demand_matrices" / "highway" / "commercial"
     logger.debug(f"Truck demand directory: {truck_dir}")
     
     for period in time_periods:
@@ -559,7 +560,8 @@ def main():
     logger.info("CONFIGURATION SUMMARY")
     logger.info("="*70)
     logger.info(f"County: {config['test']['county_name']}")
-    logger.info(f"Source dataset: {config['paths']['source_dataset']}")
+    logger.info(f"EMME project source: {config['paths']['emme_project_source']}")
+    logger.info(f"Inputs source: {config['paths']['inputs_source']}")
     logger.info(f"Output directory: {config['paths']['output_dir']}")
     logger.info(f"Filter demand: {config['test'].get('filter_demand', False)}")
     logger.info(f"Skip EMME copy: {config['test'].get('skip_emme_copy', False)}")

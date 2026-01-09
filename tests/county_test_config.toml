@@ -4,13 +4,20 @@
 # Edit the values below to match your environment.
 
 [paths]
-# Source dataset directory (must contain emme_project, inputs, demand_matrices)
-# Expected structure within this directory:
-#   emme_project/
-#     mtc_emme.emp
+# EMME Project directory (contains emme_project folder with network)
+# This is where the highway network lives - can be separate from other inputs
+# Expected structure:
+#   emme/emme_project/
+#     mtc_emme.emp (or similar .emp file)
 #     Database_highway/emmebank
+emme_project_source = "M:/Development/Travel Model Two/Supply/Network Creation 2025/from_OSM/SanMateo/7_scenario/emme/emme_project"
+
+# Input files directory (contains inputs and demand_matrices)
+# This is where tolls, MAZ data, demand matrices, etc. are located
+# Expected structure:
 #   inputs/
 #     hwy/tolls.csv
+#     hwy/interchange_nodes.csv
 #     landuse/maz_data.csv
 #   demand_matrices/
 #     highway/household/
@@ -19,7 +26,7 @@
 #       TAZ_Demand_MD.omx
 #       TAZ_Demand_PM.omx
 #       TAZ_Demand_EV.omx
-source_dataset = "E:/2015_TM2_20250619"
+inputs_source = "E:/2015_TM2_20250619"
 
 # Output/test directory where test results will be written
 # This will be created if it doesn't exist
@@ -46,7 +53,7 @@ skip_emme_copy = false
 
 # Skip test directory setup if it already exists
 # Set to true to rerun components without recreating directory structure
-skip_setup = false
+skip_setup = true
 
 # Auto-confirm all prompts (skip y/n questions)
 # Set to true for unattended/automated runs
@@ -64,7 +71,8 @@ auto_confirm = true
 [emme]
 # EMME scenario ID for the all-day base network in the source dataset
 # This scenario should have a fully loaded highway network
-all_day_scenario_id = 100
+# OSM San Mateo network uses scenario ID 1 for "drive, all day"
+all_day_scenario_id = 1
 
 # Time periods to test
 # Comment out periods you don't need for faster testing
