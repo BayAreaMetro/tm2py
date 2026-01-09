@@ -89,9 +89,14 @@ county_name = "San Mateo"  # Change to test different county
 [test]
 filter_demand = true       # true = faster (intra-county only), false = full regional
 thin_network = 4          # Optional: Remove links with @ft > 4 (comment out for full network)
+auto_confirm = true       # Skip confirmation prompts (for automated runs)
 
 [emme]
 time_periods = ["AM"]     # Quick test, or ["EA", "AM", "MD", "PM", "EV"] for full day
+
+[logging]
+console_log_level = "INFO"   # Console output level (DEBUG, INFO, WARNING, ERROR)
+file_log_level = "DEBUG"     # Log file detail level (DEBUG recommended)
 ```
 
 ---
@@ -245,6 +250,36 @@ C:\GitHub\tm2pyenv\Scripts\python.exe tests\run_county_test.py
 5. ✓ **Updates** `config/model.toml` with correct demand file paths
 6. ✓ **Updates** `config/scenario.toml` with absolute paths to test directory
 7. ✓ **Runs** highway assignment and skimming
+
+### Step 4: View Results
+
+**Test completion message shows output locations:**
+```
+======================================================================
+TEST COMPLETED SUCCESSFULLY
+======================================================================
+Test artifacts location: E:\Tests\my_test
+  - Logs: E:\Tests\my_test\logs
+  - Loaded network: E:\Tests\my_test\loaded_highway
+  - Skims: E:\Tests\my_test\skim_matrices\highway
+  - Full log: E:\Tests\my_test\logs\county_test_20260108_125547.log
+```
+
+**View the detailed log:**
+```powershell
+# View last 50 lines
+Get-Content E:\Tests\my_test\logs\county_test_*.log -Tail 50
+
+# Open in notepad
+notepad E:\Tests\my_test\logs\county_test_*.log
+```
+
+**Log file contains:**
+- Configuration values used
+- Zone detection results (TAZ/MAZ ranges)
+- Component execution progress with timestamps
+- EMME operations and timing
+- Validation results and warnings
 
 ---
 

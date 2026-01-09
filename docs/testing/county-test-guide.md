@@ -239,22 +239,114 @@ highway_database_path = "E:/2015_TM2_20250619/emme_project/Database_highway/emme
 ```
 E:\Tests\san_mateo_test\
 ├── config\
-│   ├── scenario.toml
-│   └── model.toml
+│   ├── scenario.toml         # Scenario configuration
+│   └── model.toml            # Model configuration
 ├── inputs\
 │   ├── hwy\
-│   │   └── tolls.csv
+│   │   └── tolls.csv         # Copied toll configuration
 │   ├── landuse\
-│   │   └── maz_data.csv
+│   │   └── maz_data.csv      # Copied MAZ data
 │   └── demand\
-│       └── TAZ_Demand_AM.omx  (filtered)
+│       └── TAZ_Demand_AM.omx # Filtered demand (if filter_demand=true)
 ├── emme_project\
-│   └── [full EMME project copy]
+│   ├── mtc_emme.emp
+│   └── Database_highway/
+│       └── emmebank          # Full EMME project copy
 ├── logs\
-│   ├── tm2py_detail.log
-│   └── tm2py_summary.log
-└── outputs\
-    └── [skims and assignment results]
+│   └── county_test_20260108_125547.log  # Detailed test log with timestamp
+├── skim_matrices\
+│   └── highway\
+│       └── [period-specific skim files]
+└── loaded_highway\
+    └── [loaded network exports]
+```
+
+### Log Files
+
+**Log File Naming:**
+- Format: `county_test_YYYYMMDD_HHMMSS.log`
+- Example: `county_test_20260108_125547.log`
+- Location: `{output_dir}/logs/`
+
+**Log File Contents:**
+
+The log file contains:
+- Timestamp for each operation
+- Configuration values used
+- Prerequisites check results
+- Zone detection details (TAZ/MAZ ranges)
+- Component execution progress
+- EMME operations and timing
+- **Network assignment statistics** (volumes, links, traffic)
+- Validation results
+- Final output locations
+
+**Example Log Excerpt:**
+```
+2026-01-08 12:55:47,300 - INFO - File logging started: E:\Tests\san_mateo_test\logs\county_test_20260108_125547.log
+2026-01-08 12:55:47,301 - INFO - Starting test execution...
+2026-01-08 12:55:47,304 - DEBUG - Scenario config: E:\Tests\san_mateo_test\config\scenario.toml
+2026-01-08 12:55:47,320 - DEBUG - Model config: E:\Tests\san_mateo_test\config\model.toml
+2026-01-08 12:57:33,026 - INFO - Components to run:
+2026-01-08 12:57:33,029 - INFO -   1. prepare_network_highway - Prepare network attributes
+2026-01-08 12:57:33,029 - INFO -   2. highway - Assignment and skimming
+```
+
+### Network Statistics
+
+**After assignment completes**, the test automatically prints network statistics to validate the assignment:
+
+**Statistics Included:**
+- **Total links** in the network
+- **Links with traffic** (volume > 0)
+- **Links with no traffic** (helps identify connectivity issues)
+- **Volume statistics**: min, max, average, and total volume
+- **Class-specific volumes**: By vehicle class (@flow_da, @flow_sr2, @flow_sr3, toll/non-toll)
+- **Top 10 highest-volume links**: Helps identify major corridors
+
+**Example Output:**
+```
+======================================================================
+NETWORK ASSIGNMENT STATISTICS
+======================================================================
+Total links: 34,521
+Links with traffic (volume > 0): 28,456
+Links with no traffic: 6,065
+
+Volume Statistics:
+  Min volume: 1.2
+  Max volume: 12,543.8
+  Average volume: 432.5
+  Total volume: 12,305,432.0
+
+Class-specific volumes:
+  @flow_da: 28,123 links, total = 8,234,567
+  @flow_datoll: 2,341 links, total = 1,123,456
+  @flow_sr2: 25,678 links, total = 2,456,789
+  @flow_sr3: 23,456 links, total = 490,620
+
+Top 10 highest volume links:
+  1. Link 1234-1235: 12,543 vehicles
+  2. Link 2345-2346: 11,234 vehicles
+  ...
+```
+
+**Why This Matters:**
+- **Sanity check**: Confirms assignment actually ran and assigned traffic
+- **Debugging**: Identifies if volumes are reasonable for your county
+- **Comparison**: Compare statistics across different test runs
+- **Issue detection**: Unusual patterns (e.g., very few links with traffic) indicate problems
+
+**Finding Your Log File:**
+
+After test completion, the console shows the log location:
+```
+======================================================================
+TEST COMPLETED SUCCESSFULLY
+======================================================================
+Test artifacts location: E:\Tests\san_mateo_test
+  - Logs: E:\Tests\san_mateo_test\logs
+  - Full log: E:\Tests\san_mateo_test\logs\county_test_20260108_125547.log
 ```
 
 ## Command Reference
