@@ -164,11 +164,14 @@ def setup_test_directory(config, logger):
     
     if test_dir.exists():
         logger.warning(f"Directory already exists: {test_dir}")
-        response = input("Do you want to overwrite it? (y/n): ")
-        if response.lower() != 'y':
-            logger.info("Operation cancelled by user")
-            print("Cancelled.")
-            sys.exit(0)
+        if not auto_confirm:
+            response = input("Do you want to overwrite it? (y/n): ")
+            if response.lower() != 'y':
+                logger.info("Operation cancelled by user")
+                print("Cancelled.")
+                sys.exit(0)
+        else:
+            logger.info("Auto-confirm enabled, proceeding with overwrite")
         
         logger.info(f"Removing existing directory: {test_dir}")
         # Try to remove the directory, with better error handling
