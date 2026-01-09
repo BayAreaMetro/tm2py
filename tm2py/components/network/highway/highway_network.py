@@ -195,6 +195,51 @@ class PrepareNetwork(Component):
         valuetoll_start_tollbooth_code = (
             self.config.tolls.valuetoll_start_tollbooth_code
         )
+        
+        # Check if required toll attributes exist, skip toll processing if missing
+        sample_link = next(iter(network.links()), None)
+        if sample_link is None:
+            self.logger.warn("No links found in network", indent=True)
+            return
+            
+        missing_attrs = []
+        for attr in ['@tollbooth', '@tollseg', '@useclass']:
+            try:
+                _ = sample_link[attr]
+            except KeyError:
+                missing_attrs.append(attr)
+        
+        if missing_attrs:
+            self.logger.log(
+                "="*70,
+                level="WARN"
+            )
+            self.logger.log(
+                f"MISSING NETWORK ATTRIBUTES - Time Period: {time_period}",
+                level="WARN"
+            )
+            self.logger.log(
+                f"The following required toll attributes were not found: {', '.join(missing_attrs)}",
+                level="WARN"
+            )
+            self.logger.log(
+                "Toll assignment will be SKIPPED for this network.",
+                level="WARN"
+            )
+            self.logger.log(
+                "This is expected for networks without toll facility coding (e.g., OSM-derived networks).",
+                level="WARN"
+            )
+            self.logger.log(
+                "To enable tolls: Ensure base network has @tollbooth, @tollseg, and @useclass attributes",
+                level="INFO"
+            )
+            self.logger.log(
+                "="*70,
+                level="WARN"
+            )
+            return
+        
         for link in network.links():
             # set bridgetoll
             if (
@@ -249,6 +294,46 @@ class PrepareNetwork(Component):
 
     def _set_vdf_attributes(self, network: EmmeNetwork, time_period: str):
         """Set capacity, VDF and critical speed on links."""
+        # Check for required attributes
+        sample_link = next(iter(network.links()), None)
+        if sample_link is None:
+            self.logger.warn("No links found in network", indent=True)
+            return
+        
+        required_attrs = ['@capclass', '@lanes', '@ft', '@free_flow_speed']
+        missing_attrs = []
+        for attr in required_attrs:
+            try:
+                _ = sample_link[attr]
+            except KeyError:
+                missing_attrs.append(attr)
+        
+        if missing_attrs:
+            self.logger.log(
+                "="*70,
+                level="ERROR"
+            )
+            self.logger.log(
+                f"CRITICAL: Missing required network attributes in {time_period}",
+                level="ERROR"
+            )
+            self.logger.log(
+                f"Missing attributes: {', '.join(missing_attrs)}",
+                level="ERROR"
+            )
+            self.logger.log(
+                "Cannot set VDF attributes without these base network attributes.",
+                level="ERROR"
+            )
+            self.logger.log(
+                "="*70,
+                level="ERROR"
+            )
+            raise KeyError(
+                f"Required network attributes missing: {', '.join(missing_attrs)}. "
+                "These must exist in the base EMME network before prepare_network_highway can run."
+            )
+        
         capacity_map = {}
         critical_speed_map = {}
         for row in self.config.capclass_lookup:
@@ -280,6 +365,35 @@ class PrepareNetwork(Component):
 
     def _set_link_modes(self, network: EmmeNetwork):
         """Set the link modes based on the per-class 'excluded_links' set."""
+        # Check for required drive_link attribute
+        sample_link = next(iter(network.links()), None)
+        if sample_link is None:
+            return
+        
+        try:
+            _ = sample_link["@drive_link"]
+        except KeyError:
+            self.logger.log(
+                "="*70,
+                level="ERROR"
+            )
+            self.logger.log(
+                "CRITICAL: Missing @drive_link attribute",
+                level="ERROR"
+            )
+            self.logger.log(
+                "The @drive_link attribute is required to identify driveable links.",
+                level="ERROR"
+            )
+            self.logger.log(
+                "="*70,
+                level="ERROR"
+            )
+            raise KeyError(
+                "Required @drive_link attribute missing. "
+                "This must exist in the base EMME network."
+            )
+        
         # first reset link modes (script run more than once)
         # "generic_highway_mode_code" must already be created (in import to Emme script)
         auto_mode = {network.mode(self.config.generic_highway_mode_code)}
@@ -373,15 +487,48 @@ class PrepareNetwork(Component):
         valuetoll_start_tollbooth_code = (
             self.config.tolls.valuetoll_start_tollbooth_code
         )
+        
+        # Check for attributes needed for skim lengths
+        sample_link = next(iter(network.links()), None)
+        if sample_link is None:
+            return
+        
+        has_useclass = True
+        has_tollbooth = True
+        try:
+            _ = sample_link["@useclass"]
+        except KeyError:
+            has_useclass = False
+            self.logger.log(
+                "WARNING: @useclass attribute not found. HOV length calculations will be skipped.",
+                level="WARN"
+            )
+        
+        try:
+            _ = sample_link["@tollbooth"]
+        except KeyError:
+            has_tollbooth = False
+            self.logger.log(
+                "WARNING: @tollbooth attribute not found. Toll length calculations will be skipped.",
+                level="WARN"
+            )
+        
         for link in network.links():
             # distance in hov lanes / facilities
-            if 2 <= link["@useclass"] <= 3:
-                link["@hov_length"] = link.length
+            if has_useclass:
+                if 2 <= link["@useclass"] <= 3:
+                    link["@hov_length"] = link.length
+                else:
+                    link["@hov_length"] = 0
             else:
                 link["@hov_length"] = 0
+            
             # distance on non-bridge toll facilities
-            if link["@tollbooth"] > valuetoll_start_tollbooth_code:
-                link["@toll_length"] = link.length
+            if has_tollbooth:
+                if link["@tollbooth"] > valuetoll_start_tollbooth_code:
+                    link["@toll_length"] = link.length
+                else:
+                    link["@toll_length"] = 0
             else:
                 link["@toll_length"] = 0
 
