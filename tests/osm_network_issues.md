@@ -16,23 +16,37 @@
    - Config file had BOM that caused TOML parsing error
    - Removed BOM from scenario.toml
 
-### ❌ CURRENT ISSUE
+### ❌ CURRENT ISSUE - CRITICAL
 
-**Missing Network Attribute: `@tollbooth`**
+**OSM Network Has NO User-Defined Attributes**
 
-**Error Location:** `highway_network.py` line 201 in `_set_tolls()`
+**Discovery:** The OSM San Mateo network has ZERO @ attributes!
+- Available: `type`, `length`, `num_lanes`, `data1/2/3`, `volume_delay_func`
+- Missing: ALL @ attributes including `@ft`, `@lanes`, `@capclass`, `@free_flow_speed`, `@drive_link`, etc.
 
-**Problem:** The code expects `@tollbooth` attribute on links, but OSM network doesn't have this attribute.
+**Network Stats:**
+- Links: 91,807
+- Nodes: 44,091  
+- Zones: 4,865
 
-**Code attempting:**
-```python
-link["@tollbooth"] > 0
-```
+**Root Cause:** The OSM import process created a bare-bones EMME network without TM2-specific attribute coding.
 
-**Next Steps:**
-1. Create all missing network attributes with default values
-2. Modify prepare_network_highway to handle missing attributes gracefully
-3. Document which attributes OSM network has vs. what TM2 expects
+**Solution Required:** 
+We need to create an "OSM network initialization" component that:
+1. Creates all required @ attributes
+2. Maps standard EMME fields to @ attributes:
+   - `num_lanes` → `@lanes`
+   - `type` → `@ft` (with mapping table)
+   - Calculate `@capclass` from functional type
+   - Calculate `@free_flow_speed` from functional type
+   - Set `@drive_link` = 1 for all links
+   - Initialize toll attributes to 0
+3. Runs BEFORE `create_tod_scenarios`
+
+**Immediate Options:**
+A. Create an initialization script to populate attributes in source network
+B. Modify `prepare_network_highway` to handle missing attributes and create them
+C. Use a different OSM network that has been properly coded
 
 ### 🔍 ATTRIBUTES TO INVESTIGATE
 
