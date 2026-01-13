@@ -1,4 +1,4 @@
-"""Geneates shortest path skims for walk and bike at MAZ, TAP or TAZ.
+"""Geneates shortest path skims for walk and bike at MAZ or TAZ.
 
 Compute zone-to-zone (root-to-leaf) walk distance and bicycle distances
 
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from tm2py.controller import RunController
 
 
-ROOT_LEAF_ID_MAP = {"TAZ": "@taz_id", "TAP": "@tap_id", "MAZ": "@maz_id"}
+ROOT_LEAF_ID_MAP = {"TAZ": "@taz_id", "MAZ": "@maz_id"}
 SUBNETWORK_ID_MAP = {"walk": "@walk_link", "bike": "@bike_link"}
 COUNTIES = [
     "San Francisco",
@@ -38,7 +38,7 @@ COUNTIES = [
 
 
 class ActiveModesSkim(Component):
-    """Generate shortest distance skims between network nodes (TAZs, TAPs, or MAZs).
+    """Generate shortest distance skims between network nodes (TAZs or MAZs).
 
     Details controlled in config.active_modes, e.g.:
         [active_modes]
@@ -55,11 +55,8 @@ class ActiveModesSkim(Component):
 
         Output: (1) Shortest path skims in csv format: from_zone,to_zone,dist
                 skims\\ped_distance_maz_maz.txt
-                skims\\ped_distance_maz_tap.txt
                 skims\\bike_distance_maz_maz.txt
-                skims\\bike_distance_maz_tap.txt
                 skims\\bike_distance_taz_taz.txt
-                skims\\ped_distance_tap_tap.txt
 
     Internal properties:
         _temp_scenario: temporary Emme scenario, deleted when component completes

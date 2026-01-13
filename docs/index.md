@@ -58,3 +58,6 @@ Important travel behavior enhancements in Travel Model Two include:
 ## Contributing 🎂
 
 How do you create and update these pages? See [Contributing/Documentation](contributing/documentation/)
+
+For major refactoring projects, see:
+- [TAP Removal Plan](contributing/remove-taps-plan.md) - Comprehensive plan to remove Transit Access Points from the system

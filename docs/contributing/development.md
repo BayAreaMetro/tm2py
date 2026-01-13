@@ -1,5 +1,11 @@
 # Development
 
+## Major Refactoring Projects
+
+### Removal of Transit Access Points (TAPs)
+
+A comprehensive plan for removing Transit Access Points (TAPs) from the model system is documented in [TAP Removal Plan](remove-taps-plan.md). This is a major architectural change affecting multiple components, documentation, and data files.
+
 ## Development Pattern
 
 Generally speaking, development uses git branches to manage progress on features and bugs while

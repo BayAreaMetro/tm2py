@@ -136,6 +136,7 @@ nav:
   - Contributing:
     - Development: contributing/development.md
     - Documentation: contributing/documentation.md
+    - "TAP Removal Plan": contributing/remove-taps-plan.md
 
 plugins:
   # Basic plugins that should work without GDAL dependencies:
