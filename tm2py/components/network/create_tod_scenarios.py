@@ -415,9 +415,6 @@ class CreateTODScenarios(Component):
                 else:
                     link["@trantime"] = 60 * link.length / speed
                 link.data1 = link["@trantime"]
-                # # set TAP connector distance to 60 feet
-                # if link.i_node.is_centroid or link.j_node.is_centroid:
-                #     link.length = 0.01  # 60.0 / 5280.0
             for line in network.transit_lines():
                 # TODO: may want to set transit line speeds (not necessarily used in the assignment though)
                 line_veh = network.transit_vehicle(

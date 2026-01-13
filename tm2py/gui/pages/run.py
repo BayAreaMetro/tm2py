@@ -107,8 +107,8 @@ def show_component_selection():
                 "default": True
             },
             "drive_access_skims": {
-                "name": "Drive Access Skims",
-                "description": "Generate drive-to-transit access skims",
+                "name": "Drive Access Skims (DEPRECATED)",
+                "description": "[DEPRECATED] Previously generated drive-to-transit access skims using TAPs (removed)",
                 "default": False
             },
             "active_modes": {

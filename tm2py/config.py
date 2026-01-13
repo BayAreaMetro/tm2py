@@ -65,7 +65,7 @@ ComponentNames = Literal[
     "highway_maz_assign",
     "highway",
     "highway_maz_skim",
-    "drive_access_skims",
+    "drive_access_skims",  # DEPRECATED: Relies on removed TAP infrastructure
     "prepare_network_transit",
     "transit_assign",
     "transit_skim",
@@ -935,7 +935,7 @@ class HighwayConfig(ConfigItem):
         area_type_buffer_dist_miles: used to in calculation to categorize link @areatype
             The area type is determined based on the average density of nearby
             (within this buffer distance) MAZs, using (pop+jobs*2.5)/acres
-        drive_access_output_skim_path: relative path for drive access to transit skims
+        drive_access_output_skim_path: DEPRECATED (TAPs removed) - relative path for drive access to transit skims
         output_skim_path: relative path template from run dir for OMX output skims
         output_skim_filename_tmpl: template for OMX filename for a time period. Must include
             {time_period} in the string and end in '.omx'.

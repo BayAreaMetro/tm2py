@@ -226,8 +226,8 @@ class ActiveModesSkim(Component):
                     for access_attr in SUBNETWORK_ID_MAP.values():
                         link[access_attr] = 0
 
-        # create new modes for each skim: set node TAZ, MAZ, TAP attr to find connectors
-        # note that the TAZ, MAZ, TAP connectors must not have walk or bike access
+        # create new modes for each skim: set node TAZ, MAZ attr to find connectors
+        # note that the TAZ, MAZ connectors must not have walk or bike access
         # in order to prevent "shortcutting" via zones in shortest path building (removed above)
         mode_codes = []
         for spec in self.config.shortest_path_skims:
@@ -237,10 +237,10 @@ class ActiveModesSkim(Component):
             # get network attribute names from parameters
             root_attr = ROOT_LEAF_ID_MAP[
                 spec["roots"]
-            ]  # TAZ, TAP or MAZ as root (origin)?
+            ]  # TAZ or MAZ as root (origin)?
             leaf_attr = ROOT_LEAF_ID_MAP[
                 spec["leaves"]
-            ]  # TAZ, TAP or MAZ as leaf (dest)?
+            ]  # TAZ or MAZ as leaf (dest)?
             network_attr = SUBNETWORK_ID_MAP[spec["mode"]]  # walk or bike mode
             # define network access and egress to "zones" and subnetwork
             # by setting the link.modes

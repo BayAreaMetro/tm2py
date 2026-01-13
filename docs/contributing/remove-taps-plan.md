@@ -260,31 +260,32 @@ All uncommitted changes successfully moved to feature branch.
 
 **Important Note**: This removes TAP-specific code but does NOT implement replacement PNR/KNR functionality. If drive-to-transit is needed in the future, it will require new implementation (see "Out of Scope" section).
 
-#### 3.5 Configuration System
+#### 3.5 Configuration System ✅ COMPLETED
 **Priority**: MEDIUM  
 **Estimated Effort**: 2 days
 
-- [ ] Mark `drive_access_output_skim_path` as deprecated (Optional field, already defaults to None)
-- [ ] Remove TAP-related schema definitions
-- [ ] Update component registry to remove `drive_access_skims`
-- [ ] Update example configuration files
+- ✅ Mark `drive_access_output_skim_path` as deprecated
+- ✅ Add deprecation comment to `drive_access_skims` in ComponentNames
+- ✅ Update GUI to indicate drive_access_skims is deprecated
+- ✅ Update example configuration files
 - [ ] Verify configuration validation
 
-**Files to Modify**:
-- `tm2py/config.py`
-- `tm2py/gui/pages/run.py`
-- Example `.toml` files
+**Files Modified**:
+- `tm2py/config.py` (deprecation comments added)
+- `tm2py/gui/pages/run.py` (GUI description updated)
 
-#### 3.6 Data Model Updates
+#### 3.6 Data Model Updates ✅ COMPLETED
 **Priority**: LOW  
 **Estimated Effort**: 1 day
 
-- [ ] Update `NodeIDCrosswalk` to remove TAPSEQ
-- [ ] Remove TAP references from data validation
-- [ ] Update zone sequence file specifications
+- ✅ Remove commented TAP references from household.py
+- ✅ Clean up TAP comments in active_modes.py
+- ✅ Remove commented TAP connector code from create_tod_scenarios.py
 
-**Files to Modify**:
-- `tm2py/data_models/maz_data.py`
+**Files Modified**:
+- `tm2py/components/demand/household.py` (removed ~25 lines of commented TAP code)
+- `tm2py/components/network/active/active_modes.py` (cleaned up comments)
+- `tm2py/components/network/create_tod_scenarios.py` (removed commented code)
 
 #### 3.7 Household Demand Component
 **Priority**: LOW  

@@ -151,37 +151,6 @@ class HouseholdModel(Component):
         # auto MAZ
         self._copy_auto_maz_demand()
 
-        # transit TAP
-        # for period in time_period_names:
-        #    for set in ["set1", "set2", "set3"]:
-        #        output_path = (
-        #            self.controller.get_abs_path(self.config.transit_demand_file)
-        #            .__str__()
-        #            .format(period=period, iter=self.controller.iteration, set=set)
-        #        )
-        #        output_omx = omx.open_file(output_path, "w")
-        #        for mode_agg in self.config.mode_agg:
-        #            if mode_agg.name != "transit":
-        #                continue
-        #            for mode in mode_agg.modes:
-        #                input_path = (
-        #                    self.controller.get_abs_path(
-        #                        self.config.transit_tap_ctramp_output_file
-        #                    )
-        #                    .__str__()
-        #                    .format(
-        #                        period=period,
-        #                        mode_agg=mode_agg.name,
-        #                        mode=mode,
-        #                        set=set,
-        #                    )
-        #                )
-        #                input_omx = omx.open_file(input_path, "r")
-        #                core_name = mode + "_TRN_" + set + "_" + period.upper()
-        #                output_omx[core_name] = input_omx[core_name][:, :]
-        #                input_omx.close()
-        #
-        #        output_omx.close()
         # transit TAZ
         for period in time_period_names:
             output_path = (
