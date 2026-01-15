@@ -83,14 +83,13 @@ The `Matrix Manager` is tasked with managing all of the skim matrices used by th
 
 Both the `Household Manager` and `Matrix Manager` have substantial memory footprints, currently 35GB and 44GB respectively.
 
-##### TAZ, MAZ, and TAP Data Manager
+##### TAZ and MAZ Data Manager
 The main CT-RAMP model process includes the following internal data management interfaces for managing zone-type data: 
 
-* TAZ data manager, 
-* MAZ data manager, and 
-* TAP data manager.  
+* TAZ data manager
+* MAZ data manager
 
-These data managers provide TAZ, MAZ, and TAP level data to the various sub-models.  The TAZ data manager provides TAZ attribute data.  The MAZ data manager provides MAZ attribute data, as well as MAZ to MAZ impedances.  The TAP data manager provides TAP attribute data, as well as MAZ to TAP impedances.  These data managers are copied to JPPF nodes during execution, which increases the memory required by JPPF nodes. 
+These data managers provide TAZ and MAZ level data to the various sub-models. The TAZ data manager provides TAZ attribute data. The MAZ data manager provides MAZ attribute data, as well as MAZ to MAZ impedances. These data managers are copied to JPPF nodes during execution, which increases the memory required by JPPF nodes. 
 
 ## Setup and Configuration
 
@@ -112,7 +111,7 @@ The `CTRAMP` directory contains all of the model configuration files, Java instr
 
 The `INPUT` directory contains all of the input files (see the [Input Files](#input-files) section) required to run a specific scenario. MTC will deliver the model with a set of scenario-specific set of inputs. When configuring the model on a new computing system, one should make sure that the results from an established scenario can be recreated before developing and analyzing a new scenario. The `INPUT` directory contains the following folders:
 
-* `hwy` -- contains the input master network with all zone centroids as well (TAZ, MAZ, and TAP) (see the [Networks](#networks) section);
+* `hwy` -- contains the input master network with all zone centroids (TAZ and MAZ) (see the [Networks](#networks) section);
 * `trn` -- contains all of the input transit network files (see the [Networks](#networks) section);
 * `landuse` -- contains the MAZ and TAZ level socio-economic input land use files;
 * `nonres` -- contains the fixed, year-specific internal/external trip tables, the fixed, year-specific air passenger trip tables, and files used to support the commercial vehicle model;
@@ -176,7 +175,6 @@ model run |
 | `set /A MAX_ITERATION=2`                                                     | Set the model feedback iterations |
 | `set TAZ_COUNT=4509`                                                         | The number of tazs |
 | `set TAZ_EXTS_COUNT=4530`                                                    | The number of tazs + externals |
-| `set TAP_COUNT=6172`                                                         | The number of transit access point zones |
 
 The file `CTRampEnv.bat` MS-DOS batch file points to locations of executables and contains some additional information on machine configuration. The following statements may need to be configured within this file:
 
@@ -275,7 +273,6 @@ Several steps are needed to prepare the inputs for use in the model.  The follow
 
 * `zone_seq_net_builder.job` -- build an internal numbering scheme for the network nodes to play nice with Cube
 * `CreateNonMotorizedNetwork.job` -- convert the roadway network into bike and ped networks
-* `tap_to_taz_for_parking.job` -- create the transit access point (TAP) data
 * `SetTolls.job` -- set network prices (i.e., bridge tolls, express lane tolls) in the roadway network
 * `SetHovKferPenalties.job` -- add a penalty of X seconds for dummy links connecting HOV/express lanes and general purpose lanes
 * `SetCapClass.job` -- compute area type and populate the `CAPCLASS` network variable
@@ -350,15 +347,9 @@ The CT-RAMP software is controlled by a standard Java [properties file](https://
 
 Travel Model Two employs a tiered spatial system to allow level-of-service indicators to be computed at a fine or coarser geography, as appropriate.  Two spatial systems are defined: 1) a travel analysis zone (TAZ) system and 2) a micro-analysis zone (MAZ) system.  MAZs nest within TAZs.  For travel done at a "micro" scale (in the regional context, meaning less than five miles or so), the MAZ system is used; for travel done at a larger scale, the TAZ system is used.
 
-Further, transit travel is represented as a combination of the following three movements:
+Further, transit travel is represented with direct routing between MAZs or TAZs and transit stops, without the use of intermediate transit access points.
 
- 1. Access.  An access movement from an MAZ to a so-called transit access point (or TAP), which is a single transit stop or an abstract location representing a collection of bus stops.
- 2. Line haul.  A line-haul movement from a boarding TAP to an alighting TAP, which can include a transfer (moving from one TAP to another TAP) between services.
- 3. Egress.  An egress movement from the alighting TAP to the destination MAZ. 
-
-The motivation for the MAZ and TAP model design was to more precisely represent neighborhood-level travel while avoiding the steep computational price required to maintain a full set of MAZ-to-MAZ level-of-service matrices.  This design concept originated at the San Diego Association of Governments (SANDAG) and is being adopted by other planning organizations.
-
-The MAZ and TAP model design requires transit paths be built "on the fly" (i.e. outside the commercial software used by the travel model) by intelligently building and combining the MAZ-to-TAP, TAP-to-TAP, and TAP-to-MAZ trip components into logical, efficient potential paths for evaluation in probabilistic models of mode/transit route choice. 
+The motivation for the MAZ model design was to more precisely represent neighborhood-level travel while avoiding the steep computational price required to maintain a full set of MAZ-to-MAZ level-of-service matrices. This design concept originated at the San Diego Association of Governments (SANDAG) and is being adopted by other planning organizations. 
 
 The table below presents the manner in which level-of-service indicators are extracted from the model network.
 
@@ -366,10 +357,10 @@ The table below presents the manner in which level-of-service indicators are ext
 |--------------------------------|------------------------------------------|---------------|------------|
 | Automobile times, distances, and costs | Near | MAZ to MAZ | MAZ-scale single best least-cost path |
 | Automobile times, distances, and costs | Far | TAZ to TAZ | TAZ-scale equilibrium assignment path |
-| Transit line-haul | All | TAP to TAP | N least-cost path determination |
-| Transit walk access and egress | All | MAZ to TAP | N least-cost path determination |
-| Transit bicycle access and egress | All | MAZ to TAP | N least-cost path determination |
-| Transit drive access and egress | All | TAZ to nearest TAP TAZ | TAZ-scale equilibrium assignment path |
+| Transit line-haul | All | Transit stop to transit stop | N least-cost path determination |
+| Transit walk access and egress | All | MAZ to transit stop | N least-cost path determination |
+| Transit bicycle access and egress | All | MAZ to transit stop | N least-cost path determination |
+| Transit drive access and egress | All | TAZ to TAZ | TAZ-scale equilibrium assignment path |
 | Walk | Near (assume all walk travel is near) | MAZ to MAZ | MAZ-scale single best least-cost path |
 | Bicycle | Near | MAZ to MAZ | MAZ-scale single best least-cost path |
 | Bicycle | Far | TAZ to TAZ | TAZ-scale single best least-cost path |

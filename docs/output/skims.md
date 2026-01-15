@@ -65,12 +65,12 @@ FROM_ZONE, TO_ZONE, COST, DISTANCE, BRIDGETOLL
 
 **Format**: CSV with columns:
 ```
-FTAZ,MODE,PERIOD,TTAP,TMAZ,TTAZ,DTIME,DDIST,DTOLL,WDIST
+FTAZ,MODE,PERIOD,TTAZ,TMAZ,DTIME,DDIST,DTOLL,WDIST
 ```
 
 **Content**:
 - Drive access times and costs to transit stops
-- Walking distances from parking to transit access points
+- Walking distances from parking to transit stops
 - Used for park-and-ride and kiss-and-ride mode choice
 
 ## Transit Skims

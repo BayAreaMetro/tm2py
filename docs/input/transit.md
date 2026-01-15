@@ -2,7 +2,7 @@
 
 The transit network is made up of three core components: transit lines, transit modes, and transit fares. The transit lines were built GTFS feeds from around 2015. The lines are coded with a mode (see below) and serve a series of stop nodes. Transit fares are coded according to Cube's Public Transport program (see below).
 
-Transit trips are assigned between transit access points (TAPs), which represent individual or collections of transit stops for transit access/egress. TAPs are essentially transit specific TAZs that are automatically coded based on the transit network. See the [Level of Service Information](#level-of-service-information).
+Transit trips are assigned directly between TAZs and transit stops, without the use of intermediate transit access points. See the [Level of Service Information](#level-of-service-information).
 
 ## Link Attributes
 

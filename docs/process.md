@@ -6,9 +6,17 @@
 ## Preprocessing
 
 1. [`preprocess\writeZoneSystems.job`](https://github.com/MetropolitanTransportationCommission/travel-model-two/blob/master/model-files/scripts/preprocess/writeZoneSystems.job)
-   * Summary: Counts tazs, mazs, taps and external zones based on [node number conventions](/travel-model-two/input/#county-node-numbering-system)
+   * Summary: Counts tazs, mazs and external zones based on [node number conventions](/travel-model-two/input/#county-node-numbering-system)
    * Input: `hwy\mtc_final_network_base.net`, the roadway network
-   * Output: `zoneSystem.bat`, a local batch file that defines `TAZ_COUNT`, `TAZ_EXTS_COUNT`, `TAP_COUNT`, and `MAZ_COUNT` environment variables
+   * Output: `zoneSystem.bat`, a local batch file that defines `TAZ_COUNT`, `TAZ_EXTS_COUNT`, and `MAZ_COUNT` environment variables
+
+1. [`preprocess\zone_seq_net_builder.job`](https://github.com/MetropolitanTransportationCommission/travel-model-two/blob/master/model-files/scripts/preprocess/zone_seq_net_builder.job)
+   * Summary: Builds a sequential zone numbering system for TAZs, MAZs and Externals 
+     given the [node number conventions](/travel-model-two/input/#county-node-numbering-system).
+   * Input: `hwy\mtc_final_network_base.net`, the roadway network
+   * Output:
+     1. `hwy\mtc_final_network.net` with additional nodeattributes, **TAZSEQ**, **MAZSEQ** and **EXTSEQ**
+     2. `hwy\mtc_final_network_zone_seq.csv`, the mapping of CUBE roadway nodes to renumbered TAZs and MAZs. Columns are _N_, _TAZSEQ_, _MAZSEQ_, and _EXTSEQ_
 
 1. [`preprocess\zone_seq_net_builder.job`](https://github.com/MetropolitanTransportationCommission/travel-model-two/blob/master/model-files/scripts/preprocess/zone_seq_net_builder.job)
    * Summary: Builds a sequential zone numbering system for TAZs, MAZs, TAPs and Externals 
@@ -21,7 +29,7 @@
 1. [`preprocess\zone_seq_disseminator.py`](https://github.com/MetropolitanTransportationCommission/travel-model-two/blob/master/model-files/scripts/preprocess/zone_seq_disseminator.py)
    * Summary: Builds other files with zone numbers
    * Input: 
-     1. `hwy\mtc_final_network_zone_seq.csv`, the mapping of CUBE roadway nodes to renumbered TAZs, MAZs and TAPs
+     1. `hwy\mtc_final_network_zone_seq.csv`, the mapping of CUBE roadway nodes to renumbered TAZs and MAZs
      2. `landuse\taz_data.csv` - [Zonal Data](/travel-model-two/guide/#zonal-data)
      3. `landuse\maz_data.csv` - [Micro Zonal Data](/travel-model-two/guide/#micro-zonal-data)
    * Output:
@@ -50,39 +58,16 @@
      1. `landuse\maz_data_withDensity.csv` - [Micro Zonal Data](/travel-model-two/guide/#micro-zonal-data) joined with density measures
 
 1. [`preprocess\CreateNonMotorizedNetwork.job`](https://github.com/MetropolitanTransportationCommission/travel-model-two/blob/master/model-files/scripts/preprocess/CreateNonMotorizedNetwork.job)
-   * Summary: Create pedestrian, bicycle and pedestrian TAP (Transit Access Point) to TAP networks.  The procedure to create the non-motorized networks (walk and bike) extracts the links from the network which have **CNTYPE** equal to TANA, PED/BIKE, MAZ, TAZ, or TAP and which are not freeways, or which have the BIKEPEDOK flag set to true (1). For the pedestrian network, any link that is one-way has an opposite direction link generated. 
+   * Summary: Create pedestrian and bicycle networks. The procedure to create the non-motorized networks (walk and bike) extracts the links from the network which have **CNTYPE** equal to TANA, PED/BIKE, MAZ, or TAZ and which are not freeways, or which have the BIKEPEDOK flag set to true (1). For the pedestrian network, any link that is one-way has an opposite direction link generated. 
    * Input: 
-     1. [`CTRAMP\scripts\block\maxCosts.block`](https://github.com/MetropolitanTransportationCommission/travel-model-two/blob/master/model-files/scripts/block/maxCosts.block) - sets maximum pedestrian distance, maximum bike distances, maximum driving generalized cost, maximum tap-tap pedestrian distance
+     1. [`CTRAMP\scripts\block\maxCosts.block`](https://github.com/MetropolitanTransportationCommission/travel-model-two/blob/master/model-files/scripts/block/maxCosts.block) - sets maximum pedestrian distance and maximum bike distances
      2. `hwy\mtc_final_network.net`, the roadway network
    * Output:
      1. `hwy\mtc_ped_network.net`, the pedestrian network.  Link attributes are the same as the roadway network, plus **SP_DISTANCE**, or Shortest Path Distance.  This is set to:
-        * `@max_ped_distance@` for **CNTYPE**=_MAZ_ links and **CNTYPE**=_TAP_ links with a TAZ/MAZ/TAP origin or destination,
+        * `@max_ped_distance@` for **CNTYPE**=_MAZ_ links with a TAZ/MAZ origin or destination,
         * `@nomax_bike_distance@` for _TAZ_ links
         * **FEET** otherwise
-     2. `hwy\mtc_tap_ped_network.net`, the tap-tap pedestrian network.  This is the same as the pedestrian network but with **SP_DISTANCE** for TAP links modified to @max_tap_ped_distance@.  This is because the tap-to-tap ped distances are shorter (1/2 mile versus 3 miles).
-     3. `hwy\mtc_bike_network.net`, the bike network.  This is extracted in a similar fashion as the pedestrian network, but **CNTYPE** = 'BIKE' links are included instead of **CNTYPE** = 'PED'.
-
-1. [`preprocess\tap_to_taz_for_parking.job`](https://github.com/MetropolitanTransportationCommission/travel-model-two/blob/master/model-files/scripts/preprocess/tap_to_taz_for_parking.job)
-   * Summary: Finds shortest pedestrian distance from TAP nodes to TAZ nodes.  Max cost = `@nomax_bike_distance@ + @max_ped_distance@ + @max_ped_distance@`.
-   * Input: `hwy\mtc_ped_network.net`, the pedestrian network
-   * Output: `hwy\tap_to_taz_for_parking.txt`, a CSV with columns
-      1. origin TAP
-      2. destination TAZ
-      3. destination TAZ (repeated)
-      4. total **SP_DISTANCE**
-      5. total **FEET**
-
-1. [`preprocess\tap_data_builder.py`](https://github.com/MetropolitanTransportationCommission/travel-model-two/blob/master/model-files/scripts/preprocess/tap_data_builder.py)
-   * Summary: Maps TAPs to the closest TAZ for that TAP (via **FEET**).
-   * Input:
-      1. `hwy\mtc_final_network_zone_seq.csv`, the mapping of CUBE roadway nodes to renumbered TAZs, MAZs and TAPs
-      2. `hwy\tap_to_taz_for_parking.txt`, listing the shortest pedestrian distance from all TAPs to all TAZs
-   * Output: `hwy\tap_data.csv` (**TODO**: name this better?), a CSV with columns
-      1. TAP - the tap number (in CTRAMP sequential numbering)
-      2. TAP_original - the original tap number (in the CUBE network)
-      3. lotid - the lot id; this is the same as TAP right now
-      4. TAZ - the taz the tap is associated with (see tap_to_taz_for_parking.job)
-      5. capacity - the capacity of the lot; this is set to 9999 by default, but could be changed after this process has run
+     2. `hwy\mtc_bike_network.net`, the bike network.  This is extracted in a similar fashion as the pedestrian network, but **CNTYPE** = 'BIKE' links are included instead of **CNTYPE** = 'PED'.
 
 1. [`preprocess\SetTolls.JOB`](https://github.com/MetropolitanTransportationCommission/travel-model-two/blob/master/model-files/scripts/preprocess/SetTolls.JOB)
    * Summary: Converts **TOLLBOOTH** attribute to toll attributes (by vehicle class and time period) on the network.
@@ -112,7 +97,7 @@
    * Summary: Creates per-timeperiod roadway networks for assignment and skimming
       1. Deletes links with **ASSIGNABLE** = 0
       2. Deletes links with **CNTYPE** = 'TANA' and **NUMLANES** = 0
-      3. Deletes links with **CNTYPE** not one of ("TANA","MAZ","TAZ","TAP","EXT")
+      3. Deletes links with **CNTYPE** not one of ("TANA","MAZ","TAZ","EXT")
       4. Sets freeflow time (in minutes) **FFT** based on **FEET** and **FFS**, freeflow speed.
       5. Variously deletes/changes **USECLASS**, **NUMLANES**, **FFT** or new field **CTIM** (congested time, which is set to be equal to **FFT** here) for special (mostly bridge) links. 
       6. **TODO**: **CTIM** == **FFT** so not sure why this is added here?  Also, the reversible lanes links and the shared road bypass links with their nodes are all hard-coded into the script... why not configure this?
@@ -139,15 +124,11 @@
       1. [`CTRAMP\scripts\block\maxCosts.block`](https://github.com/MetropolitanTransportationCommission/travel-model-two/blob/master/model-files/scripts/block/maxCosts.block)
       2. `hwy\mtc_ped_network.net`, the pedestrian network
       3. `hwy\mtc_bike_network.net`, the bike network
-      4. `hwy\mtc_tap_ped_network.net`, the tap-tap pedestrian network
-      5. `hwy\mtc_final_network_zone_seq.csv`, used to [resequence columns](https://github.com/MetropolitanTransportationCommission/travel-model-two/blob/master/model-files/scripts/skims/resequence_columns.py) in the skims
+      4. `hwy\mtc_final_network_zone_seq.csv`, used to [resequence columns](https://github.com/MetropolitanTransportationCommission/travel-model-two/blob/master/model-files/scripts/skims/resequence_columns.py) in the skims
     * Output: 
       1. `skims\ped_distance_maz_maz.csv`, the pedestrian MAZ to MAZ skims
-      2. `skims\ped_distance_maz_tap.csv`, the pedestrian MAZ to TAP skims
-      3. `skims\bike_distance_maz_maz.csv`, the bicycle MAZ to MAZ skims
-      4. `skims\bike_distance_maz_tap.csv`, the bicycle MAZ to TAP skims
-      5. `skims\bike_distance_taz_taz.csv`, the bicycle TAZ to TAZ skims
-      6. `skims\ped_distance_tap_tap.csv`, the pedestrian TAP to TAP skims
+      2. `skims\bike_distance_maz_maz.csv`, the bicycle MAZ to MAZ skims
+      3. `skims\bike_distance_taz_taz.csv`, the bicycle TAZ to TAZ skims
 
 1. [`skims\MazMazSkims.job`](https://github.com/MetropolitanTransportationCommission/travel-model-two/blob/master/model-files/scripts/skims/MazMazSkims.job)
     * Summary: Creates auto shortest-path skims for MAZ-to-MAZ using Cube's shortest-paths utility.

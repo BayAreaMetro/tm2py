@@ -78,8 +78,6 @@ The Comprehensive Travel Demand Model (CTRAMP) generates detailed microsimulatio
 - Updates path choices based on congested conditions
 
 **Additional Fields**:
-- `orig_tap` - Origin Transit Access Point
-- `dest_tap` - Destination Transit Access Point
 - `set` - Route set used
 - `actual_time` - Actual travel time experienced
 - `crowding_penalty` - Additional time due to crowding
@@ -97,7 +95,7 @@ The Comprehensive Travel Demand Model (CTRAMP) generates detailed microsimulatio
 **Description**: Park-and-ride demand after applying parking capacity limits
 
 **Fields**:
-- `TAP` - Transit Access Point ID
+- `taz` - TAZ ID with parking facility
 - `period` - Time period
 - `demand` - Number of parking spaces demanded
 - `capacity` - Available parking capacity
