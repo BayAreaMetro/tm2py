@@ -62,9 +62,8 @@ def generate_setupmodel_config(test_dir, inputs_source, emme_project_source, log
         # Use "none" for release tag - SetupModel won't download if this isn't a valid GitHub tag
         "TRAVEL_MODEL_TWO_RELEASE_TAG": "none",
         
-        # EMME template project - use the working emme_project from an existing run
-        # This has properly configured databases with enough extra attributes
-        "EMME_TEMPLATE_PROJECT_DIR": "E:/2015_TM2_20250619/emme_project",
+        # EMME template project - use the EMME 25 bare template (matches EMME_25.00.01.zip databases)
+        "EMME_TEMPLATE_PROJECT_DIR": "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Inputs/2015-tm22-dev-sprint-04/emme_25_project_template",
         "CONFIGS_GITHUB_PATH": "",
     }
     

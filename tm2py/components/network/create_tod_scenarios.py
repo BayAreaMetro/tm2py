@@ -228,7 +228,7 @@ class CreateTODScenarios(Component):
             self.controller.config.emme.all_day_scenario_id
         )
         attributes = {
-            "LINK": ["@area_type", "@capclass", "@free_flow_speed", "@free_flow_time"]
+            "LINK": ["@area_type", "@capclass", "@free_flow_speed", "@free_flow_time", "@lanes"]
         }
         for domain, attrs in attributes.items():
             for name in attrs:
@@ -236,6 +236,17 @@ class CreateTODScenarios(Component):
                     ref_scenario.create_extra_attribute(domain, name)
 
         network = ref_scenario.get_network()
+        
+        # Copy standard lanes to @lanes if @lanes is empty (for legacy networks)
+        lanes_attr = ref_scenario.extra_attribute("@lanes")
+        if all(v == 0 for v in ref_scenario.get_attribute_values("LINK", ["@lanes"])["@lanes"]):
+            self.controller.logger.log(
+                "Copying standard 'lanes' attribute to '@lanes' (legacy network compatibility)",
+                level="INFO"
+            )
+            for link in network.links():
+                link["@lanes"] = link.lanes
+        
         self._set_area_type(network)
         self._set_capclass(network)
         self._set_speed(network)

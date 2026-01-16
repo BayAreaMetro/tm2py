@@ -99,6 +99,173 @@ CONFIGS_GITHUB_PATH = "https://raw.githubusercontent.com/BayAreaMetro/tm2py-util
 TRAVEL_MODEL_TWO_RELEASE_TAG = "TM2.2.4"
 ```
 
+## EMME Network Setup Flow
+
+Understanding how EMME networks are initialized is critical for debugging network-related issues.
+
+### Components of EMME Setup
+
+#### 1. Project Template (`EMME_TEMPLATE_PROJECT_DIR`)
+**What it is:** Empty EMME project structure with folders and configuration.
+
+**Contents:**
+- `.emp` project file
+- `Database/` folder (empty or with minimal empty emmebank)
+- Configuration for dimensions (scenarios, zones, extra attributes capacity)
+
+**Purpose:** Provides the skeleton structure for an EMME project.
+
+**Key Point:** Contains **NO network data, NO extra attributes** - just the structure.
+
+**Version Matching:** The template EMME version (e.g., `emme_23_project_template` or `emme_25_project_template`) should ideally match the EMME version that created the database zips, though EMME often maintains backward compatibility.
+
+#### 2. Database Zips (`INPUT_EMME_NETWORK_DIR`)
+**What it is:** Compressed EMME network databases with actual network data built from Lasso.
+
+**Contents:**
+- Nodes (TAZ, MAZ, network nodes with coordinates)
+- Links (roadway segments with standard EMME attributes)
+- **Standard attributes only**: 
+  - `length` - link length
+  - `lanes` - number of lanes (lowercase, not `@lanes`)
+  - `modes` - allowed modes
+  - `type` - link type
+  - `vdf` - volume delay function
+  - Other base EMME attributes
+
+**Does NOT contain:**
+- Extra attributes (`@lanes`, `@capclass`, `@useclass`, `@free_flow_time`, etc.)
+- Time-of-day specific scenarios
+- Populated volume fields
+
+**Location:** Typically in `emme_network/` subdirectory:
+- `Database_highway_EMME_25.00.01.zip`
+- `Database_transit_EMME_25.00.01.zip`
+- `Database_active_north_EMME_25.00.01.zip`
+- `Database_active_south_EMME_25.00.01.zip`
+
+#### 3. Setup Component Execution Flow
+
+```
+Step 1: Copy Project Template
+  Source: EMME_TEMPLATE_PROJECT_DIR
+  Destination: <run_dir>/emme_project/
+  Result: Empty project structure created
+
+Step 2: Unzip Database Zips
+  Source: INPUT_EMME_NETWORK_DIR/*.zip
+  Destination: <run_dir>/emme_project/Database_*/
+  Result: Network data now in project (nodes, links with standard attributes only)
+
+Step 3: Initial Components Run (CRITICAL!)
+  Components like create_tod_scenarios create extra attributes
+```
+
+#### 4. The `create_tod_scenarios` Component (CRITICAL!)
+
+**Why it's needed:** Database zips intentionally do not contain extra attributes. These must be created by tm2py components during model setup.
+
+**What `create_tod_scenarios` does:**
+
+1. Reads base scenario from `Database_highway`
+2. **Creates extra attributes** on links:
+   - `@lanes` - copies from standard `lanes` attribute
+   - `@capclass` - capacity class for highway assignment
+   - `@useclass` - facility type classification
+   - `@free_flow_time` - calculated free-flow travel time
+   - `@free_flow_speed` - free-flow speed
+   - `@area_type` - area type classification
+   - Others as needed
+3. Populates these attributes with calculated values
+4. Creates time-of-day scenarios (EA, AM, MD, PM, EV)
+5. Writes enhanced scenarios back to emmebank
+
+**Configuration requirement:**
+
+```toml
+[run]
+    initial_components = [
+        "setup",                      # Copies template, unzips databases
+        "create_tod_scenarios",       # ← MUST be in initial_components!
+        # ... other components
+    ]
+```
+
+**Common error if missing:**
+
+```
+ERROR: Missing required network attributes: @lanes
+Traceback: prepare_network_highway → Missing @lanes attribute
+```
+
+#### 5. Complete Flow Diagram
+
+```
+Template (structure)
+    ↓
++ Database Zip (network with standard attributes)
+    ↓
++ create_tod_scenarios (creates extra attributes)
+    ↓
+= Complete EMME Project Ready for Assignment
+```
+
+**Without `create_tod_scenarios` in `initial_components`:**
+```
+❌ Missing: @lanes, @capclass, @useclass, etc.
+❌ Components fail: prepare_network, highway_assignment, etc.
+```
+
+**With `create_tod_scenarios` in `initial_components`:**
+```
+✅ Has: all required extra attributes
+✅ Components succeed: prepare_network, highway_assignment, etc.
+```
+
+### Troubleshooting EMME Network Issues
+
+#### Issue: "Missing required network attributes: @lanes"
+
+**Diagnosis:** Extra attributes were not created during setup.
+
+**Solution:** 
+1. Verify `create_tod_scenarios` is in `initial_components`
+2. Verify it runs **before** components that need the attributes (like `prepare_network_highway`)
+3. Check the log to confirm create_tod_scenarios executed successfully
+
+**Common cause:** Running a partial model with custom `initial_components` that omits `create_tod_scenarios`.
+
+#### Issue: "EMME version mismatch errors"
+
+**Diagnosis:** Project template EMME version doesn't match database EMME version.
+
+**Solution:** 
+- Check database zip filenames (e.g., `EMME_25.00.01.zip` means EMME version 25.00.01)
+- Use matching template (e.g., `emme_25_project_template` for EMME 25 databases)
+- Note: EMME often maintains backward compatibility (EMME 25 databases may work with EMME 23 templates)
+
+#### Issue: "Database appears empty after setup"
+
+**Diagnosis:** Database zips weren't unzipped or unzip failed.
+
+**Solution:**
+1. Check logs for unzip errors
+2. Verify `INPUT_EMME_NETWORK_DIR` path is correct in setupmodel_config.toml
+3. Verify database zip files exist and aren't corrupted
+4. Check disk space in destination directory
+
+### Key Insights
+
+1. **Database zips are intentionally incomplete** - they contain only base EMME network data (nodes, links, standard attributes), not extra attributes needed by tm2py.
+
+2. **Extra attributes are created by tm2py components** - specifically `create_tod_scenarios` and related network preparation components.
+
+3. **Order matters** - `create_tod_scenarios` must run before any components that reference extra attributes.
+
+4. **Templates are just structure** - the project template provides the EMME project structure but no actual network data. The data comes from unzipping the database zips.
+
+5. **Version matching is important but not always strict** - ideally use a template that matches your database EMME version, but EMME maintains reasonable backward compatibility.
+
 ## Files Validated When Setup is Skipped
 
 If setup is not in initial_components, the controller checks for:
