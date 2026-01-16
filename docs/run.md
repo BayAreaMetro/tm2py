@@ -1,6 +1,9 @@
 
 # Run the Model Setup 🚀
 
+!!! tip "Integrated Setup Component"
+    As of TM2.2, you can include the `"setup"` component in your `initial_components` to handle model initialization automatically. See **[Setup Component Integration](setup-component-integration.md)** for the modern workflow. The manual setup process below is still supported for cases where you need more control.
+
 ## 1. **Set Up the Model Run Directory** 🎂
 
 ### a. Open the **OpenPaths EMME Shell** and a terminal and activate your *tm2py* virtual environment: 🐍
