@@ -58,6 +58,7 @@ class ScenarioConfig(ConfigItem):
 
 
 ComponentNames = Literal[
+    "setup",
     "create_tod_scenarios",
     "active_modes",
     "air_passenger",

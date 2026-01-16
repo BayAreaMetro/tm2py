@@ -45,6 +45,18 @@ class SetupConfig:
             else:
                 setattr(self, key, value)
         
+        # Set default values for optional copy flags if not specified
+        if not hasattr(self, 'COPY_NETWORK_INPUTS'):
+            self.COPY_NETWORK_INPUTS = True
+        if not hasattr(self, 'COPY_POPLU_INPUTS'):
+            self.COPY_POPLU_INPUTS = True
+        if not hasattr(self, 'COPY_NONRES_INPUTS'):
+            self.COPY_NONRES_INPUTS = True
+        if not hasattr(self, 'COPY_WARMSTART_DEMAND'):
+            self.COPY_WARMSTART_DEMAND = True
+        if not hasattr(self, 'COPY_WARMSTART_SKIMS'):
+            self.COPY_WARMSTART_SKIMS = True
+        
     def validate(self):
         """Validates that all required attributes are present.
 
@@ -399,48 +411,78 @@ class SetupModel:
     def _copy_model_inputs(self):
         """
         copy required model inputs into their respective directories.
+        Uses optional flags in setup config to control what gets copied:
+        - COPY_NETWORK_INPUTS (default: True)
+        - COPY_POPLU_INPUTS (default: True)
+        - COPY_NONRES_INPUTS (default: True)
+        - COPY_WARMSTART_DEMAND (default: True)
+        - COPY_WARMSTART_SKIMS (default: True)
         """
         # Copy hwy and trn networks
-        self._copy_folder(
-            self.setup_config.INPUT_NETWORK_DIR / "hwy",
-            self.model_dir / "inputs" / "hwy"
-        )
-        self._copy_folder(
-            self.setup_config.INPUT_NETWORK_DIR / "trn",
-            self.model_dir / "inputs" / "trn"
-        )
+        if self.setup_config.COPY_NETWORK_INPUTS:
+            self.logger.info("Copying network inputs (hwy, trn)...")
+            self._copy_folder(
+                self.setup_config.INPUT_NETWORK_DIR / "hwy",
+                self.model_dir / "inputs" / "hwy"
+            )
+            self._copy_folder(
+                self.setup_config.INPUT_NETWORK_DIR / "trn",
+                self.model_dir / "inputs" / "trn"
+            )
+        else:
+            self.logger.info("Skipping network inputs (COPY_NETWORK_INPUTS=False)")
 
         # Copy popsyn and landuse inputs
-        self._copy_folder(
-            self.setup_config.INPUT_POPLU_DIR / "popsyn",
-            self.model_dir / "inputs" / "popsyn"
-        )
-        self._copy_folder(
-            self.setup_config.INPUT_POPLU_DIR /"landuse",
-            self.model_dir / "inputs" / "landuse"
-        )
+        if self.setup_config.COPY_POPLU_INPUTS:
+            self.logger.info("Copying population and land use inputs...")
+            self._copy_folder(
+                self.setup_config.INPUT_POPLU_DIR / "popsyn",
+                self.model_dir / "inputs" / "popsyn"
+            )
+            self._copy_folder(
+                self.setup_config.INPUT_POPLU_DIR /"landuse",
+                self.model_dir / "inputs" / "landuse"
+            )
+        else:
+            self.logger.info("Skipping popsyn/landuse inputs (COPY_POPLU_INPUTS=False)")
 
         # Copy nonres inputs
-        self._copy_folder(
-            self.setup_config.INPUT_NONRES_DIR / "nonres",
-            self.model_dir / "inputs" / "nonres"
-        )
+        if self.setup_config.COPY_NONRES_INPUTS:
+            self.logger.info("Copying non-residential inputs...")
+            self._copy_folder(
+                self.setup_config.INPUT_NONRES_DIR / "nonres",
+                self.model_dir / "inputs" / "nonres"
+            )
+        else:
+            self.logger.info("Skipping nonres inputs (COPY_NONRES_INPUTS=False)")
 
         # Copy warmstart demand if exists
-        warmstart_demand = self.setup_config.WARMSTART_FILES_DIR / "demand_matrices"
-        if warmstart_demand.exists():
-            self._copy_folder(
-                warmstart_demand, 
-                self.model_dir / "demand_matrices"
-            )
+        if self.setup_config.COPY_WARMSTART_DEMAND:
+            warmstart_demand = self.setup_config.WARMSTART_FILES_DIR / "demand_matrices"
+            if warmstart_demand.exists():
+                self.logger.info("Copying warmstart demand matrices...")
+                self._copy_folder(
+                    warmstart_demand, 
+                    self.model_dir / "demand_matrices"
+                )
+            else:
+                self.logger.info(f"Warmstart demand directory not found: {warmstart_demand}")
+        else:
+            self.logger.info("Skipping warmstart demand (COPY_WARMSTART_DEMAND=False)")
 
         # Copy warmstart skims
-        warmstart_skims = self.setup_config.WARMSTART_FILES_DIR / "skim_matrices"
-        if warmstart_skims.exists():
-            self._copy_folder(
-                warmstart_skims, 
-                self.model_dir /"skim_matrices"
-            )
+        if self.setup_config.COPY_WARMSTART_SKIMS:
+            warmstart_skims = self.setup_config.WARMSTART_FILES_DIR / "skim_matrices"
+            if warmstart_skims.exists():
+                self.logger.info("Copying warmstart skim matrices...")
+                self._copy_folder(
+                    warmstart_skims, 
+                    self.model_dir /"skim_matrices"
+                )
+            else:
+                self.logger.info(f"Warmstart skims directory not found: {warmstart_skims}")
+        else:
+            self.logger.info("Skipping warmstart skims (COPY_WARMSTART_SKIMS=False)")
 
     def _copy_emme_project_and_database(self):
         """

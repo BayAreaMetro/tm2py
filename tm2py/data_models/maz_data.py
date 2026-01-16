@@ -450,9 +450,11 @@ def create_sequential_index(
 
 def validate_sequential_id(
     maz_data_df: pd.DataFrame,
-    node_seq_id_xwalk: DataFrame[NodeIDCrosswalk]
+    node_seq_id_xwalk: DataFrame[NodeIDCrosswalk] = None
 ) -> None:
     """Validate consistency between MAZ data and node ID crosswalk.
+    
+    If node_seq_id_xwalk is None, validation is skipped (for older datasets).
     
     This function ensures that the sequential MAZ and TAZ IDs in the land use
     data file match the expected values from the node ID crosswalk. This validation
@@ -523,6 +525,10 @@ def validate_sequential_id(
     load_maz_data : Higher-level function that includes this validation
     NodeIDCrosswalk : Schema for the crosswalk data
     """
+    # Skip validation if crosswalk not provided (for older datasets)
+    if node_seq_id_xwalk is None:
+        return
+    
     xwalk = node_seq_id_xwalk.set_index("model_node_id")
     maz = maz_data_df["MAZ_ORIGINAL"].map(xwalk["MAZSEQ"])
     taz = maz_data_df["TAZ_ORIGINAL"].map(xwalk["TAZSEQ"])
@@ -537,7 +543,7 @@ def validate_sequential_id(
 
 def load_maz_data(
     maz_data_file: pathlib.Path, 
-    node_seq_id_xwalk: DataFrame[NodeIDCrosswalk]
+    node_seq_id_xwalk: DataFrame[NodeIDCrosswalk] = None,
 ) -> DataFrame[MAZData]:
     """Load and validate MAZ land use data for transportation modeling.
     

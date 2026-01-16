@@ -33,6 +33,65 @@ if sys.platform == 'win32':
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
+def generate_setupmodel_config(test_dir, inputs_source, emme_project_source, logger):
+    """Generate setupmodel_config.toml for the setup component.
+    
+    Args:
+        test_dir: Test output directory path
+        inputs_source: Source directory for input files
+        emme_project_source: Source directory for EMME project
+        logger: Logger instance
+    """
+    logger.info("Generating setupmodel_config.toml for setup component...")
+    
+    # Create setupmodel config content
+    setupmodel_config = {
+        # Point to the inputs subdirectory (contains hwy, trn, landuse, etc.)
+        # Convert to forward slashes for TOML compatibility
+        "INPUT_NETWORK_DIR": str(Path(inputs_source) / "inputs").replace("\\", "/"),
+        "INPUT_POPLU_DIR": str(Path(inputs_source) / "inputs").replace("\\", "/"),
+        "INPUT_NONRES_DIR": str(Path(inputs_source) / "inputs").replace("\\", "/"),
+        
+        # Point directly to the EMME network directory (not its parent)
+        # SetupModel expects INPUT_EMME_NETWORK_DIR to contain the emme_network folder or zipped databases
+        "INPUT_EMME_NETWORK_DIR": str(emme_project_source).replace("\\", "/"),
+        
+        # Required fields - SetupConfig validation requires non-empty values
+        # Point to demand_matrices for warmstart files
+        "WARMSTART_FILES_DIR": str(Path(inputs_source) / "demand_matrices").replace("\\", "/"),
+        # Use "none" for release tag - SetupModel won't download if this isn't a valid GitHub tag
+        "TRAVEL_MODEL_TWO_RELEASE_TAG": "none",
+        
+        # EMME template project - use the working emme_project from an existing run
+        # This has properly configured databases with enough extra attributes
+        "EMME_TEMPLATE_PROJECT_DIR": "E:/2015_TM2_20250619/emme_project",
+        "CONFIGS_GITHUB_PATH": "",
+    }
+    
+    # Write to test directory
+    config_path = test_dir / "setupmodel_config.toml"
+    with open(config_path, "w") as f:
+        # Write manually formatted TOML (toml.dump doesn't handle Path objects well)
+        f.write("#######################\n")
+        f.write("# Setup Model Configs #\n")
+        f.write("#######################\n")
+        f.write("# Auto-generated for county test\n\n")
+        f.write(f'INPUT_NETWORK_DIR = "{setupmodel_config["INPUT_NETWORK_DIR"]}"\n')
+        f.write(f'INPUT_POPLU_DIR = "{setupmodel_config["INPUT_POPLU_DIR"]}"\n')
+        f.write(f'INPUT_NONRES_DIR = "{setupmodel_config["INPUT_NONRES_DIR"]}"\n')
+        f.write(f'INPUT_EMME_NETWORK_DIR = "{setupmodel_config["INPUT_EMME_NETWORK_DIR"]}"\n')
+        f.write(f'WARMSTART_FILES_DIR = "{setupmodel_config["WARMSTART_FILES_DIR"]}"\n')
+        f.write(f'TRAVEL_MODEL_TWO_RELEASE_TAG = "{setupmodel_config["TRAVEL_MODEL_TWO_RELEASE_TAG"]}"\n')
+        f.write(f'EMME_TEMPLATE_PROJECT_DIR = "{setupmodel_config["EMME_TEMPLATE_PROJECT_DIR"]}"\n')
+        f.write(f'CONFIGS_GITHUB_PATH = ""\n')
+    
+    logger.info(f"✓ Created setupmodel_config.toml at {config_path}")
+    logger.debug(f"  INPUT_NETWORK_DIR: {setupmodel_config['INPUT_NETWORK_DIR']}")
+    logger.debug(f"  INPUT_EMME_NETWORK_DIR: {setupmodel_config['INPUT_EMME_NETWORK_DIR']}")
+    
+    return config_path
+
+
 def setup_console_logging(log_level='INFO'):
     """Setup console-only logging."""
     logger = logging.getLogger('county_test')
@@ -89,14 +148,26 @@ def check_prerequisites(config, logger):
     else:
         logger.info(f"✓ EMME project found: {emme_project}")
     
-    # Check EMME database
+    # Check EMME database (could be folder or zip file)
+    # Check if setup component will handle unzipping
+    run_components = config.get('components', {}).get('run_components', [])
+    use_setup_component = 'setup' in run_components
+    
     emme_db = emme_project / "Database_highway" / "emmebank"
+    emme_db_zip = list(emme_project.glob("Database_highway*.zip"))
+    
     logger.debug(f"Checking EMME database: {emme_db}")
-    if not emme_db.exists():
-        issues.append(f"EMME database not found: {emme_db}")
+    if not emme_db.exists() and not emme_db_zip:
+        issues.append(f"EMME database not found (neither folder nor zip): {emme_db}")
         logger.error(f"EMME database not found: {emme_db}")
-    else:
+    elif emme_db_zip and use_setup_component:
+        logger.info(f"✓ EMME database zip found: {emme_db_zip[0].name} (setup component will unzip)")
+    elif emme_db.exists():
         logger.info(f"✓ EMME database found: {emme_db}")
+    else:
+        logger.warning(f"EMME database is zipped but setup component is not enabled")
+        logger.warning(f"  Found: {emme_db_zip[0].name if emme_db_zip else 'none'}")
+        logger.warning(f"  Add 'setup' to run_components to handle zipped databases")
     
     # Check inputs source directory
     inputs_dir = Path(config['paths']['inputs_source'])
@@ -208,6 +279,16 @@ def setup_test_directory(config, logger):
     
     logger.info("✓ Directory structure created")
     
+    # Generate setupmodel_config.toml for setup component (after directory creation)
+    logger.info("Generating setupmodel_config.toml for setup component...")
+    setupmodel_config_path = generate_setupmodel_config(
+        test_dir=test_dir,
+        inputs_source=inputs_source,
+        emme_project_source=emme_project_source,
+        logger=logger
+    )
+    logger.info(f"✓ Created setupmodel_config.toml at {setupmodel_config_path}")
+    
     logger.info("Copying configuration templates...")
     # Copy config templates (using fixed complete config files)
     config_templates = Path(__file__).parent / "config_templates"
@@ -263,62 +344,81 @@ def setup_test_directory(config, logger):
             f.write(content)
         logger.info(f"Network thinning enabled: @ft <= {thin_network}")
     
-    # Copy EMME project
-    source_emme = emme_project_source
-    dest_emme = test_dir / "emme_project"
+    # Check if setup component will handle file copying
+    run_components = config.get('components', {}).get('run_components', [])
+    use_setup_component = 'setup' in run_components
     
-    if skip_emme_copy:
-        logger.info("Skipping EMME project copy (skip_emme_copy=true)")
-        if not dest_emme.exists():
-            logger.warning(f"EMME project not found at {dest_emme}")
-            logger.warning(f"You must manually copy it from {source_emme}")
-    elif dest_emme.exists():
-        logger.warning(f"EMME project already exists at {dest_emme}")
-        if auto_confirm:
-            logger.info("Auto-confirm enabled, using existing EMME project")
-        else:
-            response = input("  Do you want to skip copying (reuse existing)? (y/n): ")
-            if response.lower() == 'y':
-                logger.info("Using existing EMME project")
-            else:
-                logger.info("Replacing EMME project (this may take a few minutes)...")
-                shutil.rmtree(dest_emme)
-                shutil.copytree(source_emme, dest_emme)
-                logger.info(f"Copied EMME project to {dest_emme}")
+    if use_setup_component:
+        logger.info("="*70)
+        logger.info("SETUP COMPONENT ENABLED")
+        logger.info("="*70)
+        logger.info("The 'setup' component will handle:")
+        logger.info("  - Copying EMME project and unzipping databases")
+        logger.info("  - Copying input files (hwy, trn, landuse)")
+        logger.info("  - Copying demand matrices")
+        logger.info("Skipping old setup file copying logic...")
+        logger.info("="*70)
+        # Setup component will handle everything, so skip to demand filtering
     else:
-        logger.info("Copying EMME project (this may take a few minutes)...")
-        logger.debug(f"Source: {source_emme}")
-        logger.debug(f"Dest: {dest_emme}")
-        shutil.copytree(source_emme, dest_emme)
-        logger.info(f"Copied EMME project to {dest_emme}")
+        # Old setup logic: Copy EMME project manually
+        logger.info("Setup component NOT enabled, using legacy file copying...")
+        
+        # Copy EMME project
+        source_emme = emme_project_source
+        dest_emme = test_dir / "emme_project"
+        
+        if skip_emme_copy:
+            logger.info("Skipping EMME project copy (skip_emme_copy=true)")
+            if not dest_emme.exists():
+                logger.warning(f"EMME project not found at {dest_emme}")
+                logger.warning(f"You must manually copy it from {source_emme}")
+        elif dest_emme.exists():
+            logger.warning(f"EMME project already exists at {dest_emme}")
+            if auto_confirm:
+                logger.info("Auto-confirm enabled, using existing EMME project")
+            else:
+                response = input("  Do you want to skip copying (reuse existing)? (y/n): ")
+                if response.lower() == 'y':
+                    logger.info("Using existing EMME project")
+                else:
+                    logger.info("Replacing EMME project (this may take a few minutes)...")
+                    shutil.rmtree(dest_emme)
+                    shutil.copytree(source_emme, dest_emme)
+                    logger.info(f"Copied EMME project to {dest_emme}")
+        else:
+            logger.info("Copying EMME project (this may take a few minutes)...")
+            logger.debug(f"Source: {source_emme}")
+            logger.debug(f"Dest: {dest_emme}")
+            shutil.copytree(source_emme, dest_emme)
+            logger.info(f"Copied EMME project to {dest_emme}")
+        
+        # Copy essential input files from inputs_source
+        
+        # Copy tolls
+        logger.debug("Copying tolls.csv...")
+        shutil.copy(
+            inputs_source / "inputs" / "hwy" / "tolls.csv",
+            test_dir / "inputs" / "hwy" / "tolls.csv"
+        )
+        logger.debug("Copied tolls.csv")
+        
+        # Copy interchange_nodes
+        logger.debug("Copying interchange_nodes.csv...")
+        shutil.copy(
+            inputs_source / "inputs" / "hwy" / "interchange_nodes.csv",
+            test_dir / "inputs" / "hwy" / "interchange_nodes.csv"
+        )
+        logger.debug("Copied interchange_nodes.csv")
+        
+        # Copy MAZ data
+        logger.debug("Copying MAZ data...")
+        shutil.copy(
+            inputs_source / "inputs" / "landuse" / "maz_data.csv",
+            test_dir / "inputs" / "landuse" / "maz_data.csv"
+        )
+        logger.debug("Copied maz_data.csv")
     
-    # Copy essential input files from inputs_source
-    
-    # Copy tolls
-    logger.debug("Copying tolls.csv...")
-    shutil.copy(
-        inputs_source / "inputs" / "hwy" / "tolls.csv",
-        test_dir / "inputs" / "hwy" / "tolls.csv"
-    )
-    logger.debug("Copied tolls.csv")
-    
-    # Copy interchange_nodes
-    logger.debug("Copying interchange_nodes.csv...")
-    shutil.copy(
-        inputs_source / "inputs" / "hwy" / "interchange_nodes.csv",
-        test_dir / "inputs" / "hwy" / "interchange_nodes.csv"
-    )
-    logger.debug("Copied interchange_nodes.csv")
-    
-    # Copy MAZ data
-    logger.debug("Copying MAZ data...")
-    shutil.copy(
-        inputs_source / "inputs" / "landuse" / "maz_data.csv",
-        test_dir / "inputs" / "landuse" / "maz_data.csv"
-    )
-    logger.debug("Copied maz_data.csv")
-    
-    # Check if demand filtering is enabled
+    # Check if demand filtering is enabled (runs regardless of setup component)
     scenario_config = toml.load(test_dir / "config" / "scenario.toml")
     filter_demand = config['test'].get('filter_demand', False)
     

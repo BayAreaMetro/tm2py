@@ -88,11 +88,34 @@ class CountyHighwayController:
         self.county_name = county_name or "County"
         
         # Determine which components to run
-        components_to_run = ["create_tod_scenarios", "prepare_network_highway", "highway"]
+        # If config has initial_components including "setup", use those
+        # Otherwise, fall back to the old hard-coded list
+        import toml
+        config_data = toml.load(self.config_files[0] if isinstance(self.config_files, list) else self.config_files)
+        config_components = config_data.get('run', {}).get('initial_components', [])
+        
+        if config_components:
+            # Config specifies initial_components, use those as base
+            components_to_run = list(config_components)
+        else:
+            # Fall back to default components
+            components_to_run = ["create_tod_scenarios", "prepare_network_highway", "highway"]
+        
+        # Add optional components if requested
         if include_maz_components:
-            components_to_run.extend(["highway_maz_skim", "highway_maz_assign"])
+            if "highway_maz_skim" not in components_to_run:
+                components_to_run.append("highway_maz_skim")
+            if "highway_maz_assign" not in components_to_run:
+                components_to_run.append("highway_maz_assign")
         if include_network_summary:
-            components_to_run.append("network_summary")
+            if "network_summary" not in components_to_run:
+                components_to_run.append("network_summary")
+        
+        # Also include global_iteration_components from config
+        global_components = config_data.get('run', {}).get('global_iteration_components', [])
+        for comp in global_components:
+            if comp not in components_to_run:
+                components_to_run.append(comp)
         
         # Initialize the controller
         print(f"Initializing {self.county_name} Highway Controller")

@@ -40,6 +40,7 @@ from tm2py.components.network.transit.transit_network import PrepareTransitNetwo
 from tm2py.components.network.transit.transit_skim import TransitSkim
 from tm2py.components.post_processor import PostProcessor
 from tm2py.components.network_summary import NetworkSummary
+from tm2py.components.setup import Setup
 from tm2py.config import Configuration
 from tm2py.emme.manager import EmmeManager
 from tm2py.logger import Logger
@@ -52,6 +53,7 @@ from tm2py.data_models.maz_data import MAZData, NodeIDCrosswalk, load_maz_data, 
 # mapping from names referenced in config.run to imported classes
 # NOTE: component names also listed as literal in tm2py.config for validation
 component_cls_map = {
+    "setup": Setup,
     "active_modes": ActiveModesSkim,
     "create_tod_scenarios": CreateTODScenarios,
     "prepare_network_highway": PrepareNetwork,
@@ -143,9 +145,24 @@ class RunController:
         )
 
         # mapping from defined names referenced in config to Component objects
-        self._component_map = {
-            k: v(self) for k, v in component_cls_map.items() if k in run_components
-        }
+        # Special handling: if "setup" is in components, create and run it first
+        # before creating other components that may depend on files it creates
+        self._component_map = {}
+        if "setup" in run_components:
+            setup_cls = component_cls_map["setup"]
+            setup_component = setup_cls(self)
+            self._component_map["setup"] = setup_component
+            # Run setup immediately so files are in place for other components
+            self.logger.log("Running setup component before initializing other components")
+            setup_component.run()
+            self.logger.log("Setup component completed successfully")
+            # Remove setup from run_components so it doesn't run again
+            run_components = [c for c in run_components if c != "setup"]
+        
+        # Now create remaining components
+        for k, v in component_cls_map.items():
+            if k in run_components and k not in self._component_map:
+                self._component_map[k] = v(self)
 
         self.logger.set_emme_manager(self.emme_manager)
         self._queue_components(run_components=run_components)
@@ -260,9 +277,17 @@ class RunController:
     @property
     def node_seq_id_xwalk(self) -> DataFrame[NodeIDCrosswalk]:
         if self._node_seq_id_xwalk is None:
+            # Check if the config attribute exists (it's optional for older datasets)
+            if not hasattr(self.config.highway, 'model_to_emme_node_id_xwalk'):
+                self.logger.log("model_to_emme_node_id_xwalk not configured, skipping sequential ID creation", level="WARN")
+                return None
             model_to_emme_node_id_xwalk = self.get_abs_path(
                 self.config.highway.model_to_emme_node_id_xwalk
             )
+            # Check if file exists - this is a new feature that may not be in older datasets
+            if not model_to_emme_node_id_xwalk.exists():
+                self.logger.log(f"node_xwalk file not found: {model_to_emme_node_id_xwalk}, skipping sequential ID creation", level="WARN")
+                return None
             self._node_seq_id_xwalk = create_sequential_index(model_to_emme_node_id_xwalk)
             # write out the xwalk for ctramp
             self._node_seq_id_xwalk.to_csv(
