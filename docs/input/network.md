@@ -3,6 +3,9 @@
 !!! info "Network Preparation"
     For information on how to prepare and process network files for the base year, see **[Creating Base Year Inputs](../create-base-year-inputs.md#network-data)** 🛣️
 
+!!! tip "EMME Network Setup"
+    For detailed information about how EMME networks are initialized, database zips are unzipped, and extra attributes are created, see **[Setup Component: EMME Network Setup Flow](../setup-component-integration.md#emme-network-setup-flow)** 🔧
+
 ## Roadway Network
 
 The all streets highway network, walk network, and bicycle network were developed from [OpenStreetMap](http://www.openstreetmap.org/). The *projection* is [**NAD 1983 StatePlane California VI FIPS 0406 Feet**](https://epsg.io/102646).
