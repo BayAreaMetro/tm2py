@@ -7,20 +7,22 @@ Tests are run with [pyTest](pytest.org).
 For rapid testing of highway assignment/skimming on a single county:
 
 ```powershell
-python tests\run_county_test.py --output-dir "E:\Tests\san_mateo_test" --county "San Mateo"
+python tests\run_county_test.py
 ```
 
 **Documentation**:
-- **[County Test Framework Guide](COUNTY_TEST_FRAMEWORK_GUIDE.md)** - Complete usage guide, troubleshooting, architecture
-- [Field Name Mapping](COMPLETE_FIELD_NAME_MAPPING.md) - Vehicle naming conventions (s2/s3 vs sr2/sr3)
-- [EMME Manager Flow](EMME_MANAGER_FLOW.md) - EMME initialization and database management
-- [Original Framework Update](COUNTY_TEST_FRAMEWORK_UPDATE.md) - Design documentation
+- **[Quick Start Guide](../docs/testing/quick-start.md)** - Get started in 5 minutes
+- **[County Test Framework Guide](../docs/testing/county-test-guide.md)** - Complete usage guide, troubleshooting, architecture
+- [Configuration Reference](../docs/testing/configuration.md) - All config options explained
+- [Setup Component Guide](../docs/testing/setup.md) - File copying and EMME database setup
 
 **Key Features**:
+- **Setup component integration** - Automatically copies files and configures EMME databases
+- **Selective file copying** - Control what gets copied (network only, demand, land use, etc.)
 - Demand filtering (intra-county trips only)
 - ~5,000 TAZs vs ~30,000 (83% reduction)
-- 2-5 minute runtime vs 15-30 minutes
-- Components: create_tod_scenarios → prepare_network_highway → highway
+- 15-30 minute runtime including setup
+- Components: setup → create_tod_scenarios → prepare_network_highway → highway
 
 ## Test structure
 

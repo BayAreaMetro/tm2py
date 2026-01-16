@@ -10,7 +10,7 @@
 #   emme/emme_project/
 #     mtc_emme.emp (or similar .emp file)
 #     Database_highway/emmebank
-emme_project_source = "M:/Development/Travel Model Two/Supply/Network Creation 2025/from_OSM/SanMateo/7_scenario/emme/emme_project"
+emme_project_source = "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Inputs/2015-tm22-dev-sprint-04/emme_network"
 
 # Input files directory (contains inputs and demand_matrices)
 # This is where tolls, MAZ data, demand matrices, etc. are located
@@ -26,7 +26,7 @@ emme_project_source = "M:/Development/Travel Model Two/Supply/Network Creation 2
 #       TAZ_Demand_MD.omx
 #       TAZ_Demand_PM.omx
 #       TAZ_Demand_EV.omx
-inputs_source = "E:/2015_TM2_20250619"
+inputs_source = "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Outputs/2015-tm22-dev-sprint-04"
 
 # Output/test directory where test results will be written
 # This will be created if it doesn't exist
@@ -53,7 +53,7 @@ skip_emme_copy = false
 
 # Skip test directory setup if it already exists
 # Set to true to rerun components without recreating directory structure
-skip_setup = true
+skip_setup = false
 
 # Auto-confirm all prompts (skip y/n questions)
 # Set to true for unattended/automated runs
@@ -84,6 +84,7 @@ time_periods = ["AM"]
 # Components to run (in order)
 # Uncomment components you want to include in the test
 run_components = [
+    "setup",                      # NEW: Setup component (copies files using setupmodel_config.toml)
     "create_tod_scenarios",      # REQUIRED: Creates time-of-day scenarios
     "prepare_network_highway",   # REQUIRED: Sets up network attributes
     "highway",                   # REQUIRED: Highway assignment and skimming

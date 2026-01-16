@@ -20,6 +20,8 @@ start_component = ""
 
 # Component lists (tuples)
 initial_components = [
+    "setup",
+    "create_tod_scenarios",
     "prepare_network_highway",
 ]
 
