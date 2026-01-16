@@ -50,8 +50,27 @@ class CreateTODScenarios(Component):
             print("DEBUG: In _setup context of CreateTODScenarios.run()")
             self._create_highway_scenarios()
             print("DEBUG: Called _create_highway_scenarios() in CreateTODScenarios.run()")
-            self._create_transit_scenarios()
-            print("DEBUG: Called _create_transit_scenarios() in CreateTODScenarios.run()")
+            
+            # Skip transit scenarios if highway_only flag is set or no transit component in run
+            skip_transit = False
+            if hasattr(self.controller.config.emme, 'highway_only'):
+                skip_transit = self.controller.config.emme.highway_only
+            elif hasattr(self.controller.config, 'run'):
+                # Check if transit component is in the component lists
+                all_components = (
+                    list(getattr(self.controller.config.run, 'initial_components', [])) +
+                    list(getattr(self.controller.config.run, 'global_iteration_components', [])) +
+                    list(getattr(self.controller.config.run, 'final_components', []))
+                )
+                has_transit = 'transit' in all_components
+                skip_transit = not has_transit
+            
+            if skip_transit:
+                print("DEBUG: Skipping _create_transit_scenarios() - highway-only mode")
+                self.controller.logger.log("Skipping transit scenario creation (highway-only mode)", level="INFO")
+            else:
+                self._create_transit_scenarios()
+                print("DEBUG: Called _create_transit_scenarios() in CreateTODScenarios.run()")
 
     @_context
     def _setup(self):
@@ -432,11 +451,22 @@ class CreateTODScenarios(Component):
                     seg.link.modes |= {line_mode}
                 line.vehicle = line_veh
                 # Set the perception factor from the mode table
-                line["@invehicle_factor"] = in_vehicle_factors[line.vehicle.mode.id]
-                line["@iboard_penalty"] = initial_boarding_penalty[line.vehicle.mode.id]
-                line["@xboard_penalty"] = transfer_boarding_penalty[
-                    line.vehicle.mode.id
-                ]
+                # IMPORTANT: Skip if mode not in config. This handles legacy network data issues
+                # where transit lines may have been assigned highway modes (e.g., mode 'x' for MAZ-to-MAZ).
+                # This was observed in sprint-04 (April 2025) networks created before November 2025
+                # crosswalk validation improvements. Newer network builds should not have this issue.
+                if line.vehicle.mode.id in in_vehicle_factors:
+                    line["@invehicle_factor"] = in_vehicle_factors[line.vehicle.mode.id]
+                    line["@iboard_penalty"] = initial_boarding_penalty[line.vehicle.mode.id]
+                    line["@xboard_penalty"] = transfer_boarding_penalty[
+                        line.vehicle.mode.id
+                    ]
+                else:
+                    self.controller.logger.log(
+                        f"Warning: Transit line {line.id} uses mode '{line.vehicle.mode.id}' not defined in "
+                        f"transit.modes config. This may indicate network build issues. Skipping perception factors for this line.",
+                        level="WARN"
+                    )
 
             # # set link modes to the minimum set
             # auto_mode = {self.controller.config.highway.generic_highway_mode_code}
@@ -470,11 +500,14 @@ class CreateTODScenarios(Component):
                 link.j_node["@hdw_fraction"] = default_headway_fraction
                 link.j_node["@wait_pfactor"] = default_transfer_wait_perception_factor
                 link.j_node["@xboard_nodepen"] = 1
-                # update modes on connectors
+                # update modes on connectors - only if modes exist in network
+                # Access mode 'a' and egress mode 'e' may not be defined in minimal transit configs
                 if (link.i_node.is_centroid) and (link["@drive_link"] == 0):
-                    link.modes = "a"
+                    if network.mode("a"):
+                        link.modes = "a"
                 elif (link.j_node.is_centroid) and (link["@drive_link"] == 0):
-                    link.modes = "e"
+                    if network.mode("e"):
+                        link.modes = "e"
                 elif (link.i_node.is_centroid or link.j_node.is_centroid) and (
                     link["@drive_link"] != 0
                 ):
