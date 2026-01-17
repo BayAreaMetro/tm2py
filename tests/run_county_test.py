@@ -522,19 +522,27 @@ def setup_test_directory(config, logger):
     # Copy truck demand files
     logger.info("Copying truck demand files...")
     truck_dir = inputs_source / "demand_matrices" / "highway" / "commercial"
-    logger.debug(f"Truck demand directory: {truck_dir}")
+    logger.info(f"  Truck demand directory: {truck_dir}")
+    logger.info(f"  Truck directory exists: {truck_dir.exists()}")
+    logger.info(f"  Time periods to process: {time_periods}")
     
+    truck_files_copied = 0
     for period in time_periods:
         truck_file = truck_dir / f"tripstrk{period}.omx"
+        logger.info(f"  Checking for {truck_file.name}...")
         if truck_file.exists():
             output_file = test_dir / "inputs" / "demand" / truck_file.name
+            logger.info(f"    Copying {truck_file.name} to {output_file}...")
             shutil.copy(truck_file, output_file)
-            logger.info(f"  Copied {truck_file.name}")
-            logger.debug(f"    Size: {truck_file.stat().st_size / 1024 / 1024:.1f} MB")
+            truck_files_copied += 1
+            logger.info(f"    ✓ Copied {truck_file.name} (Size: {truck_file.stat().st_size / 1024 / 1024:.1f} MB)")
         else:
-            logger.warning(f"  {truck_file.name} not found, skipping")
+            logger.warning(f"    {truck_file.name} not found, skipping")
     
-    logger.info("Test directory setup complete!")
+    logger.info(f"Truck demand files copied: {truck_files_copied}")
+    logger.info("="*70)
+    logger.info("TEST DIRECTORY SETUP COMPLETE!")
+    logger.info("="*70)
     return test_dir
 
 
@@ -547,14 +555,18 @@ def run_test(config, logger):
     county_name = config['test']['county_name']
     test_dir = Path(config['paths']['output_dir'])
     
+    logger.info(f"Test directory: {test_dir}")
+    logger.info(f"County: {county_name}")
+    
     try:
         logger.info("Importing CountyHighwayController...")
         from tests.highway_assign_skim_controller import CountyHighwayController
+        logger.info("  ✓ Import successful")
         
         logger.info(f"Initializing controller for {county_name} County...")
-        logger.debug(f"Scenario config: {test_dir / 'config' / 'scenario.toml'}")
-        logger.debug(f"Model config: {test_dir / 'config' / 'model.toml'}")
-        logger.debug(f"Run directory: {test_dir}")
+        logger.info(f"  Scenario config: {test_dir / 'config' / 'scenario.toml'}")
+        logger.info(f"  Model config: {test_dir / 'config' / 'model.toml'}")
+        logger.info(f"  Run directory: {test_dir}")
         
         controller = CountyHighwayController(
             scenario_config=str(test_dir / "config" / "scenario.toml"),
@@ -607,20 +619,27 @@ def run_test(config, logger):
         return True
         
     except Exception as e:
-        logger.error(f"Test failed with error: {str(e)}")
-        logger.debug("Full traceback:", exc_info=True)
-        return False
-        print("\n" + "="*70)
-        print("❌ TEST FAILED")
-        print("="*70)
-        print(f"\nError: {e}")
+        logger.error("="*70)
+        logger.error("TEST FAILED WITH EXCEPTION")
+        logger.error("="*70)
+        logger.error(f"Error type: {type(e).__name__}")
+        logger.error(f"Error message: {str(e)}")
+        logger.error("Full traceback:")
+        
         import traceback
-        traceback.print_exc()
+        error_traceback = traceback.format_exc()
+        logger.error(error_traceback)
+        
         # Also write to file
-        with open(test_dir / "logs" / "error_traceback.txt", "w") as f:
+        error_file = test_dir / "logs" / "error_traceback.txt"
+        error_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(error_file, "w") as f:
+            f.write(f"Error Type: {type(e).__name__}\n")
             f.write(f"Error: {e}\n\n")
-            traceback.print_exc(file=f)
-        print(f"\nFull traceback saved to: {test_dir / 'logs' / 'error_traceback.txt'}")
+            f.write("Full Traceback:\n")
+            f.write(error_traceback)
+        
+        logger.error(f"Full traceback saved to: {error_file}")
         return False
 
 
@@ -716,8 +735,13 @@ def main():
     log_file = add_file_logging(logger, output_dir)
     
     # Run test
-    logger.info("Starting test execution...")
+    logger.info("="*70)
+    logger.info("STARTING TEST EXECUTION")
+    logger.info("="*70)
     success = run_test(config, logger)
+    logger.info("="*70)
+    logger.info("TEST EXECUTION COMPLETED")
+    logger.info("="*70)
     
     if success:
         test_dir = Path(config['paths']['output_dir'])
