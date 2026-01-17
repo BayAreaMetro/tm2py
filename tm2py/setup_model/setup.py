@@ -321,9 +321,18 @@ class SetupModel:
                 # the destination directory must not already exist
                 shutil.rmtree(dest_dir)
 
-            shutil.copytree(src_dir, dest_dir)
+            # Create destination directory first
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Copy contents of source directory to destination
+            # This avoids creating nested directory structure
+            for item in src_dir.iterdir():
+                if item.is_dir():
+                    shutil.copytree(item, dest_dir / item.name)
+                else:
+                    shutil.copy2(item, dest_dir / item.name)
 
-            self.logger.info(f"Copied folder from {src_dir} to {dest_dir}")
+            self.logger.info(f"Copied contents of folder from {src_dir} to {dest_dir}")
         except Exception as e:
             error_str = f"Failed to copy {src_dir} to {dest_dir}: {str(e)}"
             self.logger.error(error_str)
@@ -490,10 +499,22 @@ class SetupModel:
         on the EMME version found in the sys.path.
         """
         # copy template emme project
-        self._copy_folder(
-            self.setup_config.EMME_TEMPLATE_PROJECT_DIR,
-            self.model_dir / "emme_project"
-        )
+        # Check if template has nested emme_project subdirectory (common structure)
+        template_dir = self.setup_config.EMME_TEMPLATE_PROJECT_DIR
+        if (template_dir / "emme_project").exists():
+            # Template has emme_project subdirectory, copy its contents
+            self.logger.info(f"Template has nested emme_project subdirectory, copying from: {template_dir / 'emme_project'}")
+            self._copy_folder(
+                template_dir / "emme_project",
+                self.model_dir / "emme_project"
+            )
+        else:
+            # Template is the project itself, copy it directly
+            self.logger.info(f"Template is the project directory, copying from: {template_dir}")
+            self._copy_folder(
+                template_dir,
+                self.model_dir / "emme_project"
+            )
 
         # get emme version from sys.path
         sys_paths = sys.path
@@ -531,8 +552,9 @@ class SetupModel:
             source_file = self.setup_config.INPUT_EMME_NETWORK_DIR / f"Database_{network_type}_{EMME_VERSION}.zip"
             dest_dir = self.model_dir / "emme_project" / f"Database_{network_type}"
             if source_file.exists():
-                # remove what was there before
-                shutil.rmtree(dest_dir)
+                # remove what was there before (if it exists)
+                if dest_dir.exists():
+                    shutil.rmtree(dest_dir)
                 # unzip the EMME version of the ntework
                 with zipfile.ZipFile(source_file, 'r') as zf:
                     zf.extractall(dest_dir.parent)

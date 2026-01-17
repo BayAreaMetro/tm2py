@@ -239,7 +239,8 @@ class CreateTODScenarios(Component):
         
         # Copy standard lanes to @lanes if @lanes is empty (for legacy networks)
         lanes_attr = ref_scenario.extra_attribute("@lanes")
-        if all(v == 0 for v in ref_scenario.get_attribute_values("LINK", ["@lanes"])["@lanes"]):
+        lanes_values = ref_scenario.get_attribute_values("LINK", ["@lanes"])
+        if all(v == 0 for v in lanes_values):
             self.controller.logger.log(
                 "Copying standard 'lanes' attribute to '@lanes' (legacy network compatibility)",
                 level="INFO"
