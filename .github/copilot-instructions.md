@@ -27,19 +27,30 @@ C:\GitHub\tm2pyenv\Scripts\python.exe tests\run_county_test.py --config tests\co
 | Python Environment | `C:\GitHub\tm2pyenv\Scripts\` |
 | Test Output | `E:\Tests\` |
 | Sprint-04 Data | `E:\Data\tm2_inputs\2015_TM2_20250619_Sprint-04\` |
-| EMME 25 | `C:\Program Files\Bentley\OpenPaths\EMME 25.00.01\` |
+| EMME 24 | `C:\Program Files\Bentley\OpenPaths\EMME 24.01.00\` |
 
-## Current Issues Being Debugged
+## Known Issues & Solutions
 
-- **EMME 25.00.01 bug**: `reportlexer.py` throws "Illegal character '+'" during SOLA traffic assignment
-  - Error occurs in `inro\emme\procedure\reportlexer.py` line 103
-  - Happens ~30 seconds into assignment when parsing internal report
-  - NOT a tm2py issue - the assignment spec is valid
-  - Workaround: Downgrade to EMME 24.x
-  - Consider reporting to Bentley support
+### "Illegal character '+'" in reportlexer.py
+
+**Symptom**: SOLA traffic assignment crashes with lexer error on `+` character
+
+**Root Cause Chain**:
+1. `@lanes` = 0 for all links (attribute not copied from base network)
+2. `@capacity` = 0 (calculated from `@lanes`)
+3. VDF divides by `@capacity` → infinity
+4. EMME formats infinity as `0.135972+124` (no 'e' in exponent)
+5. Lexer crashes parsing unexpected `+`
+
+**Fix**: The `get_attribute_values()` API returns `[id_array, value_array]`, not just values. Code must extract `result[1]` for actual values. Fixed in `create_tod_scenarios.py`.
+
+### Sprint-04 Network Issues
+
+- Databases lack toll attributes (`@useclass`, `@tollbooth`, `@tollseg`) - must be created
+- Transit lines may have highway mode 'x' contamination - handled gracefully now
 
 ## Notes
 
-- Sprint-04 databases lack toll attributes (@useclass, @tollbooth, @tollseg)
 - EMME template structure: copy from `template/emme_project/` not `template/`
-- `get_attribute_values()` returns a list, not a dictionary
+- `get_attribute_values()` returns `[id_array, value_array]`, not a dictionary
+- Use `link.num_lanes` not `link.lanes` (EMME attribute naming)

@@ -148,7 +148,10 @@ class RunController:
         # Special handling: if "setup" is in components, create and run it first
         # before creating other components that may depend on files it creates
         self._component_map = {}
+        print(f"DEBUG: run_components = {run_components}")
+        print(f"DEBUG: 'setup' in run_components = {'setup' in run_components}")
         if "setup" in run_components:
+            print("DEBUG: Running setup component...")
             setup_cls = component_cls_map["setup"]
             setup_component = setup_cls(self)
             self._component_map["setup"] = setup_component
@@ -160,12 +163,24 @@ class RunController:
             run_components = [c for c in run_components if c != "setup"]
         
         # Now create remaining components
+        print(f"DEBUG: Creating remaining components: {run_components}")
         for k, v in component_cls_map.items():
             if k in run_components and k not in self._component_map:
-                self._component_map[k] = v(self)
+                print(f"DEBUG: Creating component {k}...")
+                try:
+                    self._component_map[k] = v(self)
+                    print(f"DEBUG: Component {k} created successfully")
+                except Exception as e:
+                    print(f"DEBUG: FAILED to create component {k}: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    raise
 
+        print("DEBUG: All components created, setting emme_manager on logger...")
         self.logger.set_emme_manager(self.emme_manager)
+        print("DEBUG: Queueing components...")
         self._queue_components(run_components=run_components)
+        print("DEBUG: Controller initialization complete")
 
 
 

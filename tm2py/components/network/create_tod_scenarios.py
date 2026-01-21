@@ -239,17 +239,48 @@ class CreateTODScenarios(Component):
         
         # Copy standard lanes to @lanes if @lanes is empty (for legacy networks)
         # get_attribute_values returns [id_array, value_array], so we need the second element
-        lanes_result = ref_scenario.get_attribute_values("LINK", ["@lanes"])
-        lanes_values = lanes_result[1] if isinstance(lanes_result, list) and len(lanes_result) > 1 else lanes_result
-        # Check if all lane values are 0 (need to copy from standard 'lanes' attribute)
-        all_zero = all(v == 0 for v in lanes_values) if hasattr(lanes_values, '__iter__') else lanes_values == 0
-        if all_zero:
-            self.controller.logger.log(
-                "Copying standard 'lanes' attribute to '@lanes' (legacy network compatibility)",
-                level="INFO"
-            )
-            for link in network.links():
-                link["@lanes"] = link.lanes
+        self.controller.logger.log("DEBUG: Getting @lanes attribute values...", level="INFO")
+        try:
+            lanes_result = ref_scenario.get_attribute_values("LINK", ["@lanes"])
+            self.controller.logger.log(f"DEBUG: lanes_result type: {type(lanes_result)}, len: {len(lanes_result) if hasattr(lanes_result, '__len__') else 'N/A'}", level="INFO")
+            
+            if isinstance(lanes_result, list) and len(lanes_result) > 1:
+                lanes_values = lanes_result[1]
+                self.controller.logger.log(f"DEBUG: lanes_values type: {type(lanes_values)}, len: {len(lanes_values) if hasattr(lanes_values, '__len__') else 'N/A'}", level="INFO")
+            else:
+                lanes_values = lanes_result
+                self.controller.logger.log(f"DEBUG: lanes_result not a list, using directly", level="INFO")
+            
+            # Check if all lane values are 0 (need to copy from standard 'num_lanes' attribute)
+            if hasattr(lanes_values, '__iter__'):
+                # Check first few values
+                sample = list(lanes_values[:10]) if hasattr(lanes_values, '__getitem__') else list(lanes_values)[:10]
+                self.controller.logger.log(f"DEBUG: First 10 lane values: {sample}", level="INFO")
+                all_zero = all(v == 0 for v in lanes_values)
+            else:
+                all_zero = lanes_values == 0
+            
+            self.controller.logger.log(f"DEBUG: all_zero = {all_zero}", level="INFO")
+            
+            if all_zero:
+                self.controller.logger.log(
+                    "Copying standard 'num_lanes' attribute to '@lanes' (legacy network compatibility)",
+                    level="INFO"
+                )
+                # Check if num_lanes exists on first link
+                first_link = next(iter(network.links()), None)
+                if first_link:
+                    self.controller.logger.log(f"DEBUG: First link attributes: {list(first_link.network.attributes('LINK'))[:20]}", level="INFO")
+                    self.controller.logger.log(f"DEBUG: First link num_lanes = {first_link.num_lanes}", level="INFO")
+                
+                for link in network.links():
+                    link["@lanes"] = link.num_lanes
+                self.controller.logger.log("DEBUG: Finished copying num_lanes to @lanes", level="INFO")
+        except Exception as e:
+            self.controller.logger.log(f"ERROR in lanes copying: {type(e).__name__}: {e}", level="ERROR")
+            import traceback
+            self.controller.logger.log(f"Traceback: {traceback.format_exc()}", level="ERROR")
+            raise
         
         self._set_area_type(network)
         self._set_capclass(network)
@@ -590,31 +621,64 @@ class CreateTODScenarios(Component):
         }
         for attr in ref_scenario.extra_attributes():
             for period in self.controller.config.time_periods:
-                if attr.name.endswith(period.name):
+                # Case-insensitive check: attribute names are lowercase (e.g., @lanes_am)
+                # but period names may be uppercase (e.g., "AM")
+                if attr.name.lower().endswith(period.name.lower()):
+                    # Store with the original period name suffix length for extraction
                     tod_attr_groups[attr.type][attr.name[: -len(period.name)]].append(
                         attr.name
                     )
+        
+        # Debug: show what period attributes were found
+        for domain, all_attrs in tod_attr_groups.items():
+            if all_attrs:
+                self.controller.logger.log(
+                    f"DEBUG: Found {len(all_attrs)} time-of-day attribute groups for {domain}: {list(all_attrs.keys())[:5]}...",
+                    level="INFO"
+                )
+        
         for period in self.controller.config.time_periods:
             scenario = emmebank.scenario(period.emme_scenario_id)
             if scenario:
                 emmebank.delete_scenario(scenario)
             scenario = emmebank.copy_scenario(ref_scenario, period.emme_scenario_id)
             scenario.title = f"{period.name} {ref_scenario.title}"[:60]
+            self.controller.logger.log(
+                f"DEBUG: Created period scenario {period.emme_scenario_id} for {period.name}",
+                level="INFO"
+            )
             # in per-period scenario create attributes without period suffix, copy values
             # for this period and delete all other period attributes
+            attrs_copied = []
             for domain, all_attrs in tod_attr_groups.items():
                 for root_attr, tod_attrs in all_attrs.items():
-                    src_attr = f"{root_attr}{period.name}"
+                    # Build source attribute name - try lowercase period name first (e.g., @lanes_am)
+                    # since EMME extra attribute names are typically lowercase
+                    src_attr = f"{root_attr}{period.name.lower()}"
+                    # If lowercase version doesn't exist, try the original case
+                    if scenario.extra_attribute(src_attr) is None:
+                        src_attr = f"{root_attr}{period.name}"
                     if root_attr.endswith("_"):
                         root_attr = root_attr[:-1]
                     for attr in tod_attrs:
                         if attr != src_attr:
                             scenario.delete_extra_attribute(attr)
-                    attr = scenario.create_extra_attribute(domain, root_attr)
+                    # Create target attribute if it doesn't exist, otherwise use existing
+                    if scenario.extra_attribute(root_attr) is None:
+                        attr = scenario.create_extra_attribute(domain, root_attr)
+                    else:
+                        attr = scenario.extra_attribute(root_attr)
                     attr.description = scenario.extra_attribute(src_attr).description
                     values = scenario.get_attribute_values(domain, [src_attr])
                     scenario.set_attribute_values(domain, [root_attr], values)
                     scenario.delete_extra_attribute(src_attr)
+                    attrs_copied.append(f"{src_attr}->{root_attr}")
+            
+            if attrs_copied:
+                self.controller.logger.log(
+                    f"DEBUG: Copied {len(attrs_copied)} period attributes: {attrs_copied[:5]}...",
+                    level="INFO"
+                )
 
     def _set_area_type(self, network):
         # set area type for links based on average density of MAZ closest to I or J node

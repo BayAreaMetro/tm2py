@@ -6,6 +6,9 @@
 !!! tip "EMME Network Setup"
     For detailed information about how EMME networks are initialized, database zips are unzipped, and extra attributes are created, see **[Setup Component: EMME Network Setup Flow](../setup-component-integration.md#emme-network-setup-flow)** 🔧
 
+!!! abstract "Highway Network Processing Pipeline"
+    For a detailed diagram of how network attributes are transformed during model execution, including scenario IDs, emmebank structure, and attribute modifications at each step, see **[Highway Network Processing Pipeline](highway-network-processing.md)** 📊
+
 ## Roadway Network
 
 The all streets highway network, walk network, and bicycle network were developed from [OpenStreetMap](http://www.openstreetmap.org/). The *projection* is [**NAD 1983 StatePlane California VI FIPS 0406 Feet**](https://epsg.io/102646).

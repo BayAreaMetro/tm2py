@@ -112,6 +112,7 @@ nav:
     - Input: input/index.md
     - 2023 Base Year Inputs: input/2023-inputs.md
     - Network Data: input/network.md
+    - Highway Network Processing: input/highway-network-processing.md
     - Transit Data: input/transit.md  
     - Land Use Data: input/landuse.md
     - Population Data: input/population.md
