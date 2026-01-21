@@ -12,21 +12,21 @@
 #     Database_highway/emmebank
 emme_project_source = "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Inputs/2015-tm22-dev-sprint-04/emme_network"
 
-# Input files directory (contains inputs and demand_matrices)
-# This is where tolls, MAZ data, demand matrices, etc. are located
-# Expected structure:
-#   inputs/
-#     hwy/tolls.csv
-#     hwy/interchange_nodes.csv
-#     landuse/maz_data.csv
-#   demand_matrices/
-#     highway/household/
-#       TAZ_Demand_EA.omx
-#       TAZ_Demand_AM.omx
-#       TAZ_Demand_MD.omx
-#       TAZ_Demand_PM.omx
-#       TAZ_Demand_EV.omx
+# Input files directory (network inputs: tolls, land use, demand, etc.)
+# 
+# Files pulled from inputs_source:
+#   inputs/hwy/tolls.csv              → Toll definitions for highway assignment
+#   inputs/hwy/interchange_nodes.csv  → Freeway interchange node IDs
+#   inputs/landuse/maz_data.csv       → MAZ-level land use data (used for zone filtering)
+#   demand_matrices/highway/household/TAZ_Demand_{period}.omx → Trip tables by time period
+#
+# NOTE: For Sprint-04, both inputs and demand are in Model Outputs folder
+# TODO: Separate inputs_source and demand_source when test script supports it
 inputs_source = "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Outputs/2015-tm22-dev-sprint-04"
+
+# NOTE: demand_source is defined for future use when test script is updated
+# to pull inputs and demand from separate locations
+demand_source = "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Outputs/2015-tm22-dev-sprint-04"
 
 # Output/test directory where test results will be written
 # This will be created if it doesn't exist

@@ -33,6 +33,7 @@ For rapid testing of highway assignment/skimming on a single county:
 - **[Network Thinning](network-thinning.md)** - Network optimization for faster testing
 - **[EMME Manager Flow](emme-manager-flow.md)** - EMME initialization and database management
 - **[Field Name Mapping](../assignment/field-name-mapping.md)** - Vehicle naming conventions (s2/s3 vs sr2/sr3)
+- **[Network Data Issues](../troubleshooting/network-data-issues.md)** - Common errors and solutions
 
 ## Test Structure
 

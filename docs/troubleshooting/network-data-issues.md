@@ -43,6 +43,54 @@ This may indicate network build issues. Skipping perception factors for this lin
 - Verify transit line modes during network build QA
 - Check that all transit lines use only transit modes (not 'x', 'c', etc.)
 
+## "Illegal character '+'" in reportlexer.py
+
+**Symptom**: SOLA traffic assignment crashes with lexer error:
+```
+File "inro\emme\procedure\reportlexer.py", line 103
+LexError: Illegal character '+' at position X
+```
+
+**Full Error Context**:
+Assignment runs for ~30 seconds then crashes during EMME's internal report parsing.
+
+**Root Cause Chain**:
+1. `@lanes` = 0 for all links (attribute not copied from base network)
+2. `@capacity` = 0 (calculated from `@lanes` in VDF/capacity formulas)
+3. VDF divides by `@capacity` → produces infinity
+4. EMME formats infinity as `0.135972+124` (scientific notation without 'e')
+5. Report lexer crashes on unexpected `+` character
+
+**Why @lanes Was Zero**:
+
+Two potential causes:
+
+1. **Case sensitivity in period attribute copying** (fixed January 2026):
+   - Period-specific attributes like `@lanes_am` use lowercase suffixes
+   - Period names in config are uppercase (`"AM"`)
+   - The `endswith("AM")` check failed for `@lanes_am`
+   - Fix: Use case-insensitive comparison and try lowercase suffix first
+
+2. **get_attribute_values() API misuse**:
+   The API returns `[id_array, value_array]`, not just values:
+   ```python
+   # WRONG - iterates over 2 arrays, not individual values
+   lanes_result = scenario.get_attribute_values("LINK", ["@lanes"])
+   if all(v == 0 for v in lanes_result):  # Always False!
+       ...
+
+   # CORRECT - extract the value array (index 1)
+   lanes_result = scenario.get_attribute_values("LINK", ["@lanes"])
+   lanes_values = lanes_result[1]  # The actual values
+   if all(v == 0 for v in lanes_values):
+       ...
+   ```
+
+**Fix Applied**: `create_tod_scenarios.py` now:
+- Uses case-insensitive matching for period attributes
+- Correctly extracts `lanes_result[1]` for value comparisons
+- Uses `link.num_lanes` (not `link.lanes`) for EMME standard attribute
+
 ## Missing Node Crosswalk Files
 
 See [Node ID Crosswalk Documentation](../input/node-crosswalks.md)

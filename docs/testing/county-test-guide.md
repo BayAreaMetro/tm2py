@@ -379,6 +379,14 @@ python tests\run_county_test.py --output-dir "E:\Tests\alameda_test" --county "A
 
 ## Troubleshooting
 
+### Common Errors
+
+See **[Network Data Issues](../troubleshooting/network-data-issues.md)** for detailed troubleshooting of:
+
+- **"Illegal character '+'" in reportlexer.py** - Usually caused by `@lanes = 0` leading to division by zero
+- **Transit lines with highway modes** - Mode 'x' contamination in legacy networks
+- **Missing node crosswalk files** - Path configuration issues
+
 ### Check EMME Scenarios
 
 ```python
