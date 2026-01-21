@@ -53,7 +53,7 @@ skip_emme_copy = false
 
 # Skip test directory setup if it already exists
 # Set to true to rerun components without recreating directory structure
-skip_setup = false
+skip_setup = true
 
 # Auto-confirm all prompts (skip y/n questions)
 # Set to true for unattended/automated runs
@@ -84,7 +84,7 @@ time_periods = ["AM"]
 # Components to run (in order)
 # Uncomment components you want to include in the test
 run_components = [
-    "setup",                      # NEW: Setup component (copies files using setupmodel_config.toml)
+    # "setup",                      # NEW: Setup component (copies files using setupmodel_config.toml) - SKIPPED for fast re-runs
     "create_tod_scenarios",      # REQUIRED: Creates time-of-day scenarios
     "prepare_network_highway",   # REQUIRED: Sets up network attributes
     "highway",                   # REQUIRED: Highway assignment and skimming

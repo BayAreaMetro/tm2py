@@ -548,6 +548,10 @@ def setup_test_directory(config, logger):
 
 def run_test(config, logger):
     """Run the highway test."""
+    print("\n" + "="*70)
+    print("ENTERING run_test() FUNCTION")
+    print("="*70)
+    
     logger.info("="*70)
     logger.info("RUNNING HIGHWAY TEST")
     logger.info("="*70)
@@ -555,14 +559,20 @@ def run_test(config, logger):
     county_name = config['test']['county_name']
     test_dir = Path(config['paths']['output_dir'])
     
+    print(f"Test directory: {test_dir}")
+    print(f"County: {county_name}")
+    
     logger.info(f"Test directory: {test_dir}")
     logger.info(f"County: {county_name}")
     
     try:
+        print("Importing CountyHighwayController...")
         logger.info("Importing CountyHighwayController...")
         from tests.highway_assign_skim_controller import CountyHighwayController
+        print("  ✓ Import successful")
         logger.info("  ✓ Import successful")
         
+        print(f"Initializing controller for {county_name} County...")
         logger.info(f"Initializing controller for {county_name} County...")
         logger.info(f"  Scenario config: {test_dir / 'config' / 'scenario.toml'}")
         logger.info(f"  Model config: {test_dir / 'config' / 'model.toml'}")
@@ -577,11 +587,13 @@ def run_test(config, logger):
             include_network_summary=False  # Skip network summary for speed
         )
         
+        print("✓ Controller initialized successfully")
         logger.info("Starting highway components...")
         logger.info("Components to run:")
         logger.info("  1. prepare_network_highway - Prepare network attributes")
         logger.info("  2. highway - Assignment and skimming")
         
+        print("Executing controller.run_highway_only()...")
         logger.info("Executing controller.run_highway_only()...")
         logger.info("This may take 5-15 minutes depending on network size...")
         logger.info("The following steps will occur:")
@@ -655,6 +667,13 @@ def main():
     
     args = parser.parse_args()
     
+    # Print immediately to console so we know the script started
+    print("="*70)
+    print("COUNTY TEST STARTING")
+    print(f"Time: {datetime.now()}")
+    print(f"Config file: {args.config}")
+    print("="*70)
+    
     # Load configuration
     config_path = Path(args.config)
     if not config_path.exists():
@@ -665,9 +684,11 @@ def main():
     
     print(f"Loading configuration from: {config_path}")
     config = toml.load(config_path)
+    print(f"✓ Configuration loaded successfully")
     
     # Setup console logging only initially (file logging added after directory setup)
     log_level = config.get('logging', {}).get('console_log_level', 'INFO')
+    print(f"Setting up logging with level: {log_level}")
     logger = setup_console_logging(log_level)
     
     logger.info("County Test Framework - Starting")
@@ -689,9 +710,11 @@ def main():
     logger.info("="*70)
     
     # Check prerequisites
+    logger.info("Checking prerequisites...")
     if not check_prerequisites(config, logger):
         logger.error("Prerequisites not met. Please resolve issues and try again.")
         return 1
+    logger.info("✓ Prerequisites check passed")
     
     # Confirm before running
     if not config['test'].get('auto_confirm', True):
@@ -706,8 +729,11 @@ def main():
     
     # Setup test directory
     if not config['test'].get('skip_setup', False):
+        logger.info("Setting up test directory...")
         test_dir = setup_test_directory(config, logger)
+        logger.info(f"✓ Test directory setup complete: {test_dir}")
     else:
+        logger.info("Skipping setup (skip_setup=True)")
         test_dir = Path(config['paths']['output_dir'])
         logger.info(f"Skipping setup, using existing directory: {test_dir}")
         if not test_dir.exists():
@@ -732,7 +758,9 @@ def main():
     
     # Now add file logging (after directory is set up)
     output_dir = config['paths']['output_dir']
+    logger.info(f"Adding file logging to: {output_dir}")
     log_file = add_file_logging(logger, output_dir)
+    logger.info(f"✓ File logging enabled: {log_file}")
     
     # Run test
     logger.info("="*70)
