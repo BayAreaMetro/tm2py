@@ -1,20 +1,17 @@
-# County Network Test Framework Enhancements
+# County Highway Test Framework
 
 ## Summary
-This PR enhances the county network testing framework with improved documentation, defensive attribute checking, resource monitoring, and comprehensive network inspection tools. The changes make the testing system more robust and easier to use, especially when working with networks that may have incomplete attribute initialization (e.g., OSM-derived networks).
-
-## Statistics
-- **46 files changed**: +5,645 additions, -1,267 deletions
-- **Net change**: +4,378 lines
-- **14 commits** ahead of develop
-- **No merge conflicts** ✅
+This PR adds a **new** county-level highway testing framework and includes fixes to existing tm2py code discovered during development.
 
 ---
 
 ## Key Changes
 
-### 1. 📚 Documentation Overhaul (~2,500 lines)
-**New comprehensive testing documentation in `docs/testing/`:**
+### 1. 🆕 New County Test Framework
+See section 4 below for details on the new test runner.
+
+### 2. 📚 New Documentation (~2,500 lines)
+**New testing documentation in `docs/testing/`:**
 - **county-test-guide.md** (417 lines) - Complete guide for county-level highway testing
 - **configuration.md** (360 lines) - Detailed configuration documentation
 - **data-flow.md** (473 lines) - Visual data flow diagrams and explanations
@@ -24,10 +21,11 @@ This PR enhances the county network testing framework with improved documentatio
 - **index.md** (87 lines) - Testing documentation index
 
 **Also added:**
+- **highway-network-processing.md** - Complete pipeline documentation with diagrams
 - **field-name-mapping.md** (157 lines) - CTRAMP field mapping reference
 - Updated **mkdocs.yml** with new testing section
 
-### 2. 🛡️ Defensive Attribute Checking (Production Code)
+### 3. 🛡️ Defensive Attribute Checking (Production Code)
 **Enhanced `tm2py/components/network/highway/highway_network.py`** (+151/-4):
 
 Added comprehensive attribute checking in 4 methods:
@@ -64,18 +62,18 @@ Added `monitor_resources()` context manager:
 - SOLA assignment without path analysis
 - SOLA assignment with path analysis
 
-### 4. 🔧 Test Framework Improvements
-**Major refactor of `tests/run_county_test.py`** (+478/-105):
-- Better prerequisite checking
+### 4. 🔧 New Test Framework
+**New `tests/run_county_test.py`** - Complete county test runner:
+- Prerequisite checking
 - Enhanced logging and error handling
-- More flexible configuration system
+- Flexible configuration system
 
 **New `tests/county_test_config.toml`** (102 lines):
 - Centralized configuration
-- Supports split EMME project and inputs sources
+- Supports separate EMME project, inputs, and demand sources
 
-**Enhanced `tests/highway_assign_skim_controller.py`** (+130/-2):
-- Better configuration handling
+**New `tests/highway_assign_skim_controller.py`**:
+- Test controller for highway assignment
 
 ### 5. 🔍 Network Inspection Tools (New Utilities)
 Created comprehensive network diagnostic tools:
@@ -112,15 +110,18 @@ Removed outdated documentation (content moved to `docs/testing/`):
 ---
 
 ## Testing
-- ✅ Tested with 2023 San Mateo county network
+- ✅ San Mateo county highway assignment completes successfully (~24 min)
+- ✅ Case-sensitivity fix validated with Sprint-04 data
 - ✅ Defensive attribute checking validated with OSM network
 - ✅ Resource monitoring tested during assignments
 - ✅ All network inspection tools executed successfully
+- ✅ Documentation builds correctly with mkdocs
 
 ## Backward Compatibility
 - ✅ All changes are backward compatible
 - ✅ Existing networks with proper attributes work as before
 - ✅ Networks without attributes now get clear error messages instead of cryptic failures
+- ✅ Both uppercase (`AM`) and lowercase (`am`) period names now work
 
 ## Dependencies
 - Uses `psutil` for resource monitoring (already in requirements)

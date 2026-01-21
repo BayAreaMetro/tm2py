@@ -5,7 +5,7 @@
 # ScenarioConfig - ALL required fields
 name = "San Mateo Highway Test"
 year = 2035
-landuse_file = "inputs/landuse/maz_data_withDensity.csv"
+landuse_file = "inputs/landuse/maz_data_new.csv"
 landuse_index_column = "TAZ"
 verify = false
 
@@ -19,6 +19,7 @@ end_iteration = 1
 start_component = ""
 
 # Component lists (tuples)
+# NOTE: "setup" unzips EMME databases; run_county_test.py handles file copying
 initial_components = [
     "setup",
     "create_tod_scenarios",

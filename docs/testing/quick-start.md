@@ -50,8 +50,17 @@ When you run the test, the script:
 1. **Edit:** `tests/county_test_config.toml`
    ```toml
    [paths]
-   source_dataset = "E:/NEW_LOCATION/2015_TM2_20250619"  # ← Change this
-   output_dir = "E:/Tests/my_test"                       # ← And this
+   # EMME network project
+   emme_project_source = "E:/NEW_LOCATION/emme_network"
+   
+   # Input files (tolls, land use) - script auto-detects folder structure
+   inputs_source = "E:/NEW_LOCATION/Model_Inputs"
+   
+   # Demand matrices (from a model run) - optional, defaults to inputs_source
+   demand_source = "E:/NEW_LOCATION/Model_Outputs"
+   
+   # Output directory
+   output_dir = "E:/Tests/my_test"
    ```
 
 2. **Run the test:**
@@ -78,13 +87,19 @@ When you run the test, the script:
 
 ```toml
 [paths]
-# 1. Source dataset - MUST contain emme_project, inputs, demand_matrices
-source_dataset = "E:/2015_TM2_20250619"
+# 1. EMME network project
+emme_project_source = "E:/Box/.../Model Inputs/2015-tm22-dev-sprint-04/emme_network"
 
-# 2. Output directory - Where test results go
+# 2. Input files (tolls, land use) - script auto-detects folder structure
+inputs_source = "E:/Box/.../Model Inputs/2015-tm22-dev-sprint-04"
+
+# 3. Demand matrices (from a model run) - optional, defaults to inputs_source
+demand_source = "E:/Box/.../Model Outputs/2015-tm22-dev-sprint-04"
+
+# 4. Output directory - Where test results go
 output_dir = "E:/Tests/san_mateo_test"
 
-# 3. Crosswalk file - Zone-to-county mapping
+# 5. Crosswalk file - Zone-to-county mapping
 crosswalk_file = "C:/GitHub/tm2py-utils/tm2py_utils/inputs/maz_taz/mazs_tazs_county_tract_PUMA_2.5.csv"
 ```
 
@@ -204,35 +219,57 @@ notepad tests\county_test_config.toml
 Update these lines:
 ```toml
 [paths]
-source_dataset = "E:/NEW_DATA/2015_TM2_20250619"  # Your new input location
-output_dir = "E:/Tests/my_test"                    # Where test will run
+# EMME network project
+emme_project_source = "E:/NEW_DATA/emme_network"
+
+# Input files (tolls, land use) - script auto-detects folder structure
+inputs_source = "E:/NEW_DATA/Model_Inputs"
+
+# Demand matrices (from a model run)
+demand_source = "E:/NEW_DATA/Model_Outputs"
+
+# Where test will run
+output_dir = "E:/Tests/my_test"
 ```
 
-### Step 2: Verify Source Dataset Structure
+### Step 2: Verify Source Data Structure
 
-Your source dataset **must** have this structure:
+Your source directories must contain:
 
+**emme_project_source:**
 ```
-source_dataset/
+emme_project_source/
 ├── emme_project/
 │   ├── mtc_emme.emp
-│   └── Database_highway/emmebank
-├── inputs/
-│   ├── hwy/
-│   │   ├── tolls.csv
-│   │   └── freeflow.csv
-│   ├── landuse/
-│   │   └── maz_data.csv
-│   └── validation/
-│       └── interchange_nodes.csv
+│   └── Database_highway/emmebank (or .zip)
+```
+
+**inputs_source** (script auto-detects either structure):
+```
+# Structure A (Model Inputs - files at root)
+inputs_source/
+├── hwy/
+│   ├── tolls.csv
+│   └── interchange_nodes.csv
+└── landuse/
+    └── maz_data.csv
+
+# Structure B (Model Outputs - files in inputs/ subfolder)
+inputs_source/
+└── inputs/
+    ├── hwy/
+    └── landuse/
+```
+
+**demand_source:**
+```
+demand_source/
 └── demand_matrices/
     └── highway/
         └── household/
-            ├── TAZ_Demand_EA.omx
-            ├── TAZ_Demand_AM.omx
-            ├── TAZ_Demand_MD.omx
-            ├── TAZ_Demand_PM.omx
-            └── TAZ_Demand_EV.omx
+            ├── TAZ_Demand_ea.omx
+            ├── TAZ_Demand_am.omx
+            └── ...
 ```
 
 ### Step 3: Run the Test
@@ -243,7 +280,7 @@ C:\GitHub\tm2pyenv\Scripts\python.exe tests\run_county_test.py
 
 **What the script does automatically:**
 
-1. ✓ **Validates** source files exist
+1. ✓ **Validates** source files exist (auto-detects folder structure)
 2. ✓ **Creates** `E:/Tests/my_test/` directory structure:
    ```
    E:/Tests/my_test/
@@ -251,10 +288,10 @@ C:\GitHub\tm2pyenv\Scripts\python.exe tests\run_county_test.py
    │   ├── model.toml      ← Copy of fixed_san_mateo_model.toml (paths updated)
    │   └── scenario.toml   ← Copy of fixed_san_mateo_scenario.toml (fully rewritten)
    ├── inputs/
-   │   ├── hwy/            ← Copied from source_dataset/inputs/hwy/
-   │   ├── landuse/        ← Copied from source_dataset/inputs/landuse/
-   │   └── demand/         ← Filtered demand files created here
-   ├── emme_project/       ← Full copy of source EMME project
+   │   ├── hwy/            ← Copied from inputs_source
+   │   ├── landuse/        ← Copied from inputs_source
+   │   └── demand/         ← Filtered demand files from demand_source
+   ├── emme_project/       ← Full copy from emme_project_source
    └── logs/               ← Test logs written here
    ```
 3. ✓ **Copies** EMME project and input files
@@ -331,9 +368,10 @@ C:\GitHub\tm2pyenv\Scripts\python.exe run_county_test.py --config alameda_config
 **Problem:** Paths in `county_test_config.toml` are incorrect
 
 **Solution:** 
-1. Check `source_dataset` path exists
-2. Verify it contains `emme_project/`, `inputs/`, `demand_matrices/`
-3. Check file structure matches requirements above
+1. Check `inputs_source` and `demand_source` paths exist
+2. Verify `inputs_source` contains `hwy/` and `landuse/` (or `inputs/hwy/` structure)
+3. Verify `demand_source` contains `demand_matrices/highway/household/`
+4. Check `emme_project_source` contains `emme_project/` folder
 
 ### Issue: "County not found in crosswalk"
 
@@ -372,16 +410,17 @@ C:\GitHub\tm2pyenv\Scripts\python.exe run_county_test.py --config alameda_config
 Before running a test with new data, verify:
 
 - [ ] `tests/county_test_config.toml`:
-  - [ ] `source_dataset` points to your data location
+  - [ ] `emme_project_source` points to EMME network folder
+  - [ ] `inputs_source` points to input files (tolls, land use)
+  - [ ] `demand_source` points to demand matrices (can be same as inputs_source)
   - [ ] `output_dir` is where you want results
   - [ ] `crosswalk_file` path is correct
   - [ ] `county_name` matches crosswalk file
   
-- [ ] Source dataset structure:
-  - [ ] `emme_project/` exists with Database_highway
-  - [ ] `inputs/hwy/` has tolls.csv and other required files
-  - [ ] `demand_matrices/highway/household/` has TAZ_Demand_*.omx files
-  - [ ] `inputs/validation/` has interchange_nodes.csv
+- [ ] Source data structure:
+  - [ ] `emme_project_source/emme_project/` exists with Database_highway
+  - [ ] `inputs_source` has `hwy/tolls.csv` (or `inputs/hwy/tolls.csv`)
+  - [ ] `demand_source/demand_matrices/highway/household/` has TAZ_Demand_*.omx files
 
 - [ ] Model config (usually OK as-is):
   - [ ] `tests/config_templates/fixed_san_mateo_model.toml` uses relative paths

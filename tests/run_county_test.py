@@ -44,13 +44,23 @@ def generate_setupmodel_config(test_dir, inputs_source, emme_project_source, log
     """
     logger.info("Generating setupmodel_config.toml for setup component...")
     
+    # Auto-detect folder structure: some datasets have hwy/ at root, others have inputs/hwy/
+    inputs_source = Path(inputs_source)
+    if (inputs_source / "hwy").exists():
+        # Flat structure - files at root level
+        input_dir = str(inputs_source).replace("\\", "/")
+        logger.debug("Detected flat structure (hwy/ at root)")
+    else:
+        # Nested structure - files in inputs/ subdirectory  
+        input_dir = str(inputs_source / "inputs").replace("\\", "/")
+        logger.debug("Detected nested structure (inputs/hwy/)")
+    
     # Create setupmodel config content
     setupmodel_config = {
-        # Point to the inputs subdirectory (contains hwy, trn, landuse, etc.)
-        # Convert to forward slashes for TOML compatibility
-        "INPUT_NETWORK_DIR": str(Path(inputs_source) / "inputs").replace("\\", "/"),
-        "INPUT_POPLU_DIR": str(Path(inputs_source) / "inputs").replace("\\", "/"),
-        "INPUT_NONRES_DIR": str(Path(inputs_source) / "inputs").replace("\\", "/"),
+        # Point to the inputs directory (contains hwy, trn, landuse, etc.)
+        "INPUT_NETWORK_DIR": input_dir,
+        "INPUT_POPLU_DIR": input_dir,
+        "INPUT_NONRES_DIR": input_dir,
         
         # Point directly to the EMME network directory (not its parent)
         # SetupModel expects INPUT_EMME_NETWORK_DIR to contain the emme_network folder or zipped databases
@@ -58,7 +68,7 @@ def generate_setupmodel_config(test_dir, inputs_source, emme_project_source, log
         
         # Required fields - SetupConfig validation requires non-empty values
         # Point to demand_matrices for warmstart files
-        "WARMSTART_FILES_DIR": str(Path(inputs_source) / "demand_matrices").replace("\\", "/"),
+        "WARMSTART_FILES_DIR": str(inputs_source / "demand_matrices").replace("\\", "/"),
         # Use "none" for release tag - SetupModel won't download if this isn't a valid GitHub tag
         "TRAVEL_MODEL_TWO_RELEASE_TAG": "none",
         
@@ -177,11 +187,29 @@ def check_prerequisites(config, logger):
     else:
         logger.info(f"✓ Inputs source found: {inputs_dir}")
     
-    # Check for required input files
+    # Check demand source directory (separate from inputs)
+    demand_dir = Path(config['paths'].get('demand_source', config['paths']['inputs_source']))
+    if demand_dir != inputs_dir:
+        logger.debug(f"Checking demand source: {demand_dir}")
+        if not demand_dir.exists():
+            issues.append(f"Demand source not found: {demand_dir}")
+            logger.error(f"Demand source not found: {demand_dir}")
+        else:
+            logger.info(f"✓ Demand source found: {demand_dir}")
+    
+    # Check for required input files - detect folder structure
+    # Some datasets have inputs/hwy/, others have hwy/ at root
+    if (inputs_dir / "hwy").exists():
+        hwy_subdir = inputs_dir / "hwy"
+        landuse_subdir = inputs_dir / "landuse"
+    else:
+        hwy_subdir = inputs_dir / "inputs" / "hwy"
+        landuse_subdir = inputs_dir / "inputs" / "landuse"
+    
     required_files = {
-        "MAZ data": inputs_dir / "inputs" / "landuse" / "maz_data.csv",
-        "Tolls": inputs_dir / "inputs" / "hwy" / "tolls.csv",
-        "AM Demand": inputs_dir / "demand_matrices" / "highway" / "household" / "TAZ_Demand_AM.omx",
+        "MAZ data": landuse_subdir / "maz_data_new.csv",
+        "Tolls": hwy_subdir / "tolls.csv",
+        "AM Demand": demand_dir / "demand_matrices" / "highway" / "household" / "TAZ_Demand_am.omx",
     }
     
     for name, path in required_files.items():
@@ -228,7 +256,13 @@ def setup_test_directory(config, logger):
     thin_network = config['test'].get('thin_network')
     emme_project_source = Path(config['paths']['emme_project_source'])
     inputs_source = Path(config['paths']['inputs_source'])
+    demand_source = Path(config['paths'].get('demand_source', config['paths']['inputs_source']))
     auto_confirm = config['test'].get('auto_confirm', True)
+    
+    logger.info(f"Test directory: {output_dir}")
+    logger.info(f"Inputs source: {inputs_source}")
+    if demand_source != inputs_source:
+        logger.info(f"Demand source: {demand_source}")
     
     test_dir = Path(output_dir)
     logger.info(f"Test directory: {test_dir.absolute()}")
@@ -392,30 +426,43 @@ def setup_test_directory(config, logger):
             logger.info(f"Copied EMME project to {dest_emme}")
         
         # Copy essential input files from inputs_source
+        # Detect folder structure: some datasets have hwy/ at root, others have inputs/hwy/
+        if (inputs_source / "hwy").exists():
+            hwy_subdir = inputs_source / "hwy"
+            landuse_subdir = inputs_source / "landuse"
+            logger.debug("Detected flat structure (hwy/ at root)")
+        else:
+            hwy_subdir = inputs_source / "inputs" / "hwy"
+            landuse_subdir = inputs_source / "inputs" / "landuse"
+            logger.debug("Detected nested structure (inputs/hwy/)")
         
         # Copy tolls
         logger.debug("Copying tolls.csv...")
         shutil.copy(
-            inputs_source / "inputs" / "hwy" / "tolls.csv",
+            hwy_subdir / "tolls.csv",
             test_dir / "inputs" / "hwy" / "tolls.csv"
         )
         logger.debug("Copied tolls.csv")
         
-        # Copy interchange_nodes
+        # Copy interchange_nodes (if exists)
         logger.debug("Copying interchange_nodes.csv...")
-        shutil.copy(
-            inputs_source / "inputs" / "hwy" / "interchange_nodes.csv",
-            test_dir / "inputs" / "hwy" / "interchange_nodes.csv"
-        )
-        logger.debug("Copied interchange_nodes.csv")
+        interchange_file = hwy_subdir / "interchange_nodes.csv"
+        if interchange_file.exists():
+            shutil.copy(
+                interchange_file,
+                test_dir / "inputs" / "hwy" / "interchange_nodes.csv"
+            )
+            logger.debug("Copied interchange_nodes.csv")
+        else:
+            logger.warning("interchange_nodes.csv not found, skipping")
         
         # Copy MAZ data
         logger.debug("Copying MAZ data...")
         shutil.copy(
-            inputs_source / "inputs" / "landuse" / "maz_data.csv",
-            test_dir / "inputs" / "landuse" / "maz_data.csv"
+            landuse_subdir / "maz_data_new.csv",
+            test_dir / "inputs" / "landuse" / "maz_data_new.csv"
         )
-        logger.debug("Copied maz_data.csv")
+        logger.debug("Copied maz_data_new.csv")
     
     # Check if demand filtering is enabled (runs regardless of setup component)
     scenario_config = toml.load(test_dir / "config" / "scenario.toml")
@@ -455,7 +502,7 @@ def setup_test_directory(config, logger):
         logger.debug(f"Found {len(time_periods)} time periods in config")
         
         # Filter demand files for configured time periods only
-        demand_dir = inputs_source / "demand_matrices" / "highway" / "household"
+        demand_dir = demand_source / "demand_matrices" / "highway" / "household"
         logger.debug(f"Source demand directory: {demand_dir}")
         
         logger.info("Filtering demand files...")
@@ -497,7 +544,7 @@ def setup_test_directory(config, logger):
         logger.debug(f"Found {len(time_periods)} time periods in config")
         
         # Copy demand files for configured time periods only
-        demand_dir = inputs_source / "demand_matrices" / "highway" / "household"
+        demand_dir = demand_source / "demand_matrices" / "highway" / "household"
         logger.debug(f"Source demand directory: {demand_dir}")
         
         for period in time_periods:
@@ -521,7 +568,7 @@ def setup_test_directory(config, logger):
     
     # Copy truck demand files
     logger.info("Copying truck demand files...")
-    truck_dir = inputs_source / "demand_matrices" / "highway" / "commercial"
+    truck_dir = demand_source / "demand_matrices" / "highway" / "commercial"
     logger.info(f"  Truck demand directory: {truck_dir}")
     logger.info(f"  Truck directory exists: {truck_dir.exists()}")
     logger.info(f"  Time periods to process: {time_periods}")

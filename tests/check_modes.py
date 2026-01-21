@@ -1,16 +1,51 @@
-﻿import sys
-sys.path.insert(0, r'C:\Program Files\INRO\Emme\Emme 4\Emme-4.6.0\Python39\Lib\site-packages')
-import inro.emme.database.emmebank as _eb
+﻿"""Check Modes in EMME Network
 
-emmebank = _eb.Emmebank(r'E:\2015_TM2_20250619\emme_project\Database_highway\emmebank')
-scenario = emmebank.scenario(1)
-if scenario:
-    print('Base scenario 1 exists')
-    print(f'Title: {scenario.title}')
-    modes = list(scenario.modes())
-    print(f'Number of modes: {len(modes)}')
-    print('Modes:')
-    for mode in modes:
-        print(f'  {mode.id}: {mode.type} - {mode.description}')
-else:
-    print('Scenario 1 not found')
+Lists all modes defined in an EMME network scenario.
+
+Usage:
+    python tests/check_modes.py <path_to_emmebank> [scenario_id]
+"""
+import argparse
+import sys
+from pathlib import Path
+
+try:
+    import inro.emme.database.emmebank as _eb
+except ImportError:
+    print("ERROR: EMME modules not available!")
+    sys.exit(1)
+
+
+def check_modes(emmebank_path: str, scenario_id: int = 1):
+    """Check modes in an EMME scenario."""
+    
+    emmebank_path = Path(emmebank_path)
+    if emmebank_path.is_dir():
+        emmebank_path = emmebank_path / "emmebank"
+    
+    if not emmebank_path.exists():
+        print(f"ERROR: Database not found: {emmebank_path}")
+        sys.exit(1)
+    
+    emmebank = _eb.Emmebank(str(emmebank_path))
+    scenario = emmebank.scenario(scenario_id)
+    
+    if scenario:
+        print(f'Scenario {scenario_id}: {scenario.title}')
+        modes = list(scenario.modes())
+        print(f'Number of modes: {len(modes)}')
+        print('Modes:')
+        for mode in modes:
+            print(f'  {mode.id}: {mode.type} - {mode.description}')
+    else:
+        print(f'Scenario {scenario_id} not found')
+        print(f'Available: {[s.id for s in emmebank.scenarios()]}')
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Check modes in EMME network")
+    parser.add_argument('emmebank_path', type=str, help='Path to EMME database')
+    parser.add_argument('scenario_id', type=int, nargs='?', default=1, help='Scenario ID')
+    args = parser.parse_args()
+    
+    check_modes(args.emmebank_path, args.scenario_id)

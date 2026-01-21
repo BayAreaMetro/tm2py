@@ -1,8 +1,27 @@
-"""Analyze OSM Network Standard Attributes
+"""Analyze EMME Network for tm2py Compatibility
 
-This script analyzes what values exist in the standard EMME fields
-that could be used to initialize @ attributes.
+This script checks an EMME network for the required attributes needed by tm2py
+highway assignment and network processing components.
+
+REQUIRED ATTRIBUTES (will cause errors if missing):
+  - @capclass: Capacity class index (used for capacity lookup)
+  - @lanes: Number of lanes (used for capacity calculation)  
+  - @ft: Functional type (used for VDF assignment)
+  - @free_flow_speed: Free flow speed in mph
+  - @drive_link: 1 for driveable links, 0 otherwise
+
+OPTIONAL ATTRIBUTES (gracefully skipped if missing):
+  - @tollbooth: Toll booth ID for bridge tolls
+  - @tollseg: Toll segment for value toll lookup
+  - @useclass: Vehicle use class for toll differentiation
+
+Usage:
+    python tests/analyze_osm_network.py <path_to_emmebank> [scenario_id]
+    
+Example:
+    python tests/analyze_osm_network.py "E:/Tests/san_mateo_test/emme/emme_project/Database_highway/emmebank" 1
 """
+import argparse
 import sys
 from pathlib import Path
 from collections import Counter
@@ -11,118 +30,198 @@ try:
     import inro.emme.database.emmebank as _eb
 except ImportError:
     print("ERROR: EMME modules not available!")
+    print("Run from EMME Python environment or with EMME on PATH")
     sys.exit(1)
 
-emmebank_path = Path("M:/Development/Travel Model Two/Supply/Network Creation 2025/from_OSM/SanMateo/7_scenario/emme/emme_project/Database_highway/emmebank")
 
-if not emmebank_path.exists():
-    print(f"ERROR: Database not found: {emmebank_path}")
-    sys.exit(1)
-
-print("Opening database...")
-bank = _eb.Emmebank(str(emmebank_path))
-
-scenario = bank.scenario(1)
-print(f"Analyzing scenario {scenario.id}: {scenario.title}")
-print("Loading network...")
-
-network = scenario.get_network()
-
-print("\n" + "="*80)
-print("ANALYZING LINK ATTRIBUTES")
-print("="*80)
-
-# Collect all values
-type_counter = Counter()
-lanes_counter = Counter()
-vdf_counter = Counter()
-length_values = []
-data1_values = set()
-data2_values = set()
-data3_values = set()
-
-print("\nScanning links...")
-for i, link in enumerate(network.links()):
-    if i % 10000 == 0:
-        print(f"  Processed {i:,} links...")
+def analyze_network(emmebank_path: str, scenario_id: int = None):
+    """Analyze an EMME network for tm2py compatibility."""
     
-    type_counter[link.type] += 1
-    lanes_counter[link.num_lanes] += 1
-    vdf_counter[link.volume_delay_func] += 1
-    length_values.append(link.length)
-    data1_values.add(link.data1)
-    data2_values.add(link.data2)
-    data3_values.add(link.data3)
+    emmebank_path = Path(emmebank_path)
+    if emmebank_path.is_dir():
+        emmebank_path = emmebank_path / "emmebank"
+    
+    if not emmebank_path.exists():
+        print(f"ERROR: Database not found: {emmebank_path}")
+        sys.exit(1)
 
-print(f"\n✓ Analyzed {len(list(network.links())):,} links")
+    print("="*80)
+    print("TM2PY NETWORK COMPATIBILITY CHECK")
+    print("="*80)
+    print(f"Database: {emmebank_path}")
+    
+    bank = _eb.Emmebank(str(emmebank_path))
+    
+    # Get scenario
+    scenarios = list(bank.scenarios())
+    if not scenarios:
+        print("ERROR: No scenarios in database")
+        sys.exit(1)
+    
+    if scenario_id:
+        scenario = bank.scenario(scenario_id)
+        if not scenario:
+            print(f"ERROR: Scenario {scenario_id} not found")
+            print(f"Available: {[s.id for s in scenarios]}")
+            sys.exit(1)
+    else:
+        scenario = scenarios[0]
+        print(f"Using first scenario: {scenario.id}")
+    
+    print(f"Scenario: {scenario.id} - {scenario.title}")
+    print()
+    
+    network = scenario.get_network()
+    links = list(network.links())
+    
+    if not links:
+        print("ERROR: No links in network")
+        sys.exit(1)
+    
+    print(f"Network size: {len(links):,} links, {len(list(network.nodes())):,} nodes")
+    print()
+    
+    # =========================================================================
+    # CHECK REQUIRED ATTRIBUTES
+    # =========================================================================
+    print("="*80)
+    print("REQUIRED ATTRIBUTES CHECK")
+    print("="*80)
+    
+    required_attrs = ['@capclass', '@lanes', '@ft', '@free_flow_speed', '@drive_link']
+    sample_link = links[0]
+    
+    missing_required = []
+    present_required = []
+    
+    for attr in required_attrs:
+        try:
+            val = sample_link[attr]
+            present_required.append(attr)
+            
+            # Get stats for this attribute
+            values = [link[attr] for link in links]
+            zeros = sum(1 for v in values if v == 0)
+            non_zeros = len(values) - zeros
+            
+            if attr == '@lanes':
+                min_val = min(v for v in values if v > 0) if non_zeros > 0 else 0
+                max_val = max(values)
+                print(f"  ✓ {attr:20} Found - range: {min_val:.1f} to {max_val:.1f}, zeros: {zeros:,}")
+            elif attr == '@drive_link':
+                ones = sum(1 for v in values if v == 1)
+                print(f"  ✓ {attr:20} Found - drive_link=1: {ones:,}, drive_link=0: {zeros:,}")
+            else:
+                unique = len(set(values))
+                print(f"  ✓ {attr:20} Found - {unique} unique values, zeros: {zeros:,}")
+                
+        except KeyError:
+            missing_required.append(attr)
+            print(f"  ✗ {attr:20} MISSING")
+    
+    print()
+    
+    # =========================================================================
+    # CHECK OPTIONAL TOLL ATTRIBUTES
+    # =========================================================================
+    print("="*80)
+    print("OPTIONAL TOLL ATTRIBUTES CHECK")
+    print("="*80)
+    
+    toll_attrs = ['@tollbooth', '@tollseg', '@useclass']
+    missing_toll = []
+    
+    for attr in toll_attrs:
+        try:
+            val = sample_link[attr]
+            values = [link[attr] for link in links]
+            non_zeros = sum(1 for v in values if v != 0)
+            print(f"  ✓ {attr:20} Found - {non_zeros:,} non-zero values")
+        except KeyError:
+            missing_toll.append(attr)
+            print(f"  ○ {attr:20} Not present (tolls will be skipped)")
+    
+    print()
+    
+    # =========================================================================
+    # ANALYZE VDF SETUP
+    # =========================================================================
+    print("="*80)
+    print("VDF (VOLUME DELAY FUNCTION) CHECK")
+    print("="*80)
+    
+    vdf_counter = Counter(link.volume_delay_func for link in links)
+    print(f"\nVDF distribution across {len(links):,} links:")
+    for vdf, count in sorted(vdf_counter.items()):
+        pct = 100 * count / len(links)
+        print(f"  VDF {vdf:2}: {count:8,} links ({pct:5.1f}%)")
+    
+    # Check if VDFs exist in emmebank
+    print("\nDefined VDFs in emmebank:")
+    vdfs = [f for f in bank.functions() if f.type == "VOLUME_DELAY"]
+    for vdf in vdfs[:10]:
+        print(f"  fd{vdf.id}: {vdf.expression[:60]}...")
+    if len(vdfs) > 10:
+        print(f"  ... and {len(vdfs) - 10} more")
+    
+    print()
+    
+    # =========================================================================
+    # ANALYZE LANES
+    # =========================================================================
+    print("="*80)
+    print("LANES ANALYSIS")
+    print("="*80)
+    
+    lanes_counter = Counter(link.num_lanes for link in links)
+    print(f"\nLanes distribution:")
+    for lanes, count in sorted(lanes_counter.items()):
+        pct = 100 * count / len(links)
+        print(f"  {lanes:4.1f} lanes: {count:8,} links ({pct:5.1f}%)")
+    
+    # Check for zero lanes (common problem!)
+    zero_lanes = sum(1 for link in links if link.num_lanes == 0)
+    if zero_lanes > 0:
+        print(f"\n  ⚠️  WARNING: {zero_lanes:,} links have num_lanes=0!")
+        print(f"      This will cause @capacity=0 and SOLA assignment failures")
+    
+    print()
+    
+    # =========================================================================
+    # SUMMARY
+    # =========================================================================
+    print("="*80)
+    print("SUMMARY")
+    print("="*80)
+    
+    if missing_required:
+        print(f"\n❌ NETWORK NOT COMPATIBLE WITH TM2PY")
+        print(f"   Missing required attributes: {', '.join(missing_required)}")
+        print(f"\n   These attributes must exist in the base network.")
+        print(f"   They are typically created during network preparation.")
+    else:
+        print(f"\n✅ NETWORK HAS ALL REQUIRED ATTRIBUTES")
+    
+    if missing_toll:
+        print(f"\n⚠️  Missing toll attributes: {', '.join(missing_toll)}")
+        print(f"   Toll processing will be skipped (this is OK for testing)")
+    
+    if zero_lanes > 0:
+        print(f"\n⚠️  {zero_lanes:,} links have zero lanes - may cause issues")
+    
+    print()
+    return len(missing_required) == 0
 
-print("\n" + "="*80)
-print("TYPE FIELD ANALYSIS")
-print("="*80)
-print(f"\nUnique type values: {len(type_counter)}")
-print("\nDistribution:")
-for type_val, count in sorted(type_counter.items()):
-    pct = 100 * count / len(list(network.links()))
-    print(f"  type={type_val:2} : {count:6,} links ({pct:5.1f}%)")
 
-print("\n" + "="*80)
-print("NUM_LANES FIELD ANALYSIS")
-print("="*80)
-print(f"\nUnique num_lanes values: {len(lanes_counter)}")
-print("\nDistribution:")
-for lanes, count in sorted(lanes_counter.items()):
-    pct = 100 * count / len(list(network.links()))
-    print(f"  num_lanes={lanes:4.1f} : {count:6,} links ({pct:5.1f}%)")
-
-print("\n" + "="*80)
-print("VOLUME_DELAY_FUNC ANALYSIS")
-print("="*80)
-print(f"\nUnique VDF values: {len(vdf_counter)}")
-print("\nDistribution:")
-for vdf, count in sorted(vdf_counter.items()):
-    pct = 100 * count / len(list(network.links()))
-    print(f"  vdf={vdf:2} : {count:6,} links ({pct:5.1f}%)")
-
-print("\n" + "="*80)
-print("LENGTH ANALYSIS")
-print("="*80)
-print(f"\nMin length: {min(length_values):.4f} miles")
-print(f"Max length: {max(length_values):.4f} miles")
-print(f"Avg length: {sum(length_values)/len(length_values):.4f} miles")
-
-print("\n" + "="*80)
-print("DATA FIELDS ANALYSIS")
-print("="*80)
-print(f"\ndata1 unique values: {sorted(data1_values)}")
-print(f"data2 unique values: {sorted(data2_values)}")
-print(f"data3 unique values: {sorted(data3_values)}")
-
-print("\n" + "="*80)
-print("MODE ANALYSIS")
-print("="*80)
-modes = list(network.modes())
-print(f"\nTotal modes in network: {len(modes)}")
-for mode in modes[:20]:
-    print(f"  {mode.id:10} : {mode.type:10} - {mode.description or '(no description)'}")
-if len(modes) > 20:
-    print(f"  ... and {len(modes) - 20} more modes")
-
-# Sample a few links to see mode assignments
-print("\nSample link mode assignments (first 5 links):")
-for i, link in enumerate(network.links()):
-    if i >= 5:
-        break
-    mode_ids = [m.id for m in link.modes]
-    print(f"  Link {link.id}: modes = {mode_ids}")
-
-print("\n" + "="*80)
-print("RECOMMENDATIONS")
-print("="*80)
-print("\nBased on analysis above:")
-print("  1. Use 'type' field to map to @ft (functional type)")
-print("  2. Copy 'num_lanes' directly to @lanes")
-print("  3. Calculate @capclass from type")
-print("  4. Calculate @free_flow_speed from type")
-print("  5. Set @drive_link=1 for all links (if all are driveable)")
-print("  6. Set toll attributes to 0 (no toll coding)")
-print()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Check EMME network for tm2py compatibility"
+    )
+    parser.add_argument('emmebank_path', type=str, 
+                        help='Path to EMME database (emmebank file or directory)')
+    parser.add_argument('scenario_id', type=int, nargs='?', default=None,
+                        help='Scenario ID to analyze (default: first scenario)')
+    args = parser.parse_args()
+    
+    success = analyze_network(args.emmebank_path, args.scenario_id)
+    sys.exit(0 if success else 1)

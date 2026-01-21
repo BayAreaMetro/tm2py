@@ -615,8 +615,11 @@ class AssignmentRunner:
                 if mat:
                     f.write(f"{mat_name}: {mat.id} - {mat.description}\n")
                     # Get matrix data summary
-                    data = mat.get_numpy_data()
-                    f.write(f"  Shape: {data.shape}, Min: {data.min():.4g}, Max: {data.max():.4g}, Sum: {data.sum():.4g}\n")
+                    try:
+                        data = mat.get_numpy_data()
+                        f.write(f"  Shape: {data.shape}, Min: {data.min():.4g}, Max: {data.max():.4g}, Sum: {data.sum():.4g}\n")
+                    except Exception as e:
+                        f.write(f"  (Could not get matrix data: {e})\n")
                 else:
                     f.write(f"{mat_name}: NOT FOUND\n")
         self.logger.log(f"Matrix info written to {matrix_file}", level="INFO")
