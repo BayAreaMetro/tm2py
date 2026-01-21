@@ -444,11 +444,14 @@ class PrepareNetwork(Component):
                 continue
             if not link["@drive_link"]:
                 continue
+            
+            # Check if @useclass exists (may be missing in legacy/OSM networks)
+            has_useclass = "@useclass" in link.network.attributes("LINK")
             exclude_links_map = {
-                "is_sr": link["@useclass"] in [2, 3],
-                "is_sr2": link["@useclass"] == 2,
-                "is_sr3": link["@useclass"] == 3,
-                "is_auto_only": link["@useclass"] in [2, 3, 4],
+                "is_sr": link["@useclass"] in [2, 3] if has_useclass else False,
+                "is_sr2": link["@useclass"] == 2 if has_useclass else False,
+                "is_sr3": link["@useclass"] == 3 if has_useclass else False,
+                "is_auto_only": link["@useclass"] in [2, 3, 4] if has_useclass else False,
             }
             for dst_veh in dst_veh_groups:
                 exclude_links_map[f"is_toll_{dst_veh}"] = (

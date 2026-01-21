@@ -2,6 +2,18 @@
 
 This guide explains the complete process for setting up county tests with new input data.
 
+## Python Environment
+
+**The tm2py Python environment is located at:**
+```
+C:\GitHub\tm2pyenv\Scripts\python.exe
+```
+
+Always use this Python executable when running tests:
+```powershell
+C:\GitHub\tm2pyenv\Scripts\python.exe tests\run_county_test.py
+```
+
 ## Understanding the Configuration Files
 
 ### Where They Live (Before Test Runs)

@@ -238,9 +238,12 @@ class CreateTODScenarios(Component):
         network = ref_scenario.get_network()
         
         # Copy standard lanes to @lanes if @lanes is empty (for legacy networks)
-        lanes_attr = ref_scenario.extra_attribute("@lanes")
-        lanes_values = ref_scenario.get_attribute_values("LINK", ["@lanes"])
-        if all(v == 0 for v in lanes_values):
+        # get_attribute_values returns [id_array, value_array], so we need the second element
+        lanes_result = ref_scenario.get_attribute_values("LINK", ["@lanes"])
+        lanes_values = lanes_result[1] if isinstance(lanes_result, list) and len(lanes_result) > 1 else lanes_result
+        # Check if all lane values are 0 (need to copy from standard 'lanes' attribute)
+        all_zero = all(v == 0 for v in lanes_values) if hasattr(lanes_values, '__iter__') else lanes_values == 0
+        if all_zero:
             self.controller.logger.log(
                 "Copying standard 'lanes' attribute to '@lanes' (legacy network compatibility)",
                 level="INFO"
