@@ -1,0 +1,7 @@
+=== Demand Matrices ===
+mf"AM_da": <MagicMock name='mock.Emmebank().matrix().id' id='2215725970320'> - <MagicMock name='mock.Emmebank().matrix().description' id='2215725751888'>
+  (Could not get matrix data: unsupported format string passed to MagicMock.__format__)
+mf"AM_datoll": <MagicMock name='mock.Emmebank().matrix().id' id='2215725970320'> - <MagicMock name='mock.Emmebank().matrix().description' id='2215725751888'>
+  (Could not get matrix data: unsupported format string passed to MagicMock.__format__)
+mf"AM_sr2": <MagicMock name='mock.Emmebank().matrix().id' id='2215725970320'> - <MagicMock name='mock.Emmebank().matrix().description' id='2215725751888'>
+  (Could not get matrix data: unsupported format string passed to MagicMock.__format__)

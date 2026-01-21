@@ -8,42 +8,68 @@ When your input data location changes, update these paths in `tests/county_test_
 
 ```toml
 [paths]
-# 1. Source dataset location - Contains emme_project, inputs, demand_matrices
-source_dataset = "E:/2015_TM2_20250619"
+# 1. EMME network project location
+emme_project_source = "E:/Box/.../Model Inputs/2015-tm22-dev-sprint-04/emme_network"
 
-# 2. Output directory - Where test results will be written
+# 2. Input files (tolls, land use, etc.)
+inputs_source = "E:/Box/.../Model Inputs/2015-tm22-dev-sprint-04"
+
+# 3. Demand matrices (from a model run)
+demand_source = "E:/Box/.../Model Outputs/2015-tm22-dev-sprint-04"
+
+# 4. Output directory - Where test results will be written
 output_dir = "E:/Tests/san_mateo_test"
 
-# 3. Crosswalk file - Maps zones to counties
+# 5. Crosswalk file - Maps zones to counties
 crosswalk_file = "C:/GitHub/tm2py-utils/tm2py_utils/inputs/maz_taz/mazs_tazs_county_tract_PUMA_2.5.csv"
 ```
 
-### What Must Be Inside source_dataset
+### What Files Are Needed From Each Source
 
-Your `source_dataset` directory **must** contain:
-
+**From `emme_project_source`:**
 ```
-source_dataset/
+emme_project_source/
 ├── emme_project/
 │   ├── mtc_emme.emp
 │   └── Database_highway/
-│       └── emmebank
-├── inputs/
-│   ├── hwy/
-│   │   ├── tolls.csv
-│   │   └── freeflow.csv
-│   ├── landuse/
-│   │   └── maz_data.csv
-│   └── validation/
-│       └── interchange_nodes.csv
+│       └── emmebank (or .zip file)
+```
+
+**From `inputs_source`:**
+
+The script auto-detects two folder structures:
+```
+# Structure A (Model Inputs - files at root)
+inputs_source/
+├── hwy/
+│   ├── tolls.csv
+│   └── interchange_nodes.csv
+└── landuse/
+    └── maz_data.csv
+
+# Structure B (Model Outputs - files in inputs/ subfolder)
+inputs_source/
+└── inputs/
+    ├── hwy/
+    │   ├── tolls.csv
+    │   └── interchange_nodes.csv
+    └── landuse/
+        └── maz_data.csv
+```
+
+**From `demand_source`:**
+```
+demand_source/
 └── demand_matrices/
     └── highway/
-        └── household/
-            ├── TAZ_Demand_EA.omx
-            ├── TAZ_Demand_AM.omx
-            ├── TAZ_Demand_MD.omx
-            ├── TAZ_Demand_PM.omx
-            └── TAZ_Demand_EV.omx
+        ├── household/
+        │   ├── TAZ_Demand_ea.omx
+        │   ├── TAZ_Demand_am.omx
+        │   ├── TAZ_Demand_md.omx
+        │   ├── TAZ_Demand_pm.omx
+        │   └── TAZ_Demand_ev.omx
+        └── commercial/  (optional - truck demand)
+            └── tripstrk{period}.omx
 ```
 
 ### County-Specific Settings
@@ -64,14 +90,18 @@ Controls where input data is read from and where output is written.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `source_dataset` | string | Yes | Root directory containing emme_project, inputs, and demand_matrices subdirectories |
+| `emme_project_source` | string | Yes | Directory containing EMME project with highway network |
+| `inputs_source` | string | Yes | Directory containing input files (tolls, land use) |
+| `demand_source` | string | No | Directory containing demand matrices (defaults to `inputs_source` if not set) |
 | `output_dir` | string | Yes | Directory where test results will be written (created if doesn't exist) |
 | `crosswalk_file` | string | Yes | CSV file mapping TAZ/MAZ to counties (used for zone detection) |
 
 **Example:**
 ```toml
 [paths]
-source_dataset = "E:/2015_TM2_20250619"
+emme_project_source = "E:/Box/.../Model Inputs/2015-tm22-dev-sprint-04/emme_network"
+inputs_source = "E:/Box/.../Model Inputs/2015-tm22-dev-sprint-04"
+demand_source = "E:/Box/.../Model Outputs/2015-tm22-dev-sprint-04"
 output_dir = "E:/Tests/san_mateo_test"
 crosswalk_file = "C:/GitHub/tm2py-utils/tm2py_utils/inputs/maz_taz/mazs_tazs_county_tract_PUMA_2.5.csv"
 ```
