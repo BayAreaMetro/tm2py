@@ -2,17 +2,21 @@
 
 This guide explains the complete process for setting up county tests with new input data.
 
-## Python Environment
+## Prerequisites
 
-**The tm2py Python environment is located at:**
-```
-C:\GitHub\tm2pyenv\Scripts\python.exe
-```
+Before running county tests, you need:
 
-Always use this Python executable when running tests:
-```powershell
-C:\GitHub\tm2pyenv\Scripts\python.exe tests\run_county_test.py
-```
+1. **Python environment**: Follow the [tm2py installation guide](../install.md) to set up your Python virtual environment with EMME support.
+
+2. **EMME license**: Ensure you have access to EMME 24.01.00 or later.
+
+3. **Test data**: Access to model inputs (EMME network, land use, demand matrices).
+
+!!! tip "Environment Variable"
+    Set the `EMMEPATH` environment variable before running tests:
+    ```powershell
+    $env:EMMEPATH = "C:\Program Files\Bentley\OpenPaths\EMME 24.01.00"
+    ```
 
 ## Understanding the Configuration Files
 
