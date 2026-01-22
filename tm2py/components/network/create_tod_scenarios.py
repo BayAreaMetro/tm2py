@@ -120,9 +120,11 @@ class CreateTODScenarios(Component):
         )
         self._ref_auto_network = ref_scenario.get_network()
         n_time_periods = len(self.controller.config.time_periods)
+        # EMME requires minimum 6 scenarios
+        n_scenarios = max(6, 1 + n_time_periods)
         self.controller.emme_manager.highway_emmebank.change_dimensions(
             {
-                "scenarios": 1 + n_time_periods,
+                "scenarios": n_scenarios,
                 "full_matrices": 9999,
                 "extra_attribute_values": 100000000,
             }
@@ -683,6 +685,36 @@ class CreateTODScenarios(Component):
     def _set_area_type(self, network):
         # set area type for links based on average density of MAZ closest to I or J node
         # the average density including all MAZs within the specified buffer distance
+        
+        # Check if network has @maz_id attribute - create from crosswalk if missing
+        has_maz_id = any(attr.name == "@maz_id" for attr in network.attributes("NODE"))
+        if not has_maz_id:
+            self.logger.info("Network has no @maz_id node attribute - creating from crosswalk...")
+            # Try to create @maz_id from the node ID crosswalk
+            xwalk_path = self.controller.emme_manager.highway_emmebank.path.parent / "emme_drive_network_node_id_crosswalk.csv"
+            if xwalk_path.exists():
+                import pandas as pd
+                xwalk = pd.read_csv(xwalk_path)
+                # Build mapping from emme_node_id to model_node_id (which is MAZ ID for MAZ nodes)
+                emme_to_model = dict(zip(xwalk["emme_node_id"], xwalk["model_node_id"]))
+                # MAZ range is 100001-200000
+                maz_min, maz_max = 100001, 200000
+                # Create the attribute
+                network.create_attribute("NODE", "@maz_id", default_value=0)
+                maz_count = 0
+                for node in network.nodes():
+                    model_id = emme_to_model.get(node.number, 0)
+                    if maz_min <= model_id <= maz_max:
+                        node["@maz_id"] = model_id
+                        maz_count += 1
+                self.logger.info(f"Created @maz_id for {maz_count} MAZ nodes from crosswalk")
+            else:
+                self.logger.warning(f"No crosswalk file found at {xwalk_path} - skipping area type calculation")
+                # Set default area type for all links
+                for link in network.links():
+                    link["@area_type"] = 5  # Default to suburban/rural
+                return
+        
         buff_dist = 5280 * self.controller.config.highway.area_type_buffer_dist_miles
         maz_data_df = self.controller.maz_data
         maz_landuse_data: Dict[

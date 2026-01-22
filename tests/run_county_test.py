@@ -33,12 +33,13 @@ if sys.platform == 'win32':
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
-def generate_setupmodel_config(test_dir, inputs_source, emme_project_source, logger):
+def generate_setupmodel_config(test_dir, inputs_source, landuse_source, emme_project_source, logger):
     """Generate setupmodel_config.toml for the setup component.
     
     Args:
         test_dir: Test output directory path
-        inputs_source: Source directory for input files
+        inputs_source: Source directory for network input files (hwy, trn)
+        landuse_source: Source directory for population/landuse files
         emme_project_source: Source directory for EMME project
         logger: Logger instance
     """
@@ -46,21 +47,32 @@ def generate_setupmodel_config(test_dir, inputs_source, emme_project_source, log
     
     # Auto-detect folder structure: some datasets have hwy/ at root, others have inputs/hwy/
     inputs_source = Path(inputs_source)
+    landuse_source = Path(landuse_source)
+    
     if (inputs_source / "hwy").exists():
         # Flat structure - files at root level
         input_dir = str(inputs_source).replace("\\", "/")
-        logger.debug("Detected flat structure (hwy/ at root)")
+        logger.debug("Detected flat structure for network inputs (hwy/ at root)")
     else:
         # Nested structure - files in inputs/ subdirectory  
         input_dir = str(inputs_source / "inputs").replace("\\", "/")
-        logger.debug("Detected nested structure (inputs/hwy/)")
+        logger.debug("Detected nested structure for network inputs (inputs/hwy/)")
+    
+    # Landuse may come from a different source
+    if (landuse_source / "landuse").exists():
+        poplu_dir = str(landuse_source).replace("\\", "/")
+        logger.debug(f"Detected flat structure for landuse (landuse/ at root)")
+    else:
+        poplu_dir = str(landuse_source / "inputs").replace("\\", "/")
+        logger.debug(f"Detected nested structure for landuse (inputs/landuse/)")
     
     # Create setupmodel config content
     setupmodel_config = {
-        # Point to the inputs directory (contains hwy, trn, landuse, etc.)
+        # Point to the inputs directory for network files (hwy, trn)
         "INPUT_NETWORK_DIR": input_dir,
-        "INPUT_POPLU_DIR": input_dir,
-        "INPUT_NONRES_DIR": input_dir,
+        # Point to landuse source for population/landuse
+        "INPUT_POPLU_DIR": poplu_dir,
+        "INPUT_NONRES_DIR": poplu_dir,
         
         # Point directly to the EMME network directory (not its parent)
         # SetupModel expects INPUT_EMME_NETWORK_DIR to contain the emme_network folder or zipped databases
@@ -201,10 +213,15 @@ def check_prerequisites(config, logger):
     # Some datasets have inputs/hwy/, others have hwy/ at root
     if (inputs_dir / "hwy").exists():
         hwy_subdir = inputs_dir / "hwy"
-        landuse_subdir = inputs_dir / "landuse"
     else:
         hwy_subdir = inputs_dir / "inputs" / "hwy"
-        landuse_subdir = inputs_dir / "inputs" / "landuse"
+    
+    # Landuse can come from a separate source
+    landuse_dir = Path(config['paths'].get('landuse_source', config['paths']['inputs_source']))
+    if (landuse_dir / "landuse").exists():
+        landuse_subdir = landuse_dir / "landuse"
+    else:
+        landuse_subdir = landuse_dir / "inputs" / "landuse"
     
     required_files = {
         "MAZ data": landuse_subdir / "maz_data_new.csv",
@@ -257,10 +274,14 @@ def setup_test_directory(config, logger):
     emme_project_source = Path(config['paths']['emme_project_source'])
     inputs_source = Path(config['paths']['inputs_source'])
     demand_source = Path(config['paths'].get('demand_source', config['paths']['inputs_source']))
+    # landuse_source: if not specified, fall back to inputs_source for backward compatibility
+    landuse_source = Path(config['paths'].get('landuse_source', config['paths']['inputs_source']))
     auto_confirm = config['test'].get('auto_confirm', True)
     
     logger.info(f"Test directory: {output_dir}")
     logger.info(f"Inputs source: {inputs_source}")
+    if landuse_source != inputs_source:
+        logger.info(f"Landuse source: {landuse_source}")
     if demand_source != inputs_source:
         logger.info(f"Demand source: {demand_source}")
     
@@ -317,6 +338,7 @@ def setup_test_directory(config, logger):
     setupmodel_config_path = generate_setupmodel_config(
         test_dir=test_dir,
         inputs_source=inputs_source,
+        landuse_source=landuse_source,
         emme_project_source=emme_project_source,
         logger=logger
     )
@@ -429,12 +451,18 @@ def setup_test_directory(config, logger):
         # Detect folder structure: some datasets have hwy/ at root, others have inputs/hwy/
         if (inputs_source / "hwy").exists():
             hwy_subdir = inputs_source / "hwy"
-            landuse_subdir = inputs_source / "landuse"
-            logger.debug("Detected flat structure (hwy/ at root)")
+            logger.debug("Detected flat structure for inputs (hwy/ at root)")
         else:
             hwy_subdir = inputs_source / "inputs" / "hwy"
-            landuse_subdir = inputs_source / "inputs" / "landuse"
-            logger.debug("Detected nested structure (inputs/hwy/)")
+            logger.debug("Detected nested structure for inputs (inputs/hwy/)")
+        
+        # Landuse can come from a separate source
+        if (landuse_source / "landuse").exists():
+            landuse_subdir = landuse_source / "landuse"
+            logger.debug(f"Using landuse from: {landuse_subdir}")
+        else:
+            landuse_subdir = landuse_source / "inputs" / "landuse"
+            logger.debug(f"Using landuse from nested path: {landuse_subdir}")
         
         # Copy tolls
         logger.debug("Copying tolls.csv...")

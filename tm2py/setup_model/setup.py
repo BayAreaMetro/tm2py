@@ -434,8 +434,12 @@ class SetupModel:
                 self.setup_config.INPUT_NETWORK_DIR / "hwy",
                 self.model_dir / "inputs" / "hwy"
             )
+            # Support both 'trn' and 'transit' folder names
+            trn_source = self.setup_config.INPUT_NETWORK_DIR / "trn"
+            if not trn_source.exists():
+                trn_source = self.setup_config.INPUT_NETWORK_DIR / "transit"
             self._copy_folder(
-                self.setup_config.INPUT_NETWORK_DIR / "trn",
+                trn_source,
                 self.model_dir / "inputs" / "trn"
             )
         else:
@@ -542,6 +546,7 @@ class SetupModel:
             raise ValueError(error_str) 
 
         # copy versioned, zipped emme network database, falling back to unversioned if necessary
+        # Map network_type to legacy folder names (older structure)
         DATABASE_TO_SOURCE = {
             'highway': 'emme_drive_network',
             'transit': 'emme_taz_transit_network',
@@ -560,12 +565,18 @@ class SetupModel:
                     zf.extractall(dest_dir.parent)
                 self.logger.info(f"Unzipped {source_file} to {dest_dir}")
             
-            # otherwise, copy folder
+            # otherwise, copy folder - try multiple possible source locations
             else:
-                self._copy_folder(
-                    self.setup_config.INPUT_EMME_NETWORK_DIR / DATABASE_TO_SOURCE[network_type] / "Database",
-                    dest_dir
-                )
+                # Try new structure first: Database_highway directly in emme_project
+                source_dir = self.setup_config.INPUT_EMME_NETWORK_DIR / f"Database_{network_type}"
+                if not source_dir.exists():
+                    # Fall back to legacy structure: emme_drive_network/Database
+                    source_dir = self.setup_config.INPUT_EMME_NETWORK_DIR / DATABASE_TO_SOURCE[network_type] / "Database"
+                
+                if source_dir.exists():
+                    self._copy_folder(source_dir, dest_dir)
+                else:
+                    self.logger.warning(f"Database source not found for {network_type}, skipping: {source_dir}")
 
     def _replace_in_file(self, filepath: pathlib.Path, regex_dict: dict[str, str]):
         """

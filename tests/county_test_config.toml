@@ -10,15 +10,19 @@
 #   emme/emme_project/
 #     mtc_emme.emp (or similar .emp file)
 #     Database_highway/emmebank
-emme_project_source = "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Inputs/2015-tm22-dev-sprint-04/emme_network"
+emme_project_source = "M:/Development/Travel Model Two/Supply/Network Creation 2025/from_OSM/SanMateo/7_scenario/emme/emme_project"
 
-# Input files directory (network inputs: tolls, land use)
+# Input files directory (network inputs: tolls)
 # Files pulled from inputs_source:
 #   hwy/tolls.csv              → Toll definitions for highway assignment
 #   hwy/interchange_nodes.csv  → Freeway interchange node IDs
-#   landuse/maz_data.csv       → MAZ-level land use data (used for zone filtering)
 # Note: Script auto-detects if files are at root (hwy/) or in inputs subfolder (inputs/hwy/)
-inputs_source = "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Inputs/2015-tm22-dev-sprint-04"
+inputs_source = "M:/Development/Travel Model Two/Supply/Network Creation 2025/from_OSM/SanMateo/7_scenario"
+
+# Land use source directory (separate from network inputs)
+# Files pulled from landuse_source:
+#   landuse/maz_data.csv       → MAZ-level land use data (used for zone filtering)
+landuse_source = "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Inputs/2015-tm22-dev-sprint-04"
 
 # Demand matrices source directory (can be separate from inputs)
 # Files pulled from demand_source:
@@ -47,11 +51,11 @@ filter_demand = true
 
 # Skip copying EMME project if it already exists in output directory
 # Set to true to speed up repeated test runs
-skip_emme_copy = false
+skip_emme_copy = true
 
 # Skip test directory setup if it already exists
 # Set to true to rerun components without recreating directory structure
-skip_setup = false
+skip_setup = true
 
 # Auto-confirm all prompts (skip y/n questions)
 # Set to true for unattended/automated runs
