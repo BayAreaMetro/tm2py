@@ -22,7 +22,7 @@ inputs_source = "M:/Development/Travel Model Two/Supply/Network Creation 2025/fr
 # Land use source directory (separate from network inputs)
 # Files pulled from landuse_source:
 #   landuse/maz_data.csv       → MAZ-level land use data (used for zone filtering)
-landuse_source = "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Inputs/2015-tm22-dev-sprint-04"
+landuse_source = "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Inputs/2023-tm22-dev-version-05"
 
 # Demand matrices source directory (can be separate from inputs)
 # Files pulled from demand_source:

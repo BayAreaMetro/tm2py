@@ -28,6 +28,25 @@ The `mazData.csv` file contains detailed land use characteristics at the micro-z
 
 The following fields are required in the `mazData.csv` file. All field names are **case-sensitive** and must match exactly:
 
+### Zone ID Naming Convention
+
+TM2 uses a standardized naming convention for zone identifiers to distinguish between sequential IDs (for matrix operations) and network node IDs (for geographic referencing):
+
+| Column Name | Description | Example Values |
+|-------------|-------------|----------------|
+| `MAZ_SEQ` | Sequential MAZ ID (1-based, for matrix indexing) | 1, 2, 3, ... |
+| `TAZ_SEQ` | Sequential TAZ ID (1-based, for matrix indexing) | 1, 2, 3, ... |
+| `MAZ_NODE` | Network node ID for MAZ centroid | 10001, 110002, 210003, ... |
+| `TAZ_NODE` | Network node ID for TAZ centroid | 1, 100001, 200001, ... |
+
+!!! note "Backward Compatibility"
+    The data loader automatically maps older column names to the new convention:
+    
+    - `MAZ` → `MAZ_SEQ`
+    - `TAZ` → `TAZ_SEQ`
+    - `MAZ_ORIGINAL` → `MAZ_NODE`
+    - `TAZ_ORIGINAL` → `TAZ_NODE`
+
 ::: tm2py.data_models.maz_data.MAZData
     options:
       show_root_heading: true
@@ -47,10 +66,10 @@ The following fields are required in the `mazData.csv` file. All field names are
       extra:
         show_attributes: true
       members:
-        - MAZ
-        - TAZ
-        - MAZ_ORIGINAL
-        - TAZ_ORIGINAL
+        - MAZ_SEQ
+        - TAZ_SEQ
+        - MAZ_NODE
+        - TAZ_NODE
         - DistID
         - DistName
         - CountyID
@@ -131,7 +150,7 @@ The `tazData.csv` file contains zone-level data used for specific model componen
 
 | Column Name | Description | Used by | Source |
 |-------------|-------------|---------|--------|
-| `TAZ_ORIGINAL` | Original TAZ number (renumbered during model run) | | Zone system definition |
+| `TAZ_NODE` | Network node ID for TAZ centroid (see [Zone ID Naming Convention](#zone-id-naming-convention)) | | Zone system definition |
 | `AVGTTS` | Average travel time savings for transponder ownership | [TazDataManager] | Highway network analysis |
 | `DIST` | Distance for transponder ownership model | [TazDataManager] | Highway network analysis |
 | `PCTDETOUR` | Percent detour for transponder ownership model | [TazDataManager] | Highway network analysis |

@@ -164,10 +164,10 @@ class MAZData(pa.DataFrameModel):
     walkable_areas = validated_data[validated_data['IntDenBin'] >= 2]
     ```
     """
-    MAZ: Series[int] = Field(nullable=False, unique=True)
-    TAZ: Series[int] = Field(nullable=False)
-    MAZ_ORIGINAL: Series[int] = Field(nullable=False, unique=True)    
-    TAZ_ORIGINAL: Series[int] = Field(nullable=False)
+    MAZ_SEQ: Series[int] = Field(nullable=False, unique=True)
+    TAZ_SEQ: Series[int] = Field(nullable=False)
+    MAZ_NODE: Series[int] = Field(nullable=False, unique=True)    
+    TAZ_NODE: Series[int] = Field(nullable=False)
     DistID: Series[int] = Field(nullable=False)
     DistName: Series[str] = Field(nullable=False)    
     CountyID: Series[int] = Field(nullable=False)
@@ -467,15 +467,15 @@ def validate_sequential_id(
     is critical for maintaining geographic consistency across model components.
     
     The validation checks that:
-    - Each MAZ_ORIGINAL in the data maps to the correct MAZ sequential ID
-    - Each TAZ_ORIGINAL in the data maps to the correct TAZ sequential ID  
+    - Each MAZ_NODE in the data maps to the correct MAZ_SEQ sequential ID
+    - Each TAZ_NODE in the data maps to the correct TAZ_SEQ sequential ID  
     - No mismatches exist that would cause geographic referencing errors
     
     Validation Process
     ------------------
-    1. Create lookup from original node IDs to sequential IDs
-    2. Map MAZ_ORIGINAL and TAZ_ORIGINAL to expected sequential values
-    3. Compare with actual MAZ and TAZ columns in the data
+    1. Create lookup from node IDs to sequential IDs
+    2. Map MAZ_NODE and TAZ_NODE to expected sequential values
+    3. Compare with actual MAZ_SEQ and TAZ_SEQ columns in the data
     4. Report any mismatches that indicate data inconsistency
     
     Use Case
@@ -488,12 +488,12 @@ def validate_sequential_id(
     ----------
     maz_data_df : pd.DataFrame
         MAZ land use data containing columns:
-        - MAZ: Sequential MAZ identifier  
-        - TAZ: Sequential TAZ identifier
-        - MAZ_ORIGINAL: Original MAZ node ID
-        - TAZ_ORIGINAL: Original TAZ node ID
+        - MAZ_SEQ: Sequential MAZ identifier  
+        - TAZ_SEQ: Sequential TAZ identifier
+        - MAZ_NODE: MAZ node ID from network
+        - TAZ_NODE: TAZ node ID from network
     node_seq_id_xwalk : DataFrame[NodeIDCrosswalk]
-        Validated crosswalk mapping original node IDs to sequential IDs.
+        Validated crosswalk mapping node IDs to sequential IDs.
         Created by create_sequential_index function.
     
     Returns
@@ -536,11 +536,11 @@ def validate_sequential_id(
         return
     
     xwalk = node_seq_id_xwalk.set_index("model_node_id")
-    maz = maz_data_df["MAZ_ORIGINAL"].map(xwalk["MAZSEQ"])
-    taz = maz_data_df["TAZ_ORIGINAL"].map(xwalk["TAZSEQ"])
+    maz = maz_data_df["MAZ_NODE"].map(xwalk["MAZSEQ"])
+    taz = maz_data_df["TAZ_NODE"].map(xwalk["TAZSEQ"])
 
-    bad_maz = maz_data_df.index[maz_data_df["MAZ"]!=maz]
-    bad_taz = maz_data_df.index[maz_data_df["TAZ"]!=taz]
+    bad_maz = maz_data_df.index[maz_data_df["MAZ_SEQ"]!=maz]
+    bad_taz = maz_data_df.index[maz_data_df["TAZ_SEQ"]!=taz]
 
     if len(bad_maz)>0 or len(bad_taz)>0:
         import logging
@@ -641,6 +641,25 @@ def load_maz_data(
     """
     
     maz_data_df = pd.read_csv(maz_data_file)
+    
+    # Standardize column names to MAZ_SEQ/TAZ_SEQ (sequential) and MAZ_NODE/TAZ_NODE (node IDs)
+    # Support both old (2015) and new (2023) naming conventions
+    column_mapping = {
+        # Old 2015-style names -> new standardized names
+        'MAZ': 'MAZ_SEQ',
+        'TAZ': 'TAZ_SEQ', 
+        'MAZ_ORIGINAL': 'MAZ_NODE',
+        'TAZ_ORIGINAL': 'TAZ_NODE',
+    }
+    for old_col, new_col in column_mapping.items():
+        if old_col in maz_data_df.columns and new_col not in maz_data_df.columns:
+            maz_data_df[new_col] = maz_data_df[old_col]
+    
+    # In 2023 format, MAZ column contains the node ID (no separate sequential column)
+    # If MAZ_SEQ doesn't exist, we may need to create it from a crosswalk later
+    if 'MAZ_NODE' not in maz_data_df.columns and 'MAZ' in maz_data_df.columns:
+        maz_data_df['MAZ_NODE'] = maz_data_df['MAZ']
+    
     validate_sequential_id(maz_data_df, node_seq_id_xwalk)
 
     return MAZData.validate(maz_data_df, lazy=True)

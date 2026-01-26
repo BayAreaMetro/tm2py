@@ -92,9 +92,17 @@ When `controller.maz_data` is accessed:
    - Categorize nodes into TAZ/MAZ/External based on ID ranges
    - Assign sequential IDs (1, 2, 3...) within each category
 3. **Validate MAZ data** against crosswalk:
-   - Check `MAZ_ORIGINAL` → `MAZSEQ` mapping matches
-   - Check `TAZ_ORIGINAL` → `TAZSEQ` mapping matches
-   - Raise error if mismatches found
+   - Check `MAZ_NODE` → `MAZSEQ` mapping matches
+   - Check `TAZ_NODE` → `TAZSEQ` mapping matches
+   - Log warning if mismatches found (allows testing with different network versions)
+
+!!! note "Zone ID Naming Convention"
+    MAZ data uses a standardized naming convention:
+    
+    - `MAZ_SEQ` / `TAZ_SEQ` - Sequential IDs for matrix operations
+    - `MAZ_NODE` / `TAZ_NODE` - Network node IDs for geographic referencing
+    
+    See [Land Use Zone ID Naming Convention](landuse.md#zone-id-naming-convention) for details.
 
 ```python
 # From controller.py

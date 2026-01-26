@@ -62,11 +62,16 @@ crosswalk_file = "C:/GitHub/tm2py-utils/tm2py_utils/inputs/maz_taz/mazs_tazs_cou
 #### 2. MAZ Land Use Data
 **Location**: `E:\2015_TM2_20250619\inputs\landuse\maz_data.csv`
 
-**Key Fields**:
-- `MAZ` or `MAZ_ORIGINAL` - MAZ zone ID
-- `COUNTY` - County name (for filtering)
-- `TAZ` - Parent TAZ zone
+**Key Fields** (see [Zone ID Naming Convention](../input/landuse.md#zone-id-naming-convention)):
+- `MAZ_SEQ` - Sequential MAZ ID (for matrix indexing)
+- `MAZ_NODE` - Network node ID for MAZ centroid
+- `TAZ_SEQ` - Sequential TAZ ID
+- `TAZ_NODE` - Network node ID for TAZ centroid
+- `CountyName` - County name (for filtering)
 - Other land use attributes (population, employment, etc.)
+
+!!! note "Backward Compatibility"
+    Older files may use `MAZ`, `TAZ`, `MAZ_ORIGINAL`, `TAZ_ORIGINAL` - these are automatically mapped to the new naming convention.
 
 **Purpose**: 
 - Identifies which MAZs belong to which county

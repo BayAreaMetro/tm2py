@@ -5,7 +5,7 @@
 # ScenarioConfig - ALL required fields
 name = "San Mateo Highway Test"
 year = 2035
-landuse_file = "inputs/landuse/maz_data_new.csv"
+landuse_file = "inputs/landuse/maz_data.csv"
 landuse_index_column = "TAZ"
 verify = false
 

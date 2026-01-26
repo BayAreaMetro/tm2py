@@ -687,7 +687,7 @@ class CreateTODScenarios(Component):
         # the average density including all MAZs within the specified buffer distance
         
         # Check if network has @maz_id attribute - create from crosswalk if missing
-        has_maz_id = any(attr.name == "@maz_id" for attr in network.attributes("NODE"))
+        has_maz_id = "@maz_id" in network.attributes("NODE")
         if not has_maz_id:
             self.logger.info("Network has no @maz_id node attribute - creating from crosswalk...")
             # Try to create @maz_id from the node ID crosswalk
@@ -720,9 +720,12 @@ class CreateTODScenarios(Component):
         maz_landuse_data: Dict[
             int, Dict[Any, Union[str, int, Tuple[float, float]]]
         ] = {}
+        # Use standardized column name MAZ_NODE for the node ID
+        # The load_maz_data function normalizes column names from both 2015 and 2023 formats
+        maz_id_col = "MAZ_NODE"
         for index, row in maz_data_df.iterrows():
             row_dict = row.to_dict()
-            maz_landuse_data[row_dict["MAZ_ORIGINAL"]] = row_dict        
+            maz_landuse_data[row_dict[maz_id_col]] = row_dict        
         # Build spatial index of MAZ node coords
         sp_index_maz = SpatialGridIndex(size=0.5 * 5280)
         for node in network.nodes():

@@ -224,10 +224,25 @@ def check_prerequisites(config, logger):
         landuse_subdir = landuse_dir / "inputs" / "landuse"
     
     required_files = {
-        "MAZ data": landuse_subdir / "maz_data_new.csv",
         "Tolls": hwy_subdir / "tolls.csv",
         "AM Demand": demand_dir / "demand_matrices" / "highway" / "household" / "TAZ_Demand_am.omx",
     }
+    
+    # MAZ data can have different names depending on dataset version
+    maz_file_candidates = [
+        landuse_subdir / "maz_data_withDensity.csv",  # 2023 format
+        landuse_subdir / "maz_data_new.csv",           # 2015 format
+        landuse_subdir / "maz_data.csv",               # fallback
+    ]
+    maz_file = None
+    for candidate in maz_file_candidates:
+        if candidate.exists():
+            maz_file = candidate
+            logger.info(f"✓ MAZ data found: {candidate}")
+            break
+    if maz_file is None:
+        warnings.append(f"MAZ data file not found in {landuse_subdir}")
+        logger.warning(f"MAZ data file not found. Tried: {[str(c) for c in maz_file_candidates]}")
     
     for name, path in required_files.items():
         logger.debug(f"Checking {name}: {path}")
@@ -484,13 +499,28 @@ def setup_test_directory(config, logger):
         else:
             logger.warning("interchange_nodes.csv not found, skipping")
         
-        # Copy MAZ data
+        # Copy MAZ data (check multiple possible filenames)
         logger.debug("Copying MAZ data...")
-        shutil.copy(
-            landuse_subdir / "maz_data_new.csv",
-            test_dir / "inputs" / "landuse" / "maz_data_new.csv"
-        )
-        logger.debug("Copied maz_data_new.csv")
+        maz_file_candidates = [
+            landuse_subdir / "maz_data_withDensity.csv",  # 2023 format
+            landuse_subdir / "maz_data_new.csv",           # 2015 format
+            landuse_subdir / "maz_data.csv",               # fallback
+        ]
+        maz_source = None
+        for candidate in maz_file_candidates:
+            if candidate.exists():
+                maz_source = candidate
+                break
+        if maz_source:
+            # Always copy to maz_data.csv (standardized name expected by model)
+            shutil.copy(
+                maz_source,
+                test_dir / "inputs" / "landuse" / "maz_data.csv"
+            )
+            logger.debug(f"Copied {maz_source.name} -> maz_data.csv")
+        else:
+            logger.error(f"No MAZ data file found in {landuse_subdir}")
+            raise FileNotFoundError(f"MAZ data file not found. Tried: {[str(c) for c in maz_file_candidates]}")
     
     # Check if demand filtering is enabled (runs regardless of setup component)
     scenario_config = toml.load(test_dir / "config" / "scenario.toml")
