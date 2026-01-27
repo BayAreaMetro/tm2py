@@ -4,6 +4,12 @@
 
 The CT-RAMP travel demand model requires comprehensive input data covering transportation networks, land use patterns, demographic characteristics, and travel behavior. This page provides an overview of all required input files and their organization.
 
+## Project-Specific Input Documentation
+
+For detailed information about inputs for specific base years and projects:
+
+- **[2023 Base Year Inputs](2023-inputs.md)** - Comprehensive documentation of all input files and data sources for the 2023 base year model
+
 ## Input File List
 
 The table below contains brief descriptions of the input files required to execute the travel model.
