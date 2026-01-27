@@ -113,12 +113,16 @@ class ProxyEmmebank:
     @property
     def path(self) -> Path:
         """Return the path to the Emmebank."""
+        # Ensure _path is always a Path object
+        if not isinstance(self._path, Path):
+            self._path = Path(self._path)
         if not self._path.exists():
-            self._path = self.controller.get_abs_path(self._path)
+            abs_path = self.controller.get_abs_path(self._path)
+            self._path = Path(abs_path) if not isinstance(abs_path, Path) else abs_path
         if not self._path.exists():
             raise FileNotFoundError(f"Emmebank not found: {self._path}")
         if not str(self._path).endswith("emmebank"):
-            self._path = os.path.join(self._path, "emmebank")
+            self._path = self._path / "emmebank"
         return self._path
 
     def change_dimensions(self, dimensions: Dict[str, int]):

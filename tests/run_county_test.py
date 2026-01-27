@@ -105,6 +105,8 @@ def generate_setupmodel_config(test_dir, inputs_source, landuse_source, emme_pro
         f.write(f'TRAVEL_MODEL_TWO_RELEASE_TAG = "{setupmodel_config["TRAVEL_MODEL_TWO_RELEASE_TAG"]}"\n')
         f.write(f'EMME_TEMPLATE_PROJECT_DIR = "{setupmodel_config["EMME_TEMPLATE_PROJECT_DIR"]}"\n')
         f.write(f'CONFIGS_GITHUB_PATH = ""\n')
+        # Skip copying if destination already exists (for repeated test runs)
+        f.write(f'SKIP_COPY_IF_EXISTS = true\n')
     
     logger.info(f"✓ Created setupmodel_config.toml at {config_path}")
     logger.debug(f"  INPUT_NETWORK_DIR: {setupmodel_config['INPUT_NETWORK_DIR']}")

@@ -13,6 +13,58 @@ from tm2py.tools import SpatialGridIndex
 if TYPE_CHECKING:
     from tm2py.controller import RunController
 
+
+def _get_link_attr(link, attr_name, network_attrs, default=0):
+    """Get link attribute, checking both @ (numeric) and # (string) variants.
+    
+    OSM-based networks use string attributes with # prefix (e.g., #drive_access),
+    while traditional TM2 networks use numeric extra attributes with @ prefix
+    (e.g., @drive_link). This function abstracts the lookup.
+    
+    Args:
+        link: EMME link object
+        attr_name: Attribute name without prefix (e.g., 'drive_link' or 'ft')
+        network_attrs: Set of network attribute names from network.attributes('LINK')
+        default: Default value if attribute not found
+        
+    Returns:
+        Numeric value (int or float) for the attribute
+    """
+    # Map from code attribute names to OSM attribute names
+    osm_name_map = {
+        'drive_link': 'drive_access',
+        'walk_link': 'walk_access',
+        'rail_link': 'rail_only',
+        'bus_only': 'bus_only',
+        'ft': 'ft',
+    }
+    
+    # Check numeric @ attribute first
+    if f"@{attr_name}" in network_attrs:
+        return link[f"@{attr_name}"]
+    
+    # Check string # attribute (with possible name mapping)
+    hash_name = osm_name_map.get(attr_name, attr_name)
+    if f"#{hash_name}" in network_attrs:
+        val = link[f"#{hash_name}"]
+        if val is None or val == '':
+            return default
+        # Handle boolean-like strings
+        if val in ('True', 'true', '1'):
+            return 1
+        if val in ('False', 'false', '0'):
+            return 0
+        # Try numeric conversion
+        try:
+            return int(val)
+        except ValueError:
+            try:
+                return float(val)
+            except ValueError:
+                return default
+    
+    return default
+
 _crs_wkt = """PROJCS["NAD83(HARN) / California zone 6 (ftUS)",GEOGCS["NAD83(HARN)",
 DATUM["NAD83_High_Accuracy_Reference_Network",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],
 TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6152"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",
@@ -466,12 +518,17 @@ class CreateTODScenarios(Component):
             }
             walk_speed = self.controller.config.transit.get("walk_speed", 3.0)
             transit_speed = self.controller.config.transit.get("transit_speed", 30.0)
+            # Get link attributes for facility type lookup
+            link_attrs = network.attributes("LINK")
             for link in network.links():
                 speed = cntype_speed_map.get(link["#cntype"])
                 if speed is None:
                     # speed = link["@free_flow_speed"]
                     speed = 30.0  # temp fix, will uncomment it when bring in highway changes
-                    if link["@ft"] == 1 and speed > 0:
+                    # Get facility type using helper (supports @ft and #ft)
+                    ft = _get_link_attr(link, 'ft', link_attrs, default=1)
+                    
+                    if ft == 1 and speed > 0:
                         link["@trantime"] = 60 * link.length / speed
                     elif speed > 0:
                         link["@trantime"] = (
@@ -540,6 +597,8 @@ class CreateTODScenarios(Component):
             #         link.modes = auto_mode
             #     else:
             #         link.modes = modes
+            # Get link attributes for drive_link check (supports @ and # variants)
+            link_attrs = network.attributes("LINK")
             for link in network.links():
                 # set default values
                 link.i_node["@hdw_fraction"] = default_headway_fraction
@@ -550,14 +609,15 @@ class CreateTODScenarios(Component):
                 link.j_node["@xboard_nodepen"] = 1
                 # update modes on connectors - only if modes exist in network
                 # Access mode 'a' and egress mode 'e' may not be defined in minimal transit configs
-                if (link.i_node.is_centroid) and (link["@drive_link"] == 0):
+                drive_link = _get_link_attr(link, 'drive_link', link_attrs, default=0)
+                if (link.i_node.is_centroid) and (drive_link == 0):
                     if network.mode("a"):
                         link.modes = "a"
-                elif (link.j_node.is_centroid) and (link["@drive_link"] == 0):
+                elif (link.j_node.is_centroid) and (drive_link == 0):
                     if network.mode("e"):
                         link.modes = "e"
                 elif (link.i_node.is_centroid or link.j_node.is_centroid) and (
-                    link["@drive_link"] != 0
+                    drive_link != 0
                 ):
                     link.modes = set([network.mode("c"), network.mode("D")])
                 # calculate perceived walk time
@@ -691,14 +751,33 @@ class CreateTODScenarios(Component):
         if not has_maz_id:
             self.logger.info("Network has no @maz_id node attribute - creating from crosswalk...")
             # Try to create @maz_id from the node ID crosswalk
-            xwalk_path = self.controller.emme_manager.highway_emmebank.path.parent / "emme_drive_network_node_id_crosswalk.csv"
+            emmebank_path = self.controller.emme_manager.highway_emmebank.path
+            self.logger.info(f"DEBUG: emmebank_path = {emmebank_path}, type = {type(emmebank_path)}")
+            from pathlib import Path
+            if not isinstance(emmebank_path, Path):
+                emmebank_path = Path(emmebank_path)
+            xwalk_path = emmebank_path.parent / "emme_drive_network_node_id_crosswalk.csv"
+            self.logger.info(f"DEBUG: xwalk_path = {xwalk_path}, type = {type(xwalk_path)}, exists = {xwalk_path.exists()}")
             if xwalk_path.exists():
                 import pandas as pd
-                xwalk = pd.read_csv(xwalk_path)
+                xwalk = pd.read_csv(str(xwalk_path))  # Convert to string for pandas
                 # Build mapping from emme_node_id to model_node_id (which is MAZ ID for MAZ nodes)
                 emme_to_model = dict(zip(xwalk["emme_node_id"], xwalk["model_node_id"]))
-                # MAZ range is 100001-200000
-                maz_min, maz_max = 100001, 200000
+                
+                # Auto-detect MAZ range from the crosswalk
+                # OSM networks: MAZ nodes >= 1,000,000
+                # Traditional networks: MAZ nodes in ranges like 10001-90000, 110001-190000, etc.
+                max_node_id = xwalk["model_node_id"].max()
+                if max_node_id >= 1000000:
+                    # OSM network - MAZ nodes are >= 1M
+                    maz_min, maz_max = 1000000, float('inf')
+                    self.logger.info(f"Detected OSM network (max node={max_node_id}) - MAZ range: >= 1M")
+                else:
+                    # Traditional network - use county-based ranges
+                    # For simplicity, assume 110001-190000 for San Mateo area
+                    maz_min, maz_max = 10001, 900000  # Covers all traditional MAZ ranges
+                    self.logger.info(f"Detected traditional network - MAZ range: {maz_min}-{maz_max}")
+                
                 # Create the attribute
                 network.create_attribute("NODE", "@maz_id", default_value=0)
                 maz_count = 0
@@ -709,14 +788,23 @@ class CreateTODScenarios(Component):
                         maz_count += 1
                 self.logger.info(f"Created @maz_id for {maz_count} MAZ nodes from crosswalk")
             else:
-                self.logger.warning(f"No crosswalk file found at {xwalk_path} - skipping area type calculation")
+                self.logger.warn(f"No crosswalk file found at {xwalk_path} - skipping area type calculation")
                 # Set default area type for all links
                 for link in network.links():
                     link["@area_type"] = 5  # Default to suburban/rural
                 return
         
+        # Try to load MAZ data - if it fails (mismatched IDs), use default area types
+        try:
+            maz_data_df = self.controller.maz_data
+        except Exception as e:
+            self.logger.warn(f"Could not load MAZ data: {e}")
+            self.logger.warn("Using default area type (suburban) for all links")
+            for link in network.links():
+                link["@area_type"] = 5  # Default to suburban/rural
+            return
+        
         buff_dist = 5280 * self.controller.config.highway.area_type_buffer_dist_miles
-        maz_data_df = self.controller.maz_data
         maz_landuse_data: Dict[
             int, Dict[Any, Union[str, int, Tuple[float, float]]]
         ] = {}
@@ -728,11 +816,29 @@ class CreateTODScenarios(Component):
             maz_landuse_data[row_dict[maz_id_col]] = row_dict        
         # Build spatial index of MAZ node coords
         sp_index_maz = SpatialGridIndex(size=0.5 * 5280)
+        maz_nodes_matched = 0
         for node in network.nodes():
             if node["@maz_id"]:
-                x, y = node.x, node.y
-                maz_landuse_data[int(node["@maz_id"])]["coords"] = (x, y)
-                sp_index_maz.insert(int(node["@maz_id"]), x, y)
+                maz_id = int(node["@maz_id"])
+                if maz_id in maz_landuse_data:
+                    x, y = node.x, node.y
+                    maz_landuse_data[maz_id]["coords"] = (x, y)
+                    sp_index_maz.insert(maz_id, x, y)
+                    maz_nodes_matched += 1
+        
+        # Check if we have enough MAZ matches
+        if maz_nodes_matched == 0:
+            self.logger.warn(
+                f"No MAZ nodes matched between network and landuse data. "
+                f"Network MAZ IDs may use different numbering than landuse file. "
+                f"Using default area type (suburban) for all links."
+            )
+            for link in network.links():
+                link["@area_type"] = 5  # Default to suburban/rural
+            return
+        
+        self.logger.info(f"Matched {maz_nodes_matched} MAZ nodes between network and landuse")
+        
         for maz_landuse in maz_landuse_data.values():
             x, y = maz_landuse.get("coords", (None, None))
             if x is None:
@@ -780,14 +886,20 @@ class CreateTODScenarios(Component):
 
     @staticmethod
     def _set_capclass(network):
+        # Get link attributes to check for ft attribute
+        link_attrs = network.attributes("LINK")
+        
         for link in network.links():
             area_type = link["@area_type"]
             if area_type < 0:
                 link["@capclass"] = -1
-            elif link["@ft"] == 99:
-                link["@capclass"] = 10 * area_type + 7
             else:
-                link["@capclass"] = 10 * area_type + link["@ft"]
+                # Get facility type using helper (supports @ft and #ft)
+                ft = _get_link_attr(link, 'ft', link_attrs, default=1)
+                if ft == 99:
+                    link["@capclass"] = 10 * area_type + 7
+                else:
+                    link["@capclass"] = 10 * area_type + int(ft)
 
     def _set_speed(self, network):
         free_flow_speed_map = {}

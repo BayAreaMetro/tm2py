@@ -409,40 +409,79 @@ def create_sequential_index(
     missing_cols = [c for c in required_cols if c not in node_id_df.columns]
     if missing_cols:
         raise ValueError(f"Missing columns in model_to_emme_node_id_xwalk: {missing_cols}")
-    # taz node
-    taz_node_id_df = (
-        node_id_df[node_id_df["model_node_id"].isin(taz_N_list)]
-        .copy()
-        .rename(columns={"emme_node_id":"TAZSEQ"})
-    )
-    # external taz node
-    ext_node_id_df = (
-        node_id_df[node_id_df["model_node_id"].isin(external_N_list)]
-        .copy()
-        .rename(columns={"emme_node_id":"EXTSEQ"})
-    )
-    # maz node, including the five disconnected mazs
-    maz_node_id_df = (
-        node_id_df[node_id_df["model_node_id"].isin(maz_N_list)]
-        .copy()
-        .rename(columns={"emme_node_id":"MAZSEQ"})
-    )
-    # Only add disconnected MAZs that aren't already in the crosswalk
-    existing_maz_ids = set(maz_node_id_df["model_node_id"])
-    missing_disconnected = [n for n in disconnected_maz_N_list if n not in existing_maz_ids]
-    if missing_disconnected:
-        maz_node_id_df = pd.concat(
-            [maz_node_id_df[["model_node_id"]],
-            pd.DataFrame({"model_node_id": missing_disconnected})]
-        )
+    
+    # Check if this is an OSM network (has MAZ nodes >= 1M)
+    max_node_id = node_id_df["model_node_id"].max()
+    is_osm_network = max_node_id >= 1000000
+    
+    if is_osm_network:
+        # OSM network: auto-detect node types based on ID ranges
+        # TAZ: 100,000 - 199,999
+        # MAZ: >= 1,000,000
+        # External: 900,000 - 999,999
+        all_nodes = node_id_df["model_node_id"]
+        
+        is_taz = (all_nodes >= 100000) & (all_nodes < 200000)
+        is_maz = all_nodes >= 1000000
+        is_ext = (all_nodes >= 900000) & (all_nodes < 1000000)
+        
+        # TAZ nodes
+        taz_node_id_df = node_id_df[is_taz][["model_node_id"]].copy()
+        taz_node_id_df = taz_node_id_df.sort_values("model_node_id").reset_index(drop=True)
+        taz_node_id_df["TAZSEQ"] = taz_node_id_df.index + 1
+        
+        # MAZ nodes
+        maz_node_id_df = node_id_df[is_maz][["model_node_id"]].copy()
+        maz_node_id_df = maz_node_id_df.sort_values("model_node_id").reset_index(drop=True)
+        maz_node_id_df["MAZSEQ"] = maz_node_id_df.index + 1
+        
+        # External nodes
+        ext_node_id_df = node_id_df[is_ext][["model_node_id"]].copy()
+        ext_node_id_df = ext_node_id_df.sort_values("model_node_id").reset_index(drop=True)
+        ext_node_id_df["EXTSEQ"] = ext_node_id_df.index + 1
+        
     else:
-        maz_node_id_df = maz_node_id_df[["model_node_id"]]
-    maz_node_id_df = (
-        maz_node_id_df
-        .sort_values(by="model_node_id")
-        .reset_index(drop=True)
-    )
-    maz_node_id_df["MAZSEQ"] = maz_node_id_df.index + 1
+        # Traditional TM2 network: use predefined node ID lists
+        # taz node
+        taz_node_id_df = (
+            node_id_df[node_id_df["model_node_id"].isin(taz_N_list)]
+            .copy()
+            .rename(columns={"emme_node_id":"TAZSEQ"})
+        )
+        taz_node_id_df = taz_node_id_df[["model_node_id"]].copy()
+        taz_node_id_df = taz_node_id_df.sort_values("model_node_id").reset_index(drop=True)
+        taz_node_id_df["TAZSEQ"] = taz_node_id_df.index + 1
+        
+        # external taz node
+        ext_node_id_df = (
+            node_id_df[node_id_df["model_node_id"].isin(external_N_list)]
+            .copy()
+        )
+        ext_node_id_df = ext_node_id_df[["model_node_id"]].copy()
+        ext_node_id_df = ext_node_id_df.sort_values("model_node_id").reset_index(drop=True)
+        ext_node_id_df["EXTSEQ"] = ext_node_id_df.index + 1
+        
+        # maz node, including the five disconnected mazs
+        maz_node_id_df = (
+            node_id_df[node_id_df["model_node_id"].isin(maz_N_list)]
+            .copy()
+        )
+        # Only add disconnected MAZs that aren't already in the crosswalk
+        existing_maz_ids = set(maz_node_id_df["model_node_id"])
+        missing_disconnected = [n for n in disconnected_maz_N_list if n not in existing_maz_ids]
+        if missing_disconnected:
+            maz_node_id_df = pd.concat(
+                [maz_node_id_df[["model_node_id"]],
+                pd.DataFrame({"model_node_id": missing_disconnected})]
+            )
+        else:
+            maz_node_id_df = maz_node_id_df[["model_node_id"]]
+        maz_node_id_df = (
+            maz_node_id_df
+            .sort_values(by="model_node_id")
+            .reset_index(drop=True)
+        )
+        maz_node_id_df["MAZSEQ"] = maz_node_id_df.index + 1
 
     out = (
         taz_node_id_df.merge(maz_node_id_df, on="model_node_id", how="outer")
@@ -642,23 +681,59 @@ def load_maz_data(
     
     maz_data_df = pd.read_csv(maz_data_file)
     
-    # Standardize column names to MAZ_SEQ/TAZ_SEQ (sequential) and MAZ_NODE/TAZ_NODE (node IDs)
-    # Support both old (2015) and new (2023) naming conventions
-    column_mapping = {
-        # Old 2015-style names -> new standardized names
-        'MAZ': 'MAZ_SEQ',
-        'TAZ': 'TAZ_SEQ', 
-        'MAZ_ORIGINAL': 'MAZ_NODE',
-        'TAZ_ORIGINAL': 'TAZ_NODE',
-    }
-    for old_col, new_col in column_mapping.items():
-        if old_col in maz_data_df.columns and new_col not in maz_data_df.columns:
-            maz_data_df[new_col] = maz_data_df[old_col]
+    # Detect format and standardize column names:
+    # - MAZ_SEQ/TAZ_SEQ = sequential IDs for matrix operations (1, 2, 3...)
+    # - MAZ_NODE/TAZ_NODE = network node IDs for geographic referencing
+    #
+    # Supported formats:
+    # - 2015 format: MAZ (seq), TAZ (seq), MAZ_ORIGINAL (node), TAZ_ORIGINAL (node)
+    # - 2023 maz_data_withDensity: MAZ (node), TAZ (seq), TAZ_SEQ, TAZ_NODE
+    # - 2023 maz_data.csv: MAZ_NODE, TAZ_NODE, maz (lowercase, node), taz (lowercase, seq)
     
-    # In 2023 format, MAZ column contains the node ID (no separate sequential column)
-    # If MAZ_SEQ doesn't exist, we may need to create it from a crosswalk later
-    if 'MAZ_NODE' not in maz_data_df.columns and 'MAZ' in maz_data_df.columns:
-        maz_data_df['MAZ_NODE'] = maz_data_df['MAZ']
+    # Handle lowercase column names (some 2023 files use lowercase maz/taz)
+    if 'maz' in maz_data_df.columns and 'MAZ' not in maz_data_df.columns:
+        maz_data_df['MAZ'] = maz_data_df['maz']
+    if 'taz' in maz_data_df.columns and 'TAZ' not in maz_data_df.columns:
+        maz_data_df['TAZ'] = maz_data_df['taz']
+    
+    # Check if this is 2023 format (has TAZ_NODE but no MAZ_ORIGINAL)
+    is_2023_format = 'TAZ_NODE' in maz_data_df.columns and 'MAZ_ORIGINAL' not in maz_data_df.columns
+    
+    if is_2023_format:
+        # 2023 format: MAZ column (or MAZ_NODE) contains node IDs, not sequential IDs
+        # Ensure MAZ_NODE exists
+        if 'MAZ_NODE' not in maz_data_df.columns:
+            if 'MAZ' in maz_data_df.columns:
+                maz_data_df['MAZ_NODE'] = maz_data_df['MAZ']
+            else:
+                raise KeyError("Cannot find MAZ node ID column (expected 'MAZ_NODE' or 'MAZ')")
+        
+        # TAZ_SEQ - check multiple sources
+        if 'TAZ_SEQ' not in maz_data_df.columns:
+            if 'TAZ' in maz_data_df.columns:
+                maz_data_df['TAZ_SEQ'] = maz_data_df['TAZ']
+            elif node_seq_id_xwalk is not None:
+                # Create TAZ_SEQ from crosswalk if TAZ column doesn't exist
+                xwalk = node_seq_id_xwalk.set_index("model_node_id")
+                maz_data_df['TAZ_SEQ'] = maz_data_df['TAZ_NODE'].map(xwalk["TAZSEQ"])
+            else:
+                raise KeyError("Cannot find TAZ sequential ID column (expected 'TAZ_SEQ' or 'TAZ')")
+        
+        # For 2023 format, we need to create MAZ_SEQ from the crosswalk
+        if 'MAZ_SEQ' not in maz_data_df.columns and node_seq_id_xwalk is not None:
+            xwalk = node_seq_id_xwalk.set_index("model_node_id")
+            maz_data_df['MAZ_SEQ'] = maz_data_df['MAZ_NODE'].map(xwalk["MAZSEQ"])
+    else:
+        # 2015 format: MAZ/TAZ are sequential, MAZ_ORIGINAL/TAZ_ORIGINAL are node IDs
+        column_mapping = {
+            'MAZ': 'MAZ_SEQ',
+            'TAZ': 'TAZ_SEQ', 
+            'MAZ_ORIGINAL': 'MAZ_NODE',
+            'TAZ_ORIGINAL': 'TAZ_NODE',
+        }
+        for old_col, new_col in column_mapping.items():
+            if old_col in maz_data_df.columns and new_col not in maz_data_df.columns:
+                maz_data_df[new_col] = maz_data_df[old_col]
     
     validate_sequential_id(maz_data_df, node_seq_id_xwalk)
 

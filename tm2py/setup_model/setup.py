@@ -298,19 +298,25 @@ class SetupModel:
             path.mkdir()
             self.logger.info(f"  Created Empty Folder: {path}")
 
-    def _copy_folder(self, src_dir: pathlib.Path, dest_dir: pathlib.Path):
+    def _copy_folder(self, src_dir: pathlib.Path, dest_dir: pathlib.Path, skip_if_exists: bool = False):
         """
         Copies a folder from the source directory to the destination directory.
 
         Args:
             src: source folder
             dest: destination folder
+            skip_if_exists: if True, skip copying if destination already exists
         """
 
         if not src_dir.exists():
             error_str = f"Source directory {src_dir} to copy from does not exist"
             self.logger.error(error_str)
             raise FileNotFoundError(error_str)
+        
+        # Skip if destination exists and skip_if_exists is True
+        if skip_if_exists and dest_dir.exists() and any(dest_dir.iterdir()):
+            self.logger.info(f"Skipping copy - destination already exists: {dest_dir}")
+            return
         
         # Copy the entire folder and its contents
         try:
@@ -426,13 +432,18 @@ class SetupModel:
         - COPY_NONRES_INPUTS (default: True)
         - COPY_WARMSTART_DEMAND (default: True)
         - COPY_WARMSTART_SKIMS (default: True)
+        - SKIP_COPY_IF_EXISTS (default: False) - skip copying if destination already has files
         """
+        # Check if we should skip copying when destination exists
+        skip_if_exists = getattr(self.setup_config, 'SKIP_COPY_IF_EXISTS', False)
+        
         # Copy hwy and trn networks
         if self.setup_config.COPY_NETWORK_INPUTS:
             self.logger.info("Copying network inputs (hwy, trn)...")
             self._copy_folder(
                 self.setup_config.INPUT_NETWORK_DIR / "hwy",
-                self.model_dir / "inputs" / "hwy"
+                self.model_dir / "inputs" / "hwy",
+                skip_if_exists=skip_if_exists
             )
             # Support both 'trn' and 'transit' folder names
             trn_source = self.setup_config.INPUT_NETWORK_DIR / "trn"
@@ -440,7 +451,8 @@ class SetupModel:
                 trn_source = self.setup_config.INPUT_NETWORK_DIR / "transit"
             self._copy_folder(
                 trn_source,
-                self.model_dir / "inputs" / "trn"
+                self.model_dir / "inputs" / "trn",
+                skip_if_exists=skip_if_exists
             )
         else:
             self.logger.info("Skipping network inputs (COPY_NETWORK_INPUTS=False)")
@@ -450,11 +462,13 @@ class SetupModel:
             self.logger.info("Copying population and land use inputs...")
             self._copy_folder(
                 self.setup_config.INPUT_POPLU_DIR / "popsyn",
-                self.model_dir / "inputs" / "popsyn"
+                self.model_dir / "inputs" / "popsyn",
+                skip_if_exists=skip_if_exists
             )
             self._copy_folder(
                 self.setup_config.INPUT_POPLU_DIR /"landuse",
-                self.model_dir / "inputs" / "landuse"
+                self.model_dir / "inputs" / "landuse",
+                skip_if_exists=skip_if_exists
             )
         else:
             self.logger.info("Skipping popsyn/landuse inputs (COPY_POPLU_INPUTS=False)")
@@ -464,7 +478,8 @@ class SetupModel:
             self.logger.info("Copying non-residential inputs...")
             self._copy_folder(
                 self.setup_config.INPUT_NONRES_DIR / "nonres",
-                self.model_dir / "inputs" / "nonres"
+                self.model_dir / "inputs" / "nonres",
+                skip_if_exists=skip_if_exists
             )
         else:
             self.logger.info("Skipping nonres inputs (COPY_NONRES_INPUTS=False)")
@@ -476,7 +491,8 @@ class SetupModel:
                 self.logger.info("Copying warmstart demand matrices...")
                 self._copy_folder(
                     warmstart_demand, 
-                    self.model_dir / "demand_matrices"
+                    self.model_dir / "demand_matrices",
+                    skip_if_exists=skip_if_exists
                 )
             else:
                 self.logger.info(f"Warmstart demand directory not found: {warmstart_demand}")
@@ -490,7 +506,8 @@ class SetupModel:
                 self.logger.info("Copying warmstart skim matrices...")
                 self._copy_folder(
                     warmstart_skims, 
-                    self.model_dir /"skim_matrices"
+                    self.model_dir /"skim_matrices",
+                    skip_if_exists=skip_if_exists
                 )
             else:
                 self.logger.info(f"Warmstart skims directory not found: {warmstart_skims}")

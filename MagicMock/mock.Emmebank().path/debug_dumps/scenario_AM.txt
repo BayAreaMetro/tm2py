@@ -1,6 +1,6 @@
-Scenario ID: <MagicMock name='mock.Emmebank().scenario().id' id='2215726374992'>
-Scenario Title: <MagicMock name='mock.Emmebank().scenario().title' id='2215726163152'>
-Emmebank path: <MagicMock name='mock.Emmebank().path' id='2215688994384'>
+Scenario ID: <MagicMock name='mock.Emmebank().scenario().id' id='1939421478352'>
+Scenario Title: <MagicMock name='mock.Emmebank().scenario().title' id='1939422094032'>
+Emmebank path: <MagicMock name='mock.Emmebank().path' id='1939418331600'>
 
 === Network Stats ===
 Nodes: 0

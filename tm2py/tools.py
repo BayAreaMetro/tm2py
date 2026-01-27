@@ -4,6 +4,7 @@ import multiprocessing
 import os
 import re
 import subprocess as _subprocess
+import sys
 import tempfile
 import urllib.error
 import urllib.parse
@@ -282,7 +283,33 @@ def emme_context():
     _inro_package = "inro-emme"
     _avail_packages = [pkg.key for pkg in pkg_resources.working_set]
 
+    # First check if EMME is already importable (e.g., path already set)
+    try:
+        import inro.emme
+        if "MagicMock" not in str(type(inro.emme)):
+            return True
+    except ImportError:
+        pass
+    
+    # Then check pkg_resources for pip-installed EMME
     if _inro_package not in _avail_packages:
+        # Try to find and add EMME path automatically
+        emme_paths = [
+            r"C:\Program Files\Bentley\OpenPaths\EMME 24.01.00\Python311\Lib\site-packages",
+            r"C:\Program Files\Bentley\OpenPaths\EMME 25.00.01\Python311\Lib\site-packages",
+            r"C:\Program Files\INRO\Emme\Emme 4\Emme-4.6.0\Python311\Lib\site-packages",
+        ]
+        for emme_path in emme_paths:
+            if os.path.exists(emme_path) and emme_path not in sys.path:
+                sys.path.insert(0, emme_path)
+                try:
+                    import inro.emme
+                    print(f"Found EMME at: {emme_path}")
+                    return True
+                except ImportError:
+                    sys.path.remove(emme_path)
+                    continue
+        
         print("Inro not found. Skipping inro setup.")
         mocked_inro_context()
         return False

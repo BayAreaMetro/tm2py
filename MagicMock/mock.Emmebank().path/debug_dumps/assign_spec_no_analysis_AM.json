@@ -56,7 +56,7 @@
     "normalized_gap": 0.0
   },
   "performance_settings": {
-    "number_of_processors": "<MagicMock name='mock.parse_num_processors()' id='2215688802128'>",
+    "number_of_processors": "<MagicMock name='mock.parse_num_processors()' id='1939418073552'>",
     "network_acceleration": false
   }
 }
