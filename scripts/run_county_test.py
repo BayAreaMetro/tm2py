@@ -19,10 +19,12 @@ import argparse
 import shutil
 import sys
 import toml
-import logging
 from pathlib import Path
 from datetime import datetime
 import io
+
+from tests.test_highway_assign_skim import CountyDataFilter, get_county_zones
+
 
 # Force UTF-8 encoding for console output on Windows
 if sys.platform == 'win32':
@@ -31,6 +33,9 @@ if sys.platform == 'win32':
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Import tm2py logger after path is set up
+from tm2py.controller import RunController
 
 
 def generate_setupmodel_config(test_dir, inputs_source, emme_project_source, logger):
@@ -94,47 +99,10 @@ def generate_setupmodel_config(test_dir, inputs_source, emme_project_source, log
         f.write(f'EMME_TEMPLATE_PROJECT_DIR = "{setupmodel_config["EMME_TEMPLATE_PROJECT_DIR"]}"\n')
         f.write(f'CONFIGS_GITHUB_PATH = ""\n')
     
-    logger.info(f"✓ Created setupmodel_config.toml at {config_path}")
-    logger.debug(f"  INPUT_NETWORK_DIR: {setupmodel_config['INPUT_NETWORK_DIR']}")
-    logger.debug(f"  INPUT_EMME_NETWORK_DIR: {setupmodel_config['INPUT_EMME_NETWORK_DIR']}")
+    logger.info(f"✓ Created setupmodel_config.toml")
     
     return config_path
 
-
-def setup_console_logging(log_level='INFO'):
-    """Setup console-only logging."""
-    logger = logging.getLogger('county_test')
-    logger.setLevel(logging.DEBUG)
-    logger.handlers.clear()  # Clear any existing handlers
-    
-    # Console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(getattr(logging, log_level.upper()))
-    console_formatter = logging.Formatter('%(levelname)s: %(message)s')
-    console_handler.setFormatter(console_formatter)
-    
-    logger.addHandler(console_handler)
-    return logger
-
-
-def add_file_logging(logger, output_dir):
-    """Add file handler to existing logger after test directory is set up."""
-    log_dir = Path(output_dir) / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file = log_dir / f"county_test_{timestamp}.log"
-    
-    # File handler (detailed)
-    file_handler = logging.FileHandler(log_file, encoding='utf-8')
-    file_handler.setLevel(logging.DEBUG)
-    file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    file_handler.setFormatter(file_formatter)
-    
-    logger.addHandler(file_handler)
-    logger.info(f"File logging started: {log_file}")
-    
-    return log_file
 
 def check_prerequisites(config, logger):
     """Check if all required files and directories exist."""
@@ -150,7 +118,6 @@ def check_prerequisites(config, logger):
     
     # Check EMME project source
     emme_project = Path(config['paths']['emme_project_source'])
-    logger.debug(f"Checking EMME project: {emme_project}")
     if not emme_project.exists():
         issues.append(f"EMME project not found: {emme_project}")
         logger.error(f"EMME project not found: {emme_project}")
@@ -165,7 +132,6 @@ def check_prerequisites(config, logger):
     emme_db = emme_project / "Database_highway" / "emmebank"
     emme_db_zip = list(emme_project.glob("Database_highway*.zip"))
     
-    logger.debug(f"Checking EMME database: {emme_db}")
     if not emme_db.exists() and not emme_db_zip:
         issues.append(f"EMME database not found (neither folder nor zip): {emme_db}")
         logger.error(f"EMME database not found: {emme_db}")
@@ -174,13 +140,12 @@ def check_prerequisites(config, logger):
     elif emme_db.exists():
         logger.info(f"✓ EMME database found: {emme_db}")
     else:
-        logger.warning(f"EMME database is zipped but setup component is not enabled")
-        logger.warning(f"  Found: {emme_db_zip[0].name if emme_db_zip else 'none'}")
-        logger.warning(f"  Add 'setup' to run_components to handle zipped databases")
+        logger.warn(f"EMME database is zipped but setup component is not enabled")
+        logger.warn(f"  Found: {emme_db_zip[0].name if emme_db_zip else 'none'}")
+        logger.warn(f"  Add 'setup' to run_components to handle zipped databases")
     
     # Check inputs source directory
     inputs_dir = Path(config['paths']['inputs_source'])
-    logger.debug(f"Checking inputs source: {inputs_dir}")
     if not inputs_dir.exists():
         issues.append(f"Inputs source not found: {inputs_dir}")
         logger.error(f"Inputs source not found: {inputs_dir}")
@@ -216,7 +181,7 @@ def check_prerequisites(config, logger):
         logger.debug(f"Checking {name}: {path}")
         if not path.exists():
             warnings.append(f"{name} file not found: {path}")
-            logger.warning(f"{name} file not found: {path}")
+            logger.warn(f"{name} file not found: {path}")
         else:
             logger.info(f"✓ {name} found: {path}")
     
@@ -236,233 +201,111 @@ def check_prerequisites(config, logger):
         return False
     
     if warnings:
-        logger.warning("WARNINGS:")
+        logger.warn("WARNINGS:")
         for warning in warnings:
-            logger.warning(f"  - {warning}")
+            logger.warn(f"  - {warning}")
     
     logger.info("✓ All prerequisites met!")
     return True
 
 
 def setup_test_directory(config, logger):
-    """Create test directory structure."""
+    """Complete test directory setup (EMME copy, demand filtering, etc).
+    
+    Note: Basic directory structure and config files should already be created.
+    """
     logger.info("="*70)
-    logger.info("SETTING UP TEST DIRECTORY")
+    logger.info("COMPLETING TEST DIRECTORY SETUP")
     logger.info("="*70)
     
     county_name = config['test']['county_name']
     output_dir = Path(config['paths']['output_dir'])
     skip_emme_copy = config['test']['skip_emme_copy']
     thin_network = config['test'].get('thin_network')
+    auto_confirm = config['test'].get('auto_confirm', True)
     emme_project_source = Path(config['paths']['emme_project_source'])
     inputs_source = Path(config['paths']['inputs_source'])
     demand_source = Path(config['paths'].get('demand_source', config['paths']['inputs_source']))
-    auto_confirm = config['test'].get('auto_confirm', True)
+    test_dir = Path(output_dir)
     
-    logger.info(f"Test directory: {output_dir}")
+    logger.info(f"Test directory: {test_dir.absolute()}")
     logger.info(f"Inputs source: {inputs_source}")
     if demand_source != inputs_source:
         logger.info(f"Demand source: {demand_source}")
-    
-    test_dir = Path(output_dir)
-    logger.info(f"Test directory: {test_dir.absolute()}")
-    
-    if test_dir.exists():
-        logger.warning(f"Directory already exists: {test_dir}")
-        if not auto_confirm:
-            response = input("Do you want to overwrite it? (y/n): ")
-            if response.lower() != 'y':
-                logger.info("Operation cancelled by user")
-                print("Cancelled.")
-                sys.exit(0)
-        else:
-            logger.info("Auto-confirm enabled, proceeding with overwrite")
-        
-        logger.info(f"Removing existing directory: {test_dir}")
-        # Try to remove the directory, with better error handling
-        try:
-            shutil.rmtree(test_dir)
-            logger.info("Existing directory removed successfully")
-        except (OSError, PermissionError) as e:
-            logger.error(f"Cannot delete directory: {e}")
-            print(f"\n❌ Cannot delete directory: {e}")
-            print(f"\nPossible causes:")
-            print(f"  - EMME Desktop has files open from this directory")
-            print(f"  - Another process is using files in this directory")
-            print(f"\nSolutions:")
-            print(f"  1. Close EMME Desktop and try again")
-            print(f"  2. Use skip_setup=true to reuse existing directory")
-            print(f"  3. Choose a different output_dir")
-            print(f"  4. Manually delete the directory and try again")
-            sys.exit(1)
-    
-    logger.info("Creating directory structure...")
-    # Create directory structure
-    directories = [
-        test_dir / "config",
-        test_dir / "inputs" / "hwy",
-        test_dir / "inputs" / "landuse",
-        test_dir / "inputs" / "demand",
-        test_dir / "logs",
-    ]
-    
-    for directory in directories:
-        directory.mkdir(parents=True, exist_ok=True)
-        logger.debug(f"Created directory: {directory}")
-    
-    logger.info("✓ Directory structure created")
-    
-    # Generate setupmodel_config.toml for setup component (after directory creation)
-    logger.info("Generating setupmodel_config.toml for setup component...")
-    setupmodel_config_path = generate_setupmodel_config(
-        test_dir=test_dir,
-        inputs_source=inputs_source,
-        emme_project_source=emme_project_source,
-        logger=logger
-    )
-    logger.info(f"✓ Created setupmodel_config.toml at {setupmodel_config_path}")
-    
-    logger.info("Copying configuration templates...")
-    # Copy config templates (using fixed complete config files)
-    config_templates = Path(__file__).parent / "config_templates"
-    shutil.copy(
-        config_templates / "fixed_san_mateo_scenario.toml",
-        test_dir / "config" / "scenario.toml"
-    )
-    shutil.copy(
-        config_templates / "fixed_san_mateo_model.toml",
-        test_dir / "config" / "model.toml"
-    )
-    
-    # Update model config - the household section is not used for highway-only tests
-    # Demand is loaded from time-period-specific files in inputs/demand/
-    model_config = toml.load(test_dir / "config" / "model.toml")
-    if 'household' in model_config:
-        # Point ALL household demand files to the AM demand file as placeholder (actual loading is per time period)
-        model_config['household']['highway_demand_file'] = "inputs/demand/TAZ_Demand_AM.omx"
-        model_config['household']['transit_demand_file'] = "inputs/demand/TAZ_Demand_AM.omx"
-        model_config['household']['active_demand_file'] = "inputs/demand/TAZ_Demand_AM.omx"
-    
-    # Update air_passenger and internal_external paths to use stub files (not used in county test)
-    if 'air_passenger' in model_config:
-        model_config['air_passenger']['highway_demand_file'] = "inputs/demand/TAZ_Demand_AM.omx"
-    if 'internal_external' in model_config:
-        model_config['internal_external']['highway_demand_file'] = "inputs/demand/TAZ_Demand_AM.omx"
-    
-    # Point truck demand to the copied truck file
-    if 'truck' in model_config:
-        model_config['truck']['highway_demand_file'] = "inputs/demand/tripstrkAM.omx"
-    
-    logger.debug("Updated demand paths in model config")
-    
-    # Write back the updated config
-    with open(test_dir / "config" / "model.toml", "wb") as f:
-        content = toml.dumps(model_config).encode('utf-8')
-        if content.startswith(b'\xef\xbb\xbf'):
-            content = content[3:]
-        f.write(content)
-    
-    logger.info("✓ Configuration files copied")
-    
-    # Apply thin_network setting if provided
-    if thin_network is not None:
-        scenario_config = toml.load(test_dir / "config" / "scenario.toml")
-        if "emme" not in scenario_config:
-            scenario_config["emme"] = {}
-        scenario_config["emme"]["thin_network_ft_threshold"] = thin_network
-        with open(test_dir / "config" / "scenario.toml", "wb") as f:
-            content = toml.dumps(scenario_config).encode('utf-8')
-            if content.startswith(b'\xef\xbb\xbf'):
-                content = content[3:]
-            f.write(content)
+    if thin_network:
         logger.info(f"Network thinning enabled: @ft <= {thin_network}")
     
-    # Check if setup component will handle file copying
-    run_components = config.get('components', {}).get('run_components', [])
-    use_setup_component = 'setup' in run_components
+    # Always do manual setup - we're not using the setup component
+    # (RunController is initialized with run_components=[] to avoid auto-running setup)
+    logger.info("Performing manual EMME and input file setup...")
     
-    if use_setup_component:
-        logger.info("="*70)
-        logger.info("SETUP COMPONENT ENABLED")
-        logger.info("="*70)
-        logger.info("The 'setup' component will handle:")
-        logger.info("  - Copying EMME project and unzipping databases")
-        logger.info("  - Copying input files (hwy, trn, landuse)")
-        logger.info("  - Copying demand matrices")
-        logger.info("Skipping old setup file copying logic...")
-        logger.info("="*70)
-        # Setup component will handle everything, so skip to demand filtering
-    else:
-        # Old setup logic: Copy EMME project manually
-        logger.info("Setup component NOT enabled, using legacy file copying...")
-        
-        # Copy EMME project
-        source_emme = emme_project_source
-        dest_emme = test_dir / "emme_project"
-        
-        if skip_emme_copy:
-            logger.info("Skipping EMME project copy (skip_emme_copy=true)")
-            if not dest_emme.exists():
-                logger.warning(f"EMME project not found at {dest_emme}")
-                logger.warning(f"You must manually copy it from {source_emme}")
-        elif dest_emme.exists():
-            logger.warning(f"EMME project already exists at {dest_emme}")
-            if auto_confirm:
-                logger.info("Auto-confirm enabled, using existing EMME project")
+    # Copy EMME project
+    source_emme = emme_project_source
+    dest_emme = test_dir / "emme_project"
+    
+    if skip_emme_copy:
+        logger.info("Skipping EMME project copy (skip_emme_copy=true)")
+        if not dest_emme.exists():
+            logger.warning(f"EMME project not found at {dest_emme}")
+            logger.warning(f"You must manually copy it from {source_emme}")
+    elif dest_emme.exists():
+        logger.warning(f"EMME project already exists at {dest_emme}")
+        if auto_confirm:
+            logger.info("Auto-confirm enabled, using existing EMME project")
+        else:
+            response = input("  Do you want to skip copying (reuse existing)? (y/n): ")
+            if response.lower() == 'y':
+                logger.info("Using existing EMME project")
             else:
-                response = input("  Do you want to skip copying (reuse existing)? (y/n): ")
-                if response.lower() == 'y':
-                    logger.info("Using existing EMME project")
-                else:
-                    logger.info("Replacing EMME project (this may take a few minutes)...")
-                    shutil.rmtree(dest_emme)
-                    shutil.copytree(source_emme, dest_emme)
-                    logger.info(f"Copied EMME project to {dest_emme}")
-        else:
-            logger.info("Copying EMME project (this may take a few minutes)...")
-            logger.debug(f"Source: {source_emme}")
-            logger.debug(f"Dest: {dest_emme}")
-            shutil.copytree(source_emme, dest_emme)
-            logger.info(f"Copied EMME project to {dest_emme}")
-        
-        # Copy essential input files from inputs_source
-        # Detect folder structure: some datasets have hwy/ at root, others have inputs/hwy/
-        if (inputs_source / "hwy").exists():
-            hwy_subdir = inputs_source / "hwy"
-            landuse_subdir = inputs_source / "landuse"
-            logger.debug("Detected flat structure (hwy/ at root)")
-        else:
-            hwy_subdir = inputs_source / "inputs" / "hwy"
-            landuse_subdir = inputs_source / "inputs" / "landuse"
-            logger.debug("Detected nested structure (inputs/hwy/)")
-        
-        # Copy tolls
-        logger.debug("Copying tolls.csv...")
+                logger.info("Replacing EMME project (this may take a few minutes)...")
+                shutil.rmtree(dest_emme)
+                shutil.copytree(source_emme, dest_emme)
+                logger.info(f"Copied EMME project to {dest_emme}")
+    else:
+        logger.info("Copying EMME project (this may take a few minutes)...")
+        logger.debug(f"Source: {source_emme}")
+        logger.debug(f"Dest: {dest_emme}")
+        shutil.copytree(source_emme, dest_emme)
+        logger.info(f"Copied EMME project to {dest_emme}")
+    
+    # Copy essential input files from inputs_source
+    # Detect folder structure: some datasets have hwy/ at root, others have inputs/hwy/
+    if (inputs_source / "hwy").exists():
+        hwy_subdir = inputs_source / "hwy"
+        landuse_subdir = inputs_source / "landuse"
+        logger.debug("Detected flat structure (hwy/ at root)")
+    else:
+        hwy_subdir = inputs_source / "inputs" / "hwy"
+        landuse_subdir = inputs_source / "inputs" / "landuse"
+        logger.debug("Detected nested structure (inputs/hwy/)")
+    
+    # Copy tolls
+    logger.debug("Copying tolls.csv...")
+    shutil.copy(
+        hwy_subdir / "tolls.csv",
+        test_dir / "inputs" / "hwy" / "tolls.csv"
+    )
+    logger.debug("Copied tolls.csv")
+    
+    # Copy interchange_nodes (if exists)
+    logger.debug("Copying interchange_nodes.csv...")
+    interchange_file = hwy_subdir / "interchange_nodes.csv"
+    if interchange_file.exists():
         shutil.copy(
-            hwy_subdir / "tolls.csv",
-            test_dir / "inputs" / "hwy" / "tolls.csv"
+            interchange_file,
+            test_dir / "inputs" / "hwy" / "interchange_nodes.csv"
         )
-        logger.debug("Copied tolls.csv")
-        
-        # Copy interchange_nodes (if exists)
-        logger.debug("Copying interchange_nodes.csv...")
-        interchange_file = hwy_subdir / "interchange_nodes.csv"
-        if interchange_file.exists():
-            shutil.copy(
-                interchange_file,
-                test_dir / "inputs" / "hwy" / "interchange_nodes.csv"
-            )
-            logger.debug("Copied interchange_nodes.csv")
-        else:
-            logger.warning("interchange_nodes.csv not found, skipping")
-        
-        # Copy MAZ data
-        logger.debug("Copying MAZ data...")
-        shutil.copy(
-            landuse_subdir / "maz_data_new.csv",
-            test_dir / "inputs" / "landuse" / "maz_data_new.csv"
-        )
-        logger.debug("Copied maz_data_new.csv")
+        logger.debug("Copied interchange_nodes.csv")
+    else:
+        logger.warning("interchange_nodes.csv not found, skipping")
+    
+    # Copy MAZ data
+    logger.debug("Copying MAZ data...")
+    shutil.copy(
+        landuse_subdir / "maz_data_new.csv",
+        test_dir / "inputs" / "landuse" / "maz_data_new.csv"
+    )
+    logger.debug("Copied maz_data_new.csv")
     
     # Check if demand filtering is enabled (runs regardless of setup component)
     scenario_config = toml.load(test_dir / "config" / "scenario.toml")
@@ -472,12 +315,11 @@ def setup_test_directory(config, logger):
         logger.info("="*70)
         logger.info("FILTERING DEMAND TO INTRA-COUNTY TRIPS")
         logger.info("="*70)
-        
-        from tests.test_highway_assign_skim import CountyDataFilter, get_county_zones
-        
+                
         # Get zone ranges for the county
         logger.info(f"Detecting zone ranges for {county_name} County...")
-        zone_info = get_county_zones(county_name)
+        logger.debug(f"config['paths']:{config['paths']}")
+        zone_info = get_county_zones(county_name, crosswalk_file=Path(config['paths'].get('crosswalk_file')))
         taz_range = zone_info['taz_range']
         maz_range = zone_info['maz_range']
         
@@ -593,39 +435,34 @@ def setup_test_directory(config, logger):
     return test_dir
 
 
-def run_test(config, logger):
-    """Run the highway test."""
-    print("\n" + "="*70)
-    print("ENTERING run_test() FUNCTION")
-    print("="*70)
+def run_test(config, controller):
+    """Run the highway test using the provided controller.
+    
+    Args:
+        config: Test configuration dictionary
+        controller: RunController instance with initialized logger
+    """
+    logger = controller.logger
     
     logger.info("="*70)
-    logger.info("RUNNING HIGHWAY TEST")
+    logger.info("ENTERING run_test() FUNCTION")
     logger.info("="*70)
     
     county_name = config['test']['county_name']
     test_dir = Path(config['paths']['output_dir'])
     
-    print(f"Test directory: {test_dir}")
-    print(f"County: {county_name}")
-    
     logger.info(f"Test directory: {test_dir}")
     logger.info(f"County: {county_name}")
     
     try:
-        print("Importing CountyHighwayController...")
         logger.info("Importing CountyHighwayController...")
         from tests.highway_assign_skim_controller import CountyHighwayController
-        print("  ✓ Import successful")
         logger.info("  ✓ Import successful")
         
-        print(f"Initializing controller for {county_name} County...")
-        logger.info(f"Initializing controller for {county_name} County...")
-        logger.info(f"  Scenario config: {test_dir / 'config' / 'scenario.toml'}")
-        logger.info(f"  Model config: {test_dir / 'config' / 'model.toml'}")
-        logger.info(f"  Run directory: {test_dir}")
+        logger.info(f"Initializing county controller for {county_name} County...")
         
-        controller = CountyHighwayController(
+        # Create CountyHighwayController, passing the existing RunController
+        county_controller = CountyHighwayController(
             scenario_config=str(test_dir / "config" / "scenario.toml"),
             model_config=str(test_dir / "config" / "model.toml"),
             run_dir=str(test_dir),
@@ -634,14 +471,21 @@ def run_test(config, logger):
             include_network_summary=False  # Skip network summary for speed
         )
         
-        print("✓ Controller initialized successfully")
+        logger.info("✓ County controller initialized successfully")
+        logger.info("="*70)
+        logger.info("RUNNING HIGHWAY TEST")
+        logger.info("="*70)
+        logger.info(f"Test directory: {test_dir}")
+        logger.info(f"County: {county_name}")
+        logger.info(f"  Scenario config: {test_dir / 'config' / 'scenario.toml'}")
+        logger.info(f"  Model config: {test_dir / 'config' / 'model.toml'}")
+        logger.info(f"  Run directory: {test_dir}")
         logger.info("Starting highway components...")
         logger.info("Components to run:")
         logger.info("  1. prepare_network_highway - Prepare network attributes")
         logger.info("  2. highway - Assignment and skimming")
         
-        print("Executing controller.run_highway_only()...")
-        logger.info("Executing controller.run_highway_only()...")
+        logger.info("Executing county_controller.run_highway_only()...")
         logger.info("This may take 5-15 minutes depending on network size...")
         logger.info("The following steps will occur:")
         logger.info("  - Loading network from EMME")
@@ -654,14 +498,14 @@ def run_test(config, logger):
         logger.info("Watch the EMME Modeller window for detailed progress...")
         logger.info("")
         
-        controller.run_highway_only()
+        county_controller.run_highway_only()
         
         logger.info("")
         logger.info("Controller execution completed!")
         
         # Print network statistics
         logger.info("")
-        controller.print_network_statistics(logger)
+        county_controller.print_network_statistics(logger)
         
         logger.info("")
         logger.info("="*70)
@@ -669,7 +513,7 @@ def run_test(config, logger):
         logger.info("="*70)
         
         logger.info("Validating results...")
-        success = controller.validate_results()
+        success = county_controller.validate_results()
         if success:
             logger.info("Results validation passed!")
         else:
@@ -715,11 +559,11 @@ def main():
     args = parser.parse_args()
     
     # Print immediately to console so we know the script started
-    print("="*70)
-    print("COUNTY TEST STARTING")
-    print(f"Time: {datetime.now()}")
-    print(f"Config file: {args.config}")
-    print("="*70)
+    print("="*70, flush=True)
+    print("COUNTY TEST STARTING", flush=True)
+    print(f"Time: {datetime.now()}", flush=True)
+    print(f"Config file: {args.config}", flush=True)
+    print("="*70, flush=True)
     
     # Load configuration
     config_path = Path(args.config)
@@ -729,97 +573,155 @@ def main():
         print(f"Example: python tests/run_county_test.py --config my_config.toml")
         sys.exit(1)
     
-    print(f"Loading configuration from: {config_path}")
+    print(f"Loading configuration from: {config_path}", flush=True)
     config = toml.load(config_path)
-    print(f"✓ Configuration loaded successfully")
-    
-    # Setup console logging only initially (file logging added after directory setup)
-    log_level = config.get('logging', {}).get('console_log_level', 'INFO')
-    print(f"Setting up logging with level: {log_level}")
-    logger = setup_console_logging(log_level)
-    
-    logger.info("County Test Framework - Starting")
-    logger.info(f"Configuration file: {config_path}")
+    print(f"✓ Configuration loaded successfully", flush=True)
     
     # Display configuration summary
-    logger.info("="*70)
-    logger.info("CONFIGURATION SUMMARY")
-    logger.info("="*70)
-    logger.info(f"County: {config['test']['county_name']}")
-    logger.info(f"EMME project source: {config['paths']['emme_project_source']}")
-    logger.info(f"Inputs source: {config['paths']['inputs_source']}")
-    logger.info(f"Output directory: {config['paths']['output_dir']}")
-    logger.info(f"Filter demand: {config['test'].get('filter_demand', False)}")
-    logger.info(f"Skip EMME copy: {config['test'].get('skip_emme_copy', False)}")
-    logger.info(f"Skip setup: {config['test'].get('skip_setup', False)}")
+    print("="*70, flush=True)
+    print("CONFIGURATION SUMMARY", flush=True)
+    print("="*70, flush=True)
+    print(f"County: {config['test']['county_name']}")
+    print(f"EMME project source: {config['paths']['emme_project_source']}")
+    print(f"Inputs source: {config['paths']['inputs_source']}")
+    print(f"Output directory: {config['paths']['output_dir']}")
+    print(f"Filter demand: {config['test'].get('filter_demand', False)}")
+    print(f"Skip EMME copy: {config['test'].get('skip_emme_copy', False)}")
+    print(f"Skip setup: {config['test'].get('skip_setup', False)}")
     if config['test'].get('thin_network'):
-        logger.info(f"Network thinning: @ft <= {config['test']['thin_network']}")
-    logger.info("="*70)
+        print(f"Network thinning: @ft <= {config['test']['thin_network']}")
+    print("="*70)
     
-    # Check prerequisites
-    logger.info("Checking prerequisites...")
-    if not check_prerequisites(config, logger):
-        logger.error("Prerequisites not met. Please resolve issues and try again.")
-        return 1
-    logger.info("✓ Prerequisites check passed")
+    # Determine test directory path
+    test_dir = Path(config['paths']['output_dir'])
     
-    # Confirm before running
-    if not config['test'].get('auto_confirm', True):
-        print("\nReady to run test? This will take several minutes. (y/n): ", end='')
-        response = input()
-        if response.lower() != 'y':
-            logger.info("Test cancelled by user")
-            print("\nTest cancelled.")
-            return 0
-    else:
-        logger.info("Auto-confirm enabled, proceeding with test")
-    
-    # Setup test directory
+    # Setup phase 1: Create directory structure and config files
+    # This must be done before RunController initialization
     if not config['test'].get('skip_setup', False):
-        logger.info("Setting up test directory...")
-        test_dir = setup_test_directory(config, logger)
-        logger.info(f"✓ Test directory setup complete: {test_dir}")
+        print("Creating test directory structure...", flush=True)
+        
+        # Create directory structure
+        test_dir.mkdir(parents=True, exist_ok=True)
+        (test_dir / "config").mkdir(exist_ok=True)
+        (test_dir / "logs").mkdir(exist_ok=True)
+        
+        # Create input directories
+        for subdir in ["hwy", "landuse", "demand"]:
+            (test_dir / "inputs" / subdir).mkdir(parents=True, exist_ok=True)
+        
+        print(f"✓ Directory structure created: {test_dir}", flush=True)
+        
+        # Copy configuration templates
+        print("Copying configuration templates...", flush=True)
+        config_templates_dir = Path("tests/config_templates")
+        
+        shutil.copy(
+            config_templates_dir / "fixed_san_mateo_scenario.toml",
+            test_dir / "config" / "scenario.toml"
+        )
+        shutil.copy(
+            config_templates_dir / "fixed_san_mateo_model.toml",
+            test_dir / "config" / "model.toml"
+        )
+        
+        print("✓ Configuration templates copied", flush=True)
+        
+        # Generate setupmodel_config.toml (needed by setup component)
+        print("Generating setupmodel_config.toml...", flush=True)
+        # Use a simple logger replacement for this pre-RunController phase
+        class SimpleLogger:
+            def info(self, msg): print(f"  {msg}")
+            def debug(self, msg): pass
+            def warn(self, msg): print(f"  WARNING: {msg}")
+            def warning(self, msg): print(f"  WARNING: {msg}")
+            def error(self, msg): print(f"  ERROR: {msg}")
+        
+        generate_setupmodel_config(
+            test_dir=test_dir,
+            inputs_source=Path(config['paths']['inputs_source']),
+            emme_project_source=Path(config['paths']['emme_project_source']),
+            logger=SimpleLogger()
+        )
+        
+        print("✓ setupmodel_config.toml generated", flush=True)
     else:
-        logger.info("Skipping setup (skip_setup=True)")
-        test_dir = Path(config['paths']['output_dir'])
-        logger.info(f"Skipping setup, using existing directory: {test_dir}")
+        print("Skipping setup (skip_setup=True)", flush=True)
+        
+        # Verify directory and required files exist
         if not test_dir.exists():
-            logger.error(f"Test directory does not exist: {test_dir}")
+            print(f"ERROR: Test directory does not exist: {test_dir}")
             return 1
         
-        # Verify required files exist
         required_files = [
             test_dir / "config" / "scenario.toml",
             test_dir / "config" / "model.toml",
         ]
         missing_files = [f for f in required_files if not f.exists()]
         if missing_files:
-            logger.error("Required files missing from test directory:")
+            print("ERROR: Required files missing from test directory:")
             for f in missing_files:
-                logger.error(f"  - {f}")
+                print(f"  - {f}")
             print(f"\nTo fix:")
             print(f"  1. Close EMME Desktop if it's open")
             print(f"  2. Delete the directory manually")
             print(f"  3. Run without skip_setup=true to create fresh directory")
             return 1
     
-    # Now add file logging (after directory is set up)
-    output_dir = config['paths']['output_dir']
-    logger.info(f"Adding file logging to: {output_dir}")
-    log_file = add_file_logging(logger, output_dir)
-    logger.info(f"✓ File logging enabled: {log_file}")
+    # Use simple logger before RunController can be created
+    class SimpleLogger:
+        def info(self, msg): print(f"INFO: {msg}", flush=True)
+        def debug(self, msg): pass  # Skip debug for simplicity
+        def warn(self, msg): print(f"WARNING: {msg}", flush=True)
+        def warning(self, msg): print(f"WARNING: {msg}", flush=True)
+        def error(self, msg): print(f"ERROR: {msg}", flush=True)
     
-    # Run test
+    simple_logger = SimpleLogger()
+    
+    # Check prerequisites
+    simple_logger.info("Checking prerequisites...")
+    if not check_prerequisites(config, simple_logger):
+        simple_logger.error("Prerequisites not met. Please resolve issues and try again.")
+        return 1
+    simple_logger.info("✓ Prerequisites check passed")
+    
+    # Confirm before running
+    if not config['test'].get('auto_confirm', True):
+        print("\nReady to run test? This will take several minutes. (y/n): ", end='', flush=True)
+        response = input()
+        if response.lower() != 'y':
+            simple_logger.info("Test cancelled by user.")
+            return 0
+    else:
+        simple_logger.info("Auto-confirm enabled, proceeding with test")
+    
+    # Complete setup (EMME copy, demand filtering, etc.)
+    if not config['test'].get('skip_setup', False):
+        simple_logger.info("Completing test directory setup...")
+        setup_test_directory(config, simple_logger)
+        simple_logger.info(f"✓ Test directory setup complete: {test_dir}")
+    
+    # Now that EMME project exists, initialize RunController to get real tm2py logger
+    print("Initializing RunController...", flush=True)
+    controller = RunController(
+        config_file=[
+            test_dir / "config" / "scenario.toml",
+            test_dir / "config" / "model.toml"
+        ],
+        run_dir=test_dir,
+        run_components=[]  # Don't run any components yet
+    )
+    logger = controller.logger
+    logger.info("="*70)
+    logger.info("COUNTY TEST - RunController initialized")
+    logger.info("="*70)
+    
+    # Run test using existing controller
     logger.info("="*70)
     logger.info("STARTING TEST EXECUTION")
     logger.info("="*70)
-    success = run_test(config, logger)
-    logger.info("="*70)
-    logger.info("TEST EXECUTION COMPLETED")
-    logger.info("="*70)
+    success = run_test(config, controller)
     
     if success:
-        test_dir = Path(config['paths']['output_dir'])
         logger.info("="*70)
         logger.info("TEST COMPLETED SUCCESSFULLY")
         logger.info("="*70)
@@ -827,13 +729,12 @@ def main():
         logger.info(f"  - Logs: {test_dir / 'logs'}")
         logger.info(f"  - Loaded network: {test_dir / 'loaded_highway'}")
         logger.info(f"  - Skims: {test_dir / 'skim_matrices' / 'highway'}")
-        logger.info(f"  - Full log: {log_file}")
         return 0
     else:
-        test_dir = Path(config['paths']['output_dir'])
+        logger.error("="*70)
         logger.error("TEST FAILED")
+        logger.error("="*70)
         logger.error(f"Check logs in: {test_dir / 'logs'}")
-        logger.error(f"Full log: {log_file}")
         return 1
 
 
