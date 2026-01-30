@@ -1,4 +1,4 @@
-"""Quick Test Script for County Highway Framework
+USAGE = """Quick Test Script for County Highway Framework
 
 This script helps you test the county highway assignment framework by:
 1. Checking prerequisites
@@ -23,19 +23,15 @@ from pathlib import Path
 from datetime import datetime
 import io
 
-from tests.test_highway_assign_skim import CountyDataFilter, get_county_zones
+import tm2py
+from tm2py.controller import RunController
+from tm2py.county_tools import CountyDataFilter, get_county_zones
 
 
 # Force UTF-8 encoding for console output on Windows
 if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
-
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-# Import tm2py logger after path is set up
-from tm2py.controller import RunController
 
 
 def generate_setupmodel_config(test_dir, inputs_source, emme_project_source, logger):
@@ -547,158 +543,30 @@ def run_test(config, controller):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Run county highway test using configuration file"
-    )
-    parser.add_argument(
-        "--config",
-        default="tests/county_test_config.toml",
-        help="Path to configuration file (default: tests/county_test_config.toml)"
-    )
-    
+    parser = argparse.ArgumentParser(description=USAGE, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("setup_config_toml", type=Path, help="The setup_config.toml to use. Can be absolute or relative.")
+    parser.add_argument("model_dir", type=Path, help="The model directory. Can be absolute or relative.")
+    parser.add_argument("test_county", type=str, help="The county to test")
     args = parser.parse_args()
     
-    # Print immediately to console so we know the script started
-    print("="*70, flush=True)
-    print("COUNTY TEST STARTING", flush=True)
-    print(f"Time: {datetime.now()}", flush=True)
-    print(f"Config file: {args.config}", flush=True)
-    print("="*70, flush=True)
+    print("Running tm2py.setup_model.setup.SetupModel with")
+    print(f"setup_config_toml: {args.setup_config_toml.resolve()}")
+    print(f"        model_dir: {args.model_dir.resolve()}")
+    print("")
+    print(f"See log file: {args.model_dir.resolve() / 'setup.log'}")
     
-    # Load configuration
-    config_path = Path(args.config)
-    if not config_path.exists():
-        print(f"❌ Configuration file not found: {config_path}")
-        print(f"\nPlease create a configuration file or specify an existing one with --config")
-        print(f"Example: python tests/run_county_test.py --config my_config.toml")
-        sys.exit(1)
     
-    print(f"Loading configuration from: {config_path}", flush=True)
-    config = toml.load(config_path)
-    print(f"✓ Configuration loaded successfully", flush=True)
+    setup_model = tm2py.setup_model.setup.SetupModel(config_file=args.setup_config_toml, model_dir=args.model_dir)
+    # since this is a highway assignment/skim test, we don't need all the inputs
+    setup_model.setup_config.COPY_POPLU_INPUTS = False
+    setup_model.setup_config.COPY_NONRES_INPUTS = False
+    setup_model.setup_config.COPY_WARMSTART_DEMAND = True # hmm we might as well use this tho...
+    setup_model.setup_config.COPY_WARMSTART_SKIMS = False
+    print(vars(setup_model.setup_config), flush=True)
     
-    # Display configuration summary
-    print("="*70, flush=True)
-    print("CONFIGURATION SUMMARY", flush=True)
-    print("="*70, flush=True)
-    print(f"County: {config['test']['county_name']}")
-    print(f"EMME project source: {config['paths']['emme_project_source']}")
-    print(f"Inputs source: {config['paths']['inputs_source']}")
-    print(f"Output directory: {config['paths']['output_dir']}")
-    print(f"Filter demand: {config['test'].get('filter_demand', False)}")
-    print(f"Skip EMME copy: {config['test'].get('skip_emme_copy', False)}")
-    print(f"Skip setup: {config['test'].get('skip_setup', False)}")
-    if config['test'].get('thin_network'):
-        print(f"Network thinning: @ft <= {config['test']['thin_network']}")
-    print("="*70)
-    
-    # Determine test directory path
-    test_dir = Path(config['paths']['output_dir'])
-    
-    # Setup phase 1: Create directory structure and config files
-    # This must be done before RunController initialization
-    if not config['test'].get('skip_setup', False):
-        print("Creating test directory structure...", flush=True)
-        
-        # Create directory structure
-        test_dir.mkdir(parents=True, exist_ok=True)
-        (test_dir / "config").mkdir(exist_ok=True)
-        (test_dir / "logs").mkdir(exist_ok=True)
-        
-        # Create input directories
-        for subdir in ["hwy", "landuse", "demand"]:
-            (test_dir / "inputs" / subdir).mkdir(parents=True, exist_ok=True)
-        
-        print(f"✓ Directory structure created: {test_dir}", flush=True)
-        
-        # Copy configuration templates
-        print("Copying configuration templates...", flush=True)
-        config_templates_dir = Path("tests/config_templates")
-        
-        shutil.copy(
-            config_templates_dir / "fixed_san_mateo_scenario.toml",
-            test_dir / "config" / "scenario.toml"
-        )
-        shutil.copy(
-            config_templates_dir / "fixed_san_mateo_model.toml",
-            test_dir / "config" / "model.toml"
-        )
-        
-        print("✓ Configuration templates copied", flush=True)
-        
-        # Generate setupmodel_config.toml (needed by setup component)
-        print("Generating setupmodel_config.toml...", flush=True)
-        # Use a simple logger replacement for this pre-RunController phase
-        class SimpleLogger:
-            def info(self, msg): print(f"  {msg}")
-            def debug(self, msg): pass
-            def warn(self, msg): print(f"  WARNING: {msg}")
-            def warning(self, msg): print(f"  WARNING: {msg}")
-            def error(self, msg): print(f"  ERROR: {msg}")
-        
-        generate_setupmodel_config(
-            test_dir=test_dir,
-            inputs_source=Path(config['paths']['inputs_source']),
-            emme_project_source=Path(config['paths']['emme_project_source']),
-            logger=SimpleLogger()
-        )
-        
-        print("✓ setupmodel_config.toml generated", flush=True)
-    else:
-        print("Skipping setup (skip_setup=True)", flush=True)
-        
-        # Verify directory and required files exist
-        if not test_dir.exists():
-            print(f"ERROR: Test directory does not exist: {test_dir}")
-            return 1
-        
-        required_files = [
-            test_dir / "config" / "scenario.toml",
-            test_dir / "config" / "model.toml",
-        ]
-        missing_files = [f for f in required_files if not f.exists()]
-        if missing_files:
-            print("ERROR: Required files missing from test directory:")
-            for f in missing_files:
-                print(f"  - {f}")
-            print(f"\nTo fix:")
-            print(f"  1. Close EMME Desktop if it's open")
-            print(f"  2. Delete the directory manually")
-            print(f"  3. Run without skip_setup=true to create fresh directory")
-            return 1
-    
-    # Use simple logger before RunController can be created
-    class SimpleLogger:
-        def info(self, msg): print(f"INFO: {msg}", flush=True)
-        def debug(self, msg): pass  # Skip debug for simplicity
-        def warn(self, msg): print(f"WARNING: {msg}", flush=True)
-        def warning(self, msg): print(f"WARNING: {msg}", flush=True)
-        def error(self, msg): print(f"ERROR: {msg}", flush=True)
-    
-    simple_logger = SimpleLogger()
-    
-    # Check prerequisites
-    simple_logger.info("Checking prerequisites...")
-    if not check_prerequisites(config, simple_logger):
-        simple_logger.error("Prerequisites not met. Please resolve issues and try again.")
-        return 1
-    simple_logger.info("✓ Prerequisites check passed")
-    
-    # Confirm before running
-    if not config['test'].get('auto_confirm', True):
-        print("\nReady to run test? This will take several minutes. (y/n): ", end='', flush=True)
-        response = input()
-        if response.lower() != 'y':
-            simple_logger.info("Test cancelled by user.")
-            return 0
-    else:
-        simple_logger.info("Auto-confirm enabled, proceeding with test")
-    
-    # Complete setup (EMME copy, demand filtering, etc.)
-    if not config['test'].get('skip_setup', False):
-        simple_logger.info("Completing test directory setup...")
-        setup_test_directory(config, simple_logger)
-        simple_logger.info(f"✓ Test directory setup complete: {test_dir}")
+    # run the setup
+    #TODO: This creates more than is needed; we could instrument to suppress more
+    setup_model.run_setup()
     
     # Now that EMME project exists, initialize RunController to get real tm2py logger
     print("Initializing RunController...", flush=True)

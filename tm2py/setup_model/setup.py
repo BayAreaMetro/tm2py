@@ -6,6 +6,7 @@ import requests
 import zipfile
 import io
 import logging
+import pprint
 import toml
 import re
 import socket
@@ -29,6 +30,27 @@ class SetupConfig:
             config_dict (dict): Assumes keys that end with _DIR point to
             pathlib.Path objects, otherwise assumes values are strings.
         """
+        self.update(config_dict)
+        
+        # Set default values for optional copy flags if not specified
+        if not hasattr(self, 'COPY_NETWORK_INPUTS'):
+            self.COPY_NETWORK_INPUTS = True
+        if not hasattr(self, 'COPY_POPLU_INPUTS'):
+            self.COPY_POPLU_INPUTS = True
+        if not hasattr(self, 'COPY_NONRES_INPUTS'):
+            self.COPY_NONRES_INPUTS = True
+        if not hasattr(self, 'COPY_WARMSTART_DEMAND'):
+            self.COPY_WARMSTART_DEMAND = True
+        if not hasattr(self, 'COPY_WARMSTART_SKIMS'):
+            self.COPY_WARMSTART_SKIMS = True
+        
+    def update(self, config_dict: dict):
+        """ Incorporate configuration dictionary
+
+        Args:
+            config_dict (dict): Assumes keys that end with _DIR point to
+            pathlib.Path objects, otherwise assumes values are strings.
+        """
         MTC_BOX_DIR = pathlib.Path("E:\Box")
         username = os.environ['USERNAME'].upper()
 
@@ -44,19 +66,7 @@ class SetupConfig:
                 setattr(self, key, my_path)
             else:
                 setattr(self, key, value)
-        
-        # Set default values for optional copy flags if not specified
-        if not hasattr(self, 'COPY_NETWORK_INPUTS'):
-            self.COPY_NETWORK_INPUTS = True
-        if not hasattr(self, 'COPY_POPLU_INPUTS'):
-            self.COPY_POPLU_INPUTS = True
-        if not hasattr(self, 'COPY_NONRES_INPUTS'):
-            self.COPY_NONRES_INPUTS = True
-        if not hasattr(self, 'COPY_WARMSTART_DEMAND'):
-            self.COPY_WARMSTART_DEMAND = True
-        if not hasattr(self, 'COPY_WARMSTART_SKIMS'):
-            self.COPY_WARMSTART_SKIMS = True
-        
+
     def validate(self):
         """Validates that all required attributes are present.
 
@@ -147,7 +157,8 @@ class SetupModel:
         """
         # Read setup setup_config
         config_dict = self._load_toml()
-        self.setup_config = SetupConfig(config_dict)
+        # Don't re-initialize in case there's information set already; just incorporate the new
+        self.setup_config.update(config_dict)
         self.setup_config.validate()
 
         # if the directory already exists - error and quit
@@ -421,12 +432,13 @@ class SetupModel:
         """
         copy required model inputs into their respective directories.
         Uses optional flags in setup config to control what gets copied:
-        - COPY_NETWORK_INPUTS (default: True)
-        - COPY_POPLU_INPUTS (default: True)
-        - COPY_NONRES_INPUTS (default: True)
-        - COPY_WARMSTART_DEMAND (default: True)
-        - COPY_WARMSTART_SKIMS (default: True)
+        - COPY_NETWORK_INPUTS
+        - COPY_POPLU_INPUTS
+        - COPY_NONRES_INPUTS
+        - COPY_WARMSTART_DEMAND
+        - COPY_WARMSTART_SKIMS
         """
+        self.logger.info(f"setup_config: {pprint.pformat(vars(self.setup_config))}")
         # Copy hwy and trn networks
         if self.setup_config.COPY_NETWORK_INPUTS:
             self.logger.info("Copying network inputs (hwy, trn)...")
@@ -599,6 +611,7 @@ class SetupModel:
         myfile.write(file_contents)
         myfile.close()
 
+#TODO: Move this into it's own file and copy it so we have syntax highlighting, etc
 _RUN_MODEL_PY_CONTENT = """
 import pathlib
 import random
