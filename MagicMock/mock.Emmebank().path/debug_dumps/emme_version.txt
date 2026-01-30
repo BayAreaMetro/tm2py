@@ -1,6 +1,0 @@
-Python: 3.11.6 (tags/v3.11.6:8b6ee5b, Oct  2 2023, 14:57:12) [MSC v.1935 64 bit (AMD64)]
-EMMEPATH: C:\Program Files\Bentley\OpenPaths\EMME 25.00.01
-PATH entries with EMME:
-  C:\Program Files\Bentley\OpenPaths\EMME 25.00.01\programs
-
-Could not get inro.emme info: No module named 'inro.emme'; 'inro' is not a package
