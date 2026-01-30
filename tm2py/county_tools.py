@@ -1,19 +1,26 @@
-"""Test framework for county-specific highway-only components.
+"""Utilities for county-specific highway testing and data filtering.
 
-This test module provides a framework for testing highway network creation,
-skimming, and assignment for a specific county using fixed trips.
+This module provides utilities for filtering TM2 model data to specific counties
+and setting up county-specific test environments.
 
-The framework:
-1. Filters input data to specified county zones only
-2. Runs only highway network preparation, skimming, and assignment
-3. Validates outputs for the subset of zones
+Key features:
+1. Auto-detect zone ranges (TAZ/MAZ) for counties from crosswalk files
+2. Filter trip tables, MAZ data, and network files to county zones
+3. Set up county-specific test directories with filtered data
 
 Example usage:
+    from tm2py.tools.county_utils import get_county_zones, CountyDataFilter
+    
     # Auto-detect zones for a county
     zones = get_county_zones("San Mateo")
     
-    # Run test
-    pytest tests/test_highway_assign_skim.py::test_county_highway_subset
+    # Create filter and filter trip data
+    filter_helper = CountyDataFilter(
+        taz_range=zones['taz_range'],
+        maz_range=zones['maz_range'],
+        county_name="San Mateo"
+    )
+    filter_helper.filter_trip_table(input_omx, output_omx)
 """
 
 import os
@@ -25,12 +32,6 @@ from typing import List, Tuple, Optional, Dict
 import numpy as np
 import openmatrix as omx
 import pandas as pd
-
-# Pytest only needed for test functions, not for utility classes
-try:
-    import pytest
-except ImportError:
-    pytest = None
 
 from tm2py.controller import RunController
 
@@ -312,196 +313,3 @@ def setup_county_test_data(
     # )
 
     return test_dir
-
-
-# Pytest fixtures and test functions (only defined if pytest is available)
-if pytest is not None:
-    @pytest.fixture
-    def county_test_dir(tmp_path):
-        """Pytest fixture to create temporary test directory for county test."""
-        return tmp_path / "county_test"
-
-
-    @pytest.fixture
-    def county_filter():
-        """Pytest fixture to create data filter for county."""
-        return CountyDataFilter(DEFAULT_TAZ_RANGE, DEFAULT_MAZ_RANGE, "Test County")
-
-
-    @pytest.mark.skipci
-    def test_county_highway_subset(county_test_dir, county_filter):
-        """Test highway network creation, skimming, and assignment for a specific county.
-
-        This test:
-        1. Sets up filtered data for specified county only
-        2. Creates a minimal configuration to run highway components
-        3. Runs prepare_network_highway, highway, and highway_maz components
-        4. Validates outputs
-        """
-        # Set up test data (you'll need to point to your source data)
-        # source_dir = Path("path/to/your/full/model/data")
-        # test_dir = setup_county_test_data(source_dir, county_test_dir, county_filter)
-
-        # For now, create config files
-        config_dir = county_test_dir / "config"
-        config_dir.mkdir(parents=True, exist_ok=True)
-
-        # Create minimal configuration (you'll need to customize this)
-        scenario_config = config_dir / "county_scenario.toml"
-        model_config = config_dir / "county_model.toml"
-
-        # These would need to be created with actual content
-        # See the helper function below for config templates
-
-        # Run controller with only highway components
-        controller = RunController(
-            [str(scenario_config), str(model_config)],
-            run_dir=county_test_dir,
-            run_components=[
-                "prepare_network_highway",
-                "highway",
-                "highway_maz_skim",
-                "highway_maz_assign"
-            ]
-        )
-        
-        controller.run()
-
-        # Validate outputs exist
-        assert (county_test_dir / "skim_matrices" / "highway").exists()
-        
-        # Add more specific validation as needed
-        print(f"County highway test completed successfully")
-
-
-# Helper functions (always available, don't require pytest)
-def create_county_config_files(config_dir: Path, test_dir: Path, county_name: str = "County"):
-    """Create minimal configuration files for county-specific highway test.
-
-    Args:
-        config_dir: Directory where config files will be created
-        test_dir: Test data directory path
-        county_name: Name of the county for display in configs
-    """
-    # Scenario configuration
-    scenario_config = f"""
-# {county_name} Highway Test - Scenario Configuration
-
-[scenario]
-year = 2035
-title = "{county_name} Highway Test"
-description = "Test run for highway components with {county_name} data only"
-
-[run]
-start_iteration = 1
-end_iteration = 1
-start_component = ""
-
-# Run only highway components
-initial_components = [
-    "prepare_network_highway",
-]
-
-global_iteration_components = [
-    "highway",
-]
-
-final_components = [
-    "highway_maz_skim",
-    "highway_maz_assign",
-]
-
-[emme]
-# Adjust these paths as needed
-project_path = "{str(test_dir / 'emme_project')}"
-highway_database_path = "{str(test_dir / 'emme_project' / 'Database_highway')}"
-num_processors = 1
-
-# Time periods (simplified for testing)
-[[time_periods]]
-name = "AM"
-length_hours = 3.0
-
-[[time_periods]]
-name = "PM"
-length_hours = 3.0
-"""
-
-    # Model configuration (minimal)
-    model_config = f"""
-# {county_name} Highway Test - Model Configuration
-
-[highway]
-# Simplified highway assignment configuration
-relative_gap = 0.0001
-max_iterations = 100
-normalize_gap = 2
-
-# Highway classes
-[[highway.classes]]
-name = "DA"
-description = "Drive alone"
-mode = "d"
-value_of_time = 18.93
-operating_cost_per_mile = 0.20
-
-[[highway.classes]]
-name = "SR2"
-description = "Shared ride 2"
-mode = "d"
-value_of_time = 18.93
-operating_cost_per_mile = 0.20
-occupancy = 2.0
-
-[[highway.classes]]
-name = "SR3"
-description = "Shared ride 3+"
-mode = "d"
-value_of_time = 18.93
-operating_cost_per_mile = 0.20
-occupancy = 3.5
-
-[logging]
-display_level = "INFO"
-run_file_level = "INFO"
-log_file_level = "DETAIL"
-"""
-
-    # Write config files
-    (config_dir / "county_scenario.toml").write_text(scenario_config)
-    (config_dir / "county_model.toml").write_text(model_config)
-
-
-if __name__ == "__main__":
-    """
-    Example of how to run this test manually or set up data.
-    """
-    if len(sys.argv) > 1 and sys.argv[1] == "setup":
-        # Setup mode - create config files
-        county_name = sys.argv[2] if len(sys.argv) > 2 else "County"
-        test_dir = Path(f"test_{county_name.lower().replace(' ', '_')}")
-        config_dir = test_dir / "config"
-        config_dir.mkdir(parents=True, exist_ok=True)
-        
-        create_county_config_files(config_dir, test_dir, county_name)
-        print(f"Configuration files created in {config_dir}")
-        
-        # Try to auto-detect zones
-        try:
-            zones = get_county_zones(county_name)
-            print(f"\n✓ Zone ranges auto-detected from crosswalk file")
-        except Exception as e:
-            print(f"\n⚠ Could not auto-detect zones: {e}")
-            print(f"  Update DEFAULT_TAZ_RANGE and DEFAULT_MAZ_RANGE in this file manually")
-        
-        print(f"\nNext steps:")
-        print(f"1. Review and customize the config files in {config_dir}")
-        print(f"2. Add your {county_name} trip data to {test_dir / 'inputs' / 'demand'}")
-        print(f"3. Ensure Emme project is set up in {test_dir / 'emme_project'}")
-        print(f"4. Run: pytest tests/test_highway_assign_skim.py::test_county_highway_subset")
-    else:
-        print("Usage:")
-        print("  Setup config files: python tests/test_highway_assign_skim.py setup [county_name]")
-        print("  Example: python tests/test_highway_assign_skim.py setup 'San Mateo'")
-        print("  Auto-detect zones: python -c 'from test_highway_assign_skim import get_county_zones; print(get_county_zones(\"San Mateo\"))'")
-        print("  Run test: pytest tests/test_highway_assign_skim.py::test_county_highway_subset")
