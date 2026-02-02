@@ -2,6 +2,7 @@
 
 It gets copied into the model run directory as part of the setup_model process.
 """
+import datetime
 import pathlib
 import random
 import subprocess
@@ -49,8 +50,11 @@ def notify_slack(message, extra_info=None):
         print(f"Failed to send Slack notification: {e}")
         print(f"Message was: {message}")
 
-if __name__ == "__main__":
-    import datetime
+def main() -> int:
+    """ Basical run model script method.
+
+    Returns success code (0 if true)
+    """
     run_successful = False
     error_message = ""
     start_time = datetime.datetime.now()
@@ -186,5 +190,8 @@ if __name__ == "__main__":
         
         notify_slack(f"❌ Travel Model Two run failed", failure_info + f"\n\n💭 {motivating_message}")
     
+    return 0 if run_successful else 1
+
+if __name__ == "__main__":
     # Exit with appropriate code
-    sys.exit(0 if run_successful else 1)
+    sys.exit(main())
