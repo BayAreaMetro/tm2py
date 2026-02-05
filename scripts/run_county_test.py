@@ -16,12 +16,16 @@ Usage:
 """
 
 import argparse
+import logging
+import os
 import shutil
 import sys
 import toml
+import tomlkit # preserves comments
 from pathlib import Path
 from datetime import datetime
 import io
+import pprint
 
 import tm2py
 from tm2py.controller import RunController
@@ -33,71 +37,6 @@ if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
-
-def generate_setupmodel_config(test_dir, inputs_source, emme_project_source, logger):
-    """Generate setupmodel_config.toml for the setup component.
-    
-    Args:
-        test_dir: Test output directory path
-        inputs_source: Source directory for input files
-        emme_project_source: Source directory for EMME project
-        logger: Logger instance
-    """
-    logger.info("Generating setupmodel_config.toml for setup component...")
-    
-    # Auto-detect folder structure: some datasets have hwy/ at root, others have inputs/hwy/
-    inputs_source = Path(inputs_source)
-    if (inputs_source / "hwy").exists():
-        # Flat structure - files at root level
-        input_dir = str(inputs_source).replace("\\", "/")
-        logger.debug("Detected flat structure (hwy/ at root)")
-    else:
-        # Nested structure - files in inputs/ subdirectory  
-        input_dir = str(inputs_source / "inputs").replace("\\", "/")
-        logger.debug("Detected nested structure (inputs/hwy/)")
-    
-    # Create setupmodel config content
-    setupmodel_config = {
-        # Point to the inputs directory (contains hwy, trn, landuse, etc.)
-        "INPUT_NETWORK_DIR": input_dir,
-        "INPUT_POPLU_DIR": input_dir,
-        "INPUT_NONRES_DIR": input_dir,
-        
-        # Point directly to the EMME network directory (not its parent)
-        # SetupModel expects INPUT_EMME_NETWORK_DIR to contain the emme_network folder or zipped databases
-        "INPUT_EMME_NETWORK_DIR": str(emme_project_source).replace("\\", "/"),
-        
-        # Required fields - SetupConfig validation requires non-empty values
-        # Point to demand_matrices for warmstart files
-        "WARMSTART_FILES_DIR": str(inputs_source / "demand_matrices").replace("\\", "/"),
-        # Use "none" for release tag - SetupModel won't download if this isn't a valid GitHub tag
-        "TRAVEL_MODEL_TWO_RELEASE_TAG": "none",
-        
-        # EMME template project - use the EMME 25 bare template (matches EMME_25.00.01.zip databases)
-        "EMME_TEMPLATE_PROJECT_DIR": "E:/Box/Modeling and Surveys/Development/Travel Model Two Conversion/Model Inputs/2015-tm22-dev-sprint-04/emme_25_project_template",
-        "CONFIGS_GITHUB_PATH": "",
-    }
-    
-    # Write to test directory
-    config_path = test_dir / "setupmodel_config.toml"
-    with open(config_path, "w") as f:
-        # Write manually formatted TOML (toml.dump doesn't handle Path objects well)
-        f.write("#######################\n")
-        f.write("# Setup Model Configs #\n")
-        f.write("#######################\n")
-        f.write("# Auto-generated for county test\n\n")
-        f.write(f'INPUT_NETWORK_DIR = "{setupmodel_config["INPUT_NETWORK_DIR"]}"\n')
-        f.write(f'INPUT_POPLU_DIR = "{setupmodel_config["INPUT_POPLU_DIR"]}"\n')
-        f.write(f'INPUT_NONRES_DIR = "{setupmodel_config["INPUT_NONRES_DIR"]}"\n')
-        f.write(f'INPUT_EMME_NETWORK_DIR = "{setupmodel_config["INPUT_EMME_NETWORK_DIR"]}"\n')
-        f.write(f'WARMSTART_FILES_DIR = "{setupmodel_config["WARMSTART_FILES_DIR"]}"\n')
-        f.write(f'TRAVEL_MODEL_TWO_RELEASE_TAG = "{setupmodel_config["TRAVEL_MODEL_TWO_RELEASE_TAG"]}"\n')
-        f.write(f'EMME_TEMPLATE_PROJECT_DIR = "{setupmodel_config["EMME_TEMPLATE_PROJECT_DIR"]}"\n')
-        f.write(f'CONFIGS_GITHUB_PATH = ""\n')
-    
-    logger.info(f"✓ Created setupmodel_config.toml")
-    
-    return config_path
 
 
 def check_prerequisites(config, logger):
@@ -204,114 +143,7 @@ def check_prerequisites(config, logger):
     logger.info("✓ All prerequisites met!")
     return True
 
-
-def setup_test_directory(config, logger):
-    """Complete test directory setup (EMME copy, demand filtering, etc).
-    
-    Note: Basic directory structure and config files should already be created.
-    """
-    logger.info("="*70)
-    logger.info("COMPLETING TEST DIRECTORY SETUP")
-    logger.info("="*70)
-    
-    county_name = config['test']['county_name']
-    output_dir = Path(config['paths']['output_dir'])
-    skip_emme_copy = config['test']['skip_emme_copy']
-    thin_network = config['test'].get('thin_network')
-    auto_confirm = config['test'].get('auto_confirm', True)
-    emme_project_source = Path(config['paths']['emme_project_source'])
-    inputs_source = Path(config['paths']['inputs_source'])
-    demand_source = Path(config['paths'].get('demand_source', config['paths']['inputs_source']))
-    test_dir = Path(output_dir)
-    
-    logger.info(f"Test directory: {test_dir.absolute()}")
-    logger.info(f"Inputs source: {inputs_source}")
-    if demand_source != inputs_source:
-        logger.info(f"Demand source: {demand_source}")
-    if thin_network:
-        logger.info(f"Network thinning enabled: @ft <= {thin_network}")
-    
-    # Always do manual setup - we're not using the setup component
-    # (RunController is initialized with run_components=[] to avoid auto-running setup)
-    logger.info("Performing manual EMME and input file setup...")
-    
-    # Copy EMME project
-    source_emme = emme_project_source
-    dest_emme = test_dir / "emme_project"
-    
-    if skip_emme_copy:
-        logger.info("Skipping EMME project copy (skip_emme_copy=true)")
-        if not dest_emme.exists():
-            logger.warning(f"EMME project not found at {dest_emme}")
-            logger.warning(f"You must manually copy it from {source_emme}")
-    elif dest_emme.exists():
-        logger.warning(f"EMME project already exists at {dest_emme}")
-        if auto_confirm:
-            logger.info("Auto-confirm enabled, using existing EMME project")
-        else:
-            response = input("  Do you want to skip copying (reuse existing)? (y/n): ")
-            if response.lower() == 'y':
-                logger.info("Using existing EMME project")
-            else:
-                logger.info("Replacing EMME project (this may take a few minutes)...")
-                shutil.rmtree(dest_emme)
-                shutil.copytree(source_emme, dest_emme)
-                logger.info(f"Copied EMME project to {dest_emme}")
-    else:
-        logger.info("Copying EMME project (this may take a few minutes)...")
-        logger.debug(f"Source: {source_emme}")
-        logger.debug(f"Dest: {dest_emme}")
-        shutil.copytree(source_emme, dest_emme)
-        logger.info(f"Copied EMME project to {dest_emme}")
-    
-    # Copy essential input files from inputs_source
-    # Detect folder structure: some datasets have hwy/ at root, others have inputs/hwy/
-    if (inputs_source / "hwy").exists():
-        hwy_subdir = inputs_source / "hwy"
-        landuse_subdir = inputs_source / "landuse"
-        logger.debug("Detected flat structure (hwy/ at root)")
-    else:
-        hwy_subdir = inputs_source / "inputs" / "hwy"
-        landuse_subdir = inputs_source / "inputs" / "landuse"
-        logger.debug("Detected nested structure (inputs/hwy/)")
-    
-    # Copy tolls
-    logger.debug("Copying tolls.csv...")
-    shutil.copy(
-        hwy_subdir / "tolls.csv",
-        test_dir / "inputs" / "hwy" / "tolls.csv"
-    )
-    logger.debug("Copied tolls.csv")
-    
-    # Copy interchange_nodes (if exists)
-    logger.debug("Copying interchange_nodes.csv...")
-    interchange_file = hwy_subdir / "interchange_nodes.csv"
-    if interchange_file.exists():
-        shutil.copy(
-            interchange_file,
-            test_dir / "inputs" / "hwy" / "interchange_nodes.csv"
-        )
-        logger.debug("Copied interchange_nodes.csv")
-    else:
-        logger.warning("interchange_nodes.csv not found, skipping")
-    
-    # Copy MAZ data
-    logger.debug("Copying MAZ data...")
-    shutil.copy(
-        landuse_subdir / "maz_data_new.csv",
-        test_dir / "inputs" / "landuse" / "maz_data_new.csv"
-    )
-    logger.debug("Copied maz_data_new.csv")
-    
-    # Check if demand filtering is enabled (runs regardless of setup component)
-    scenario_config = toml.load(test_dir / "config" / "scenario.toml")
-    filter_demand = config['test'].get('filter_demand', False)
-    
-    if filter_demand:
-        logger.info("="*70)
-        logger.info("FILTERING DEMAND TO INTRA-COUNTY TRIPS")
-        logger.info("="*70)
-                
+"""
         # Get zone ranges for the county
         logger.info(f"Detecting zone ranges for {county_name} County...")
         logger.debug(f"config['paths']:{config['paths']}")
@@ -430,181 +262,137 @@ def setup_test_directory(config, logger):
     logger.info("="*70)
     return test_dir
 
+"""
 
-def run_test(config, controller):
-    """Run the highway test using the provided controller.
-    
+def update_config_for_test(model_dir: Path, test_county: str, logger):
+    """Updates the model configuration (scenario and model) for the test
+    from the default for the full model run.
+
     Args:
-        config: Test configuration dictionary
-        controller: RunController instance with initialized logger
+        model_dir (Path): Directory for model run test
+        test_county (str): County for testing
     """
-    logger = controller.logger
-    
-    logger.info("="*70)
-    logger.info("ENTERING run_test() FUNCTION")
-    logger.info("="*70)
-    
-    county_name = config['test']['county_name']
-    test_dir = Path(config['paths']['output_dir'])
-    
-    logger.info(f"Test directory: {test_dir}")
-    logger.info(f"County: {county_name}")
-    
-    try:
-        logger.info("Importing CountyHighwayController...")
-        from tests.highway_assign_skim_controller import CountyHighwayController
-        logger.info("  ✓ Import successful")
-        
-        logger.info(f"Initializing county controller for {county_name} County...")
-        
-        # Create CountyHighwayController, passing the existing RunController
-        county_controller = CountyHighwayController(
-            scenario_config=str(test_dir / "config" / "scenario.toml"),
-            model_config=str(test_dir / "config" / "model.toml"),
-            run_dir=str(test_dir),
-            county_name=county_name,
-            include_maz_components=False,  # Skip MAZ for initial test
-            include_network_summary=False  # Skip network summary for speed
-        )
-        
-        logger.info("✓ County controller initialized successfully")
-        logger.info("="*70)
-        logger.info("RUNNING HIGHWAY TEST")
-        logger.info("="*70)
-        logger.info(f"Test directory: {test_dir}")
-        logger.info(f"County: {county_name}")
-        logger.info(f"  Scenario config: {test_dir / 'config' / 'scenario.toml'}")
-        logger.info(f"  Model config: {test_dir / 'config' / 'model.toml'}")
-        logger.info(f"  Run directory: {test_dir}")
-        logger.info("Starting highway components...")
-        logger.info("Components to run:")
-        logger.info("  1. prepare_network_highway - Prepare network attributes")
-        logger.info("  2. highway - Assignment and skimming")
-        
-        logger.info("Executing county_controller.run_highway_only()...")
-        logger.info("This may take 5-15 minutes depending on network size...")
-        logger.info("The following steps will occur:")
-        logger.info("  - Loading network from EMME")
-        logger.info("  - Setting network attributes (@useclass, tolls, etc.)")
-        logger.info("  - Loading demand matrices")
-        logger.info("  - Running highway assignment (iterative convergence)")
-        logger.info("  - Computing skims")
-        logger.info("  - Exporting loaded network")
-        logger.info("")
-        logger.info("Watch the EMME Modeller window for detailed progress...")
-        logger.info("")
-        
-        county_controller.run_highway_only()
-        
-        logger.info("")
-        logger.info("Controller execution completed!")
-        
-        # Print network statistics
-        logger.info("")
-        county_controller.print_network_statistics(logger)
-        
-        logger.info("")
-        logger.info("="*70)
-        logger.info("TEST COMPLETED SUCCESSFULLY!")
-        logger.info("="*70)
-        
-        logger.info("Validating results...")
-        success = county_controller.validate_results()
-        if success:
-            logger.info("Results validation passed!")
-        else:
-            logger.warning("Results validation had warnings - check logs")
-        
-        return True
-        
-    except Exception as e:
-        logger.error("="*70)
-        logger.error("TEST FAILED WITH EXCEPTION")
-        logger.error("="*70)
-        logger.error(f"Error type: {type(e).__name__}")
-        logger.error(f"Error message: {str(e)}")
-        logger.error("Full traceback:")
-        
-        import traceback
-        error_traceback = traceback.format_exc()
-        logger.error(error_traceback)
-        
-        # Also write to file
-        error_file = test_dir / "logs" / "error_traceback.txt"
-        error_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(error_file, "w") as f:
-            f.write(f"Error Type: {type(e).__name__}\n")
-            f.write(f"Error: {e}\n\n")
-            f.write("Full Traceback:\n")
-            f.write(error_traceback)
-        
-        logger.error(f"Full traceback saved to: {error_file}")
-        return False
+    # The model run is setup, but it's setup for a complete run
+    # Adjust for county-specific assignment test
 
+    # replace the scenario_config.toml one for the county test
+    scenario_config_file = model_dir.resolve() / "scenario_config.toml"
+    with open(scenario_config_file, "r", encoding="utf-8") as f:
+        scenario_config_content = f.read()
+    scenario_config = tomlkit.parse(scenario_config_content)
+    
+    logger.debug(f"scenario_config:\n{scenario_config}")
+
+    # rename scenario
+    scenario_config['scenario']['name'] = f"{test_county} County Highway Test"
+
+    # Run a subset of components
+    scenario_config['run']['initial_components'] = [
+        "create_tod_scenarios",
+        "prepare_network_highway",
+        "highway",
+        "highway_maz_skim",
+    ]
+    scenario_config['run']['global_iteration_components'] = [
+        "highway_maz_assign",
+        "highway"
+    ] 
+    scenario_config['run']['final_components'] = ["network_summary"]
+
+    # Only run for 1 interation
+    scenario_config['run']['end_iteration'] = 1
+
+    # Disable slack
+    scenario_config['slack_notifications']['enabled'] = False
+
+    # TODO: What are warmstart skims used for?
+    # ohhh.... I'm guessing it's to make the initial skims rather than generating them
+    scenario_config['warmstart']['use_warmstart_skim'] = False
+    scenario_config['warmstart']['use_warmstart_demand'] = True
+
+    logger.debug(f"scenario_config:\n{scenario_config}")    
+
+    # write it
+    with open(scenario_config_file, "w", encoding="utf-8") as f:
+        tomlkit.dump(scenario_config, f)
+    logger.info(f"Wrote updated scenario config for county test to {scenario_config_file}")
+
+    # model config - reduce max iterations for highway
+    model_config_file = model_dir.resolve() / "model_config.toml"
+    with open(model_config_file, "r", encoding="utf-8") as f:
+        model_config_content = f.read()
+    model_config = tomlkit.parse(model_config_content)
+
+    # adjust down to 3
+    model_config['highway']['max_iterations'] = 3
+    
+    # write it
+    with open(model_config_file, "w", encoding="utf-8") as f:
+        tomlkit.dump(model_config, f)
+    logger.info(f"Wrote updated model config for county test to {model_config_file}")
 
 def main():
     parser = argparse.ArgumentParser(description=USAGE, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("setup_config_toml", type=Path, help="The setup_config.toml to use. Can be absolute or relative.")
     parser.add_argument("model_dir", type=Path, help="The model directory. Can be absolute or relative.")
     parser.add_argument("test_county", type=str, help="The county to test")
+    parser.add_argument("--overwrite", action='store_true', help="Overwrite directory if it exists")
+
     args = parser.parse_args()
     
     print("Running tm2py.setup_model.setup.SetupModel with")
     print(f"setup_config_toml: {args.setup_config_toml.resolve()}")
     print(f"        model_dir: {args.model_dir.resolve()}")
+    print(f"      test_county: {args.test_county}")
+    print(f"        overwrite: {args.overwrite}")
     print("")
-    print(f"See log file: {args.model_dir.resolve() / 'setup.log'}")
+    print(f"See log file: {args.model_dir.resolve() / 'setup.log'}", flush=True)
     
+    if args.overwrite and args.model_dir.resolve().exists():
+        print(f"overwrite={args.overwrite} and {args.model_dir.resolve()} exists: DELETING", flush=True)
+        shutil.rmtree(args.model_dir.resolve())
     
     setup_model = tm2py.setup_model.setup.SetupModel(config_file=args.setup_config_toml, model_dir=args.model_dir)
     # since this is a highway assignment/skim test, we don't need all the inputs
-    setup_model.setup_config.COPY_POPLU_INPUTS = False
-    setup_model.setup_config.COPY_NONRES_INPUTS = False
+    setup_model.setup_config.COPY_POPLU_INPUTS = True
+    # I don't think this should be required but for now, it is
+    # because mazdata_withDensity.csv is required for CreateTODScenarios.run()
+    setup_model.setup_config.COPY_NONRES_INPUTS = True # demand is needed for assignment
     setup_model.setup_config.COPY_WARMSTART_DEMAND = True # hmm we might as well use this tho...
     setup_model.setup_config.COPY_WARMSTART_SKIMS = False
-    print(vars(setup_model.setup_config), flush=True)
     
     # run the setup
     #TODO: This creates more than is needed; we could instrument to suppress more
     setup_model.run_setup()
-    
-    # Now that EMME project exists, initialize RunController to get real tm2py logger
-    print("Initializing RunController...", flush=True)
-    controller = RunController(
-        config_file=[
-            test_dir / "config" / "scenario.toml",
-            test_dir / "config" / "model.toml"
-        ],
-        run_dir=test_dir,
-        run_components=[]  # Don't run any components yet
-    )
-    logger = controller.logger
-    logger.info("="*70)
-    logger.info("COUNTY TEST - RunController initialized")
-    logger.info("="*70)
-    
-    # Run test using existing controller
-    logger.info("="*70)
-    logger.info("STARTING TEST EXECUTION")
-    logger.info("="*70)
-    success = run_test(config, controller)
-    
-    if success:
-        logger.info("="*70)
-        logger.info("TEST COMPLETED SUCCESSFULLY")
-        logger.info("="*70)
-        logger.info(f"Test artifacts location: {test_dir.absolute()}")
-        logger.info(f"  - Logs: {test_dir / 'logs'}")
-        logger.info(f"  - Loaded network: {test_dir / 'loaded_highway'}")
-        logger.info(f"  - Skims: {test_dir / 'skim_matrices' / 'highway'}")
-        return 0
-    else:
-        logger.error("="*70)
-        logger.error("TEST FAILED")
-        logger.error("="*70)
-        logger.error(f"Check logs in: {test_dir / 'logs'}")
-        return 1
 
+    # The model run is setup, but it's setup for a complete run
+    # Adjust for county-specific assignment test
+    update_config_for_test(args.model_dir, args.test_county, setup_model.logger)
+
+    # We're done setting up. Shut down logging as RunModel will do its own logging
+    setup_model.logger.info(f"Setup complete; switching to RunModel.py in {args.model_dir}")
+    # do something with logging here?
+    # logging.shutdown()
+
+    initial_cwd = Path.cwd()
+    # Let's try to run it
+    os.chdir(args.model_dir)
+    print(f"Switched to {Path.cwd()}")
+    # add that path to sysdir for import
+    sys.path.append(str(args.model_dir.resolve()))
+
+    # Fingers crossed
+    retcode = 0
+    try:
+        import RunModel
+        RunModel.main()
+    except Exception as e:
+        print(f"Exception occurred: {e}")
+        retcode = 1
+    
+    # go back to initial cwd and return the return code
+    os.chdir(initial_cwd)
+    return retcode
 
 if __name__ == "__main__":
     sys.exit(main())
