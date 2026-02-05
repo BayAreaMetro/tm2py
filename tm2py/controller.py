@@ -137,7 +137,7 @@ class RunController:
 
         # create logger before creating components so we can log if issues arise in the component creation
         self.logger = Logger(self)
-        print(f"initialize_log({self.runtime_log_file, self.runtime_log_headers, self.runtime_log_col_width})")
+        print(f"initialize_log({self.runtime_log_file, self.runtime_log_headers, self.runtime_log_col_width})", flush=True)
         initialize_log(
             self.runtime_log_file, self.runtime_log_headers, self.runtime_log_col_width
         )
@@ -180,9 +180,9 @@ class RunController:
 
         Implemented here for easy access for all components.
 
-        Returns: list of uppercased string names of time periods
+        Returns: list of string names of time periods
         """
-        return [time.name.upper() for time in self.config.time_periods]
+        return [time.name for time in self.config.time_periods]
 
     @property
     def time_period_durations(self) -> dict:

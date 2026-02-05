@@ -129,6 +129,9 @@ class HighwayAssignment(Component):
     @LogStartEnd("Highway assignment and skims", level="STATUS")
     def run(self):
         """Run highway assignment."""
+        self.logger.debug(f"{self.controller.iteration=}")
+        self.logger.debug(f"{self.controller.config.warmstart.warmstart=}")
+        self.logger.debug(f"{self.controller.config.warmstart.use_warmstart_demand=}")
         demand = PrepareHighwayDemand(self.controller)
         if self.controller.iteration == 0:
             self.highway_emmebank.create_zero_matrix()
@@ -227,9 +230,10 @@ class HighwayAssignment(Component):
         )
         # Must match signature of manager.BaseAssignmentLauncher.add_run
         #       time, scenario, assign_spec, demand_matrices, skim_matrices, omx_file_path
+        self.logger.debug(f"highway_assign._get_assign_params {time=}")
         params = dict(
             time=time,
-            scenario_id=self.highway_emmebank.scenario(time).id,
+            scenario_id=self.highway_emmebank.scenario(time.lower()).id,
             assign_spec=builder.assignment_spec,
             demand_matrices=builder.demand_matrices,
             skim_matrices=builder.skim_matrices,
@@ -353,6 +357,7 @@ class AssignmentRunner:
                 self._copy_maz_flow()
             else:
                 self._reset_background_traffic()
+            self.logger.debug(f"AssignmentRunner.run() with {self.demand_matrix_ids}")
             for matrix_name in self.demand_matrix_ids:
                 if not self.emmebank.matrix(matrix_name):
                     raise Exception(f"demand matrix {matrix_name} does not exist")

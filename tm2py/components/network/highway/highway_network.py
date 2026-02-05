@@ -342,7 +342,7 @@ class PrepareNetwork(Component):
             if row.get("critical_speed") is not None:
                 critical_speed_map[row["capclass"]] = row.get("critical_speed")
         tp_mapping = {
-            tp.name.upper(): tp.highway_capacity_factor
+            tp.name: tp.highway_capacity_factor
             for tp in self.controller.config.time_periods
         }
         period_capacity_factor = tp_mapping[time_period]
