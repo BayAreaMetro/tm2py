@@ -41,15 +41,12 @@ class CreateTODScenarios(Component):
         # TODO
 
     def run(self):
-        print("DEBUG: Entered CreateTODScenarios.run()")
         # project_path = self.get_abs_path(self.controller.config.emme.project_path)
         # self._emme_manager = self.controller.emme_manager
         # emme_app = self._emme_manager.project(project_path)
         # self._emme_manager.init_modeller(emme_app)
         with self._setup():
-            print("DEBUG: In _setup context of CreateTODScenarios.run()")
             self._create_highway_scenarios()
-            print("DEBUG: Called _create_highway_scenarios() in CreateTODScenarios.run()")
             
             # Skip transit scenarios if highway_only flag is set or no transit component in run
             skip_transit = False
@@ -66,11 +63,10 @@ class CreateTODScenarios(Component):
                 skip_transit = not has_transit
             
             if skip_transit:
-                print("DEBUG: Skipping _create_transit_scenarios() - highway-only mode")
+                self.controller.debug("Skipping _create_transit_scenarios() - highway-only mode")
                 self.controller.logger.log("Skipping transit scenario creation (highway-only mode)", level="INFO")
             else:
                 self._create_transit_scenarios()
-                print("DEBUG: Called _create_transit_scenarios() in CreateTODScenarios.run()")
 
     @_context
     def _setup(self):
@@ -644,8 +640,8 @@ class CreateTODScenarios(Component):
             scenario = emmebank.copy_scenario(ref_scenario, period.emme_scenario_id)
             scenario.title = f"{period.name} {ref_scenario.title}"[:60]
             self.controller.logger.log(
-                f"DEBUG: Created period scenario {period.emme_scenario_id} for {period.name}",
-                level="INFO"
+                f"Created period scenario {period.emme_scenario_id} for {period.name}",
+                level="DEBUG"
             )
             # in per-period scenario create attributes without period suffix, copy values
             # for this period and delete all other period attributes
@@ -676,8 +672,8 @@ class CreateTODScenarios(Component):
             
             if attrs_copied:
                 self.controller.logger.log(
-                    f"DEBUG: Copied {len(attrs_copied)} period attributes: {attrs_copied[:5]}...",
-                    level="INFO"
+                    f"Copied {len(attrs_copied)} period attributes: {attrs_copied[:5]}...",
+                    level="DEBUG"
                 )
 
     def _set_area_type(self, network):
