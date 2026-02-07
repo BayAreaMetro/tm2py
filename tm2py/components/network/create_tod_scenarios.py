@@ -239,28 +239,28 @@ class CreateTODScenarios(Component):
         
         # Copy standard lanes to @lanes if @lanes is empty (for legacy networks)
         # get_attribute_values returns [id_array, value_array], so we need the second element
-        self.controller.logger.log("DEBUG: Getting @lanes attribute values...", level="INFO")
+        self.controller.logger.log("Getting @lanes attribute values...", level="DEBUG")
         try:
             lanes_result = ref_scenario.get_attribute_values("LINK", ["@lanes"])
-            self.controller.logger.log(f"DEBUG: lanes_result type: {type(lanes_result)}, len: {len(lanes_result) if hasattr(lanes_result, '__len__') else 'N/A'}", level="INFO")
+            self.controller.logger.log(f"lanes_result type: {type(lanes_result)}, len: {len(lanes_result) if hasattr(lanes_result, '__len__') else 'N/A'}", level="DEBUG")
             
             if isinstance(lanes_result, list) and len(lanes_result) > 1:
                 lanes_values = lanes_result[1]
-                self.controller.logger.log(f"DEBUG: lanes_values type: {type(lanes_values)}, len: {len(lanes_values) if hasattr(lanes_values, '__len__') else 'N/A'}", level="INFO")
+                self.controller.logger.log(f"lanes_values type: {type(lanes_values)}, len: {len(lanes_values) if hasattr(lanes_values, '__len__') else 'N/A'}", level="DEBUG")
             else:
                 lanes_values = lanes_result
-                self.controller.logger.log(f"DEBUG: lanes_result not a list, using directly", level="INFO")
+                self.controller.logger.log(f"lanes_result not a list, using directly", level="DEBUG")
             
             # Check if all lane values are 0 (need to copy from standard 'num_lanes' attribute)
             if hasattr(lanes_values, '__iter__'):
                 # Check first few values
                 sample = list(lanes_values[:10]) if hasattr(lanes_values, '__getitem__') else list(lanes_values)[:10]
-                self.controller.logger.log(f"DEBUG: First 10 lane values: {sample}", level="INFO")
+                self.controller.logger.log(f"First 10 lane values: {sample}", level="DEBUG")
                 all_zero = all(v == 0 for v in lanes_values)
             else:
                 all_zero = lanes_values == 0
             
-            self.controller.logger.log(f"DEBUG: all_zero = {all_zero}", level="INFO")
+            self.controller.logger.log(f"all_zero = {all_zero}", level="DEBUG")
             
             if all_zero:
                 self.controller.logger.log(
@@ -270,12 +270,12 @@ class CreateTODScenarios(Component):
                 # Check if num_lanes exists on first link
                 first_link = next(iter(network.links()), None)
                 if first_link:
-                    self.controller.logger.log(f"DEBUG: First link attributes: {list(first_link.network.attributes('LINK'))[:20]}", level="INFO")
-                    self.controller.logger.log(f"DEBUG: First link num_lanes = {first_link.num_lanes}", level="INFO")
+                    self.controller.logger.log(f"First link attributes: {list(first_link.network.attributes('LINK'))[:20]}", level="DEBUG")
+                    self.controller.logger.log(f"First link num_lanes = {first_link.num_lanes}", level="DEBUG")
                 
                 for link in network.links():
                     link["@lanes"] = link.num_lanes
-                self.controller.logger.log("DEBUG: Finished copying num_lanes to @lanes", level="INFO")
+                self.controller.logger.log("Finished copying num_lanes to @lanes", level="DEBUG")
         except Exception as e:
             self.controller.logger.log(f"ERROR in lanes copying: {type(e).__name__}: {e}", level="ERROR")
             import traceback
