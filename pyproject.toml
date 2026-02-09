@@ -22,6 +22,8 @@ dependencies = [
     "geopandas",
     "openmatrix",
     "pandera",
+    "pyarrow",
+    "openpyxl",
     # these would be in an EMME environment
     "pyproj",
     "shapely"
