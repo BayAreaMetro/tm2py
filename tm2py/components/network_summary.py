@@ -174,15 +174,12 @@ class NetworkSummary(Component):
             True if successful, False otherwise
         """
         try:
-            self.logger.info("=" * 60)
-            self.logger.info("STARTING NETWORK SUMMARY COMPONENT")
-            self.logger.info("=" * 60)
-            self.logger.info(f"Output directory: {self.output_dir}")
-            self.logger.info(f"Time periods configured: {self.time_period_names}")
-            self.logger.info(f"Time period mapping: {self._tp_mapping}")
+            self.logger.debug(f"Output directory: {self.output_dir}")
+            self.logger.debug(f"Time periods configured: {self.time_period_names}")
+            self.logger.debug(f"Time period mapping: {self._tp_mapping}")
             
             # Test database connections first
-            self.logger.info("Testing database connections...")
+            self.logger.debug("Testing database connections...")
             
             # Test database connections
             # Test highway database connection
@@ -190,7 +187,7 @@ class NetworkSummary(Component):
             for period in self.time_period_names:
                 try:
                     highway_test_scenario = self.highway_emmebank.scenario(period)
-                    self.logger.info(f"SUCCESS: Highway database connected - scenario {period} accessible")
+                    self.logger.debug(f"SUCCESS: Highway database connected - scenario {period} accessible")
                     break
                 except:
                     continue
@@ -204,7 +201,7 @@ class NetworkSummary(Component):
             for period in self.time_period_names:
                 try:
                     transit_test_scenario = self.transit_emmebank.scenario(period)
-                    self.logger.info(f"SUCCESS: Transit database connected - scenario {period} accessible")
+                    self.logger.debug(f"SUCCESS: Transit database connected - scenario {period} accessible")
                     break
                 except:
                     continue
@@ -214,9 +211,6 @@ class NetworkSummary(Component):
                 
             
             # Generate highway analysis
-            self.logger.info("-" * 40)
-            self.logger.info("STARTING HIGHWAY NETWORK ANALYSIS")
-            self.logger.info("-" * 40)
             if self._analyze_highway_network():
                 self.logger.info("SUCCESS: Highway analysis completed successfully")
             else:
@@ -224,9 +218,6 @@ class NetworkSummary(Component):
                 return False
             
             # Generate transit analysis
-            self.logger.info("-" * 40)
-            self.logger.info("STARTING TRANSIT NETWORK ANALYSIS")
-            self.logger.info("-" * 40)
             if self._analyze_transit_network():
                 self.logger.info("SUCCESS: Transit analysis completed successfully")
             else:
@@ -234,10 +225,6 @@ class NetworkSummary(Component):
             
             # Generate final validation summary
             self._generate_final_validation_summary()
-            
-            self.logger.info("=" * 60)
-            self.logger.info("NETWORK SUMMARY COMPONENT COMPLETED SUCCESSFULLY")
-            self.logger.info("=" * 60)
             return True
             
         except Exception as e:

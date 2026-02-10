@@ -109,7 +109,7 @@ class EmmeDemand:
                 raise Exception(f"error averaging demand: matrix {name} does not exist")
             prev_demand = matrix.get_numpy_data(self._scenario.id)
             demand = prev_demand + (1.0 / msa_iteration) * (demand - prev_demand)
-        self.logger.log(f"{name} sum: {demand.sum()}", level="DEBUG")
+        self.logger.log(f"EmmeDemand._save_demand() {self._emmebank.emmebank=} for matrix {name} sum: {demand.sum()}", level="DEBUG")
         matrix.set_numpy_data(demand, self._scenario.id)
 
 
@@ -168,7 +168,6 @@ class PrepareHighwayDemand(EmmeDemand):
             self._emmebank = self._highway_emmebank
         return self._highway_emmebank
 
-    # @LogStartEnd("prepare highway demand")
     def run(self):
         """Open combined demand OMX files from demand models and prepare for assignment."""
 
@@ -177,6 +176,7 @@ class PrepareHighwayDemand(EmmeDemand):
             for klass in self.config.classes:
                 self._prepare_demand(klass.name, klass.description, klass.demand, time)
 
+    @LogStartEnd("Preparing highway demand from OMX")
     def _prepare_demand(
         self,
         name: str,
@@ -199,23 +199,87 @@ class PrepareHighwayDemand(EmmeDemand):
         """
         self._scenario = self.highway_emmebank.scenario(time_period)
         num_zones = len(self._scenario.zone_numbers)
+        self.logger.debug(f"{self._scenario.zone_numbers=}", indent=True)
         demand = self._read_demand(demand_config[0], time_period, num_zones)
         for file_config in demand_config[1:]:
             demand = demand + self._read_demand(file_config, time_period, num_zones)
         demand_name = f"{time_period}_{name}"
         description = f"{time_period} {description} demand"
+
+        # optionally filter demand
+        demand = self._filter_demand(demand)
         self._save_demand(
             demand_name, demand, description, apply_msa=self.config.apply_msa_demand
         )
 
-    def _read_demand(self, file_config, time_period, num_zones):
-        # Load demand from cross-referenced source file,
-        # the named demand model component under the key highway_demand_file
+    def _filter_demand(
+        self,
+        demand: NumpyArray,
+    ) -> NumpyArray:
+        """ Filters demand if scenario_config specifies it
+        """
+        self.logger.debug(f"scenario config: {self.controller.config.scenario}")
+        # No filtering needed
+        if not self.controller.config.scenario.test_filter:
+            return demand
+
+        # filter demand to within county
+        if "county" in self.controller.config.scenario.test_filter.keys():
+            filter_county = self.controller.config.scenario.test_filter["county"]
+            self.logger.debug(f"Filtering demand to {filter_county}", indent=True)
+            self.logger.debug(f"{demand.shape=} {demand.size=}", indent=True)
+
+            maz_data = self.controller.maz_data
+            county_mask = (
+                maz_data["CountyName"].astype(str).str.casefold()
+                == str(filter_county).casefold()
+            )
+            county_tazs = maz_data.loc[county_mask, "TAZ"].dropna().unique()
+
+            if not len(county_tazs):
+                self.logger.warning(
+                    f"No TAZ records found for county '{filter_county}'. Skipping demand filter."
+                )
+                return demand
+            self.logger.debug(f"county_tazs={county_tazs.min()}-{county_tazs.max()}", indent=True)
+
+            zone_numbers = np.array(self._scenario.zone_numbers, dtype=int)
+            in_county = np.isin(zone_numbers, county_tazs)
+
+            if not in_county.any():
+                self.logger.warning(
+                    "Scenario zone list does not intersect requested county. Skipping demand filter."
+                )
+                return demand
+
+            mask = np.outer(in_county, in_county)
+            demand = np.where(mask, demand, 0.0)
+            retained_pairs = int(mask.sum())
+            self.logger.debug(
+                f"Filtered to {in_county.sum()} zones and {retained_pairs} OD cells",
+                indent=True,
+            )
+            return demand
+
+    def _read_demand(
+        self,
+        file_config: Dict[str, Union[str, float]],
+        time_period: str,
+        num_zones: int,
+    ) -> NumpyArray:
+        """ Load demand from cross-referenced source file,
+            the named demand model component under the key highway_demand_file
+        """
         source = file_config["source"]
         name = file_config["name"].format(period=time_period.upper())
         path = self.controller.get_abs_path(
             self.controller.config[source].highway_demand_file
         ).__str__()
+        self.logger.debug(
+            f"Reading demand from "
+            f"{ path.format(period=time_period, iter=self.controller.iteration)}"
+            f" period={time_period} iter={self.controller.iteration}", indent=True
+        )
         return self._read(
             path.format(period=time_period, iter=self.controller.iteration),
             name,
@@ -671,7 +735,25 @@ class PrepareTransitDemand(EmmeDemand):
         apply_msa = self.config.apply_msa_demand
         self._save_demand(demand_name, demand, description, apply_msa=apply_msa)
 
-    def _read_demand(self, file_config, time_period, skim_set, num_zones):
+    def _read_demand(
+        self,
+        file_config: Dict[str, Union[str, float]],
+        time_period: str,
+        skim_set: str,
+        num_zones: int,
+    ) -> NumpyArray:
+        """Read transit demand matrix metadata and fetch the OMX array.
+
+        Args:
+            file_config: Mapping that identifies the demand source component and matrix name.
+            time_period: Time-of-day key used to select the correct OMX file.
+            skim_set: Transit skim set identifier; retained for compatibility even though
+                the value is not consumed inside this method.
+            num_zones: Expected square size of the demand matrix; used for padding/truncation.
+
+        Returns:
+            NumpyArray: Demand matrix resized to the configured zone count.
+        """
         # Load demand from cross-referenced source file,
         # the named demand model component under the key highway_demand_file
         if (

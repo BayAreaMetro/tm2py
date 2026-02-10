@@ -3,6 +3,8 @@
 
 import heapq as _heapq
 import os
+import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Set
 
 import pandas as pd
@@ -29,7 +31,6 @@ class PostProcessor(Component):
         Args:
             controller (RunController): Reference to run controller object.
         """
-        print("Starting initialization...")
         super().__init__(controller)
         self.config = self.controller.config.post_processor
         self._emme_manager = self.controller.emme_manager
@@ -42,9 +43,10 @@ class PostProcessor(Component):
 
 
         self._tp_mapping = {
-            tp.name.upper(): tp.emme_scenario_id
+            tp.name: tp.emme_scenario_id
             for tp in self.controller.config.time_periods
         }
+        self.controller.logger.debug(f"_tp_mapping={self._tp_mapping}", indent=True)
 
         # TODO: Convert this to the enums inputs once that is pushed
         self._mode_label ={
@@ -95,37 +97,96 @@ class PostProcessor(Component):
             f"Files expected: {base_filename}_1.csv through {base_filename}_{max_iter}.csv"
         )
 
-    @LogStartEnd("Exporting model networks")
+    @LogStartEnd("Running Post Processor")
     def run(self):
-        """Export model networks."""
+        """Run the post-processor.
 
-        # print("Reading trip and tour data")
-        # # Find the highest available iteration for each file
-        indiv_trip_file = self._find_highest_iteration('indivTripData')
-        joint_trip_file = self._find_highest_iteration('jointTripData')
-        indiv_tour_file = self._find_highest_iteration('indivTourData')
-        joint_tour_file = self._find_highest_iteration('jointTourData')
-        
+        Attempts to refresh CTRAMP household trip/tour outputs (skims + parquet),
+        always exports the network-based products (shapefiles, boardings), and
+        finally prepares the enriched household/person/tour/trip datasets.
+        Household output regeneration failures are logged and do not stop
+        network exports or downstream aggregations.
+        """
+
+        if not self._update_household_outputs():
+            self.logger.warn(
+                "Household trip and tour outputs were not updated because required files were missing."
+            )
+
+        self.export_loaded_networks()
+
+        self.prepare_output_data()
+
+    @LogStartEnd("Exporting loaded networks")
+    def export_loaded_networks(self):
+        """Export shapefiles and boarding summaries for each time period."""
+        for period in self.controller.time_period_names:
+            with self.controller.emme_manager.logbook_trace(
+                f"exporting networks for {period}"
+            ):
+                self.logger.log(f"Processing for {period}")
+                transit_scenario = self.transit_emmebank.scenario(period)
+                highway_scenario = self.highway_emmebank.scenario(period)
+
+                if self.config.export_transit_network_shapefile:
+                    self._export_transit_network_as_shapefile(transit_scenario, period)
+
+                if self.config.export_highway_network_shapefile:
+                    self._export_highway_network_as_shapefile(highway_scenario, period)
+
+                if period.upper() == "AM":
+                    if self.config.export_boardings_by_segment:
+                        self._export_boardings_by_segment(transit_scenario, period)
+                    if self.config.export_boardings_by_segment_geofile:
+                        self._export_boardings_by_segment_geofile(transit_scenario, period)
+
+    @LogStartEnd("Updating household outputs")
+    def _update_household_outputs(self) -> bool:
+        """Refresh indiv/joint trip and tour outputs.
+
+        Looks up the latest CTRAMP CSVs for individual/joint trip and tour data,
+        attaches highway, transit, and non-motorized skims, and writes the enriched
+        Parquet versions used by downstream post-processing steps. Returns False
+        (after logging a warning) when any of the expected source files are
+        missing so the caller can continue gracefully.
+
+        # TODO: This is similar to prepare_output_data(); are they both needed?
+        """
+        try:
+            indiv_trip_file = self._find_highest_iteration('indivTripData')
+            joint_trip_file = self._find_highest_iteration('jointTripData')
+            indiv_tour_file = self._find_highest_iteration('indivTourData')
+            joint_tour_file = self._find_highest_iteration('jointTourData')
+        except FileNotFoundError as err:
+            self.logger.warn(str(err))
+            return False
+
         # Extract iteration number from the file name (e.g., 'indivTripData_3.csv' -> '3')
         self._iteration_num = indiv_trip_file.split('_')[-1].split('.')[0]
 
-        self.logger.log(f"Reading indiv and joint trip files from {indiv_trip_file} and {joint_trip_file}")
+        try:
+            self.logger.log(
+                f"Reading indiv and joint trip files from {indiv_trip_file} and {joint_trip_file}"
+            )
+            indiv_trip = pd.read_csv(self.get_abs_path(indiv_trip_file))
+            joint_trip = pd.read_csv(self.get_abs_path(joint_trip_file))
 
-        indiv_trip = pd.read_csv(self.get_abs_path(indiv_trip_file))
-        joint_trip = pd.read_csv(self.get_abs_path(joint_trip_file))
-        
-        self.logger.log(f"Reading indiv and joint trip files from {indiv_tour_file} and {joint_tour_file}")
-        indiv_tour = pd.read_csv(self.get_abs_path(indiv_tour_file))
-        joint_tour = pd.read_csv(self.get_abs_path(joint_tour_file))
-        
+            self.logger.log(
+                f"Reading indiv and joint trip files from {indiv_tour_file} and {joint_tour_file}"
+            )
+            indiv_tour = pd.read_csv(self.get_abs_path(indiv_tour_file))
+            joint_tour = pd.read_csv(self.get_abs_path(joint_tour_file))
+        except FileNotFoundError as err:
+            self.logger.warn(str(err))
+            return False
 
-        ## Prepare trip and tour dataframes by adding skim columns and time period (from start duration) """
+        # Prepare trip and tour dataframes by adding skim columns and time period (from start duration)
         indiv_trip = self._add_trip_skim_columns(indiv_trip)
         joint_trip = self._add_trip_skim_columns(joint_trip)
         indiv_tour = self._add_tour_skim_columns(indiv_tour)
         joint_tour = self._add_tour_skim_columns(joint_tour)
 
-        ## Attach nonmotorized skims
+        # Attach non-motorized skims
         indiv_trip = self._attach_nonmotorized_skims_to_trip_tour(indiv_trip, 'trip')
         joint_trip = self._attach_nonmotorized_skims_to_trip_tour(joint_trip, 'trip')
 
@@ -133,39 +194,21 @@ class PostProcessor(Component):
         joint_tour = self._attach_nonmotorized_skims_to_trip_tour(joint_tour, 'tour')
 
         for period in self.controller.time_period_names:
-            with self.controller.emme_manager.logbook_trace(
-                f"exporting networks for {period}"
-                ):
-                self.logger.log(f"Processing for {period}")
-                transit_scenario = self.transit_emmebank.scenario(period)
-                highway_scenario = self.highway_emmebank.scenario(period)
-                
-                indiv_trip = self._attach_highway_skims_to_trip(highway_scenario, period, indiv_trip)
-                joint_trip = self._attach_highway_skims_to_trip(highway_scenario, period, joint_trip)
+            transit_scenario = self.transit_emmebank.scenario(period)
+            highway_scenario = self.highway_emmebank.scenario(period)
 
-                indiv_tour = self._attach_highway_skims_to_tour(highway_scenario, period, indiv_tour)
-                joint_tour = self._attach_highway_skims_to_tour(highway_scenario, period, joint_tour)
+            indiv_trip = self._attach_highway_skims_to_trip(highway_scenario, period, indiv_trip)
+            joint_trip = self._attach_highway_skims_to_trip(highway_scenario, period, joint_trip)
 
-                indiv_trip = self._attach_transit_skims_to_trip(transit_scenario, period, indiv_trip)
-                joint_trip = self._attach_transit_skims_to_trip(transit_scenario, period, joint_trip)
-                
-                indiv_tour = self._attach_transit_skims_to_tour(transit_scenario, period, indiv_tour)
-                joint_tour = self._attach_transit_skims_to_tour(transit_scenario, period, joint_tour)
+            indiv_tour = self._attach_highway_skims_to_tour(highway_scenario, period, indiv_tour)
+            joint_tour = self._attach_highway_skims_to_tour(highway_scenario, period, joint_tour)
 
+            indiv_trip = self._attach_transit_skims_to_trip(transit_scenario, period, indiv_trip)
+            joint_trip = self._attach_transit_skims_to_trip(transit_scenario, period, joint_trip)
 
-                if self.config.export_transit_network_shapefile:
-                    self._export_transit_network_as_shapefile(transit_scenario, period)
-                
-                if self.config.export_highway_network_shapefile:
-                    self._export_highway_network_as_shapefile(highway_scenario, period)
-                
-                if period.upper() == "AM":
-                    if self.config.export_boardings_by_segment:
-                        self._export_boardings_by_segment(transit_scenario, period)
-                    if self.config.export_boardings_by_segment_geofile:
-                        self._export_boardings_by_segment_geofile(transit_scenario, period)
+            indiv_tour = self._attach_transit_skims_to_tour(transit_scenario, period, indiv_tour)
+            joint_tour = self._attach_transit_skims_to_tour(transit_scenario, period, joint_tour)
 
-        #indiv_trip.to_csv(self.get_abs_path(f"updated_output/indivTripData_{iteration_num}.csv"))
         indiv_trip = self._sum_time_dist_cost(indiv_trip, 'trip')
         joint_trip = self._sum_time_dist_cost(joint_trip, 'trip')
         indiv_tour = self._sum_time_dist_cost(indiv_tour, 'tour')
@@ -177,7 +220,7 @@ class PostProcessor(Component):
         indiv_tour.to_parquet(self.get_abs_path(f"updated_output/indivTourData_{self._iteration_num}.parquet"))
         joint_tour.to_parquet(self.get_abs_path(f"updated_output/jointTourData_{self._iteration_num}.parquet"))
 
-        self.prepare_output_data()
+        return True
 
     def validate_inputs(self):
         """Validate the inputs."""
@@ -218,8 +261,17 @@ class PostProcessor(Component):
             for tp in self.time_period_names
         }
         return self._transit_networks
-    
+
+    @LogStartEnd("Preparing enriched output")
     def prepare_output_data(self):
+        """Generate validated enriched outputs for households, persons, tours, trips.
+
+        Uses the refreshed CTRAMP parquet files plus land-use inputs to build
+        the final analysis datasets (households, persons, trips, tours, commute
+        tours, work/school locations) and persists them to `updated_output/`.
+
+        #TODO: This should be named something more clear: prepare_enriched_output()
+        """
         landuse = self._prepare_landuse_data()
         households = self._prepare_households_data(landuse)
 
@@ -247,6 +299,7 @@ class PostProcessor(Component):
         validated_work_school_locations.to_parquet('updated_output/work_school_locations.parquet')
         commute_tours.to_parquet('updated_output/commute_tours.parquet')
 
+    @LogStartEnd("Exporting transit network as shapefile")
     def _export_transit_network_as_shapefile(self, scenario: EmmeScenario, time_period: str):
         """Export transit segments and lines as shapefiles."""
         network_to_shapefile = self.controller.emme_manager.tool(
@@ -275,14 +328,18 @@ class PostProcessor(Component):
                     filepath = os.path.join(output_path, filename)
                     os.remove(filepath)
 
+    @LogStartEnd("Exporting highway network as shapefile")
     def _export_highway_network_as_shapefile(self, scenario: EmmeScenario, time_period: str):
         """Export highway nodes and links as shapefiles."""
         network_to_shapefile = self.controller.emme_manager.tool(
             "inro.emme.data.network.export_network_as_shapefile"
         )
         path_tmplt = self.get_abs_path(self.config.network_shapefile_path)
+        self.logger.debug(f"{path_tmplt=}", indent=True)
         period_scen_id = self._tp_mapping[time_period]
+        self.logger.debug(f"{period_scen_id=}", indent=True)
         output_path = path_tmplt.format(period=period_scen_id)
+        self.logger.debug(f"{output_path=}", indent=True)
         network_to_shapefile(
             export_path = output_path,
             scenario = scenario,
@@ -294,6 +351,7 @@ class PostProcessor(Component):
             }
         )
 
+    @LogStartEnd("Exporting transit boardings by segment")
     def _export_boardings_by_segment(self, scenario: EmmeScenario, time_period: str):
         """Export transit segment boardings to a CSV file.
 
@@ -356,6 +414,7 @@ class PostProcessor(Component):
                     )
                     f.write("\n")
 
+    @LogStartEnd("Exporting transit boardings by segment to geojson")
     def _export_boardings_by_segment_geofile(self, scenario: EmmeScenario, time_period: str):
         """Export transit segment boardings to a geojson file.
 
@@ -402,6 +461,7 @@ class PostProcessor(Component):
         with open(output_path, "w") as f:
             json.dump(geojson_data, f, indent=2)
 
+    @LogStartEnd("Attaching highway skims to trips")
     def _attach_highway_skims_to_trip(self, scenario: EmmeScenario, time_period: str, output: pd.DataFrame):
         """Attach skim (time, dist, cost, bridge toll, value toll) values to trips. Skims are attached at a taz level
         Args:
@@ -470,7 +530,8 @@ class PostProcessor(Component):
         
 
         return output
-    
+
+    @LogStartEnd("Attaching highway skims to tours")
     def _attach_highway_skims_to_tour(self, scenario: EmmeScenario, time_period: str, output: pd.DataFrame):
         """Attach skim (time, dist, cost, bridge toll, value toll) values to tours. This will include inbound and outbound skims. Skims are attached at a taz level
         Args:
@@ -561,6 +622,7 @@ class PostProcessor(Component):
         
         return output
 
+    @LogStartEnd("Attaching transit skims to trips")
     def _attach_transit_skims_to_trip(self, scenario: EmmeScenario, time_period: str, output: pd.DataFrame):
         """Attach transit skim values to trips and tours. Skims are attached at a TAZ level
         Args:
@@ -637,7 +699,8 @@ class PostProcessor(Component):
                 output.loc[mask, name] = matrix[trip_origins, trip_dests]
 
         return output
-    
+
+    @LogStartEnd("Attaching transit skims to tours")    
     def _attach_transit_skims_to_tour(self, scenario: EmmeScenario, time_period: str, output: pd.DataFrame):
         """Attach transit skim values to trips and tours. Skims are attached at a TAZ level
         Args:
@@ -729,6 +792,7 @@ class PostProcessor(Component):
         return output
 
 
+    @LogStartEnd("Attaching highway distance skims to transit trips")    
     def _attach_dist_skim_to_transit_trip(self, scenario: EmmeScenario, time_period: str, output:pd.DataFrame):
         """"
         Getting highway distance skims for transit trips since transit trips do not have distance. Distance is based on drive-alone no toll distance
@@ -753,6 +817,7 @@ class PostProcessor(Component):
 
         return output
 
+    @LogStartEnd("Attaching highway distance skims to transit tours")    
     def _attach_dist_skim_to_transit_tour(self, scenario: EmmeScenario, time_period: str, output:pd.DataFrame):
         """
         Getting highway distance skims for transit tours since transit tours do not have distance. Distance is based on drive-alone no toll distance
@@ -787,7 +852,7 @@ class PostProcessor(Component):
         
         return output
 
-
+    @LogStartEnd("Attaching nonmotorized skims to trips and tours")    
     def _attach_nonmotorized_skims_to_trip_tour(self, output: pd.DataFrame, trip_tour: str):
         """Attach nomotorized skims (bike and walk) on MAZ to MAZ level to trips
         Nonmotorized time skims are calculated by dividing skim distance by average bike/ped walking time
@@ -1270,3 +1335,51 @@ class PostProcessor(Component):
 
         return ws_location
         
+
+if __name__ == "__main__":
+    if "tm2py.components.post_processor" not in sys.modules:
+        sys.modules["tm2py.components.post_processor"] = sys.modules[__name__]
+
+    try:
+        from tm2py.controller import RunController
+    except ImportError as exc:  # pragma: no cover
+        print(f"Unable to import RunController: {exc}")
+        sys.exit(1)
+
+    run_dir = Path.cwd()
+    config_files = [run_dir / "scenario_config.toml", run_dir / "model_config.toml"]
+
+    for cfg in config_files:
+        if not cfg.exists():
+            print(f"Required configuration file not found: {cfg}")
+            sys.exit(1)
+
+    try:
+        # Provide an empty run_components list so the controller skips queuing the
+        # standard model workflow; we just need access to shared resources (logger,
+        # config, emme manager) before invoking PostProcessor manually.
+        controller = RunController(
+            config_file=config_files,
+            run_dir=run_dir,
+            run_components=[],
+            log_file_path="post_processor.log",
+        )
+    except Exception as exc:  # pylint: disable=broad-except
+        print(f"Failed to initialize RunController: {exc}")
+        sys.exit(1)
+
+    # Instantiate the component directly rather than calling controller.run(); the
+    # latter would re-run the configured component queue, while we only want this
+    # standalone post-processor pass.
+    processor = PostProcessor(controller)
+    try:
+        processor.validate_inputs()
+        processor.run()
+    except Exception as exc:  # pylint: disable=broad-except
+        controller.logger.log_exception(exc)
+        print(f"PostProcessor failed: {exc}")
+        sys.exit(1)
+
+    controller.logger.log("PostProcessor finished successfully.", level="INFO")
+    sys.exit(0)
+

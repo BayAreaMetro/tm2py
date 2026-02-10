@@ -245,9 +245,9 @@ class HighwayAssignment(Component):
         self.logger.debug(
             f"_get_assign_params: self.config.output_skim_path:{self.config.output_skim_path}"
         )
-        with self.logger._skip_emme_logging():
-            self.logger.debug("_get_assign_params: params dictionary")
-            self.logger.log_dict(params, level="DEBUG")
+        # with self.logger._skip_emme_logging():
+        #     self.logger.debug("_get_assign_params: params dictionary")
+        #     self.logger.log_dict(params, level="DEBUG")
         return params
 
 
@@ -363,8 +363,9 @@ class AssignmentRunner:
                     raise Exception(f"demand matrix {matrix_name} does not exist")
 
             self._create_skim_matrices()
-            with self.logger._skip_emme_logging():
-                self.logger.log_dict(self.assign_spec, level="DEBUG")
+            # with self.logger._skip_emme_logging():
+            #    self.logger.debug("AssignmentReunner.run() assign_spec:")
+            #    self.logger.log_dict(self.assign_spec, level="DEBUG")
             
             # ========== EXTENSIVE DEBUG LOGGING ==========
             self._debug_dump_assignment_state()
