@@ -171,6 +171,10 @@ class PostProcessor(Component):
         indiv_tour = self._sum_time_dist_cost(indiv_tour, 'tour')
         joint_tour = self._sum_time_dist_cost(joint_tour, 'tour')
 
+        # Create updated_output directory if it doesn't exist
+        updated_output_dir = self.get_abs_path("updated_output")
+        os.makedirs(updated_output_dir, exist_ok=True)
+
         indiv_trip.to_parquet(self.get_abs_path(f"updated_output/indivTripData_{self._iteration_num}.parquet"))
         joint_trip.to_parquet(self.get_abs_path(f"updated_output/jointTripData_{self._iteration_num}.parquet"))
 
