@@ -37,233 +37,6 @@ if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
-
-
-def check_prerequisites(config, logger):
-    """Check if all required files and directories exist."""
-    logger.info("="*70)
-    logger.info("CHECKING PREREQUISITES")
-    logger.info("="*70)
-    
-    issues = []
-    warnings = []
-    
-    county_name = config['test']['county_name']
-    logger.info(f"County: {county_name}")
-    
-    # Check EMME project source
-    emme_project = Path(config['paths']['emme_project_source'])
-    if not emme_project.exists():
-        issues.append(f"EMME project not found: {emme_project}")
-        logger.error(f"EMME project not found: {emme_project}")
-    else:
-        logger.info(f"✓ EMME project found: {emme_project}")
-    
-    # Check EMME database (could be folder or zip file)
-    # Check if setup component will handle unzipping
-    run_components = config.get('components', {}).get('run_components', [])
-    use_setup_component = 'setup' in run_components
-    
-    emme_db = emme_project / "Database_highway" / "emmebank"
-    emme_db_zip = list(emme_project.glob("Database_highway*.zip"))
-    
-    if not emme_db.exists() and not emme_db_zip:
-        issues.append(f"EMME database not found (neither folder nor zip): {emme_db}")
-        logger.error(f"EMME database not found: {emme_db}")
-    elif emme_db_zip and use_setup_component:
-        logger.info(f"✓ EMME database zip found: {emme_db_zip[0].name} (setup component will unzip)")
-    elif emme_db.exists():
-        logger.info(f"✓ EMME database found: {emme_db}")
-    else:
-        logger.warn(f"EMME database is zipped but setup component is not enabled")
-        logger.warn(f"  Found: {emme_db_zip[0].name if emme_db_zip else 'none'}")
-        logger.warn(f"  Add 'setup' to run_components to handle zipped databases")
-    
-    # Check inputs source directory
-    inputs_dir = Path(config['paths']['inputs_source'])
-    if not inputs_dir.exists():
-        issues.append(f"Inputs source not found: {inputs_dir}")
-        logger.error(f"Inputs source not found: {inputs_dir}")
-    else:
-        logger.info(f"✓ Inputs source found: {inputs_dir}")
-    
-    # Check demand source directory (separate from inputs)
-    demand_dir = Path(config['paths'].get('demand_source', config['paths']['inputs_source']))
-    if demand_dir != inputs_dir:
-        logger.debug(f"Checking demand source: {demand_dir}")
-        if not demand_dir.exists():
-            issues.append(f"Demand source not found: {demand_dir}")
-            logger.error(f"Demand source not found: {demand_dir}")
-        else:
-            logger.info(f"✓ Demand source found: {demand_dir}")
-    
-    # Check for required input files - detect folder structure
-    # Some datasets have inputs/hwy/, others have hwy/ at root
-    if (inputs_dir / "hwy").exists():
-        hwy_subdir = inputs_dir / "hwy"
-        landuse_subdir = inputs_dir / "landuse"
-    else:
-        hwy_subdir = inputs_dir / "inputs" / "hwy"
-        landuse_subdir = inputs_dir / "inputs" / "landuse"
-    
-    required_files = {
-        "MAZ data": landuse_subdir / "maz_data_new.csv",
-        "Tolls": hwy_subdir / "tolls.csv",
-        "AM Demand": demand_dir / "demand_matrices" / "highway" / "household" / "TAZ_Demand_am.omx",
-    }
-    
-    for name, path in required_files.items():
-        logger.debug(f"Checking {name}: {path}")
-        if not path.exists():
-            warnings.append(f"{name} file not found: {path}")
-            logger.warn(f"{name} file not found: {path}")
-        else:
-            logger.info(f"✓ {name} found: {path}")
-    
-    # Check config templates
-    config_dir = Path(__file__).parent / "config_templates"
-    logger.debug(f"Checking config templates: {config_dir}")
-    if not config_dir.exists():
-        issues.append(f"Config templates not found: {config_dir}")
-        logger.error(f"Config templates not found: {config_dir}")
-    else:
-        logger.info(f"✓ Config templates found: {config_dir}")
-    
-    if issues:
-        logger.error("CRITICAL ISSUES FOUND:")
-        for issue in issues:
-            logger.error(f"  - {issue}")
-        return False
-    
-    if warnings:
-        logger.warn("WARNINGS:")
-        for warning in warnings:
-            logger.warn(f"  - {warning}")
-    
-    logger.info("✓ All prerequisites met!")
-    return True
-
-"""
-        # Get zone ranges for the county
-        logger.info(f"Detecting zone ranges for {county_name} County...")
-        logger.debug(f"config['paths']:{config['paths']}")
-        zone_info = get_county_zones(county_name, crosswalk_file=Path(config['paths'].get('crosswalk_file')))
-        taz_range = zone_info['taz_range']
-        maz_range = zone_info['maz_range']
-        
-        logger.info(f"County zone ranges:")
-        logger.info(f"  TAZ: {taz_range[0]} - {taz_range[1]}")
-        logger.info(f"  MAZ: {maz_range[0]} - {maz_range[1]}")
-        
-        logger.debug("Creating CountyDataFilter helper...")
-        filter_helper = CountyDataFilter(
-            taz_range=taz_range,
-            maz_range=maz_range,
-            county_name=county_name
-        )
-        
-        # Get time periods from scenario config to filter only those demand files
-        time_periods = []
-        if 'time_periods' in scenario_config:
-            for tp in scenario_config['time_periods']:
-                time_periods.append(tp['name'])
-        
-        logger.info(f"Time periods to filter: {', '.join(time_periods)}")
-        logger.debug(f"Found {len(time_periods)} time periods in config")
-        
-        # Filter demand files for configured time periods only
-        demand_dir = demand_source / "demand_matrices" / "highway" / "household"
-        logger.debug(f"Source demand directory: {demand_dir}")
-        
-        logger.info("Filtering demand files...")
-        for period in time_periods:
-            demand_file = demand_dir / f"TAZ_Demand_{period}.omx"
-            if demand_file.exists():
-                output_file = test_dir / "inputs" / "demand" / demand_file.name
-                logger.info(f"  Processing {demand_file.name}...")
-                logger.debug(f"    Source: {demand_file}")
-                logger.debug(f"    Output: {output_file}")
-                filter_helper.filter_trip_table(demand_file, output_file)
-                
-                # Verify the output file was created and list its matrices
-                if output_file.exists():
-                    logger.debug(f"    Output file created successfully")
-                    try:
-                        import openmatrix as omx
-                        with omx.open_file(str(output_file), 'r') as omx_file:
-                            matrices = omx_file.list_matrices()
-                            logger.info(f"    Created {len(matrices)} matrices: {', '.join(matrices[:5])}{'...' if len(matrices) > 5 else ''}")
-                    except Exception as e:
-                        logger.warning(f"    Could not verify matrices: {e}")
-                else:
-                    logger.error(f"    Output file was not created!")
-            else:
-                logger.warning(f"  {demand_file.name} not found, skipping")
-        
-        logger.info("Demand filtering complete!")
-    else:
-        logger.info("Copying demand files (filtering disabled)...")
-        
-        # Get time periods from scenario config to copy only those demand files
-        time_periods = []
-        if 'time_periods' in scenario_config:
-            for tp in scenario_config['time_periods']:
-                time_periods.append(tp['name'])
-        
-        logger.info(f"Time periods to copy: {', '.join(time_periods)}")
-        logger.debug(f"Found {len(time_periods)} time periods in config")
-        
-        # Copy demand files for configured time periods only
-        demand_dir = demand_source / "demand_matrices" / "highway" / "household"
-        logger.debug(f"Source demand directory: {demand_dir}")
-        
-        for period in time_periods:
-            demand_file = demand_dir / f"TAZ_Demand_{period}.omx"
-            if demand_file.exists():
-                output_file = test_dir / "inputs" / "demand" / demand_file.name
-                shutil.copy(demand_file, output_file)
-                logger.info(f"  Copied {demand_file.name}")
-                logger.debug(f"    Size: {demand_file.stat().st_size / 1024 / 1024:.1f} MB")
-                
-                # Verify the output file and list its matrices
-                try:
-                    import openmatrix as omx
-                    with omx.open_file(str(output_file), 'r') as omx_file:
-                        matrices = omx_file.list_matrices()
-                        logger.debug(f"    Contains {len(matrices)} matrices: {', '.join(matrices[:5])}{'...' if len(matrices) > 5 else ''}")
-                except Exception as e:
-                    logger.warning(f"    Could not verify matrices: {e}")
-            else:
-                logger.warning(f"  {demand_file.name} not found, skipping")
-    
-    # Copy truck demand files
-    logger.info("Copying truck demand files...")
-    truck_dir = demand_source / "demand_matrices" / "highway" / "commercial"
-    logger.info(f"  Truck demand directory: {truck_dir}")
-    logger.info(f"  Truck directory exists: {truck_dir.exists()}")
-    logger.info(f"  Time periods to process: {time_periods}")
-    
-    truck_files_copied = 0
-    for period in time_periods:
-        truck_file = truck_dir / f"tripstrk{period}.omx"
-        logger.info(f"  Checking for {truck_file.name}...")
-        if truck_file.exists():
-            output_file = test_dir / "inputs" / "demand" / truck_file.name
-            logger.info(f"    Copying {truck_file.name} to {output_file}...")
-            shutil.copy(truck_file, output_file)
-            truck_files_copied += 1
-            logger.info(f"    ✓ Copied {truck_file.name} (Size: {truck_file.stat().st_size / 1024 / 1024:.1f} MB)")
-        else:
-            logger.warning(f"    {truck_file.name} not found, skipping")
-    
-    logger.info(f"Truck demand files copied: {truck_files_copied}")
-    logger.info("="*70)
-    logger.info("TEST DIRECTORY SETUP COMPLETE!")
-    logger.info("="*70)
-    return test_dir
-
-"""
-
 def update_config_for_test(model_dir: Path, test_county: str, logger):
     """Updates the model configuration (scenario and model) for the test
     from the default for the full model run.
@@ -285,6 +58,15 @@ def update_config_for_test(model_dir: Path, test_county: str, logger):
 
     # rename scenario
     scenario_config['scenario']['name'] = f"{test_county} County Highway Test"
+    # configure inline test filter so it stays within the [scenario] table
+    test_filter = tomlkit.inline_table()
+    test_filter['county'] = test_county
+    test_filter.trailing_comma = False
+    test_filter.trivia.indent = "    "
+    scenario_section = scenario_config['scenario']
+    if 'test_filter' in scenario_section:
+        del scenario_section['test_filter']
+    scenario_section.add('test_filter', test_filter)
 
     # Run a subset of components
     scenario_config['run']['initial_components'] = [
@@ -295,9 +77,8 @@ def update_config_for_test(model_dir: Path, test_county: str, logger):
     ]
     scenario_config['run']['global_iteration_components'] = [
         "highway_maz_assign",
-        "highway"
     ] 
-    scenario_config['run']['final_components'] = ["network_summary"]
+    scenario_config['run']['final_components'] = ["post_processor","network_summary"]
 
     # Only run for 1 interation
     scenario_config['run']['end_iteration'] = 1
@@ -309,6 +90,11 @@ def update_config_for_test(model_dir: Path, test_county: str, logger):
     # ohhh.... I'm guessing it's to make the initial skims rather than generating them
     scenario_config['warmstart']['use_warmstart_skim'] = False
     scenario_config['warmstart']['use_warmstart_demand'] = True
+
+    # disable transit network post processing
+    scenario_config['post_processor']['export_transit_network_shapefile'] = False
+    scenario_config['post_processor']['export_boardings_by_segment'] = False
+    scenario_config['post_processor']['export_boardings_by_segment_geofile'] = False
 
     logger.debug(f"scenario_config:\n{scenario_config}")    
 

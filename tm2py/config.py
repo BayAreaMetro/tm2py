@@ -48,6 +48,8 @@ class ScenarioConfig(ConfigItem):
         name: scenario name string
         year: model year, must be at least 2005
         landuse_file: TAZ file
+        test_filter: optional filters to scope scenario level inputs. Currently only
+            supports a "county" entry used by county test workflows.
     """
     
     landuse_file: pathlib.Path
@@ -55,6 +57,22 @@ class ScenarioConfig(ConfigItem):
     name: str
     year: int = Field(ge=2005)
     verify: Optional[bool] = Field(default=False)
+    test_filter: Optional[Dict[str, str]] = Field(default=None)
+
+    @validator("test_filter", allow_reuse=True)
+    def validate_test_filter(cls, value):
+        """Validate optional test_filter content."""
+        if value is None:
+            return value
+        if not isinstance(value, dict):
+            raise ValueError("scenario.test_filter must be a table of key/value pairs")
+        unsupported = set(value.keys()) - {"county"}
+        if unsupported:
+            raise ValueError(f"scenario.test_filter unsupported keys: {sorted(unsupported)}")
+        county_value = value.get("county")
+        if county_value is not None and not isinstance(county_value, str):
+            raise ValueError("scenario.test_filter.county must be a string if provided")
+        return value
 
 
 ComponentNames = Literal[

@@ -63,7 +63,7 @@ class CreateTODScenarios(Component):
                 skip_transit = not has_transit
             
             if skip_transit:
-                self.controller.debug("Skipping _create_transit_scenarios() - highway-only mode")
+                self.controller.logger.debug("Skipping _create_transit_scenarios() - highway-only mode")
                 self.controller.logger.log("Skipping transit scenario creation (highway-only mode)", level="INFO")
             else:
                 self._create_transit_scenarios()
