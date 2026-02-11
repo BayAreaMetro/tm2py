@@ -16,21 +16,14 @@ Usage:
 """
 
 import argparse
-import logging
 import os
 import shutil
 import sys
-import toml
 import tomlkit # preserves comments
 from pathlib import Path
-from datetime import datetime
 import io
-import pprint
 
 import tm2py
-from tm2py.controller import RunController
-from tm2py.county_tools import CountyDataFilter, get_county_zones
-
 
 # Force UTF-8 encoding for console output on Windows
 if sys.platform == 'win32':
