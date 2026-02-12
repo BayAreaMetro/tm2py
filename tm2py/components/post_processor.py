@@ -115,7 +115,12 @@ class PostProcessor(Component):
 
         self.export_loaded_networks()
 
-        self.prepare_output_data()
+        try:
+            self.prepare_output_data()
+        except FileNotFoundError as err:
+            self.logger.warn(
+                f"Enriched output data preparation skipped due to missing files: {err}"
+            )
 
     @LogStartEnd("Exporting loaded networks")
     def export_loaded_networks(self):
