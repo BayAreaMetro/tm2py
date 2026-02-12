@@ -102,8 +102,14 @@ def update_config_for_test(model_dir: Path, test_county: str, logger):
         model_config_content = f.read()
     model_config = tomlkit.parse(model_config_content)
 
-    # adjust down to 3
+    # adjust down to 3 highway iterations
     model_config['highway']['max_iterations'] = 3
+
+    # only run 'time_periods' name in ['am','md']
+    # md is required because highway.maz_to_maz.skim_period == 'md'
+    if 'time_periods' in model_config:
+        filtered_periods = [period for period in model_config['time_periods'] if period.get('name') in ['am', 'md']]
+        model_config['time_periods'] = filtered_periods
     
     # write it
     with open(model_config_file, "w", encoding="utf-8") as f:
