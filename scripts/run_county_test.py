@@ -110,6 +110,14 @@ def update_config_for_test(model_dir: Path, test_county: str, logger):
     if 'time_periods' in model_config:
         filtered_periods = [period for period in model_config['time_periods'] if period.get('name') in ['am', 'md']]
         model_config['time_periods'] = filtered_periods
+
+    # Assuming the current setup of running each one in serial
+    # [[emme.highway_distribution]]
+    #     time_periods = ["EA", "AM", "MD", "PM", "EV"]
+    #     num_processors = "MAX-1"
+    if 'emme' in model_config and 'highway_distribution' in model_config['emme']:
+        for dist in model_config['emme']['highway_distribution']:
+            dist['time_periods'] = ['AM', 'MD']
     
     # write it
     with open(model_config_file, "w", encoding="utf-8") as f:
