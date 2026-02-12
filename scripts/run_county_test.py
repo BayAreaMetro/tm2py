@@ -76,8 +76,8 @@ def update_config_for_test(model_dir: Path, test_county: str, logger):
     # Only run for 1 interation
     scenario_config['run']['end_iteration'] = 1
 
-    # Disable slack
-    scenario_config['slack_notifications']['enabled'] = False
+    # Leaving slack enabled as this isn't crashing but in test mode, feel free to uncomment
+    # scenario_config['slack_notifications']['enabled'] = False
 
     # TODO: What are warmstart skims used for?
     # ohhh.... I'm guessing it's to make the initial skims rather than generating them
