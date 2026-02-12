@@ -202,7 +202,7 @@ class LoggingConfig(ConfigItem):
 
     Properties:
         display_level: filter level for messages to show in console, default
-            is STATUS
+            is INFO
         run_file_path: relative path to high-level log file for the model run,
             default is tm2py_run_[%Y%m%d_%H%M].log
         run_file_level: filter level for messages recorded in the run log,
@@ -223,7 +223,7 @@ class LoggingConfig(ConfigItem):
             during the highway component run at iteration 2.
     """
 
-    display_level: Optional[LogLevel] = Field(default="STATUS")
+    display_level: Optional[LogLevel] = Field(default="INFO")
     run_file_path: Optional[str] = Field(
         default="tm2py_run_{}.log".format(
             datetime.datetime.now().strftime("%Y%m%d_%H%M")
