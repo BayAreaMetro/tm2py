@@ -2,7 +2,7 @@
 
 ## Overview
 
-Land use data provides the spatial distribution of households, population, employment, and other activities that generate and attract travel. The travel model uses two levels of spatial detail: Traffic Analysis Zones (TAZ) for regional analysis and Micro Analysis Zones (MAZ) for detailed local accessibility and mode choice modeling.
+Land use data provides the spatial distribution of households, population, employment, and other activities that generate and attract travel. The travel model uses two levels of spatial detail: Traffic Analysis Zones (TAZ) for regional analysis and Micro Analysis Zones (MAZ) for detailed local accessibility and mode choice modeling.  For more details on land use input creation, see the [land use input documentation in tm2py-utils](https://github.com/BayAreaMetro/tm2py-utils/tree/main/tm2py_utils/inputs/land_use).
 
 !!! info "Creating Land Use Files"
     For detailed instructions on how to prepare land use data files for the base year, see **[Creating Base Year Inputs](../create-base-year-inputs.md#land-use-data)** 🏙️

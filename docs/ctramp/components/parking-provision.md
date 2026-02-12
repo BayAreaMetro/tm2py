@@ -21,5 +21,5 @@ The model predict the parking provisions based on a multinomial logit discrete c
 - Occupation
 - Weighted daily equivalent of average monthly cost
 
-**Important Note**: Free onsite parking is not the same as full reimbursement. Those with free onsite parking will always park at their destination location. Those with reimbursement will determine their parking location based on the parking location choice model.
+**Important Note**: Free onsite parking is not the same as full reimbursement. Those with free onsite parking will always park at their destination location. Those with reimbursement will determine their parking location based on the parking location choice model.  For more details on parking input creation, see the [land use input documentation in tm2py-utils](https://github.com/BayAreaMetro/tm2py-utils/tree/main/tm2py_utils/inputs/land_use).
 
