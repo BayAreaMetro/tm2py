@@ -59,7 +59,9 @@ class CreateTODScenarios(Component):
                     list(getattr(self.controller.config.run, 'global_iteration_components', [])) +
                     list(getattr(self.controller.config.run, 'final_components', []))
                 )
-                has_transit = 'transit' in all_components
+                # Check for any transit-related components
+                transit_components = {'transit_assign', 'transit_skim', 'prepare_network_transit'}
+                has_transit = any(comp in transit_components for comp in all_components)
                 skip_transit = not has_transit
             
             if skip_transit:
