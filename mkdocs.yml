@@ -85,6 +85,7 @@ nav:
       - "→ Data Dictionaries": ctramp-outputs/data-dictionaries.md
     - Model Documentation:
       - Tour Mode Choice: ctramp/tour_mode_choice_documentation.md
+      - Parking Costs: ctramp/parking.md
       - Trip Mode Choice: ctramp/trip_mode_choice_documentation.md
       - Tour Destination Choice: ctramp/tour_destination_choice_documentation.md
       - Individual Tours: ctramp/individual_tour_documentation.md
