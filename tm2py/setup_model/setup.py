@@ -567,6 +567,80 @@ class SetupModel:
                     dest_dir
                 )
 
+        # Update EMME project file to support dual-database matrix serving
+        # PR #223 introduced separate highway/transit databases, but matrix server
+        # needs access to both databases to serve matrices from either one
+        self._update_emme_project_for_dual_databases()
+
+    def _update_emme_project_for_dual_databases(self):
+        """
+        Update EMME project file (.emp) to support dual-database architecture.
+        
+        PR #223 introduced separate highway and transit databases, but the matrix server
+        needs access to both databases to serve matrices from either one. This method
+        updates the OpenDatabases configuration to include both databases.
+        """
+        emp_files = list((self.model_dir / "emme_project").glob("*.emp"))
+        if not emp_files:
+            self.logger.warning("No EMME project file (.emp) found - skipping dual-database configuration")
+            return
+        
+        emp_file = emp_files[0]  # Use first .emp file found
+        self.logger.info(f"Updating EMME project file for dual-database support: {emp_file}")
+        
+        try:
+            # Read the current project file
+            with open(emp_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Update OpenDatabases to include both highway and transit databases
+            # This allows the matrix server to serve matrices from both databases
+            import re
+            
+            # Pattern to match OpenDatabases line
+            open_db_pattern = r'(# String OpenDatabases:.*\n)(OpenDatabases = )([^\n]+)'
+            
+            def update_open_databases(match):
+                comment_line = match.group(1)
+                key_part = match.group(2)
+                current_value = match.group(3)
+                
+                # Ensure both highway and transit databases are included
+                databases_to_add = []
+                if 'Database_highway\\emmebank' not in current_value:
+                    databases_to_add.append('Database_highway\\emmebank')
+                # Don't duplicate transit database if already present
+                
+                if not databases_to_add:
+                    # All required databases already present
+                    return match.group(0)
+                
+                # Add missing databases to existing ones
+                if current_value.strip():
+                    existing_dbs = [db.strip() for db in current_value.split(',')]
+                    all_dbs = existing_dbs + databases_to_add
+                else:
+                    all_dbs = databases_to_add
+                
+                new_value = ','.join(all_dbs)
+                self.logger.info(f"Updated OpenDatabases from '{current_value}' to '{new_value}'")
+                
+                return comment_line + key_part + new_value
+            
+            updated_content = re.sub(open_db_pattern, update_open_databases, content, flags=re.MULTILINE)
+            
+            if updated_content != content:
+                # Write the updated content
+                with open(emp_file, 'w', encoding='utf-8') as f:
+                    f.write(updated_content)
+                self.logger.info("Successfully updated EMME project file for dual-database matrix serving")
+            else:
+                self.logger.info("EMME project file already configured for dual-database access")
+                
+        except Exception as e:
+            self.logger.error(f"Failed to update EMME project file for dual-database support: {e}")
+            self.logger.error("Matrix server may not be able to serve from both highway and transit databases")
+
     def _replace_in_file(self, filepath: pathlib.Path, regex_dict: dict[str, str]):
         """
         Copies `filepath` to `filepath.original`
