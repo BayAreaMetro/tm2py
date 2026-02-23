@@ -201,6 +201,8 @@ class PostProcessor(Component):
         for period in self.controller.time_period_names:
             transit_scenario = self.transit_emmebank.scenario(period)
             highway_scenario = self.highway_emmebank.scenario(period)
+            # Matrix names and timeperiod column labels use uppercase (e.g. 'EA_da_time')
+            period = period.upper()
 
             indiv_trip = self._attach_highway_skims_to_trip(highway_scenario, period, indiv_trip)
             joint_trip = self._attach_highway_skims_to_trip(highway_scenario, period, joint_trip)
