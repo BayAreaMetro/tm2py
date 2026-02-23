@@ -1,18 +1,15 @@
-USAGE = """Quick Test Script for County Highway Framework
+USAGE = R"""Quick Test Script for County Highway Framework
 
 This script helps you test the county highway assignment framework by:
-1. Checking prerequisites
-2. Setting up a minimal test directory
+1. Setting up a test directory
 3. Running a basic highway test
 
 Usage:
     From EMME Python environment:
-    
-    # Edit tests/county_test_config.toml with your paths and settings, then run:
-    python tests/run_county_test.py
-    
-    # Or specify a different config file:
-    python tests/run_county_test.py --config tests/my_custom_config.toml
+    python scripts\run_county_test.py 
+      --overwrite 
+      E:\GitHub\tm2\tm2py-utils\tm2py_utils\config\develop\setup_config_mtc_2015.toml 
+      E:\tm2py_san_mateo_test_2015 "San Mateo"
 """
 
 import argparse
