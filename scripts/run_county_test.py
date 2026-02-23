@@ -5,11 +5,20 @@ This script helps you test the county highway assignment framework by:
 3. Running a basic highway test
 
 Usage:
-    From EMME Python environment:
-    python scripts\run_county_test.py 
-      --overwrite 
-      E:\GitHub\tm2\tm2py-utils\tm2py_utils\config\develop\setup_config_mtc_2015.toml 
-      E:\tm2py_san_mateo_test_2015 "San Mateo"
+    Step 1 - Setup only:
+    python scripts\run_county_test.py --setup-only --overwrite \
+      E:\GitHub\tm2\tm2py-utils\tm2py_utils\config\develop\setup_config_mtc_2015.toml \
+      E:\tm2_countytest_pr223 "San Mateo"
+
+    Step 2 - Run model only (from model directory):
+    python scripts\run_county_test.py --run-only \
+      E:\GitHub\tm2\tm2py-utils\tm2py_utils\config\develop\setup_config_mtc_2015.toml \
+      E:\tm2_countytest_pr223 "San Mateo"
+
+    Combined (setup + run in one step):
+    python scripts\run_county_test.py --overwrite \
+      E:\GitHub\tm2\tm2py-utils\tm2py_utils\config\develop\setup_config_mtc_2015.toml \
+      E:\tm2_countytest_pr223 "San Mateo"
 """
 
 import argparse
@@ -127,51 +136,70 @@ def main():
     parser.add_argument("model_dir", type=Path, help="The model directory. Can be absolute or relative.")
     parser.add_argument("test_county", type=str, help="The county to test")
     parser.add_argument("--overwrite", action='store_true', help="Overwrite directory if it exists")
+    parser.add_argument("--setup-only", action='store_true', help="Only run setup, do not run the model")
+    parser.add_argument("--run-only", action='store_true', help="Only run the model (assumes setup already done)")
 
     args = parser.parse_args()
+
+    if args.setup_only and args.run_only:
+        parser.error("Cannot specify both --setup-only and --run-only")
     
-    print("Running tm2py.setup_model.setup.SetupModel with")
+    do_setup = not args.run_only
+    do_run = not args.setup_only
+
+    print("Running tm2py county test with")
     print(f"setup_config_toml: {args.setup_config_toml.resolve()}")
     print(f"        model_dir: {args.model_dir.resolve()}")
     print(f"      test_county: {args.test_county}")
     print(f"        overwrite: {args.overwrite}")
+    print(f"        do_setup : {do_setup}")
+    print(f"        do_run   : {do_run}")
     print("")
-    print(f"See log file: {args.model_dir.resolve() / 'setup.log'}", flush=True)
-    
-    if args.overwrite and args.model_dir.resolve().exists():
-        print(f"overwrite={args.overwrite} and {args.model_dir.resolve()} exists: DELETING", flush=True)
-        shutil.rmtree(args.model_dir.resolve())
-    
-    setup_model = tm2py.setup_model.setup.SetupModel(config_file=args.setup_config_toml, model_dir=args.model_dir)
-    # since this is a highway assignment/skim test, we don't need all the inputs
-    setup_model.setup_config.COPY_POPLU_INPUTS = True
-    # I don't think this should be required but for now, it is
-    # because mazdata_withDensity.csv is required for CreateTODScenarios.run()
-    setup_model.setup_config.COPY_NONRES_INPUTS = True # demand is needed for assignment
-    setup_model.setup_config.COPY_WARMSTART_DEMAND = True # hmm we might as well use this tho...
-    setup_model.setup_config.COPY_WARMSTART_SKIMS = False
-    
-    # run the setup
-    #TODO: This creates more than is needed; we could instrument to suppress more
-    setup_model.run_setup()
 
-    # The model run is setup, but it's setup for a complete run
-    # Adjust for county-specific assignment test
-    update_config_for_test(args.model_dir, args.test_county, setup_model.logger)
+    # --- Step 1: Setup ---
+    if do_setup:
+        print(f"See log file: {args.model_dir.resolve() / 'setup.log'}", flush=True)
 
-    # We're done setting up. Shut down logging as RunModel will do its own logging
-    setup_model.logger.info(f"Setup complete; switching to RunModel.py in {args.model_dir}")
-    # do something with logging here?
-    # logging.shutdown()
+        if args.overwrite and args.model_dir.resolve().exists():
+            print(f"overwrite={args.overwrite} and {args.model_dir.resolve()} exists: DELETING", flush=True)
+            shutil.rmtree(args.model_dir.resolve())
+        
+        setup_model = tm2py.setup_model.setup.SetupModel(config_file=args.setup_config_toml, model_dir=args.model_dir)
+        # since this is a highway assignment/skim test, we don't need all the inputs
+        setup_model.setup_config.COPY_POPLU_INPUTS = True
+        # I don't think this should be required but for now, it is
+        # because mazdata_withDensity.csv is required for CreateTODScenarios.run()
+        setup_model.setup_config.COPY_NONRES_INPUTS = True # demand is needed for assignment
+        setup_model.setup_config.COPY_WARMSTART_DEMAND = True # hmm we might as well use this tho...
+        setup_model.setup_config.COPY_WARMSTART_SKIMS = False
+        
+        # run the setup
+        #TODO: This creates more than is needed; we could instrument to suppress more
+        setup_model.run_setup()
+
+        # The model run is setup, but it's setup for a complete run
+        # Adjust for county-specific assignment test
+        update_config_for_test(args.model_dir, args.test_county, setup_model.logger)
+
+        setup_model.logger.info(f"Setup complete for {args.model_dir}")
+        print(f"Setup complete.", flush=True)
+
+    if not do_run:
+        print(f"Setup-only mode: skipping model run. To run the model:\n"
+              f"  python scripts/run_county_test.py --run-only "
+              f"{args.setup_config_toml} {args.model_dir} \"{args.test_county}\"")
+        return 0
+
+    # --- Step 2: Run model ---
+    if not args.model_dir.resolve().exists():
+        print(f"ERROR: Model directory {args.model_dir.resolve()} does not exist. Run setup first.", flush=True)
+        return 1
 
     initial_cwd = Path.cwd()
-    # Let's try to run it
     os.chdir(args.model_dir)
-    print(f"Switched to {Path.cwd()}")
-    # add that path to sysdir for import
+    print(f"Switched to {Path.cwd()}", flush=True)
     sys.path.append(str(args.model_dir.resolve()))
 
-    # Fingers crossed
     retcode = 0
     try:
         import RunModel
