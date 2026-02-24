@@ -3,6 +3,12 @@
 !!! info "Network Preparation"
     For information on how to prepare and process network files for the base year, see **[Creating Base Year Inputs](../create-base-year-inputs.md#network-data)** 🛣️
 
+!!! tip "EMME Network Setup"
+    For detailed information about how EMME networks are initialized, database zips are unzipped, and extra attributes are created, see **[Setup Component: EMME Network Setup Flow](../setup-component-integration.md#emme-network-setup-flow)** 🔧
+
+!!! abstract "Highway Network Processing Pipeline"
+    For a detailed diagram of how network attributes are transformed during model execution, including scenario IDs, emmebank structure, and attribute modifications at each step, see **[Highway Network Processing Pipeline](highway-network-processing.md)** 📊
+
 ## Roadway Network
 
 The all streets highway network, walk network, and bicycle network were developed from [OpenStreetMap](http://www.openstreetmap.org/). The *projection* is [**NAD 1983 StatePlane California VI FIPS 0406 Feet**](https://epsg.io/102646).
@@ -129,6 +135,117 @@ The TM2PY highway network contains **85 link attributes** in the EMME database:
 | 7 | Local | Local streets and roads |
 | 8 | Connector | Highway ramps and connectors |
 | 99 | Other | Special facilities and other links |
+
+## Tolls
+
+### Overview
+
+The `tolls.csv` file specifies toll prices for all tolled facilities across all time periods and vehicle classes. Tolls are applied to links during network preparation and used in highway assignment path building.
+
+**File Location**: `inputs/hwy/tolls.csv`
+
+### File Format
+
+The tolls file is a CSV with the following structure:
+
+- **fac_index**: Facility index identifier (matches facility/tollbooth coding in the network)
+- **toll{period}_{vehicle}**: Toll amount in dollars for each time period and vehicle class
+  - Periods: `ea`, `am`, `md`, `pm`, `ev`
+  - Vehicle groups: `da`, `s2`, `s3`, `vsm`, `sml`, `med`, `lrg`
+
+### Required Columns
+
+For AM period testing, minimum required columns are:
+```
+fac_index,tollam_da,tollam_s2,tollam_s3,tollam_vsm,tollam_sml,tollam_med,tollam_lrg
+```
+
+For full model runs, all 5 time periods × 7 vehicle groups = 35 toll columns plus `fac_index`.
+
+### Example
+
+```csv
+facility_name,fac_index,tollam_da,tollam_s2,tollam_s3,tollam_vsm,tollam_sml,tollam_med,tollam_lrg
+Bay Bridge GP,2000,7.0,7.0,7.0,7.0,7.0,21.0,35.0
+Golden Gate Bridge,3000,9.25,6.75,6.75,9.25,9.25,27.75,46.25
+```
+
+### Placeholder File
+
+If toll data is not yet available, use an empty placeholder with just the header row:
+
+**File**: `tests/placeholder_files/tolls_empty.csv`
+```csv
+fac_index,tollam_da,tollam_s2,tollam_s3,tollam_vsm,tollam_sml,tollam_med,tollam_lrg
+```
+
+**Behavior**: All links will have zero tolls applied (no toll costs in assignment).
+
+## Interchanges
+
+### Overview
+
+The `interchange_nodes.csv` file identifies which network nodes are freeway interchanges. This information is used to calculate **travel time reliability** metrics for freeway links.
+
+**File Location**: `inputs/hwy/interchange_nodes.csv`
+
+### Purpose
+
+Highway reliability represents the variability or unpredictability of travel times. The model computes reliability factors based on:
+
+1. **Distance to interchanges**: Links closer to interchanges have higher reliability penalties due to:
+   - Merging and diverging traffic conflicts
+   - Congestion spillback from ramps
+   - Weaving movements
+   - Variable flow patterns
+
+2. **Reliability calculation**: For each freeway link (facility type 1-2), the model:
+   - Performs shortest-path search along freeway to find nearest upstream and downstream interchanges
+   - Stores distances in `@intdist_up` and `@intdist_down` link attributes
+   - Applies formula: `Reliability = 0.1078 + (0.011 / upstream_dist) + (0.0005445 / downstream_dist)`
+
+3. **Skim output**: Reliability (`@reliability_sq`) is exported in highway skims as `rlbty` for use in mode choice models to represent schedule delay costs.
+
+### File Format
+
+The interchange nodes file is a CSV with:
+
+- **geometry**: Point geometry (optional, for reference)
+- **N**: Node ID in the network
+- **intx**: Interchange flag (1 = interchange node, 0 = not an interchange)
+- **bool_interchange**: Boolean form of intx (optional)
+
+### Example
+
+```csv
+geometry,N,intx,bool_interchange
+POINT (4779879.38 3724023.96),1000053,0,False
+POINT (4781488.65 3731757.23),1000153,1,True
+POINT (4781391.13 3727329.44),1000194,1,True
+```
+
+### Placeholder File
+
+If interchange data is not yet available, use an empty placeholder with just the header row:
+
+**File**: `tests/placeholder_files/interchange_nodes_empty.csv`
+```csv
+geometry,N,intx,bool_interchange
+```
+
+**Behavior**: 
+- No nodes marked as interchanges
+- All freeway links assigned default interchange distance of 99 miles
+- Reliability calculations still run but with minimal distance penalty
+- Model will execute successfully with slightly different reliability metrics
+
+### Reusing Existing Data
+
+If testing a modified version of an existing network with the same node numbering, you can reuse the `interchange_nodes.csv` from the base model run. Only regenerate this file if:
+
+- Node IDs have changed
+- New interchanges have been added
+- Existing interchanges have been removed or relocated
 
 ## County Node Numbering System
 

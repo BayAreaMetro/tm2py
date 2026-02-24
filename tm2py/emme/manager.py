@@ -143,7 +143,7 @@ class ProxyEmmebank:
         Args:
             time_period: valid time period abbreviation
         """
-        _scenario_id = self.scenario_dict[time_period.lower()]
+        _scenario_id = self.scenario_dict[time_period]
         return self.emmebank.scenario(_scenario_id)
 
     def create_matrix(
@@ -470,6 +470,20 @@ class EmmeManager(EmmeManagerLight):
         self.active_south_database_path = self.controller.get_abs_path(
             self.config.active_south_database_path
         )
+
+        # PR #223: Ensure all configured databases are opened in the EMME project.
+        # The .emp file's OpenDatabases only lists one database, but the dual-database
+        # architecture requires all databases to be accessible through the project.
+        for db_path in [
+            self.highway_database_path,
+            self.transit_database_path,
+            self.active_north_database_path,
+            self.active_south_database_path,
+        ]:
+            try:
+                self.add_database(db_path)
+            except Exception:
+                pass  # database may already be open or not yet created
 
         self._highway_emmebank = None
         self._transit_emmebank = None

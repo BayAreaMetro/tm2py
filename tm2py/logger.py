@@ -222,6 +222,14 @@ class BaseLogger:
         """Format dictionary to string and log as text."""
         self.log(pformat(mapping, indent=1, width=120), level)
 
+    def log_exception(self, exc: BaseException):
+        """Record the stack trace for an exception at ERROR level."""
+        stack_text = "".join(
+            _traceback.format_exception(type(exc), exc, exc.__traceback__)
+        ).rstrip()
+        for line in stack_text.splitlines():
+            self.error(line, indent=False)
+
     @_context
     def _skip_emme_logging(self):
         """Temporary disable Emme logging (if enabled) and restore on exit.
@@ -323,24 +331,36 @@ class Logger(BaseLogger):
 
         log_config = controller.config.logging
         iter_component_level = log_config.iter_component_level or []
+        # Pre-compute the level overrides (iteration + component tuple -> log level int)
         iter_component_level = dict(
             ((i, c), LEVELS_STR_TO_INT[l]) for i, c, l in iter_component_level
         )
+
+        # Always include console output so operators see high-level progress immediately.
         display_logger = LogDisplay(LEVELS_STR_TO_INT[log_config.display_level])
-        run_log_formatter = LogFile(
-            LEVELS_STR_TO_INT[log_config.run_file_level],
-            os.path.join(controller.run_dir, log_config.run_file_path),
-        )
+        log_formatters = [display_logger]
+
+        # When no detailed log override is provided, also emit the legacy run log file.
+        log_file_override = getattr(controller, "_log_file_override", None)
+        if log_file_override is None:
+            run_log_path = controller.run_dir / log_config.run_file_path
+            run_log_formatter = LogFile(
+                LEVELS_STR_TO_INT[log_config.run_file_level], run_log_path
+            )
+            log_formatters.append(run_log_formatter)
+            standard_log_path = controller.run_dir / log_config.log_file_path
+        else:
+            standard_log_path = log_file_override
+
+        # Detailed per-component log with optional iteration/component-level overrides.
         standard_log_formatter = LogFileLevelOverride(
             LEVELS_STR_TO_INT[log_config.log_file_level],
-            os.path.join(controller.run_dir, log_config.log_file_path),
+            standard_log_path,
             iter_component_level,
             controller,
         )
-        log_formatters = [display_logger, run_log_formatter, standard_log_formatter]
-        log_cache_file = os.path.join(
-            controller.run_dir, log_config.log_on_error_file_path
-        )
+        log_formatters.append(standard_log_formatter)
+        log_cache_file = controller.run_dir / log_config.log_on_error_file_path
         # set this latter via setEmmeManager()
         emme_manager = None
         super().__init__(log_formatters, log_cache_file)

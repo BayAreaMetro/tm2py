@@ -42,6 +42,8 @@ from __future__ import annotations
 import argparse
 import json as _json
 import os
+import psutil
+import threading
 import time as _time
 from contextlib import contextmanager as _context
 from copy import deepcopy as _copy
@@ -65,6 +67,22 @@ from tm2py.logger import LogStartEnd, ProcessLogger
 
 if TYPE_CHECKING:
     from tm2py.controller import RunController
+
+
+@_context
+def monitor_resources(logger, interval_seconds=60, label="Assignment"):
+    """Monitor CPU and memory usage during long-running operations.
+    
+    DISABLED: The print() calls were interfering with EMME's internal report parsing,
+    causing "Illegal character '+'" errors in reportlexer.py.
+    
+    Args:
+        logger: Logger instance (used to get run_dir for file location)
+        interval_seconds: How often to log resource usage (default: 60 seconds)
+        label: Label for the operation being monitored
+    """
+    # Simply yield without monitoring - the monitoring was causing EMME parser errors
+    yield
 
 
 class HighwayAssignment(Component):
@@ -111,6 +129,9 @@ class HighwayAssignment(Component):
     @LogStartEnd("Highway assignment and skims", level="STATUS")
     def run(self):
         """Run highway assignment."""
+        self.logger.debug(f"{self.controller.iteration=}")
+        self.logger.debug(f"{self.controller.config.warmstart.warmstart=}")
+        self.logger.debug(f"{self.controller.config.warmstart.use_warmstart_demand=}")
         demand = PrepareHighwayDemand(self.controller)
         if self.controller.iteration == 0:
             self.highway_emmebank.create_zero_matrix()
@@ -209,9 +230,10 @@ class HighwayAssignment(Component):
         )
         # Must match signature of manager.BaseAssignmentLauncher.add_run
         #       time, scenario, assign_spec, demand_matrices, skim_matrices, omx_file_path
+        self.logger.debug(f"highway_assign._get_assign_params {time=}")
         params = dict(
             time=time,
-            scenario_id=self.highway_emmebank.scenario(time).id,
+            scenario_id=self.highway_emmebank.scenario(time.lower()).id,
             assign_spec=builder.assignment_spec,
             demand_matrices=builder.demand_matrices,
             skim_matrices=builder.skim_matrices,
@@ -223,9 +245,9 @@ class HighwayAssignment(Component):
         self.logger.debug(
             f"_get_assign_params: self.config.output_skim_path:{self.config.output_skim_path}"
         )
-        with self.logger._skip_emme_logging():
-            self.logger.debug("_get_assign_params: params dictionary")
-            self.logger.log_dict(params, level="DEBUG")
+        # with self.logger._skip_emme_logging():
+        #     self.logger.debug("_get_assign_params: params dictionary")
+        #     self.logger.log_dict(params, level="DEBUG")
         return params
 
 
@@ -335,22 +357,35 @@ class AssignmentRunner:
                 self._copy_maz_flow()
             else:
                 self._reset_background_traffic()
+            self.logger.debug(f"AssignmentRunner.run() with {self.demand_matrix_ids}")
             for matrix_name in self.demand_matrix_ids:
                 if not self.emmebank.matrix(matrix_name):
                     raise Exception(f"demand matrix {matrix_name} does not exist")
 
             self._create_skim_matrices()
-            with self.logger._skip_emme_logging():
-                self.logger.log_dict(self.assign_spec, level="DEBUG")
+            # with self.logger._skip_emme_logging():
+            #    self.logger.debug("AssignmentReunner.run() assign_spec:")
+            #    self.logger.log_dict(self.assign_spec, level="DEBUG")
+            
+            # ========== EXTENSIVE DEBUG LOGGING ==========
+            self._debug_dump_assignment_state()
+            
+            # Log that assignment is starting with resource monitoring
             with self.logger.log_start_end(
                 "Run SOLA assignment (no path analyses)", level="INFO"
             ):
                 assign = self.emme_manager.tool(
                     "inro.emme.traffic_assignment.sola_traffic_assignment"
                 )
-                assign(
-                    self.assign_spec_no_analysis, self.scenario, chart_log_interval=1
-                )
+                # Wrap assignment in try/except to capture more context on failure
+                try:
+                    self._debug_patch_lexer()
+                    assign(
+                        self.assign_spec_no_analysis, self.scenario, chart_log_interval=1
+                    )
+                except Exception as e:
+                    self._debug_capture_failure(e, self.assign_spec_no_analysis)
+                    raise
 
             with self.logger.log_start_end(
                 "Calculates link level LOS based reliability", level="DETAIL"
@@ -506,6 +541,191 @@ class AssignmentRunner:
                 f"{data.mean():9.4g} {data.sum(): 13.7g}"
             )
             self.logger.debug(stats)
+
+    def _debug_dump_assignment_state(self):
+        """Dump all relevant state before assignment for debugging."""
+        import json
+        import os
+        
+        debug_dir = os.path.join(os.path.dirname(self.emmebank.path), "debug_dumps")
+        os.makedirs(debug_dir, exist_ok=True)
+        
+        self.logger.log(f"=== DEBUG: Dumping assignment state to {debug_dir} ===", level="INFO")
+        
+        # 1. Dump VDFs
+        vdf_file = os.path.join(debug_dir, f"vdfs_{self.time}.txt")
+        with open(vdf_file, "w") as f:
+            f.write("=== Volume Delay Functions ===\n")
+            for func in self.emmebank.functions():
+                if func.type == "VOLUME_DELAY":
+                    f.write(f"{func.id}: {func.expression}\n")
+                    # Check for problematic characters
+                    for i, char in enumerate(func.expression):
+                        if char == '+':
+                            f.write(f"  '+' at position {i}\n")
+            
+            # Also dump extra function parameters
+            f.write("\n=== Extra Function Parameters ===\n")
+            efp = self.emmebank.extra_function_parameters
+            for el in ["el1", "el2", "el3", "el4"]:
+                f.write(f"{el}: {getattr(efp, el)}\n")
+        self.logger.log(f"VDFs written to {vdf_file}", level="INFO")
+        
+        # 2. Dump assignment spec (no analysis version)
+        spec_file = os.path.join(debug_dir, f"assign_spec_no_analysis_{self.time}.json")
+        with open(spec_file, "w") as f:
+            json.dump(self.assign_spec_no_analysis, f, indent=2, default=str)
+        self.logger.log(f"Spec written to {spec_file}", level="INFO")
+        
+        # 3. Dump scenario info
+        scenario_file = os.path.join(debug_dir, f"scenario_{self.time}.txt")
+        with open(scenario_file, "w") as f:
+            f.write(f"Scenario ID: {self.scenario.id}\n")
+            f.write(f"Scenario Title: {self.scenario.title}\n")
+            f.write(f"Emmebank path: {self.emmebank.path}\n")
+            
+            # Network stats
+            net = self.scenario.get_network()
+            f.write(f"\n=== Network Stats ===\n")
+            f.write(f"Nodes: {len(list(net.nodes()))}\n")
+            f.write(f"Links: {len(list(net.links()))}\n")
+            f.write(f"Zones: {len(self.scenario.zone_numbers)}\n")
+            
+            # Check link VDF assignments
+            vdf_counts = {}
+            for link in net.links():
+                vdf = link.volume_delay_func
+                vdf_counts[vdf] = vdf_counts.get(vdf, 0) + 1
+            f.write(f"\n=== Link VDF Distribution ===\n")
+            for vdf, count in sorted(vdf_counts.items()):
+                f.write(f"VDF {vdf}: {count} links\n")
+            
+            # Check for links with missing/zero attributes
+            f.write(f"\n=== Link Attribute Checks ===\n")
+            attrs_to_check = ["@free_flow_time", "@capacity", "@cost_da"]
+            for attr in attrs_to_check:
+                if self.scenario.extra_attribute(attr):
+                    zero_count = sum(1 for link in net.links() if link[attr] == 0)
+                    none_count = sum(1 for link in net.links() if link[attr] is None)
+                    f.write(f"{attr}: {zero_count} zeros, {none_count} None\n")
+                else:
+                    f.write(f"{attr}: DOES NOT EXIST\n")
+        self.logger.log(f"Scenario info written to {scenario_file}", level="INFO")
+        
+        # 4. Dump demand matrices
+        matrix_file = os.path.join(debug_dir, f"matrices_{self.time}.txt")
+        with open(matrix_file, "w") as f:
+            f.write("=== Demand Matrices ===\n")
+            for mat_name in self.demand_matrix_ids:
+                mat = self.emmebank.matrix(mat_name)
+                if mat:
+                    f.write(f"{mat_name}: {mat.id} - {mat.description}\n")
+                    # Get matrix data summary
+                    try:
+                        data = mat.get_numpy_data()
+                        f.write(f"  Shape: {data.shape}, Min: {data.min():.4g}, Max: {data.max():.4g}, Sum: {data.sum():.4g}\n")
+                    except Exception as e:
+                        f.write(f"  (Could not get matrix data: {e})\n")
+                else:
+                    f.write(f"{mat_name}: NOT FOUND\n")
+        self.logger.log(f"Matrix info written to {matrix_file}", level="INFO")
+        
+        # 5. Check EMME version info
+        version_file = os.path.join(debug_dir, "emme_version.txt")
+        with open(version_file, "w") as f:
+            import sys
+            f.write(f"Python: {sys.version}\n")
+            f.write(f"EMMEPATH: {os.environ.get('EMMEPATH', 'NOT SET')}\n")
+            f.write(f"PATH entries with EMME:\n")
+            for p in os.environ.get('PATH', '').split(os.pathsep):
+                if 'EMME' in p.upper() or 'OPENPATHS' in p.upper():
+                    f.write(f"  {p}\n")
+            
+            # Try to get EMME module info
+            try:
+                import inro.emme
+                f.write(f"\ninro.emme location: {inro.emme.__file__}\n")
+            except Exception as e:
+                f.write(f"\nCould not get inro.emme info: {e}\n")
+        self.logger.log(f"Version info written to {version_file}", level="INFO")
+        
+        self.logger.log("=== DEBUG: State dump complete ===", level="INFO")
+
+    def _debug_patch_lexer(self):
+        """Patch PLY lexer to capture context on error."""
+        try:
+            import ply.lex as ply_lex
+            
+            # Store original if not already patched
+            if not hasattr(ply_lex.Lexer, '_original_token'):
+                ply_lex.Lexer._original_token = ply_lex.Lexer.token
+                
+                def patched_token(lexer_self):
+                    try:
+                        return ply_lex.Lexer._original_token(lexer_self)
+                    except Exception as e:
+                        if "Illegal character" in str(e):
+                            self._debug_capture_lexer_state(lexer_self, e)
+                        raise
+                
+                ply_lex.Lexer.token = patched_token
+                self.logger.log("DEBUG: PLY lexer patched for error capture", level="INFO")
+        except Exception as e:
+            self.logger.log(f"DEBUG: Could not patch lexer: {e}", level="WARN")
+
+    def _debug_capture_lexer_state(self, lexer, error):
+        """Capture lexer state when error occurs."""
+        import os
+        
+        debug_dir = os.path.join(os.path.dirname(self.emmebank.path), "debug_dumps")
+        os.makedirs(debug_dir, exist_ok=True)
+        
+        lexer_file = os.path.join(debug_dir, f"lexer_error_{self.time}.txt")
+        with open(lexer_file, "w") as f:
+            f.write(f"=== LEXER ERROR CAPTURED ===\n")
+            f.write(f"Error: {error}\n\n")
+            
+            if hasattr(lexer, 'lexpos'):
+                f.write(f"Position: {lexer.lexpos}\n")
+            if hasattr(lexer, 'lineno'):
+                f.write(f"Line: {lexer.lineno}\n")
+            if hasattr(lexer, 'lexdata'):
+                f.write(f"Data length: {len(lexer.lexdata)}\n\n")
+                f.write("=== FULL LEXDATA ===\n")
+                f.write(lexer.lexdata)
+                f.write("\n\n=== CONTEXT AROUND ERROR ===\n")
+                if hasattr(lexer, 'lexpos'):
+                    start = max(0, lexer.lexpos - 500)
+                    end = min(len(lexer.lexdata), lexer.lexpos + 500)
+                    f.write(f"Characters {start} to {end}:\n")
+                    f.write("-" * 80 + "\n")
+                    f.write(lexer.lexdata[start:lexer.lexpos])
+                    f.write("\n>>> ERROR POSITION <<<\n")
+                    f.write(lexer.lexdata[lexer.lexpos:end])
+                    f.write("\n" + "-" * 80 + "\n")
+        
+        self.logger.log(f"LEXER ERROR STATE CAPTURED: {lexer_file}", level="ERROR")
+
+    def _debug_capture_failure(self, error, spec):
+        """Capture all context when assignment fails."""
+        import json
+        import os
+        import traceback
+        
+        debug_dir = os.path.join(os.path.dirname(self.emmebank.path), "debug_dumps")
+        os.makedirs(debug_dir, exist_ok=True)
+        
+        failure_file = os.path.join(debug_dir, f"assignment_failure_{self.time}.txt")
+        with open(failure_file, "w") as f:
+            f.write("=== ASSIGNMENT FAILURE ===\n")
+            f.write(f"Error type: {type(error).__name__}\n")
+            f.write(f"Error message: {error}\n\n")
+            f.write("=== TRACEBACK ===\n")
+            f.write(traceback.format_exc())
+            f.write("\n\n=== SPEC USED ===\n")
+            f.write(json.dumps(spec, indent=2, default=str))
+        
+        self.logger.log(f"FAILURE DETAILS CAPTURED: {failure_file}", level="ERROR")
 
 
 if __name__ == "__main__":

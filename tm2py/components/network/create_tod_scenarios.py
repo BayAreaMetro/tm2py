@@ -41,17 +41,34 @@ class CreateTODScenarios(Component):
         # TODO
 
     def run(self):
-        print("DEBUG: Entered CreateTODScenarios.run()")
         # project_path = self.get_abs_path(self.controller.config.emme.project_path)
         # self._emme_manager = self.controller.emme_manager
         # emme_app = self._emme_manager.project(project_path)
         # self._emme_manager.init_modeller(emme_app)
         with self._setup():
-            print("DEBUG: In _setup context of CreateTODScenarios.run()")
             self._create_highway_scenarios()
-            print("DEBUG: Called _create_highway_scenarios() in CreateTODScenarios.run()")
-            self._create_transit_scenarios()
-            print("DEBUG: Called _create_transit_scenarios() in CreateTODScenarios.run()")
+            
+            # Skip transit scenarios if highway_only flag is set or no transit component in run
+            skip_transit = False
+            if hasattr(self.controller.config.emme, 'highway_only'):
+                skip_transit = self.controller.config.emme.highway_only
+            elif hasattr(self.controller.config, 'run'):
+                # Check if transit component is in the component lists
+                all_components = (
+                    list(getattr(self.controller.config.run, 'initial_components', [])) +
+                    list(getattr(self.controller.config.run, 'global_iteration_components', [])) +
+                    list(getattr(self.controller.config.run, 'final_components', []))
+                )
+                # Check for any transit-related components
+                transit_components = {'transit_assign', 'transit_skim', 'prepare_network_transit'}
+                has_transit = any(comp in transit_components for comp in all_components)
+                skip_transit = not has_transit
+            
+            if skip_transit:
+                self.controller.logger.debug("Skipping _create_transit_scenarios() - highway-only mode")
+                self.controller.logger.log("Skipping transit scenario creation (highway-only mode)", level="INFO")
+            else:
+                self._create_transit_scenarios()
 
     @_context
     def _setup(self):
@@ -209,7 +226,7 @@ class CreateTODScenarios(Component):
             self.controller.config.emme.all_day_scenario_id
         )
         attributes = {
-            "LINK": ["@area_type", "@capclass", "@free_flow_speed", "@free_flow_time"]
+            "LINK": ["@area_type", "@capclass", "@free_flow_speed", "@free_flow_time", "@lanes"]
         }
         for domain, attrs in attributes.items():
             for name in attrs:
@@ -217,6 +234,52 @@ class CreateTODScenarios(Component):
                     ref_scenario.create_extra_attribute(domain, name)
 
         network = ref_scenario.get_network()
+        
+        # Copy standard lanes to @lanes if @lanes is empty (for legacy networks)
+        # get_attribute_values returns [id_array, value_array], so we need the second element
+        self.controller.logger.log("Getting @lanes attribute values...", level="DEBUG")
+        try:
+            lanes_result = ref_scenario.get_attribute_values("LINK", ["@lanes"])
+            self.controller.logger.log(f"lanes_result type: {type(lanes_result)}, len: {len(lanes_result) if hasattr(lanes_result, '__len__') else 'N/A'}", level="DEBUG")
+            
+            if isinstance(lanes_result, list) and len(lanes_result) > 1:
+                lanes_values = lanes_result[1]
+                self.controller.logger.log(f"lanes_values type: {type(lanes_values)}, len: {len(lanes_values) if hasattr(lanes_values, '__len__') else 'N/A'}", level="DEBUG")
+            else:
+                lanes_values = lanes_result
+                self.controller.logger.log(f"lanes_result not a list, using directly", level="DEBUG")
+            
+            # Check if all lane values are 0 (need to copy from standard 'num_lanes' attribute)
+            if hasattr(lanes_values, '__iter__'):
+                # Check first few values
+                sample = list(lanes_values[:10]) if hasattr(lanes_values, '__getitem__') else list(lanes_values)[:10]
+                self.controller.logger.log(f"First 10 lane values: {sample}", level="DEBUG")
+                all_zero = all(v == 0 for v in lanes_values)
+            else:
+                all_zero = lanes_values == 0
+            
+            self.controller.logger.log(f"all_zero = {all_zero}", level="DEBUG")
+            
+            if all_zero:
+                self.controller.logger.log(
+                    "Copying standard 'num_lanes' attribute to '@lanes' (legacy network compatibility)",
+                    level="INFO"
+                )
+                # Check if num_lanes exists on first link
+                first_link = next(iter(network.links()), None)
+                if first_link:
+                    self.controller.logger.log(f"First link attributes: {list(first_link.network.attributes('LINK'))[:20]}", level="DEBUG")
+                    self.controller.logger.log(f"First link num_lanes = {first_link.num_lanes}", level="DEBUG")
+                
+                for link in network.links():
+                    link["@lanes"] = link.num_lanes
+                self.controller.logger.log("Finished copying num_lanes to @lanes", level="DEBUG")
+        except Exception as e:
+            self.controller.logger.log(f"ERROR in lanes copying: {type(e).__name__}: {e}", level="ERROR")
+            import traceback
+            self.controller.logger.log(f"Traceback: {traceback.format_exc()}", level="ERROR")
+            raise
+        
         self._set_area_type(network)
         self._set_capclass(network)
         self._set_speed(network)
@@ -432,11 +495,22 @@ class CreateTODScenarios(Component):
                     seg.link.modes |= {line_mode}
                 line.vehicle = line_veh
                 # Set the perception factor from the mode table
-                line["@invehicle_factor"] = in_vehicle_factors[line.vehicle.mode.id]
-                line["@iboard_penalty"] = initial_boarding_penalty[line.vehicle.mode.id]
-                line["@xboard_penalty"] = transfer_boarding_penalty[
-                    line.vehicle.mode.id
-                ]
+                # IMPORTANT: Skip if mode not in config. This handles legacy network data issues
+                # where transit lines may have been assigned highway modes (e.g., mode 'x' for MAZ-to-MAZ).
+                # This was observed in sprint-04 (April 2025) networks created before November 2025
+                # crosswalk validation improvements. Newer network builds should not have this issue.
+                if line.vehicle.mode.id in in_vehicle_factors:
+                    line["@invehicle_factor"] = in_vehicle_factors[line.vehicle.mode.id]
+                    line["@iboard_penalty"] = initial_boarding_penalty[line.vehicle.mode.id]
+                    line["@xboard_penalty"] = transfer_boarding_penalty[
+                        line.vehicle.mode.id
+                    ]
+                else:
+                    self.controller.logger.log(
+                        f"Warning: Transit line {line.id} uses mode '{line.vehicle.mode.id}' not defined in "
+                        f"transit.modes config. This may indicate network build issues. Skipping perception factors for this line.",
+                        level="WARN"
+                    )
 
             # # set link modes to the minimum set
             # auto_mode = {self.controller.config.highway.generic_highway_mode_code}
@@ -470,11 +544,14 @@ class CreateTODScenarios(Component):
                 link.j_node["@hdw_fraction"] = default_headway_fraction
                 link.j_node["@wait_pfactor"] = default_transfer_wait_perception_factor
                 link.j_node["@xboard_nodepen"] = 1
-                # update modes on connectors
+                # update modes on connectors - only if modes exist in network
+                # Access mode 'a' and egress mode 'e' may not be defined in minimal transit configs
                 if (link.i_node.is_centroid) and (link["@drive_link"] == 0):
-                    link.modes = "a"
+                    if network.mode("a"):
+                        link.modes = "a"
                 elif (link.j_node.is_centroid) and (link["@drive_link"] == 0):
-                    link.modes = "e"
+                    if network.mode("e"):
+                        link.modes = "e"
                 elif (link.i_node.is_centroid or link.j_node.is_centroid) and (
                     link["@drive_link"] != 0
                 ):
@@ -542,31 +619,64 @@ class CreateTODScenarios(Component):
         }
         for attr in ref_scenario.extra_attributes():
             for period in self.controller.config.time_periods:
-                if attr.name.endswith(period.name):
+                # Case-insensitive check: attribute names are lowercase (e.g., @lanes_am)
+                # but period names may be uppercase (e.g., "AM")
+                if attr.name.lower().endswith(period.name.lower()):
+                    # Store with the original period name suffix length for extraction
                     tod_attr_groups[attr.type][attr.name[: -len(period.name)]].append(
                         attr.name
                     )
+        
+        # Debug: show what period attributes were found
+        for domain, all_attrs in tod_attr_groups.items():
+            if all_attrs:
+                self.controller.logger.log(
+                    f"DEBUG: Found {len(all_attrs)} time-of-day attribute groups for {domain}: {list(all_attrs.keys())[:5]}...",
+                    level="INFO"
+                )
+        
         for period in self.controller.config.time_periods:
             scenario = emmebank.scenario(period.emme_scenario_id)
             if scenario:
                 emmebank.delete_scenario(scenario)
             scenario = emmebank.copy_scenario(ref_scenario, period.emme_scenario_id)
             scenario.title = f"{period.name} {ref_scenario.title}"[:60]
+            self.controller.logger.log(
+                f"Created period scenario {period.emme_scenario_id} for {period.name}",
+                level="DEBUG"
+            )
             # in per-period scenario create attributes without period suffix, copy values
             # for this period and delete all other period attributes
+            attrs_copied = []
             for domain, all_attrs in tod_attr_groups.items():
                 for root_attr, tod_attrs in all_attrs.items():
-                    src_attr = f"{root_attr}{period.name}"
+                    # Build source attribute name - try lowercase period name first (e.g., @lanes_am)
+                    # since EMME extra attribute names are typically lowercase
+                    src_attr = f"{root_attr}{period.name.lower()}"
+                    # If lowercase version doesn't exist, try the original case
+                    if scenario.extra_attribute(src_attr) is None:
+                        src_attr = f"{root_attr}{period.name}"
                     if root_attr.endswith("_"):
                         root_attr = root_attr[:-1]
                     for attr in tod_attrs:
                         if attr != src_attr:
                             scenario.delete_extra_attribute(attr)
-                    attr = scenario.create_extra_attribute(domain, root_attr)
+                    # Create target attribute if it doesn't exist, otherwise use existing
+                    if scenario.extra_attribute(root_attr) is None:
+                        attr = scenario.create_extra_attribute(domain, root_attr)
+                    else:
+                        attr = scenario.extra_attribute(root_attr)
                     attr.description = scenario.extra_attribute(src_attr).description
                     values = scenario.get_attribute_values(domain, [src_attr])
                     scenario.set_attribute_values(domain, [root_attr], values)
                     scenario.delete_extra_attribute(src_attr)
+                    attrs_copied.append(f"{src_attr}->{root_attr}")
+            
+            if attrs_copied:
+                self.controller.logger.log(
+                    f"Copied {len(attrs_copied)} period attributes: {attrs_copied[:5]}...",
+                    level="DEBUG"
+                )
 
     def _set_area_type(self, network):
         # set area type for links based on average density of MAZ closest to I or J node

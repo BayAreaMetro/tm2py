@@ -968,7 +968,7 @@ class TransitSkim(Component):
         omx_file_path = os.path.join(
             output_skim_path,
             self.config.output_skim_filename_tmpl.format(
-                time_period=time_period, tclass=transit_class.name
+                time_period=time_period.upper(), tclass=transit_class.name
             ),
         )
         os.makedirs(os.path.dirname(omx_file_path), exist_ok=True)
@@ -979,6 +979,14 @@ class TransitSkim(Component):
             skim_properties=self.skim_outputs
 
         )
+
+        # Uppercase the time period prefix in matrix names for CTRAMP compatibility.
+        # EMME matrices use lowercase time period names (e.g. "md_PNR_TRN_WLK_IVT")
+        # but CTRAMP UECs expect uppercase (e.g. "MD_PNR_TRN_WLK_IVT").
+        _matrices = {
+            time_period.upper() + k[len(time_period):]: v
+            for k, v in _matrices.items()
+        }
 
         with OMXManager(
             omx_file_path,

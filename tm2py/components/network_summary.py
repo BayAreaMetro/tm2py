@@ -174,15 +174,12 @@ class NetworkSummary(Component):
             True if successful, False otherwise
         """
         try:
-            self.logger.info("=" * 60)
-            self.logger.info("STARTING NETWORK SUMMARY COMPONENT")
-            self.logger.info("=" * 60)
-            self.logger.info(f"Output directory: {self.output_dir}")
-            self.logger.info(f"Time periods configured: {self.time_period_names}")
-            self.logger.info(f"Time period mapping: {self._tp_mapping}")
+            self.logger.debug(f"Output directory: {self.output_dir}")
+            self.logger.debug(f"Time periods configured: {self.time_period_names}")
+            self.logger.debug(f"Time period mapping: {self._tp_mapping}")
             
             # Test database connections first
-            self.logger.info("Testing database connections...")
+            self.logger.debug("Testing database connections...")
             
             # Test database connections
             # Test highway database connection
@@ -190,7 +187,7 @@ class NetworkSummary(Component):
             for period in self.time_period_names:
                 try:
                     highway_test_scenario = self.highway_emmebank.scenario(period)
-                    self.logger.info(f"SUCCESS: Highway database connected - scenario {period} accessible")
+                    self.logger.debug(f"SUCCESS: Highway database connected - scenario {period} accessible")
                     break
                 except:
                     continue
@@ -204,7 +201,7 @@ class NetworkSummary(Component):
             for period in self.time_period_names:
                 try:
                     transit_test_scenario = self.transit_emmebank.scenario(period)
-                    self.logger.info(f"SUCCESS: Transit database connected - scenario {period} accessible")
+                    self.logger.debug(f"SUCCESS: Transit database connected - scenario {period} accessible")
                     break
                 except:
                     continue
@@ -214,9 +211,6 @@ class NetworkSummary(Component):
                 
             
             # Generate highway analysis
-            self.logger.info("-" * 40)
-            self.logger.info("STARTING HIGHWAY NETWORK ANALYSIS")
-            self.logger.info("-" * 40)
             if self._analyze_highway_network():
                 self.logger.info("SUCCESS: Highway analysis completed successfully")
             else:
@@ -224,9 +218,6 @@ class NetworkSummary(Component):
                 return False
             
             # Generate transit analysis
-            self.logger.info("-" * 40)
-            self.logger.info("STARTING TRANSIT NETWORK ANALYSIS")
-            self.logger.info("-" * 40)
             if self._analyze_transit_network():
                 self.logger.info("SUCCESS: Transit analysis completed successfully")
             else:
@@ -234,10 +225,6 @@ class NetworkSummary(Component):
             
             # Generate final validation summary
             self._generate_final_validation_summary()
-            
-            self.logger.info("=" * 60)
-            self.logger.info("NETWORK SUMMARY COMPONENT COMPLETED SUCCESSFULLY")
-            self.logger.info("=" * 60)
             return True
             
         except Exception as e:
@@ -1473,8 +1460,8 @@ class NetworkSummary(Component):
         for link in network.links():
             links_processed += 1
             
-            # Log progress every 5000 links for better feedback
-            if links_processed % 5000 == 0:
+            # Log progress every 25000 links for better feedback
+            if links_processed % 25000 == 0:
                 progress_pct = (links_processed / total_links) * 100
                 self.logger.info(f"     Processing links: {links_processed:,}/{total_links:,} ({progress_pct:.1f}%)")
             
@@ -2841,183 +2828,49 @@ class NetworkSummary(Component):
                     self.logger.info(f"  {key.replace('_', ' ').title()}: {value}")
 
 
-def main() -> int:
-    """Main entry point for the network summarizer."""
-    parser = argparse.ArgumentParser(
-        description="Generate comprehensive network performance summaries from TM2PY EMME results",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-    python network_summary.py E:\\2015-tm22-dev-sprint-04
-    python network_summary.py E:\\2015-tm22-dev-sprint-04 --output C:\\results
-    python network_summary.py --help
-        """
-    )
-    
-    parser.add_argument(
-        'model_run_dir',
-        type=str,
-        help='Path to the TM2PY model run directory containing EMME results'
-    )
-    
-    parser.add_argument(
-        '--output', '-o',
-        type=str,
-        default=None,
-        help='Output directory for summary files (default: from config.network_summary.output_directory)'
-    )
-    
-    parser.add_argument(
-        '--verbose', '-v',
-        action='store_true',
-        help='Enable verbose logging'
-    )
-    
-    parser.add_argument(
-        '--validate-only',
-        action='store_true',
-        help='Run input validation only without processing (useful for troubleshooting)'
-    )
-    
-    parser.add_argument(
-        '--validate-outputs',
-        action='store_true',
-        help='Run output validation on existing results (requires previous run completion)'
-    )
-    
-    parser.add_argument(
-        '--list-scenarios',
-        action='store_true',
-        help='List all available scenarios in both highway and transit databases'
-    )
-    
-    args = parser.parse_args()
-    
-    # Validate model run directory
-    model_run_path = Path(args.model_run_dir)
-    if not model_run_path.exists():
-        print(f"Error: Model run directory does not exist: {model_run_path}")
-        return 1
-    
-    # Set up logging level
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-    
-    try:
-        # For standalone usage, would need to create a proper controller
-        # NetworkSummary is designed as a TM2PY component and requires controller
-        print("ERROR: NetworkSummary must be run as a TM2PY component via RunModel.py")
-        print("Standalone execution is not supported.")
-        return 1
-        
-        if args.list_scenarios:
-            print("Listing all available scenarios...")
-            try:
-                # Connect to databases first
-                validation_results = summarizer.validate_inputs()
-                if validation_results['status'] == 'fail':
-                    print("ERROR: Could not connect to databases")
-                    for error in validation_results.get('errors', []):
-                        print(f"  ERROR: {error}")
-                    return 1
-                
-                print("\n=== HIGHWAY DATABASE SCENARIOS ===")
-                highway_scenarios = list(summarizer.highway_bank.scenarios())
-                for scenario in highway_scenarios:
-                    time_period = summarizer._map_scenario_to_time_period(scenario)
-                    title = scenario.title or '(no title)'
-                    print(f"  Scenario {scenario.id:2d}: {title} -> {time_period}")
-                    
-                print(f"\nHighway total: {len(highway_scenarios)} scenarios")
-                
-                print("\n=== TRANSIT DATABASE SCENARIOS ===")
-                transit_scenarios = list(summarizer.transit_bank.scenarios())
-                for scenario in transit_scenarios:
-                    time_period = summarizer._map_scenario_to_time_period(scenario)
-                    title = scenario.title or '(no title)'
-                    print(f"  Scenario {scenario.id:2d}: {title} -> {time_period}")
-                    
-                print(f"\nTransit total: {len(transit_scenarios)} scenarios")
-                
-                # Show time period mapping summary
-                highway_periods = {summarizer._map_scenario_to_time_period(s) for s in highway_scenarios}
-                transit_periods = {summarizer._map_scenario_to_time_period(s) for s in transit_scenarios}
-                
-                print(f"\n=== TIME PERIOD SUMMARY ===")
-                print(f"Highway periods found: {sorted([p for p in highway_periods if p != 'unknown'])}")
-                print(f"Transit periods found: {sorted([p for p in transit_periods if p != 'unknown'])}")
-                
-                highway_unknown = [s for s in highway_scenarios if summarizer._map_scenario_to_time_period(s) == 'unknown']
-                transit_unknown = [s for s in transit_scenarios if summarizer._map_scenario_to_time_period(s) == 'unknown']
-                
-                if highway_unknown:
-                    print(f"\nHighway scenarios with unknown periods (will be skipped): {[s.id for s in highway_unknown]}")
-                if transit_unknown:
-                    print(f"Transit scenarios with unknown periods (will be skipped): {[s.id for s in transit_unknown]}")
-                    
-                return 0
-                
-            except Exception as e:
-                print(f"ERROR: Failed to list scenarios: {e}")
-                return 1
-        
-        if args.validate_only:
-            print("Running input validation only...")
-            validation_results = summarizer.validate_inputs()
-            summarizer._log_validation_results(validation_results)
-            
-            if validation_results['status'] == 'fail':
-                print("\nERROR Validation FAILED")
-                return 1
-            elif validation_results['status'] == 'pass_with_warnings':
-                print("\nWARNING  Validation PASSED with warnings")
-                return 0
-            else:
-                print("\nOK Validation PASSED")
-                return 0
-        elif args.validate_outputs:
-            print("Running output validation on existing results...")
-            output_validation = summarizer.validate_outputs()
-            
-            if output_validation['status'] == 'fail':
-                print("\nERROR Output validation FAILED")
-                print("Issues found:")
-                for error in output_validation['errors']:
-                    print(f"  ERROR {error}")
-                return 1
-            elif output_validation['status'] == 'pass_with_warnings':
-                print("\nWARNING  Output validation PASSED with warnings")
-                print("Warnings:")
-                for warning in output_validation['warnings']:
-                    print(f"  WARNING  {warning}")
-                return 0
-            else:
-                print("\nOK Output validation PASSED")
-                return 0
-        else:
-            success = summarizer.run()
-            
-            if success:
-                print(f"\nNetwork summary completed successfully!")
-                print(f"Results saved to: {summarizer.output_dir}")
-                print(f"\nGenerated files include:")
-                print(f"  Highway Analysis:")
-                print(f"    - facility_type_summary.csv (VMT/VHT by facility type)")
-                print(f"    - topsheet.csv (system-wide metrics with landuse and transit totals)")
-                print(f"    - lane_mile_inventory.csv (network inventory)")
-                print(f"  Transit Analysis (if transit database available):")
-                print(f"    - transit_boardings_by_line_{{period}}.csv (line boardings by time period)")
-                print(f"    - transit_boardings_by_line_daily.csv (all-day totals by line)")
-                print(f"    - transit_boardings_by_service_type.csv (summary by mode)")
-            else:
-                print("\nNetwork summary failed. Check logs for details.")
-                
-            return 0 if success else 1
-        
-    except Exception as e:
-        print(f"Error: {e}")
-        return 1
-
-
 if __name__ == "__main__":
-    sys.exit(main())
+    if "tm2py.components.network_summary" not in sys.modules:
+        sys.modules["tm2py.components.network_summary"] = sys.modules[__name__]
+
+    try:
+        from tm2py.controller import RunController
+    except ImportError as exc:  # pragma: no cover
+        print(f"Unable to import RunController: {exc}")
+        sys.exit(1)
+
+    run_dir = Path.cwd()
+    config_files = [run_dir / "scenario_config.toml", run_dir / "model_config.toml"]
+
+    for cfg in config_files:
+        if not cfg.exists():
+            print(f"Required configuration file not found: {cfg}")
+            sys.exit(1)
+
+    try:
+        # Provide an empty run_components list so the controller skips queuing the
+        # standard model workflow; we just need access to shared resources (logger,
+        # config, emme manager) before invoking NetworkSummary manually.
+        controller = RunController(
+            config_file=config_files,
+            run_dir=run_dir,
+            run_components=[],
+            log_file_path="network_summary.log",
+        )
+    except Exception as exc:  # pylint: disable=broad-except
+        print(f"Failed to initialize RunController: {exc}")
+        sys.exit(1)
+
+    # Instantiate the component directly rather than calling controller.run(); the
+    # latter would re-run the configured component queue, while we only want this
+    # standalone network summary pass.
+    summarizer = NetworkSummary(controller)
+    try:
+        summarizer.validate_inputs()
+        summarizer.run()
+    except Exception as exc:  # pylint: disable=broad-except
+        controller.logger.log_exception(exc)
+        print(f"NetworkSummary failed: {exc}")
+        sys.exit(1)
+
+    controller.logger.log("NetworkSummary finished successfully.", level="INFO")
+    sys.exit(0)

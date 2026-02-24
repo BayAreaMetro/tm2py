@@ -235,13 +235,14 @@ class AssignmentClass:
     @property
     def demand_matrix(self) -> str:
         """Returns: The demand matrix name for this class."""
+        # TODO: time_period case biting us again
         if self.iteration == 0:
             if not self.warmstart:
                 demand_matrix = 'ms"zero"'
             else:
-                demand_matrix = f'mf"{self.time_period}_{self.name}"'
+                demand_matrix = f'mf"{self.time_period.lower()}_{self.name}"'
         else:
-            demand_matrix = f'mf"{self.time_period}_{self.name}"'
+            demand_matrix = f'mf"{self.time_period.lower()}_{self.name}"'
         return demand_matrix
 
     @property

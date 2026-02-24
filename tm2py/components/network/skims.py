@@ -74,9 +74,9 @@ def get_omx_skim_as_numpy(
         property: Property to get. Defaults to "time".
     """
 
-    if time_period.upper() not in controller.time_period_names:
+    if time_period.lower() not in controller.time_period_names:
         raise ValueError(
-            f"Skim time period {time_period.upper()} must be a subset of config time periods: {controller.time_period_names}"
+            f"Skim time period {time_period.lower()} must be a subset of config time periods: {controller.time_period_names}"
         )
 
     # TODO need to more dutifully map skim modes to network modes

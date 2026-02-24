@@ -21,7 +21,7 @@ import queue
 import re
 from collections import deque
 from pathlib import Path
-from typing import Collection, List, Tuple, Union
+from typing import Collection, List, Optional, Tuple, Union
 from pandera.typing import DataFrame
 
 from datetime import datetime
@@ -104,6 +104,7 @@ class RunController:
         config_file: Union[Collection[Union[str, Path]], str, Path] = None,
         run_dir: Union[Path, str] = None,
         run_components: Collection[str] = component_cls_map.keys(),
+        log_file_path: Optional[Union[Path, str]] = None,
     ):
         """Constructor for RunController class.
 
@@ -113,11 +114,19 @@ class RunController:
             run_dir: Model run directory as a Path object or string. If not provided, defaults
                 to the directory of the first config_file.
             run_components: List of component names to run. Defaults to all components.
+            log_file_path: Optional override for the detailed log file path used by the
+                main logger. Relative paths are resolved against ``run_dir``.
         """
         if run_dir is None:
             run_dir = Path(os.path.abspath(os.path.dirname(config_file[0])))
 
         self._run_dir = Path(run_dir)
+        self._log_file_override: Optional[Path] = None
+        if log_file_path is not None:
+            override_path = Path(log_file_path)
+            if not override_path.is_absolute():
+                override_path = self._run_dir / override_path
+            self._log_file_override = override_path
 
         self.config = Configuration.load_toml(config_file)
         self.has_emme: bool = emme_context()
@@ -137,7 +146,7 @@ class RunController:
 
         # create logger before creating components so we can log if issues arise in the component creation
         self.logger = Logger(self)
-        print(f"initialize_log({self.runtime_log_file, self.runtime_log_headers, self.runtime_log_col_width})")
+        print(f"initialize_log({self.runtime_log_file, self.runtime_log_headers, self.runtime_log_col_width})", flush=True)
         initialize_log(
             self.runtime_log_file, self.runtime_log_headers, self.runtime_log_col_width
         )
@@ -180,9 +189,9 @@ class RunController:
 
         Implemented here for easy access for all components.
 
-        Returns: list of uppercased string names of time periods
+        Returns: list of string names of time periods
         """
-        return [time.name.upper() for time in self.config.time_periods]
+        return [time.name for time in self.config.time_periods]
 
     @property
     def time_period_durations(self) -> dict:
@@ -363,7 +372,12 @@ class RunController:
                 self.runtime_log_file,
                 self.runtime_log_col_width,
             )
-        except:
+        except BaseException as exc:
+            self.logger.error(
+                f"Component {name} failed during iteration {iteration}",
+                indent=False,
+            )
+            self.logger.log_exception(exc)
             # re-insert failed component on error
             self._queued_components.insert(0, (iteration, name, component))
             raise

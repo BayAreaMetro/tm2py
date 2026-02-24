@@ -2,6 +2,11 @@ site_name: "Travel Model Two Python Package: tm2py"
 site_url: https://bayareametro.github.io/tm2py
 repo_url: https://github.com/bayareametro/tm2py
 edit_uri: edit/main/docs
+
+# Exclude files that conflict or aren't part of docs
+exclude_docs: |
+  README.md
+
 # Temporarily removed to avoid GDAL dependency issues:
 # watch:
 #   - tm2py
@@ -53,6 +58,7 @@ nav:
     - Server Setup: server-setup.md
     - Installing tm2py: install.md
     - Running tm2: run.md
+    - Setup Component: setup-component-integration.md
   - Process: process.md
   - CT-RAMP:
     - Overview: ctramp/index.md
@@ -99,6 +105,7 @@ nav:
     - Overview: assignment/index.md
     - Highway Value of Time: assignment/highway_value_of_time.md
     - Volume Delay Functions: assignment/volume_delay_functions.md
+    - Field Name Mapping: assignment/field-name-mapping.md
   - Codebase:
     - Architecture: architecture.md
     - API Documentation: api.md
@@ -106,6 +113,7 @@ nav:
     - Input: input/index.md
     - 2023 Base Year Inputs: input/2023-inputs.md
     - Network Data: input/network.md
+    - Highway Network Processing: input/highway-network-processing.md
     - Transit Data: input/transit.md  
     - Land Use Data: input/landuse.md
     - Population Data: input/population.md
@@ -135,6 +143,18 @@ nav:
     - Geographies: geographies.md
     - Network QA: network_qa.md
     - Papers: papers.md
+  - Testing:
+    - Overview: testing/index.md
+    - Quick Start: testing/quick-start.md
+    - County Test Guide: testing/county-test-guide.md
+    - Configuration Reference: testing/configuration.md
+    - Data Flow: testing/data-flow.md
+    - Setup & Configuration: testing/setup.md
+    - Quick Reference: testing/quick-reference.md
+    - Advanced Topics:
+      - Trip Filtering: testing/filtering-trips.md
+      - Network Thinning: testing/network-thinning.md
+      - EMME Manager Flow: testing/emme-manager-flow.md
   - Contributing:
     - Development: contributing/development.md
     - Documentation: contributing/documentation.md

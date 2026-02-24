@@ -259,7 +259,7 @@ class AirPassenger(Component):
         # TODO This should be done entirely in pandas using group-by
         for _year, _period, (_class, _access_modes) in _year_tp_group_accessmode:
             data = input_demand[
-                [f"{_period}_{_access}_{_class}_{_year}" for _access in _access_modes]
+                [f"{_period.upper()}_{_access}_{_class}_{_year}" for _access in _access_modes]
             ]
             aggr_demand[f"{_period}_{_class}_{_year}"] = data.sum(axis=1)
 

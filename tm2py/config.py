@@ -48,6 +48,8 @@ class ScenarioConfig(ConfigItem):
         name: scenario name string
         year: model year, must be at least 2005
         landuse_file: TAZ file
+        test_filter: optional filters to scope scenario level inputs. Currently only
+            supports a "county" entry used by county test workflows.
     """
     
     landuse_file: pathlib.Path
@@ -55,9 +57,26 @@ class ScenarioConfig(ConfigItem):
     name: str
     year: int = Field(ge=2005)
     verify: Optional[bool] = Field(default=False)
+    test_filter: Optional[Dict[str, str]] = Field(default=None)
+
+    @validator("test_filter", allow_reuse=True)
+    def validate_test_filter(cls, value):
+        """Validate optional test_filter content."""
+        if value is None:
+            return value
+        if not isinstance(value, dict):
+            raise ValueError("scenario.test_filter must be a table of key/value pairs")
+        unsupported = set(value.keys()) - {"county"}
+        if unsupported:
+            raise ValueError(f"scenario.test_filter unsupported keys: {sorted(unsupported)}")
+        county_value = value.get("county")
+        if county_value is not None and not isinstance(county_value, str):
+            raise ValueError("scenario.test_filter.county must be a string if provided")
+        return value
 
 
 ComponentNames = Literal[
+    "setup",
     "create_tod_scenarios",
     "active_modes",
     "air_passenger",
@@ -183,7 +202,7 @@ class LoggingConfig(ConfigItem):
 
     Properties:
         display_level: filter level for messages to show in console, default
-            is STATUS
+            is INFO
         run_file_path: relative path to high-level log file for the model run,
             default is tm2py_run_[%Y%m%d_%H%M].log
         run_file_level: filter level for messages recorded in the run log,
@@ -204,7 +223,7 @@ class LoggingConfig(ConfigItem):
             during the highway component run at iteration 2.
     """
 
-    display_level: Optional[LogLevel] = Field(default="STATUS")
+    display_level: Optional[LogLevel] = Field(default="INFO")
     run_file_path: Optional[str] = Field(
         default="tm2py_run_{}.log".format(
             datetime.datetime.now().strftime("%Y%m%d_%H%M")

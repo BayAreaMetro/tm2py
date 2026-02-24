@@ -469,7 +469,7 @@ class TransitAssignment(Component):
             else:
                 # iteration >= 1 and use_warmstart_skim = False : run congested transit assignment
                 use_ccr = self.config.use_ccr
-                if time_period in ["EA", "EV", "MD"]:
+                if time_period.lower() in ["ea", "ev", "md"]:
                     congested_transit_assignment = False
                 else:
                     congested_transit_assignment = (
