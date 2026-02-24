@@ -63,6 +63,18 @@ While still in the activated virtual environment:
 ## Model Configuration ⚙️
 The model config file allows for customization on the the model run performance settings.
 
+### Performance & Processor Configuration 🚀
+
+For optimal model performance, proper processor configuration is critical. tm2py uses parallel processing in multiple components including EMME assignment procedures, CTRAMP threads, and highway distribution.
+
+!!! tip "Complete Processor Configuration Guide"
+    **[📊 Processor Configuration Guide](processor-configuration.md)** - Comprehensive guide covering:
+    
+    - All processor configuration locations (EMME, CTRAMP, highway distribution)
+    - Performance optimization for different system types (desktop vs server)
+    - Format options (`"MAX-2"`, `"MAX/3"`, specific numbers)
+    - Troubleshooting and best practices
+
 ### Network Acceleration 🚀
 
 Emme Openpaths provides the network accelerate option, which allows for faster assignment on smaller machines.  
@@ -90,8 +102,10 @@ tm2py offers the option to run assignment in parallel to reduce runtime. This ca
 
 Otherwise, to turn this feature off, explicitly configure tm2py to use 1 thread:
 ```
-    if serial assignment is required comment about the above block and use the below
     [[emme.highway_distribution]]
         time_periods = ["EA", "AM", "MD", "PM", "EV"]
-        num_pro
+        num_processors = "1"
 ```
+
+!!! info "Complete Processor Configuration Guide"
+    For comprehensive information on configuring processors throughout tm2py, including EMME settings, CTRAMP threads, and performance optimization guidelines, see the **[Processor Configuration Guide](processor-configuration.md)**.

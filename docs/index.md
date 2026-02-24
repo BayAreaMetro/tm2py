@@ -35,6 +35,7 @@ Important travel behavior enhancements in Travel Model Two include:
 * [Input](inputs.md) - Input data requirements and formats
 * [Creating Base Year Inputs](create-base-year-inputs.md) - How to generate base year input files
 * [Run](run.md) - How to execute the model
+* [Processor Configuration](processor-configuration.md) - Complete guide to configuring processors for optimal performance
 * [Outputs](outputs.md) - Model outputs and analysis
 * [CTRAMP Output File Specifications](ctramp-outputs/index.md) - Comprehensive field-level documentation for survey integration
 * [Network Summary Component](network_summary.md) - Comprehensive network analysis component
