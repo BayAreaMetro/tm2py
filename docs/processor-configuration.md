@@ -151,11 +151,18 @@ self.CTRAMP_NUM_THREADS = max(1, (os.cpu_count() or 48) - 4)
    - **logsum.properties**: `{model_run_dir}/CTRAMP/runtime/logsum.properties` 
    - Updates: `acc.without.jppf.numThreads={ctramp_threads}`
    - Pattern: `r'(acc\.without\.jppf\.numThreads\s*=\s*)\d+'`
+   - **`distributed.task.packet.size`** (manual edit only — not updated by setup): controls how many household tasks are bundled into each JPPF work unit. Default is often `500`. On machines with many JPPF threads, large packet sizes cause poor load balancing (some threads finish early and sit idle). Reduce proportionally — e.g. `125` for 160 threads. Rule of thumb: `packet_size ≈ total_households / (threads × 10)`.
+   - **`acc.without.jppf.numThreads`**: controls threads used by the accessibility calculation sub-step, which runs concurrently with JPPF tasks. If raising `jppf.local.execution.threads` significantly, reduce this to avoid total thread count exceeding physical cores.
 
 3. **JPPF Node Configuration Files** (in model run directory):
    - **jppf-node{X}.properties**: `{model_run_dir}/CTRAMP/runtime/config/jppf-node{X}.properties`
    - Updates: `processing.threads={threads_per_node}`
    - **jppf-clientLocal.properties**: `jppf.local.execution.threads={local_threads}`
+
+4. **Java Launch Script** (`CTRAMP/runtime/runMTCTM2ABM.cmd`) — **not updated by setup, manual edit only**:
+   - Contains the `java` command that launches the CTRAMP model process
+   - **`-Xmx`**: Java heap size. Must be large enough to hold the full household dataset and skim matrices in memory. Typical values: `120g` for standard runs, `200g`+ for large samples on big servers. Too small causes out-of-memory crashes; too large wastes address space but is otherwise harmless.
+   - **JVM flags on Java 8**: Exercise caution with additional JVM flags. In particular, `-XX:+UseNUMA` combined with `-XX:+UseG1GC` causes CTRAMP to hang silently on `jdk1.8.0`. If using Java 8, do not add both flags simultaneously. This combination works in Java 11+.
 
 **Usage in Components** ([tm2py/components/demand/household.py#L46](tm2py/components/demand/household.py#L46)):
 ```bash
@@ -210,7 +217,7 @@ num_processors_transit_skim = "MAX-1"
 ```toml
 [emme]
 num_processors = "MAX-4"              # Leave cores for other processes  
-num_processors_transit_skim = "MAX-2" # Transit often needs fewer processors
+num_processors_transit_skim = "32"    # Cap at 32 -- Emme transit solver does not scale above this
 
 # Parallel assignment for production
 [[emme.highway_distribution]]
@@ -228,7 +235,7 @@ num_processors_transit_skim = "MAX-2" # Transit often needs fewer processors
 ```toml
 [emme]
 num_processors = "MAX-8"              # Conservative for stability
-num_processors_transit_skim = "MAX-4"
+num_processors_transit_skim = "32"    # Hard cap -- more threads actively degrades Emme transit performance
 
 # Aggressive parallelization
 [[emme.highway_distribution]]
@@ -271,6 +278,9 @@ num_processors_transit_skim = "MAX-4"
 - Too few processors: increase configuration
 - Too many processors: may cause overhead, try reducing
 - Check if bottlenecks are elsewhere (I/O, memory)
+- **Transit skims slow despite many cores**: Cap `num_processors_transit_skim` at `"32"` — Emme's transit solver does not scale beyond ~32 threads and runs slower with more
+- **CTRAMP not faster on large server**: Check `jppf.local.execution.threads` in `CTRAMP/runtime/config/jppf-clientLocal.properties` — this value is NOT auto-detected and must be set manually to match available cores (e.g. `160` on a 208-core server). The default in config files is often `22`, matching a desktop workstation.
+- **CTRAMP hangs after changing JVM flags**: Do not combine `-XX:+UseNUMA` and `-XX:+UseG1GC` on Java 8 (`jdk1.8.0`). This combination causes a hang. Use neither, or upgrade to Java 11+.
 
 ### Debugging Processor Usage
 
