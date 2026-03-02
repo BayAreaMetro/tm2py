@@ -48,6 +48,12 @@ pytest tests/test_basic.py
 pytest -m favorites
 ```
 
+## Performance Benchmarking
+
+For results from Sprint 4 runtime benchmarking across two hardware configurations, including findings on CTRAMP scaling, transit assignment timing, and `num_processors` tuning:
+
+**[TM2 Runtime Performance — Findings and Uncertainty](runtime-performance.md)**
+
 ### Continuous Integration Tests
 
 ```sh

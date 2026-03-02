@@ -2,6 +2,9 @@
 
 This document outlines recommendations for improving processor configuration management in tm2py to reduce complexity, improve maintainability, and enhance user experience.
 
+!!! note "Empirical Basis"
+    Several recommendations here are informed by recent benchmarking results. See **[Runtime Performance Benchmarking](testing/runtime-performance.md)** for the underlying findings, including the `num_processors_transit_skim` sweep and highway parallelization test.
+
 ## Current Issues
 
 ### 1. Multiple Configuration Points
