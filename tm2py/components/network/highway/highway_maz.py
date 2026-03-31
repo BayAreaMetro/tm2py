@@ -115,7 +115,13 @@ class AssignMAZSPDemand(Component):
     @LogStartEnd()
     def run(self):
         """Run MAZ-to-MAZ shortest path assignment."""
-
+        
+        emme_node_id_to_maz_seq_id = pd.read_csv(
+            self.controller.config.highway.model_to_emme_node_id_xwalk
+        ).merge(
+            self.controller.node_seq_id_xwalk, how="inner", on="model_node_id", validate="1:1"
+        ).set_index("emme_node_id")["MAZSEQ"].to_dict()
+        
         county_groups = {}
         for group in self.config.demand_county_groups:
             county_groups[group.number] = group.counties
@@ -130,7 +136,7 @@ class AssignMAZSPDemand(Component):
                             f"warning: no mazs for counties {', '.join(names)}"
                         )
                         continue
-                    self._process_demand(time, i, maz_ids)
+                    self._process_demand(time, i, maz_ids, emme_node_id_to_maz_seq_id)
                 demand_bins = self._group_demand()
                 for i, demand_group in enumerate(demand_bins):
                     self._find_roots_and_leaves(demand_group["demand"])
@@ -247,7 +253,7 @@ class AssignMAZSPDemand(Component):
         self.logger.log(f"Num MAZs {len(mazs)}", level="DEBUG")
         return sorted(mazs, key=lambda n: n["@maz_id"])
 
-    def _process_demand(self, time: str, index: int, maz_ids: List[EmmeNode]):
+    def _process_demand(self, time: str, index: int, maz_ids: List[EmmeNode], model_id_to_maz_id: dict[int, int]):
         """Loads the demand from file and groups by origin node.
 
         Sets the demand to self._demand for later processing, grouping the demand in
@@ -260,17 +266,22 @@ class AssignMAZSPDemand(Component):
             maz_ids: indexed list of MAZ ID nodes for the county group
                 (active counties for this demand file)
         """
-        self.logger.log(
-            f"Process demand for time period {time} index {index}", level="DETAIL"
+        emme_node_by_maz_id = {model_id_to_maz_id[int(maz_id)]: maz_id for maz_id in maz_ids if not isinstance(maz_id, dict)}
+
+        maz_demand_file = str(self.controller.config.highway.maz_to_maz.demand_file).format(
+            period=time.upper(), iter=self.controller.iteration
         )
-        data = self._read_demand_array(time, index)
-        origins, destinations = data.nonzero()
+        data = pd.read_csv(maz_demand_file)
+
+        origin_mazs, destination_mazs, demands = data["MAZ_x"], data["MAZ_y"], data["eq_cnt"]
+
+        # origins, destinations = data.nonzero()
         self.logger.log(
-            f"non-zero origins {len(origins)} destinations {len(destinations)}",
+            f"non-zero origins {len(origin_mazs)} destinations {len(destination_mazs)}",
             level="DEBUG",
         )
         total_demand = 0
-        for orig, dest in zip(origins, destinations):
+        for orig, dest, demand in zip(origin_mazs, destination_mazs, demands):
             # skip intra-maz demand
             if orig == dest:
                 continue
@@ -286,12 +297,14 @@ class AssignMAZSPDemand(Component):
                     level="DEBUG",
                 )
                 continue
-            check = maz_ids[99]
-            orig_node = maz_ids[orig]
-            dest_node = maz_ids[dest]
+            # check = maz_ids[99]
+            orig_node = emme_node_by_maz_id[orig]
+            dest_node = emme_node_by_maz_id[dest]
+            
             dist = _sqrt(
                 (dest_node.x - orig_node.x) ** 2 + (dest_node.y - orig_node.y) ** 2
-            )
+            ) if not (isinstance(orig_node, dict) or isinstance(dest_node, dict)) else 0
+
             if (dist / 5280) > self.config.max_distance:
                 self.logger.log(
                     f"MAZ demand from {orig} to {dest} is over {self.config.max_distance} miles, do not assign",
@@ -300,16 +313,18 @@ class AssignMAZSPDemand(Component):
                 continue
             if dist > self._max_dist:
                 self._max_dist = dist
-            demand = data[orig][dest]
+            # demand = data[orig][dest]
             total_demand += demand
-            self._demand[orig_node].append(
-                {
-                    "orig": orig_node,
-                    "dest": dest_node,
-                    "dem": demand,
-                    "dist": dist,
-                }
-            )
+            if not isinstance(orig_node, dict):
+
+                self._demand[orig_node].append(
+                    {
+                        "orig": orig_node,
+                        "dest": dest_node,
+                        "dem": demand,
+                        "dist": dist,
+                    }
+                )
         self.logger.log(f"Max distance found {self._max_dist}", level="DEBUG")
         self.logger.log(f"Total inter-zonal demand {total_demand}", level="DEBUG")
 
@@ -512,7 +527,7 @@ class AssignMAZSPDemand(Component):
         )
 
         self.controller.emme_manager.copy_attribute_values(
-            self._network, self._scenario, {"LINK": ["temp_flow"]}, {"LINK": ["data1"]}
+            self._network, self._scenario, {"LINK": ["temp_flow"]}, {"LINK": ["@maz_flow"]}
         )
 
     def _load_text_format_paths(
@@ -588,7 +603,7 @@ class AssignMAZSPDemand(Component):
         )
 
     @staticmethod
-    def _get_path_indices(paths_file: BinaryIO) -> [int, int, _array.array]:
+    def _get_path_indices(paths_file: BinaryIO) -> tuple[int, int, _array.array]:
         """Get the path header indices.
 
         See the Emme Shortest path tool doc for additional details on reading
@@ -620,7 +635,7 @@ class AssignMAZSPDemand(Component):
         dest: EmmeNode,
         leaves_nb: int,
         path_indicies: _array.array,
-    ) -> [int, int]:
+    ) -> tuple[int, int]:
         """Get the location in the paths_file to read.
 
         Args:

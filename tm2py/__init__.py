@@ -12,6 +12,7 @@ from .controller import RunController
 from .examples import get_example
 from .logger import Logger, LogStartEnd
 from .setup_model.setup import SetupModel
+from .enum import ModeChoice
 
 __all__ = [
     # component
@@ -30,4 +31,5 @@ __all__ = [
     # logger
     "Logger",
     "LogStartEnd",
+    "ModeChoice",
 ]

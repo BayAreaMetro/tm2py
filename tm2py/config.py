@@ -350,7 +350,6 @@ class HouseholdConfig(ConfigItem):
     taxi_split: Dict[str, float]
     single_tnc_split: Dict[str, float]
     shared_tnc_split: Dict[str, float]
-    ctramp_mode_names: Dict[float, str]
     income_segment: Dict[str, Union[float, str, list]]
     ctramp_hh_file: str
     sample_rate_by_iteration: List[float]
@@ -998,6 +997,7 @@ class HighwayConfig(ConfigItem):
     output_node_sequential_id_xwalk: str = Field()
     apply_msa_demand: bool = True
     reliability: bool = Field(default=True)
+    maz_drive_distance_threshold: float = Field()
 
     @validator("output_skim_filename_tmpl")
     def valid_skim_template(value):
